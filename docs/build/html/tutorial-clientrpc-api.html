@@ -121,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
 <li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
@@ -139,7 +140,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC API tutorial</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#registering-classes-from-your-cordapp-with-rpc-kryo">Registering classes from your CorDapp with RPC Kryo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#whitelisting-classes-from-your-cordapp-with-the-corda-node">Whitelisting classes from your CorDapp with the Corda node</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 </ul>
 </li>
@@ -170,6 +171,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -353,16 +355,21 @@ latter.</p>
 </pre></div>
 </div>
 <p>If we run the client with <code class="docutils literal"><span class="pre">Visualise</span></code> we should see a simple random graph being drawn as new transactions are being created.</p>
-<div class="section" id="registering-classes-from-your-cordapp-with-rpc-kryo">
-<h2>Registering classes from your CorDapp with RPC Kryo<a class="headerlink" href="#registering-classes-from-your-cordapp-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
-<p>As described in <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>, you currently have to register any additional classes you add that are needed in RPC
-requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;s an example of how you do this for an example class.</p>
-<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">data</span> <span class="k">class</span> <span class="nc">ExampleRPCValue</span><span class="p">(</span><span class="k">val</span> <span class="py">foo</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span>
+<div class="section" id="whitelisting-classes-from-your-cordapp-with-the-corda-node">
+<h2>Whitelisting classes from your CorDapp with the Corda node<a class="headerlink" href="#whitelisting-classes-from-your-cordapp-with-the-corda-node" title="Permalink to this headline">¶</a></h2>
+<p>As described in <a class="reference internal" href="clientrpc.html"><span class="doc">Client RPC</span></a>, you have to whitelist any additional classes you add that are needed in RPC
+requests or responses with the Corda node.  Here&#8217;s an example of both ways you can do this for a couple of example classes.</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="c1">// Not annotated, so need to whitelist manually.</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">ExampleRPCValue</span><span class="p">(</span><span class="k">val</span> <span class="py">foo</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span>
+
+<span class="c1">// Annotated, so no need to whitelist manually.</span>
+<span class="n">@CordaSerializable</span>
+<span class="k">data</span> <span class="k">class</span> <span class="nc">ExampleRPCValue2</span><span class="p">(</span><span class="k">val</span> <span class="py">bar</span><span class="p">:</span> <span class="n">Int</span><span class="p">)</span>
 
 <span class="k">class</span> <span class="nc">ExampleRPCCordaPluginRegistry</span> <span class="p">:</span> <span class="n">CordaPluginRegistry</span><span class="p">()</span> <span class="p">{</span>
-    <span class="k">override</span> <span class="k">fun</span> <span class="nf">registerRPCKryoTypes</span><span class="p">(</span><span class="n">kryo</span><span class="p">:</span> <span class="n">Kryo</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">customizeSerialization</span><span class="p">(</span><span class="n">custom</span><span class="p">:</span> <span class="n">SerializationCustomization</span><span class="p">):</span> <span class="n">Boolean</span> <span class="p">{</span>
         <span class="c1">// Add classes like this.</span>
-        <span class="n">kryo</span><span class="p">.</span><span class="n">register</span><span class="p">(</span><span class="n">ExampleRPCValue</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
+        <span class="n">custom</span><span class="p">.</span><span class="n">addToWhitelist</span><span class="p">(</span><span class="n">ExampleRPCValue</span><span class="o">::</span><span class="k">class</span><span class="p">.</span><span class="n">java</span><span class="p">)</span>
         <span class="c1">// You should return true, otherwise your plugin will be ignored for registering classes with Kryo.</span>
         <span class="k">return</span> <span class="k">true</span>
     <span class="p">}</span>
@@ -372,8 +379,7 @@ requests or responses with the <cite>Kryo</cite> instance RPC uses.  Here&#8217;
 <p>See more on plugins in <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
-customisation point will either go away completely or change.</p>
+<p class="last">We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.</p>
 </div>
 </div>
 <div class="section" id="security">

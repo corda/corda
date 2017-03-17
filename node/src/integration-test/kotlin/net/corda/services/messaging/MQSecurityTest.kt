@@ -154,8 +154,8 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return client
     }
 
-    fun loginToRPC(target: HostAndPort, rpcUser: User): SimpleMQClient {
-        val client = clientTo(target, null)
+    fun loginToRPC(target: HostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): SimpleMQClient {
+        val client = clientTo(target, sslConfiguration)
         client.loginToRPC(rpcUser)
         return client
     }
@@ -225,7 +225,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode("Bob").getOrThrow()
-        bob.services.registerFlowInitiator(SendFlow::class, ::ReceiveFlow)
+        bob.services.registerFlowInitiator(SendFlow::class.java, ::ReceiveFlow)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()

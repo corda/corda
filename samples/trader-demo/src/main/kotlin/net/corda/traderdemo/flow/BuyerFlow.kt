@@ -14,7 +14,6 @@ import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow
-import net.corda.node.services.persistence.NodeAttachmentService
 import java.nio.file.Path
 import java.util.*
 
@@ -28,11 +27,11 @@ class BuyerFlow(val otherParty: Party,
         init {
             // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
             // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
-            val attachmentsPath = (services.storageService.attachments as NodeAttachmentService).let {
+            val attachmentsPath = (services.storageService.attachments).let {
                 it.automaticallyExtractAttachments = true
                 it.storePath
             }
-            services.registerFlowInitiator(SellerFlow::class) { BuyerFlow(it, attachmentsPath) }
+            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath) }
         }
     }
 

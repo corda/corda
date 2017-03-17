@@ -3,6 +3,7 @@ package net.corda.node.services.config
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import net.corda.core.div
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.internal.Node
@@ -64,20 +65,21 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
                 User(username, password, permissions)
             }
     val useHTTPS: Boolean by config
-    val artemisAddress: HostAndPort by config
+    val p2pAddress: HostAndPort by config
     val rpcAddress: HostAndPort? by config
     val webAddress: HostAndPort by config
-    // TODO This field is slightly redundant as artemisAddress is sufficient to hold the address of the node's MQ broker.
+    // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
     // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
     val messagingServerAddress: HostAndPort? by config
     val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }
     val useTestClock: Boolean by config.getOrElse { false }
+    val notaryNodeId: Int? by config
     val notaryNodeAddress: HostAndPort? by config
     val notaryClusterAddresses: List<HostAndPort> = config
             .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
             .map { HostAndPort.fromString(it) }
 
-    fun createNode(): Node {
+    fun createNode(nodeVersionInfo: NodeVersionInfo): Node {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
 
@@ -87,7 +89,7 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
                 .toMutableSet()
         if (networkMapService == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
 
-        return Node(this, advertisedServices, if (useTestClock) TestClock() else NodeClock())
+        return Node(this, advertisedServices, nodeVersionInfo, if (useTestClock) TestClock() else NodeClock())
     }
 }
 

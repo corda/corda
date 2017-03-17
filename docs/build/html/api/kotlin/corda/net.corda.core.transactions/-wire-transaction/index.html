@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>WireTransaction - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href=".">WireTransaction</a><br/>
@@ -64,6 +64,14 @@ signatures to have the same identity hash.</p>
 </tr>
 <tr>
 <td>
+<a href="merkle-tree.html">merkleTree</a></td>
+<td>
+<code><span class="keyword">val </span><span class="identifier">merkleTree</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-merkle-tree/index.html"><span class="identifier">MerkleTree</span></a></code>
+<p>Builds whole Merkle tree for a transaction.</p>
+</td>
+</tr>
+<tr>
+<td>
 <a href="serialized.html">serialized</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">serialized</span><span class="symbol">: </span><a href="../../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">WireTransaction</span><span class="symbol">&gt;</span></code></td>
@@ -73,6 +81,24 @@ signatures to have the same identity hash.</p>
 <h3>Inherited Properties</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="../-traversable-transaction/available-component-hashes.html">availableComponentHashes</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">availableComponentHashes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code>
+<p>Calculate the hashes of the sub-components of the transaction, that are used to build its Merkle tree.
+The root of the tree is the transaction identifier. The tree structure is helpful for privacy, please
+see the user-guide section "Transaction tear-offs" to learn more about this topic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-traversable-transaction/available-components.html">availableComponents</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">availableComponents</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Returns a flattened list of all the components that are present in the transaction, in the following order:</p>
+</td>
+</tr>
 <tr>
 <td>
 <a href="../-base-transaction/must-sign.html">mustSign</a></td>
@@ -113,15 +139,6 @@ time window to find out when a transaction is deemed to have occurred, from the 
 </tr>
 <tr>
 <td>
-<a href="../-traversable-transaction/traversable-list.html">traversableList</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">traversableList</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code>
-<p>Traversing transaction fields with a list function over transaction contents. Used for leaves hashes calculation
-and user provided filtering and checking of filtered transaction.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="../-base-transaction/type.html">type</a></td>
 <td>
 <code><span class="keyword">val </span><span class="identifier">type</span><span class="symbol">: </span><a href="../../net.corda.core.contracts/-transaction-type/index.html"><span class="identifier">TransactionType</span></a></code>
@@ -157,14 +174,6 @@ and user provided filtering and checking of filtered transaction.</p>
 </tr>
 <tr>
 <td>
-<a href="get-merkle-tree.html">getMerkleTree</a></td>
-<td>
-<code><span class="keyword">fun </span><span class="identifier">getMerkleTree</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../../net.corda.core.crypto/-merkle-tree/index.html"><span class="identifier">MerkleTree</span></a></code>
-<p>Builds whole Merkle tree for a transaction.</p>
-</td>
-</tr>
-<tr>
-<td>
 <a href="hash-code.html">hashCode</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">hashCode</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Int</span></code></td>
@@ -183,7 +192,7 @@ and user provided filtering and checking of filtered transaction.</p>
 <td>
 <a href="to-ledger-transaction.html">toLedgerTransaction</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServiceHub)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-service-hub/index.html"><span class="identifier">ServiceHub</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code>
+<code><span class="keyword">fun </span><span class="identifier">toLedgerTransaction</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction$toLedgerTransaction(net.corda.core.node.ServicesForResolution)/services">services</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.node/-services-for-resolution/index.html"><span class="identifier">ServicesForResolution</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-ledger-transaction/index.html"><span class="identifier">LedgerTransaction</span></a></code>
 <p>Looks up identities and attachments from storage to generate a <a href="../-ledger-transaction/index.html">LedgerTransaction</a>. A transaction is expected to
 have been fully resolved using the resolution flow by this point.</p>
 </td>
@@ -201,12 +210,6 @@ have been fully resolved using the resolution flow by this point.</p>
 <tbody>
 <tr>
 <td>
-<a href="../-traversable-transaction/calculate-leaves-hashes.html">calculateLeavesHashes</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">calculateLeavesHashes</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
-</tr>
-<tr>
-<td>
 <a href="../-base-transaction/check-invariants.html">checkInvariants</a></td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">checkInvariants</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Unit</span></code></td>
@@ -220,7 +223,7 @@ have been fully resolved using the resolution flow by this point.</p>
 <td>
 <a href="deserialize.html">deserialize</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction.Companion$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/data">data</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">WireTransaction</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.WireTransaction.Companion$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">WireTransaction</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.WireTransaction.Companion$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/data">data</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.serialization/-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">WireTransaction</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.WireTransaction.Companion$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">WireTransaction</span></code></td>
 </tr>
 </tbody>
 </table>

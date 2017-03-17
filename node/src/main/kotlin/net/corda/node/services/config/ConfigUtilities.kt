@@ -46,7 +46,7 @@ object ConfigHelper {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     if (metadata.returnType.isMarkedNullable && !hasPath(metadata.name)) {
         return null as T
@@ -54,6 +54,7 @@ operator fun <T> Config.getValue(receiver: Any, metadata: KProperty<*>): T {
     return when (metadata.returnType.javaType) {
         String::class.java -> getString(metadata.name) as T
         Int::class.java -> getInt(metadata.name) as T
+        Integer::class.java -> getInt(metadata.name) as T
         Long::class.java -> getLong(metadata.name) as T
         Double::class.java -> getDouble(metadata.name) as T
         Boolean::class.java -> getBoolean(metadata.name) as T

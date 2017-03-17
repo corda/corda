@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>FilteredLeaves - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.core.transactions</a>&nbsp;/&nbsp;<a href=".">FilteredLeaves</a><br/>
@@ -10,7 +10,7 @@
 <h1>FilteredLeaves</h1>
 <code><span class="keyword">class </span><span class="identifier">FilteredLeaves</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="../-traversable-transaction/index.html"><span class="identifier">TraversableTransaction</span></a></code>
 <p>Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
-field from WireTransaction can be used in PartialMerkleTree calculation.</p>
+field from <a href="../-wire-transaction/index.html">WireTransaction</a> can be used in <a href="../../net.corda.core.crypto/-partial-merkle-tree/index.html">PartialMerkleTree</a> calculation.</p>
 <h3>Constructors</h3>
 <table>
 <tbody>
@@ -20,7 +20,7 @@ field from WireTransaction can be used in PartialMerkleTree calculation.</p>
 <td>
 <code><span class="identifier">FilteredLeaves</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/inputs">inputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-state-ref/index.html"><span class="identifier">StateRef</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/attachments">attachments</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/outputs">outputs</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-transaction-state/index.html"><span class="identifier">TransactionState</span></a><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-contract-state/index.html"><span class="identifier">ContractState</span></a><span class="symbol">&gt;</span><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/commands">commands</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.contracts/-command/index.html"><span class="identifier">Command</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/notary">notary</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.crypto/-party/index.html"><span class="identifier">Party</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/mustSign">mustSign</span><span class="symbol">:</span>&nbsp;<span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-composite-key/index.html"><span class="identifier">CompositeKey</span></a><span class="symbol">&gt;</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/type">type</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-transaction-type/index.html"><span class="identifier">TransactionType</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.core.transactions.FilteredLeaves$<init>(kotlin.collections.List((net.corda.core.contracts.StateRef)), kotlin.collections.List((net.corda.core.crypto.SecureHash)), kotlin.collections.List((net.corda.core.contracts.TransactionState((net.corda.core.contracts.ContractState)))), kotlin.collections.List((net.corda.core.contracts.Command)), net.corda.core.crypto.Party, kotlin.collections.List((net.corda.core.crypto.CompositeKey)), net.corda.core.contracts.TransactionType, net.corda.core.contracts.Timestamp)/timestamp">timestamp</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.core.contracts/-timestamp/index.html"><span class="identifier">Timestamp</span></a><span class="symbol">?</span><span class="symbol">)</span></code>
 <p>Class that holds filtered leaves for a partial Merkle transaction. We assume mixed leaf types, notice that every
-field from WireTransaction can be used in PartialMerkleTree calculation.</p>
+field from <a href="../-wire-transaction/index.html">WireTransaction</a> can be used in <a href="../../net.corda.core.crypto/-partial-merkle-tree/index.html">PartialMerkleTree</a> calculation.</p>
 </td>
 </tr>
 </tbody>
@@ -83,11 +83,20 @@ field from WireTransaction can be used in PartialMerkleTree calculation.</p>
 <tbody>
 <tr>
 <td>
-<a href="../-traversable-transaction/traversable-list.html">traversableList</a></td>
+<a href="../-traversable-transaction/available-component-hashes.html">availableComponentHashes</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">traversableList</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code>
-<p>Traversing transaction fields with a list function over transaction contents. Used for leaves hashes calculation
-and user provided filtering and checking of filtered transaction.</p>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">availableComponentHashes</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code>
+<p>Calculate the hashes of the sub-components of the transaction, that are used to build its Merkle tree.
+The root of the tree is the transaction identifier. The tree structure is helpful for privacy, please
+see the user-guide section "Transaction tear-offs" to learn more about this topic.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="../-traversable-transaction/available-components.html">availableComponents</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">val </span><span class="identifier">availableComponents</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><span class="identifier">Any</span><span class="symbol">&gt;</span></code>
+<p>Returns a flattened list of all the components that are present in the transaction, in the following order:</p>
 </td>
 </tr>
 </tbody>
@@ -106,17 +115,6 @@ Example: Oracle is implemented to check only for commands, if it gets an attachm
 over a transaction with the attachment that wasn't verified. Of course it depends on how you implement it, but else -&gt; false
 should solve a problem with possible later extensions to WireTransaction.</p>
 </td>
-</tr>
-</tbody>
-</table>
-<h3>Inherited Functions</h3>
-<table>
-<tbody>
-<tr>
-<td>
-<a href="../-traversable-transaction/calculate-leaves-hashes.html">calculateLeavesHashes</a></td>
-<td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">calculateLeavesHashes</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">List</span><span class="symbol">&lt;</span><a href="../../net.corda.core.crypto/-secure-hash/index.html"><span class="identifier">SecureHash</span></a><span class="symbol">&gt;</span></code></td>
 </tr>
 </tbody>
 </table>

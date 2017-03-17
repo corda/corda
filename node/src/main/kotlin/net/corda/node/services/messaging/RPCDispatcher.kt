@@ -42,6 +42,8 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
 
     private val queueToSubscription = HashMultimap.create<String, Subscription>()
 
+    private val handleCounter = AtomicInteger()
+
     // Created afresh for every RPC that is annotated as returning observables. Every time an observable is
     // encountered either in the RPC response or in an object graph that is being emitted by one of those
     // observables, the handle counter is incremented and the server-side observable is subscribed to. The
@@ -49,41 +51,48 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
     //
     // When the observables are deserialised on the client side, the handle is read from the byte stream and
     // the queue is filtered to extract just those observations.
-    private inner class ObservableSerializer(private val toQName: String) : Serializer<Observable<Any>>() {
-        private val handleCounter = AtomicInteger()
+    class ObservableSerializer() : Serializer<Observable<Any>>() {
+        private fun toQName(kryo: Kryo): String = kryo.context[RPCKryoQNameKey] as String
+        private fun toDispatcher(kryo: Kryo): RPCDispatcher = kryo.context[RPCKryoDispatcherKey] as RPCDispatcher
 
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
             throw UnsupportedOperationException("not implemented")
         }
 
         override fun write(kryo: Kryo, output: Output, obj: Observable<Any>) {
-            val handle = handleCounter.andIncrement
+            val qName = toQName(kryo)
+            val dispatcher = toDispatcher(kryo)
+            val handle = dispatcher.handleCounter.andIncrement
             output.writeInt(handle, true)
             // Observables can do three kinds of callback: "next" with a content object, "completed" and "error".
             // Materializing the observable converts these three kinds of callback into a single stream of objects
             // representing what happened, which is useful for us to send over the wire.
             val subscription = obj.materialize().subscribe { materialised: Notification<out Any> ->
-                val newKryo = createRPCKryo(observableSerializer = this@ObservableSerializer)
-                val bits = MarshalledObservation(handle, materialised).serialize(newKryo)
+                val newKryo = createRPCKryoForSerialization(qName, dispatcher)
+                val bits = try { MarshalledObservation(handle, materialised).serialize(newKryo) } finally {
+                    releaseRPCKryoForSerialization(newKryo)
+                }
                 rpcLog.debug("RPC sending observation: $materialised")
-                send(bits, toQName)
+                dispatcher.send(bits, qName)
             }
-            synchronized(queueToSubscription) {
-                queueToSubscription.put(toQName, subscription)
+            synchronized(dispatcher.queueToSubscription) {
+                dispatcher.queueToSubscription.put(qName, subscription)
             }
         }
     }
 
     fun dispatch(msg: ClientRPCRequestMessage) {
         val (argsBytes, replyTo, observationsTo, methodName) = msg
-        val kryo = createRPCKryo(observableSerializer = if (observationsTo != null) ObservableSerializer(observationsTo) else null)
 
         val response: ErrorOr<Any> = ErrorOr.catch {
             val method = methodTable[methodName] ?: throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
             if (method.isAnnotationPresent(RPCReturnsObservables::class.java) && observationsTo == null)
                 throw RPCException("Received RPC without any destination for observations, but the RPC returns observables")
 
-            val args = argsBytes.deserialize(kryo)
+            val kryo = createRPCKryoForSerialization(observationsTo, this)
+            val args = try { argsBytes.deserialize(kryo) } finally {
+                releaseRPCKryoForSerialization(kryo)
+            }
 
             rpcLog.debug { "-> RPC -> $methodName(${args.joinToString()})    [reply to $replyTo]" }
 
@@ -95,13 +104,15 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
         }
         rpcLog.debug { "<- RPC <- $methodName = $response " }
 
-
         // Serialise, or send back a simple serialised ErrorOr structure if we couldn't do it.
+        val kryo = createRPCKryoForSerialization(observationsTo, this)
         val responseBits = try {
             response.serialize(kryo)
         } catch (e: KryoException) {
             rpcLog.error("Failed to respond to inbound RPC $methodName", e)
             ErrorOr.of(e).serialize(kryo)
+        } finally {
+            releaseRPCKryoForSerialization(kryo)
         }
         send(responseBits, replyTo)
     }

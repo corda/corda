@@ -2,13 +2,13 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>createKryo - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href="index.html">net.corda.core.serialization</a>&nbsp;/&nbsp;<a href=".">createKryo</a><br/>
 <br/>
 <h1>createKryo</h1>
 <a name="net.corda.core.serialization$createKryo(com.esotericsoftware.kryo.Kryo)"></a>
-<code><span class="keyword">fun </span><span class="identifier">createKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$createKryo(com.esotericsoftware.kryo.Kryo)/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;Kryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code>
+<code><span class="keyword">fun </span><span class="identifier">createKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$createKryo(com.esotericsoftware.kryo.Kryo)/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;CordaKryo(makeStandardClassResolver())<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code>
 </BODY>
 </HTML>

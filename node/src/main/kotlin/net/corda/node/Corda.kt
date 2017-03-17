@@ -1,9 +1,13 @@
 @file:JvmName("Corda")
 package net.corda.node
 
+import com.typesafe.config.Config
+import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
+import net.corda.core.node.NodeVersionInfo
+import net.corda.core.node.Version
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
@@ -22,18 +26,23 @@ private var renderBasicInfoToConsole = true
 
 /** Used for useful info that we always want to show, even when not logging to the console */
 fun printBasicNodeInfo(description: String, info: String? = null) {
-    if (renderBasicInfoToConsole) {
-        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
-        println(msg)
-    } else {
-        val msg = if (info == null) description else "$description: $info"
-        LoggerFactory.getLogger("Main").info(msg)
-    }
+    val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+    val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+    LoggerFactory.getLogger(loggerName).info(msg)
 }
 
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
+
+    // Manifest properties are only available if running from the corda jar
+    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+    val nodeVersionInfo = NodeVersionInfo(
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Revision") ?: "Unknown",
+            manifestValue("Corda-Vendor") ?: "Unknown"
+    )
 
     val argsParser = ArgsParser()
 
@@ -43,6 +52,12 @@ fun main(args: Array<String>) {
         println("Invalid command line arguments: ${ex.message}")
         argsParser.printHelp(System.out)
         exitProcess(1)
+    }
+
+    if (cmdlineOptions.isVersion) {
+        println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
+        println("Revision ${nodeVersionInfo.revision}")
+        exitProcess(0)
     }
 
     // Maybe render command line help.
@@ -58,7 +73,7 @@ fun main(args: Array<String>) {
         renderBasicInfoToConsole = false
     }
 
-    drawBanner()
+    drawBanner(nodeVersionInfo)
 
     System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
 
@@ -66,7 +81,9 @@ fun main(args: Array<String>) {
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
 
     val conf = try {
-        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
+        val conf = cmdlineOptions.loadConfig()
+        checkConfigVersion(conf)
+        FullNodeConfiguration(cmdlineOptions.baseDirectory, conf)
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
@@ -83,8 +100,12 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+    log.info("Version: ${nodeVersionInfo.version}")
+    log.info("Vendor: ${nodeVersionInfo.vendor}")
+    log.info("Revision: ${nodeVersionInfo.revision}")
     val info = ManagementFactory.getRuntimeMXBean()
+    log.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
+    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
     log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
     log.info("Application Args: ${args.joinToString(" ")}")
     log.info("bootclasspath: ${info.bootClassPath}")
@@ -92,18 +113,18 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    log.info("Starting as node on ${conf.artemisAddress}")
+    log.info("Starting as node on ${conf.p2pAddress}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        val node = conf.createNode()
+        val node = conf.createNode(nodeVersionInfo)
         node.start()
         printPluginsAndServices(node)
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node ${node.info.legalIdentity.name} started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)
@@ -116,7 +137,18 @@ fun main(args: Array<String>) {
         log.error("Exception during node startup", e)
         exitProcess(1)
     }
+
     exitProcess(0)
+}
+
+private fun checkConfigVersion(conf: Config) {
+    // TODO: Remove this check in future milestone.
+    if (conf.hasPath("artemisAddress")) {
+        // artemisAddress has been renamed to p2pAddress in M10.
+        println("artemisAddress has been renamed to p2pAddress in M10, please upgrade your configuration file and start Corda node again.")
+        println("Corda will now exit...")
+        exitProcess(1)
+    }
 }
 
 private fun checkJavaVersion() {
@@ -154,13 +186,12 @@ private fun messageOfTheDay(): Pair<String, String> {
             "Computer science and finance together.\nYou should see our crazy Christmas parties!"
     )
     if (Emoji.hasEmojiTerminal)
-        messages +=
-            "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
+        messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
     val (a, b) = messages.randomOrNull()!!.split('\n')
     return Pair(a, b)
 }
 
-private fun drawBanner() {
+private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
@@ -174,7 +205,7 @@ private fun drawBanner() {
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-        a("--- MILESTONE 9 -------------------------------------------------------------------").
+        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(7)}) -----------------------------------------------").
         newline().
         newline().
         a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").

@@ -19,7 +19,7 @@ class NonValidatingNotaryFlow(otherSide: Party,
      * undo the commit of the input states (the exact mechanism still needs to be worked out).
      */
     @Suspendable
-    override fun receiveAndVerifyTx(): NotaryFlow.Service.TransactionParts {
+    override fun receiveAndVerifyTx(): TransactionParts {
         val ftx = receive<FilteredTransaction>(otherSide).unwrap {
             it.verify()
             it

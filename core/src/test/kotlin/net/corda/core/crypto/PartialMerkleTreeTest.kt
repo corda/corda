@@ -1,18 +1,20 @@
 package net.corda.core.crypto
 
 
-import com.esotericsoftware.kryo.serializers.MapSerializer
+import com.esotericsoftware.kryo.KryoException
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
-import net.corda.core.serialization.*
-import net.corda.core.transactions.*
-import net.corda.core.utilities.*
+import net.corda.core.serialization.p2PKryo
+import net.corda.core.serialization.serialize
+import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_PUBKEY_1
+import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.ledger
 import org.junit.Test
-import java.util.*
 import kotlin.test.*
 
 class PartialMerkleTreeTest {
@@ -208,15 +210,12 @@ class PartialMerkleTreeTest {
         assertFalse(pmt.verify(wrongRoot, inclHashes))
     }
 
-    @Test
-    fun `hash map serialization`() {
+    @Test(expected = KryoException::class)
+    fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        assert(serializedHash(hm1) == serializedHash(hm1.serialize().deserialize())) // It internally uses the ordered HashMap extension.
-        val kryo = extendKryoHash(createKryo())
-        assertTrue(kryo.getSerializer(HashMap::class.java) is OrderedSerializer)
-        assertTrue(kryo.getSerializer(LinkedHashMap::class.java) is MapSerializer)
-        val hm2 = hm1.serialize(kryo).deserialize(kryo)
-        assert(hm1.hashCode() == hm2.hashCode())
+        p2PKryo().run { kryo ->
+            hm1.serialize(kryo)
+        }
     }
 
     private fun makeSimpleCashWtx(notary: Party, timestamp: Timestamp? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {

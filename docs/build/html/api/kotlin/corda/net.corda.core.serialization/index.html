@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>net.corda.core.serialization - corda</title>
-<link rel="stylesheet" href="..\..\style.css">
+<link rel="stylesheet" href="../../style.css">
 </HEAD>
 <BODY>
 <a href="../index.html">corda</a>&nbsp;/&nbsp;<a href=".">net.corda.core.serialization</a><br/>
@@ -11,6 +11,24 @@
 <h3>Types</h3>
 <table>
 <tbody>
+<tr>
+<td>
+<a href="-all-whitelist/index.html">AllWhitelist</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">AllWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-built-in-exceptions-whitelist/index.html">BuiltInExceptionsWhitelist</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">BuiltInExceptionsWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-class-whitelist/index.html">ClassWhitelist</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">ClassWhitelist</span></code></td>
+</tr>
 <tr>
 <td>
 <a href="-composite-key-leaf-serializer/index.html">CompositeKeyLeafSerializer</a></td>
@@ -24,6 +42,27 @@
 <a href="-composite-key-node-serializer/index.html">CompositeKeyNodeSerializer</a></td>
 <td>
 <code><span class="keyword">object </span><span class="identifier">CompositeKeyNodeSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><a href="../net.corda.core.crypto/-composite-key/-node/index.html"><span class="identifier">Node</span></a><span class="symbol">&gt;</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-corda-class-resolver/index.html">CordaClassResolver</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">CordaClassResolver</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">DefaultClassResolver</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="-corda-kryo/index.html">CordaKryo</a></td>
+<td>
+<code><span class="keyword">open</span> <span class="keyword">class </span><span class="identifier">CordaKryo</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span></code>
+<p>We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
+for existing registrations and then will enter our <a href="-corda-class-resolver/get-registration.html">CordaClassResolver.getRegistration</a> method.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-default-kryo-customizer/index.html">DefaultKryoCustomizer</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">DefaultKryoCustomizer</span></code></td>
 </tr>
 <tr>
 <td>
@@ -51,6 +90,18 @@
 </tr>
 <tr>
 <td>
+<a href="-empty-whitelist/index.html">EmptyWhitelist</a></td>
+<td>
+<code><span class="keyword">object </span><span class="identifier">EmptyWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-global-transient-class-white-list/index.html">GlobalTransientClassWhiteList</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">GlobalTransientClassWhiteList</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-mutable-class-whitelist/index.html"><span class="identifier">MutableClassWhitelist</span></a><span class="symbol">, </span><a href="-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
+</tr>
+<tr>
+<td>
 <a href="-immutable-class-serializer/index.html">ImmutableClassSerializer</a></td>
 <td>
 <code><span class="keyword">class </span><span class="identifier">ImmutableClassSerializer</span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
@@ -71,6 +122,27 @@ set via the constructor and the class is immutable.</p>
 <code><span class="keyword">object </span><span class="identifier">KotlinObjectSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Serializer</span><span class="symbol">&lt;</span><a href="-deserialize-as-kotlin-object-def.html"><span class="identifier">DeserializeAsKotlinObjectDef</span></a><span class="symbol">&gt;</span></code>
 <p>Serializer to deserialize kotlin object definitions marked with <a href="-deserialize-as-kotlin-object-def.html">DeserializeAsKotlinObjectDef</a>.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-kryo-serialization-customization/index.html">KryoSerializationCustomization</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">KryoSerializationCustomization</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-serialization-customization/index.html"><span class="identifier">SerializationCustomization</span></a></code></td>
+</tr>
+<tr>
+<td>
+<a href="-logging-whitelist/index.html">LoggingWhitelist</a></td>
+<td>
+<code><span class="keyword">class </span><span class="identifier">LoggingWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-mutable-class-whitelist/index.html"><span class="identifier">MutableClassWhitelist</span></a></code>
+<p>This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
+and was used to track down the initial set.</p>
+</td>
+</tr>
+<tr>
+<td>
+<a href="-mutable-class-whitelist/index.html">MutableClassWhitelist</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">MutableClassWhitelist</span>&nbsp;<span class="symbol">:</span>&nbsp;<a href="-class-whitelist/index.html"><span class="identifier">ClassWhitelist</span></a></code></td>
 </tr>
 <tr>
 <td>
@@ -101,6 +173,12 @@ functionality to Java, but it won't arrive for a few years yet!</p>
 <code><span class="keyword">object </span><span class="identifier">ReferencesAwareJavaSerializer</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">JavaSerializer</span></code>
 <p>Improvement to the builtin JavaSerializer by honouring the <a href="#">Kryo.getReferences</a> setting.</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="-serialization-customization/index.html">SerializationCustomization</a></td>
+<td>
+<code><span class="keyword">interface </span><span class="identifier">SerializationCustomization</span></code></td>
 </tr>
 <tr>
 <td>
@@ -181,6 +259,19 @@ to indicate which instance the token is a serialized form of.</p>
 </tr>
 </tbody>
 </table>
+<h3>Annotations</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<a href="-corda-serializable/index.html">CordaSerializable</a></td>
+<td>
+<code><span class="keyword">annotation</span> <span class="keyword">class </span><span class="identifier">CordaSerializable</span></code>
+<p>This annotation is a marker to indicate that a class is permitted and intended to be serialized as part of Node messaging.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3>Exceptions</h3>
 <table>
 <tbody>
@@ -238,15 +329,6 @@ to indicate which instance the token is a serialized form of.</p>
 <td>
 <code><span class="keyword">val </span><span class="identifier">ATTACHMENT_STORAGE</span><span class="symbol">: </span><span class="identifier">String</span></code></td>
 </tr>
-<tr>
-<td>
-<a href="-t-h-r-e-a-d_-l-o-c-a-l_-k-r-y-o.html">THREAD_LOCAL_KRYO</a></td>
-<td>
-<code><span class="keyword">val </span><span class="identifier">THREAD_LOCAL_KRYO</span><span class="symbol">: </span><a href="http://docs.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html"><span class="identifier">ThreadLocal</span></a><span class="symbol">&lt;</span><span class="identifier">Kryo</span><span class="symbol">&gt;</span></code>
-<p>Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
-simple, totally non-extensible binary (sub)format.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <h3>Functions</h3>
@@ -254,17 +336,23 @@ simple, totally non-extensible binary (sub)format.</p>
 <tbody>
 <tr>
 <td>
+<a href="create-internal-kryo.html">createInternalKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">createInternalKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$createInternalKryo(com.esotericsoftware.kryo.Kryo)/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;CordaKryo(makeNoWhitelistClassResolver())<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="create-kryo.html">createKryo</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">createKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$createKryo(com.esotericsoftware.kryo.Kryo)/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;Kryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
+<code><span class="keyword">fun </span><span class="identifier">createKryo</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$createKryo(com.esotericsoftware.kryo.Kryo)/k">k</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;CordaKryo(makeStandardClassResolver())<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
 </tr>
 <tr>
 <td>
 <a href="deserialize.html">deserialize</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><br/>
-<code><span class="keyword">fun </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.serialization.deserialize.T)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-opaque-bytes/index.html"><span class="identifier">OpaqueBytes</span></a><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.OpaqueBytes, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code><br/>
+<code><span class="keyword">fun </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><a href="../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.transactions.WireTransaction)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><a href="../net.corda.core.transactions/-wire-transaction/index.html"><span class="identifier">WireTransaction</span></a></code><br/>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span><span class="symbol">.</span><span class="identifier">deserialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$deserialize(net.corda.core.serialization.SerializedBytes((net.corda.core.serialization.deserialize.T)), com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;if (internalOnly) threadLocalStorageKryo() else threadLocalP2PKryo()<span class="symbol">)</span><span class="symbol">: </span><span class="identifier">T</span></code></td>
 </tr>
 <tr>
 <td>
@@ -274,12 +362,36 @@ simple, totally non-extensible binary (sub)format.</p>
 </tr>
 <tr>
 <td>
+<a href="make-no-whitelist-class-resolver.html">makeNoWhitelistClassResolver</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">makeNoWhitelistClassResolver</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ClassResolver</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="make-standard-class-resolver.html">makeStandardClassResolver</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">makeStandardClassResolver</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">ClassResolver</span></code></td>
+</tr>
+<tr>
+<td>
 <a href="serialize.html">serialize</a></td>
 <td>
-<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;THREAD_LOCAL_KRYO.get()<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
+<code><span class="keyword">fun </span><span class="symbol">&lt;</span><span class="identifier">T</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">Any</span><span class="symbol">&gt;</span> <span class="identifier">T</span><span class="symbol">.</span><span class="identifier">serialize</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo, kotlin.Boolean)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span>&nbsp;<span class="symbol">=</span>&nbsp;threadLocalP2PKryo()<span class="symbol">, </span><span class="identifier" id="net.corda.core.serialization$serialize(net.corda.core.serialization.serialize.T, com.esotericsoftware.kryo.Kryo, kotlin.Boolean)/internalOnly">internalOnly</span><span class="symbol">:</span>&nbsp;<span class="identifier">Boolean</span>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="-serialized-bytes/index.html"><span class="identifier">SerializedBytes</span></a><span class="symbol">&lt;</span><span class="identifier">T</span><span class="symbol">&gt;</span></code>
 <p>Can be called on any object to convert it to a byte array (wrapped by <a href="-serialized-bytes/index.html">SerializedBytes</a>), regardless of whether
 the type is marked as serializable or was designed for it (so be careful!).</p>
 </td>
+</tr>
+<tr>
+<td>
+<a href="thread-local-p2-p-kryo.html">threadLocalP2PKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">threadLocalP2PKryo</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
+</tr>
+<tr>
+<td>
+<a href="thread-local-storage-kryo.html">threadLocalStorageKryo</a></td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">threadLocalStorageKryo</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Kryo</span></code></td>
 </tr>
 </tbody>
 </table>

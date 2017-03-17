@@ -1,0 +1,26 @@
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+dependencies {
+    compile project(':core')
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    // Jackson and its plugins: parsing to/from JSON and other textual formats.
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
+    // Yaml is useful for parsing strings to method calls.
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
+    // This adds support for java.time types.
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+
+    testCompile "junit:junit:$junit_version"
+}

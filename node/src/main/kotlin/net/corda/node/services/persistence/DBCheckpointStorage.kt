@@ -4,7 +4,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.threadLocalStorageKryo
+import net.corda.core.serialization.storageKryo
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.utilities.*
@@ -39,7 +39,7 @@ class DBCheckpointStorage : CheckpointStorage {
     private val checkpointStorage = synchronizedMap(CheckpointMap())
 
     override fun addCheckpoint(checkpoint: Checkpoint) {
-        checkpointStorage.put(checkpoint.id, checkpoint.serialize(threadLocalStorageKryo(), true))
+        checkpointStorage.put(checkpoint.id, checkpoint.serialize(storageKryo(), true))
     }
 
     override fun removeCheckpoint(checkpoint: Checkpoint) {

@@ -1,10 +1,7 @@
 {
   "fixedLeg": {
     "fixedRatePayer": "fixedRatePayerKey",
-    "notional": {
-      "quantity": 2500000000,
-      "token": "EUR"
-    },
+    "notional": "€25000000",
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
     "effectiveDateAdjustment": null,
@@ -26,10 +23,7 @@
   },
   "floatingLeg": {
     "floatingRatePayer": "floatingRatePayerKey",
-    "notional": {
-      "quantity": 2500000000,
-      "token": "EUR"
-    },
+    "notional": "€25000000",
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",
     "effectiveDateAdjustment": null,
@@ -66,22 +60,10 @@
     "baseCurrency": "EUR",
     "eligibleCurrency": "EUR",
     "eligibleCreditSupport": "Cash in an Eligible Currency",
-    "independentAmounts": {
-      "quantity": 0,
-      "token": "EUR"
-    },
-    "threshold": {
-      "quantity": 0,
-      "token": "EUR"
-    },
-    "minimumTransferAmount": {
-      "quantity": 25000000,
-      "token": "EUR"
-    },
-    "rounding": {
-      "quantity": 1000000,
-      "token": "EUR"
-    },
+    "independentAmounts": "0 EUR",
+    "threshold": "0 EUR",
+    "minimumTransferAmount": "250000 EUR",
+    "rounding": "10000 EUR",
     "valuationDateDescription": "Every Local Business Day",
     "notificationTime": "2:00pm London",
     "resolutionTime": "2:00pm London time on the first LocalBusiness Day following the date on which the notice is given ",

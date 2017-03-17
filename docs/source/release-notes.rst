@@ -4,6 +4,15 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Milestone 10
+------------
+
+Important: There are configuration changes in M10 due to the split of the Artemis port into separate P2P and RPC
+ports. To upgrade, you *must*:
+
+ 1. In Gradle build configurations replace any references to ``artemisPort`` with ``p2pPort``.
+ 2. In node configurations replace ``artemisAddress`` with ``p2pAddress``.
+
 Milestone 9
 -----------
 
@@ -11,10 +20,10 @@ This release focuses on improvements to resiliency of the core infrastructure, w
 fault tolerant (BFT) decentralised notary, based on the BFT-SMaRT protocol and isolating the web server from the
 Corda node.
 
-With thanks to open source contributor Thomas Schroeter for providing the BFT notary, Corda can now resist malicious
-attacks by members of a distributed notary service. If your notary has five members, two can become hacked or malicious
-simultaneously and the system continues unaffected!
-.. You can read more about this new feature <here>.
+With thanks to open source contributor Thomas Schroeter for providing the BFT notary prototype, Corda can now resist
+malicious attacks by members of a distributed notary service. If your notary service cluster has seven members, two can
+become hacked or malicious simultaneously and the system continues unaffected! This work is still in development stage,
+and more features are coming in the next snapshot!
 
 The web server has been split out of the Corda node as part of our ongoing hardening of the node. We now provide a Jetty
 servlet container pre-configured to contact a Corda node as a backend service out of the box, which means individual

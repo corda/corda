@@ -57,6 +57,7 @@ class ProgressTracker(vararg steps: Step) {
         open fun childProgressTracker(): ProgressTracker? = null
     }
 
+    // TODO: There's no actual way to create these steps anymore!
     /** This class makes it easier to relabel a step on the fly, to provide transient information. */
     open inner class RelabelableStep(currentLabel: String) : Step(currentLabel) {
         override val changes: BehaviorSubject<Change> = BehaviorSubject.create()
@@ -88,7 +89,7 @@ class ProgressTracker(vararg steps: Step) {
     @CordaSerializable
     private data class Child(val tracker: ProgressTracker, @Transient val subscription: Subscription?)
 
-    private val childProgressTrackers = HashMap<Step, Child>()
+    private val childProgressTrackers = mutableMapOf<Step, Child>()
 
     init {
         steps.forEach {

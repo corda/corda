@@ -8,6 +8,7 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.MetaData
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -16,6 +17,7 @@ import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
+import org.slf4j.Logger
 import java.io.BufferedInputStream
 import java.util.*
 
@@ -33,7 +35,7 @@ object DefaultKryoCustomizer {
             // for change to a class.
             setDefaultSerializer(CompatibleFieldSerializer::class.java)
             // Take the safest route here and allow subclasses to have fields named the same as super classes.
-            fieldSerializerConfig.setCachedFieldNameStrategy(FieldSerializer.CachedFieldNameStrategy.EXTENDED)
+            fieldSerializerConfig.cachedFieldNameStrategy = FieldSerializer.CachedFieldNameStrategy.EXTENDED
 
             // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
             // no-arg constructor available.
@@ -73,6 +75,11 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
 
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
+
+            register(MetaData::class.java, MetaDataSerializer)
+            register(BitSet::class.java, ReferencesAwareJavaSerializer)
+
+            addDefaultSerializer(Logger::class.java, LoggerSerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }

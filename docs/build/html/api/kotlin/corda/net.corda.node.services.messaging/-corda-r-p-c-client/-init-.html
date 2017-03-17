@@ -2,13 +2,13 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>CordaRPCClient.<init> - corda</title>
-<link rel="stylesheet" href="..\..\..\style.css">
+<link rel="stylesheet" href="../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../index.html">corda</a>&nbsp;/&nbsp;<a href="../index.html">net.corda.node.services.messaging</a>&nbsp;/&nbsp;<a href="index.html">CordaRPCClient</a>&nbsp;/&nbsp;<a href=".">&lt;init&gt;</a><br/>
 <br/>
 <h1>&lt;init&gt;</h1>
-<code><span class="identifier">CordaRPCClient</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-s-s-l-configuration/index.html"><span class="identifier">SSLConfiguration</span></a><span class="symbol">?</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/serviceConfigurationOverride">serviceConfigurationOverride</span><span class="symbol">:</span>&nbsp;<span class="identifier">ServerLocator</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
+<code><span class="identifier">CordaRPCClient</span><span class="symbol">(</span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/host">host</span><span class="symbol">:</span>&nbsp;<span class="identifier">HostAndPort</span><span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/config">config</span><span class="symbol">:</span>&nbsp;<a href="../../net.corda.node.services.config/-s-s-l-configuration/index.html"><span class="identifier">SSLConfiguration</span></a><span class="symbol">?</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">, </span><span class="identifier" id="net.corda.node.services.messaging.CordaRPCClient$<init>(com.google.common.net.HostAndPort, net.corda.node.services.config.SSLConfiguration, kotlin.Function1((org.apache.activemq.artemis.api.core.client.ServerLocator, kotlin.Unit)))/serviceConfigurationOverride">serviceConfigurationOverride</span><span class="symbol">:</span>&nbsp;<span class="identifier">ServerLocator</span><span class="symbol">.</span><span class="symbol">(</span><span class="symbol">)</span>&nbsp;<span class="symbol">-&gt;</span>&nbsp;<span class="identifier">Unit</span>&nbsp;<span class="symbol">=</span>&nbsp;null<span class="symbol">)</span></code>
 <p>An RPC client connects to the specified server and allows you to make calls to the server that perform various
 useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review the docsite to learn more about how this API works.</p>
 <h3>Parameters</h3>
@@ -16,6 +16,6 @@ useful tasks. See the documentation for <a href="proxy.html">proxy</a> or review
 <p><a name="host"></a>
 <code>host</code> - The hostname and messaging port of the node.
 <p><a name="config"></a>
-<code>config</code> - If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
+<code>config</code> - If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will only be authenticated on non-SSL RPC port, the RPC traffic with not be encrypted when SSL is disabled.
 </BODY>
 </HTML>

@@ -7,6 +7,10 @@
         <Console name="Console-Appender" target="SYSTEM_OUT">
             <PatternLayout pattern="[%-5level] %d{HH:mm:ss.SSS} [%t] %c{2}.%M - %msg%n" />
         </Console>
+        <!-- Required for printBasicInfo -->
+        <Console name="Console-Appender-Println" target="SYSTEM_OUT">
+            <PatternLayout pattern="%msg%n" />
+        </Console>
     </Appenders>
     <Loggers>
         <Root level="info">
@@ -14,6 +18,9 @@
         </Root>
         <Logger name="net.corda" level="${sys:defaultLogLevel}" additivity="false">
             <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="BasicInfo" additivity="false">
+            <AppenderRef ref="Console-Appender-Println"/>
         </Logger>
     </Loggers>
 </Configuration>

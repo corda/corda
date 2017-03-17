@@ -139,6 +139,9 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     protected fun tcpTransport(direction: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true): TransportConfiguration {
+        // Will throw exception if enableSSL = true but config is missing
+        require(config != null || !enableSSL) { "SSL configuration cannot be null when SSL is enabled." }
+
         val config = config
         val options = mutableMapOf<String, Any?>(
                 // Basic TCP target details

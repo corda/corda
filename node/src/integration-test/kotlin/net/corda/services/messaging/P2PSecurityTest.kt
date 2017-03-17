@@ -15,6 +15,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
+import net.corda.testing.MOCK_VERSION
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
@@ -31,7 +32,7 @@ class P2PSecurityTest : NodeBasedTest() {
         val incorrectNetworkMapName = random63BitValue().toString()
         val node = startNode("Bob", configOverrides = mapOf(
                 "networkMapService" to mapOf(
-                        "address" to networkMapNode.configuration.artemisAddress.toString(),
+                        "address" to networkMapNode.configuration.p2pAddress.toString(),
                         "legalName" to incorrectNetworkMapName
                 )
         ))
@@ -56,13 +57,13 @@ class P2PSecurityTest : NodeBasedTest() {
         val config = TestNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath() / legalName,
                 myLegalName = legalName,
-                networkMapService = NetworkMapInfo(networkMapNode.configuration.artemisAddress, networkMapNode.info.legalIdentity.name))
+                networkMapService = NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config).apply { start() }
     }
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: String): ListenableFuture<NetworkMapService.RegistrationResponse> {
-        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public))
+        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public), MOCK_VERSION)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(identity.private), net.myAddress)
         return net.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.net.myAddress)

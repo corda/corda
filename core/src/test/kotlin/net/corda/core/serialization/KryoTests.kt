@@ -1,20 +1,37 @@
 package net.corda.core.serialization
 
+import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
-import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class KryoTests {
 
-    private val kryo = createKryo()
+    private lateinit var kryo: Kryo
+
+    @Before
+    fun setup() {
+        kryo = p2PKryo().borrow()
+    }
+
+    @After
+    fun teardown() {
+        p2PKryo().release(kryo)
+    }
 
     @Test
     fun ok() {
@@ -92,6 +109,30 @@ class KryoTests {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
+    }
+
+    @Test
+    fun `serialize - deserialize MetaData`() {
+        Security.addProvider(BouncyCastleProvider())
+        Security.addProvider(BouncyCastlePQCProvider())
+        val testString = "Hello World"
+        val testBytes = testString.toByteArray()
+        val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val bitSet = java.util.BitSet(10)
+        bitSet.set(3)
+
+        val meta = MetaData("ECDSA_SECP256K1_SHA256", "M9", SignatureType.FULL, Instant.now(), bitSet, bitSet, testBytes, keyPair1.public)
+        val serializedMetaData = meta.bytes()
+        val meta2 = serializedMetaData.deserialize<MetaData>()
+        assertEquals(meta2, meta)
+    }
+
+    @Test
+    fun `serialize - deserialize Logger`() {
+        val logger = LoggerFactory.getLogger("aName")
+        val logger2 = logger.serialize(storageKryo()).deserialize(storageKryo())
+        assertEquals(logger.name, logger2.name)
+        assertTrue(logger === logger2)
     }
 
     @CordaSerializable

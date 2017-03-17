@@ -24,11 +24,13 @@ import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.Closeable
+import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import javax.annotation.concurrent.GuardedBy
 import javax.annotation.concurrent.ThreadSafe
@@ -107,19 +109,24 @@ class CordaRPCClientImpl(private val session: ClientSession,
     // do this.
     private fun <T : Any> ClientMessage.deserialize(kryo: Kryo): T = ByteArray(bodySize).apply { bodyBuffer.readBytes(this) }.deserialize(kryo)
 
+    // We by default use a weak reference so GC can happen, otherwise they persist for the life of the client.
     @GuardedBy("sessionLock")
-    private val addressToQueueObservables = CacheBuilder.newBuilder().build<String, QueuedObservable>()
+    private val addressToQueuedObservables = CacheBuilder.newBuilder().weakValues().build<String, QueuedObservable>()
+    // This is used to hold a reference counted hard reference when we know there are subscribers.
+    private val hardReferencesToQueuedObservables = Collections.synchronizedSet(mutableSetOf<QueuedObservable>())
 
     private var producer: ClientProducer? = null
 
-    private inner class ObservableDeserializer(private val qName: String,
-                                               private val rpcName: String,
-                                               private val rpcLocation: Throwable) : Serializer<Observable<Any>>() {
+    class ObservableDeserializer() : Serializer<Observable<Any>>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
+            val qName = kryo.context[RPCKryoQNameKey] as String
+            val rpcName = kryo.context[RPCKryoMethodNameKey] as String
+            val rpcLocation = kryo.context[RPCKryoLocationKey] as Throwable
+            val rpcClient = kryo.context[RPCKryoClientKey] as CordaRPCClientImpl
             val handle = input.readInt(true)
-            val ob = sessionLock.withLock {
-                addressToQueueObservables.getIfPresent(qName) ?: QueuedObservable(qName, rpcName, rpcLocation, this).apply {
-                    addressToQueueObservables.put(qName, this)
+            val ob = rpcClient.sessionLock.withLock {
+                rpcClient.addressToQueuedObservables.getIfPresent(qName) ?: rpcClient.QueuedObservable(qName, rpcName, rpcLocation).apply {
+                    rpcClient.addressToQueuedObservables.put(qName, this)
                 }
             }
             val result = ob.getForHandle(handle)
@@ -177,9 +184,17 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
             checkMethodVersion(method)
 
-            // sendRequest may return a reconfigured Kryo if the method returns observables.
-            val kryo: Kryo = sendRequest(args, location, method) ?: createRPCKryo()
-            val next: ErrorOr<*> = receiveResponse(kryo, method, timeout)
+            val msg: ClientMessage = createMessage(method)
+            // We could of course also check the return type of the method to see if it's Observable, but I'd
+            // rather haved the annotation be used consistently.
+            val returnsObservables = method.isAnnotationPresent(RPCReturnsObservables::class.java)
+            val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else createRPCKryoForDeserialization(this@CordaRPCClientImpl)
+            val next: ErrorOr<*> = try {
+                sendRequest(args, msg)
+                receiveResponse(kryo, method, timeout)
+            } finally {
+                releaseRPCKryoForDeserialization(kryo)
+            }
             rpcLog.debug { "<- RPC <- ${method.name} = $next" }
             return unwrapOrThrow(next)
         }
@@ -210,22 +225,18 @@ class CordaRPCClientImpl(private val session: ClientSession,
             return next
         }
 
-        private fun sendRequest(args: Array<out Any>?, location: Throwable, method: Method): Kryo? {
-            // We could of course also check the return type of the method to see if it's Observable, but I'd
-            // rather haved the annotation be used consistently.
-            val returnsObservables = method.isAnnotationPresent(RPCReturnsObservables::class.java)
-
+        private fun sendRequest(args: Array<out Any>?, msg: ClientMessage) {
             sessionLock.withLock {
-                val msg: ClientMessage = createMessage(method)
-                val kryo = if (returnsObservables) maybePrepareForObservables(location, method, msg) else null
+                val argsKryo = createRPCKryoForDeserialization(this@CordaRPCClientImpl)
                 val serializedArgs = try {
-                    (args ?: emptyArray<Any?>()).serialize(createRPCKryo())
+                    (args ?: emptyArray<Any?>()).serialize(argsKryo)
                 } catch (e: KryoException) {
                     throw RPCException("Could not serialize RPC arguments", e)
+                } finally {
+                    releaseRPCKryoForDeserialization(argsKryo)
                 }
                 msg.writeBodyBufferBytes(serializedArgs.bytes)
                 producer!!.send(ArtemisMessagingComponent.RPC_REQUESTS_QUEUE, msg)
-                return kryo
             }
         }
 
@@ -237,7 +248,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
             msg.putLongProperty(ClientRPCRequestMessage.OBSERVATIONS_TO, observationsId)
             // And make sure that we deserialise observable handles so that they're linked to the right
             // queue. Also record a bit of metadata for debugging purposes.
-            return createRPCKryo(observableSerializer = ObservableDeserializer(observationsQueueName, method.name, location))
+            return createRPCKryoForDeserialization(this@CordaRPCClientImpl, observationsQueueName, method.name, location)
         }
 
         private fun createMessage(method: Method): ClientMessage {
@@ -273,40 +284,78 @@ class CordaRPCClientImpl(private val session: ClientSession,
     @ThreadSafe
     private inner class QueuedObservable(private val qName: String,
                                          private val rpcName: String,
-                                         private val rpcLocation: Throwable,
-                                         private val observableDeserializer: ObservableDeserializer) {
+                                         private val rpcLocation: Throwable) {
         private val root = PublishSubject.create<MarshalledObservation>()
         private val rootShared = root.doOnUnsubscribe { close() }.share()
 
         // This could be made more efficient by using a specialised IntMap
-        private val observables = HashMap<Int, Observable<Any>>()
+        // When handling this map we don't synchronise on [this], otherwise there is a race condition between close() and deliver()
+        private val observables = Collections.synchronizedMap(HashMap<Int, Observable<Any>>())
 
-        private var consumer: ClientConsumer? = sessionLock.withLock { session.createConsumer(qName) }.setMessageHandler { deliver(it) }
+        private var consumer: ClientConsumer? = null
 
-        @Synchronized
+        private val referenceCount = AtomicInteger(0)
+
+        // We have to create a weak reference, otherwise we cannot be GC'd.
+        init {
+            val weakThis = WeakReference<QueuedObservable>(this)
+            consumer = sessionLock.withLock { session.createConsumer(qName) }.setMessageHandler { weakThis.get()?.deliver(it) }
+        }
+
+        /**
+         * We have to reference count subscriptions to the returned [Observable]s to prevent early GC because we are
+         * weak referenced.
+         *
+         * Derived [Observables] (e.g. filtered etc) hold a strong reference to the original, but for example, if
+         * the pattern as follows is used, the original passes out of scope and the direction of reference is from the
+         * original to the [Observer].  We use the reference counting to allow for this pattern.
+         *
+         * val observationsSubject = PublishSubject.create<Observation>()
+         * originalObservable.subscribe(observationsSubject)
+         * return observationsSubject
+         */
+        private fun refCountUp() {
+            if(referenceCount.andIncrement == 0) {
+                hardReferencesToQueuedObservables.add(this)
+            }
+        }
+
+        private fun refCountDown() {
+            if(referenceCount.decrementAndGet() == 0) {
+                hardReferencesToQueuedObservables.remove(this)
+            }
+        }
+
         fun getForHandle(handle: Int): Observable<Any> {
-            return observables.getOrPut(handle) {
-                /**
-                 * Note that the order of bufferUntilSubscribed() -> dematerialize() is very important here.
-                 *
-                 * In particular doing it the other way around may result in the following edge case:
-                 * The RPC returns two (or more) Observables. The first Observable unsubscribes *during serialisation*,
-                 * before the second one is hit, causing the [rootShared] to unsubscribe and consequently closing
-                 * the underlying artemis queue, even though the second Observable was not even registered.
-                 *
-                 * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
-                 * subscribes, which must be after full deserialisation and registering of all top level Observables.
-                 */
-                rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().share()
+            synchronized(observables) {
+                return observables.getOrPut(handle) {
+                    /**
+                     * Note that the order of bufferUntilSubscribed() -> dematerialize() is very important here.
+                     *
+                     * In particular doing it the other way around may result in the following edge case:
+                     * The RPC returns two (or more) Observables. The first Observable unsubscribes *during serialisation*,
+                     * before the second one is hit, causing the [rootShared] to unsubscribe and consequently closing
+                     * the underlying artemis queue, even though the second Observable was not even registered.
+                     *
+                     * The buffer -> dematerialize order ensures that the Observable may not unsubscribe until the caller
+                     * subscribes, which must be after full deserialisation and registering of all top level Observables.
+                     *
+                     * In addition, when subscribe and unsubscribe is called on the [Observable] returned here, we
+                     * reference count a hard reference to this [QueuedObservable] to prevent premature GC.
+                     */
+                    rootShared.filter { it.forHandle == handle }.map { it.what }.bufferUntilSubscribed().dematerialize<Any>().doOnSubscribe { refCountUp() }.doOnUnsubscribe { refCountDown() }.share()
+                }
             }
         }
 
         private fun deliver(msg: ClientMessage) {
             msg.acknowledge()
-            val kryo = createRPCKryo(observableSerializer = observableDeserializer)
-            val received: MarshalledObservation = msg.deserialize(kryo)
+            val kryo = createRPCKryoForDeserialization(this@CordaRPCClientImpl, qName, rpcName, rpcLocation)
+            val received: MarshalledObservation = try { msg.deserialize(kryo) } finally {
+                releaseRPCKryoForDeserialization(kryo)
+            }
             rpcLog.debug { "<- Observable [$rpcName] <- Received $received" }
-            synchronized(this) {
+            synchronized(observables) {
                 // Force creation of the buffer if it doesn't already exist.
                 getForHandle(received.forHandle)
                 root.onNext(received)
@@ -325,9 +374,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
         fun finalize() {
             val c = synchronized(this) { consumer }
             if (c != null) {
-                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to or explicitly closed. " +
+                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to. " +
                         "This wastes server-side resources because it was queueing observations for retrieval. " +
-                        "It is being closed now, but please adjust your code to cast the observable to AutoCloseable and then close it explicitly.", rpcLocation)
+                        "It is being closed now, but please adjust your code to subscribe and unsubscribe from the observable to close it explicitly.", rpcLocation)
                 c.close()
             }
         }

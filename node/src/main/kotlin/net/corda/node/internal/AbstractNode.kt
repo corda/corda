@@ -25,6 +25,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.*
 import net.corda.node.services.api.*
+import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
@@ -58,7 +59,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -96,6 +96,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract val log: Logger
     protected abstract val networkMapAddress: SingleMessageRecipient?
+    protected abstract val version: Version
 
     // We will run as much stuff in this single thread as possible to keep the risk of thread safety bugs low during the
     // low-performance prototyping period.
@@ -124,10 +125,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic) }
         }
 
-        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
-            require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
-            log.info("Registering flow ${markerClass.java.name}")
-            flowFactories[markerClass.java] = flowFactory
+        override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
+            require(markerClass !in flowFactories) { "${markerClass.name} has already been used to register a flow" }
+            log.info("Registering flow ${markerClass.name}")
+            flowFactories[markerClass] = flowFactory
         }
 
         override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
@@ -222,7 +223,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(CordaRPCOpsImpl(services, smm, database))
-            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class) { ContractUpgradeFlow.Acceptor(it) }
+            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()
@@ -281,7 +282,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
-        return NodeInfo(net.myAddress, legalIdentity, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(net.myAddress, legalIdentity, version, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -380,15 +381,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
-        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
-            "Initial network map address must indicate a node that provides a network map service"
-        }
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may run without any network map service sometimes.
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
-
         } else {
             registerWithNetworkMap()
         }
@@ -399,11 +396,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     protected open fun registerWithNetworkMap(): ListenableFuture<Unit> {
+        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
+            "Initial network map address must indicate a node that provides a network map service"
+        }
         val address = networkMapAddress ?: info.address
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { response ->
-            check(response.success) { "The network map service rejected our registration request" }
-            // This Future will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
+            check(response.error == null) { "Unable to register with the network map service: ${response.error}" }
+            // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(net, address, true, null)
         }
     }
@@ -440,6 +440,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider)
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
+                val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")
+                val client = BFTSMaRt.Client(nodeId)
+                tokenizableServices.add(client)
+                BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
+            }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
@@ -495,7 +501,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         )
     }
 
-    protected open fun constructStorageService(attachments: NodeAttachmentService,
+    protected open fun constructStorageService(attachments: AttachmentStorage,
                                                transactionStorage: TransactionStorage,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
@@ -540,13 +546,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    protected fun makeAttachmentStorage(dir: Path): NodeAttachmentService {
+    protected fun makeAttachmentStorage(dir: Path): AttachmentStorage {
         val attachmentsDir = dir / "attachments"
         try {
             attachmentsDir.createDirectory()
         } catch (e: FileAlreadyExistsException) {
         }
-        return NodeAttachmentService(attachmentsDir, services.monitoringService.metrics)
+        return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
     }
 
     protected fun createNodeDir() {

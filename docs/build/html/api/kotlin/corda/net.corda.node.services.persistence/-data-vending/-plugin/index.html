@@ -2,7 +2,7 @@
 <HEAD>
 <meta charset="UTF-8">
 <title>DataVending.Plugin - corda</title>
-<link rel="stylesheet" href="..\..\..\..\style.css">
+<link rel="stylesheet" href="../../../../style.css">
 </HEAD>
 <BODY>
 <a href="../../../index.html">corda</a>&nbsp;/&nbsp;<a href="../../index.html">net.corda.node.services.persistence</a>&nbsp;/&nbsp;<a href="../index.html">DataVending</a>&nbsp;/&nbsp;<a href=".">Plugin</a><br/>
@@ -77,13 +77,10 @@ potentially be able to live in a process separate from the node itself.</p>
 <tbody>
 <tr>
 <td>
-<a href="../../../net.corda.core.node/-corda-plugin-registry/register-r-p-c-kryo-types.html">registerRPCKryoTypes</a></td>
+<a href="../../../net.corda.core.node/-corda-plugin-registry/customize-serialization.html">customizeSerialization</a></td>
 <td>
-<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">registerRPCKryoTypes</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.CordaPluginRegistry$registerRPCKryoTypes(com.esotericsoftware.kryo.Kryo)/kryo">kryo</span><span class="symbol">:</span>&nbsp;<span class="identifier">Kryo</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
-<p>Optionally register types with <a href="#">Kryo</a> for use over RPC, as we lock down the types that can be serialised in this
-particular use case.
-For example, if you add an RPC interface that carries some contract states back and forth, you need to register
-those classes here using the <a href="#">register</a> method on Kryo.</p>
+<code><span class="keyword">open</span> <span class="keyword">fun </span><span class="identifier">customizeSerialization</span><span class="symbol">(</span><span class="identifier" id="net.corda.core.node.CordaPluginRegistry$customizeSerialization(net.corda.core.serialization.SerializationCustomization)/custom">custom</span><span class="symbol">:</span>&nbsp;<a href="../../../net.corda.core.serialization/-serialization-customization/index.html"><span class="identifier">SerializationCustomization</span></a><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">Boolean</span></code>
+<p>Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.</p>
 </td>
 </tr>
 </tbody>

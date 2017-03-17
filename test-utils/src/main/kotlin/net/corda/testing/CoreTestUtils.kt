@@ -9,7 +9,9 @@ import com.typesafe.config.Config
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.Version
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
@@ -85,6 +87,9 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 
 val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
+val MOCK_VERSION = Version(0, 0, false)
+val MOCK_NODE_VERSION_INFO = NodeVersionInfo(MOCK_VERSION, "Mock revision", "Mock Vendor")
+
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
 /**
@@ -146,7 +151,7 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass, flowFactory)
+    services.registerFlowInitiator(markerClass.java, flowFactory)
     return future
 }
 

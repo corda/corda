@@ -36,7 +36,7 @@
   
     <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
         <link rel="next" title="Networking and messaging" href="messaging.html"/>
-        <link rel="prev" title="The example CorDapp" href="tutorial-cordapp.html"/> 
+        <link rel="prev" title="Object Serialization" href="serialization.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -121,6 +121,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 </ul>
 <p class="caption"><span class="caption-text">The Corda node</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Client RPC</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#observables">Observables</a></li>
@@ -129,7 +130,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread safety</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#error-handling">Error handling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#registering-classes-with-rpc-kryo">Registering classes with RPC Kryo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#whitelisting-classes-with-the-corda-node">Whitelisting classes with the Corda node</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
@@ -176,6 +177,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
 <li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
@@ -309,17 +311,15 @@ side as if it was thrown from inside the called RPC method. These exceptions can
 <p>The client RPC wire protocol is not currently documented. To use it you must use the client library provided.
 This is likely to change in a future release.</p>
 </div>
-<div class="section" id="registering-classes-with-rpc-kryo">
-<h2>Registering classes with RPC Kryo<a class="headerlink" href="#registering-classes-with-rpc-kryo" title="Permalink to this headline">¶</a></h2>
-<p>In the present implementation of the node we use Kryo to generate the <em>on the wire</em> representation of contracts states
-or any other classes that form part of the RPC arguments or response.  To avoid the RPC interface being wide open to all
-classes on the classpath, Cordapps will currently have to register any classes or custom serialisers they require with Kryo
-if they are not one of those registered by default in <code class="docutils literal"><span class="pre">RPCKryo</span></code> via the plugin architecture.  See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a>.
-This will require some familiarity with Kryo.  An example is shown in <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
+<div class="section" id="whitelisting-classes-with-the-corda-node">
+<h2>Whitelisting classes with the Corda node<a class="headerlink" href="#whitelisting-classes-with-the-corda-node" title="Permalink to this headline">¶</a></h2>
+<p>To avoid the RPC interface being wide open to all
+classes on the classpath, Cordapps have to whitelist any classes they require with the serialization framework of Corda,
+if they are not one of those whitelisted by default in <code class="docutils literal"><span class="pre">DefaultWhitelist</span></code>, via either the plugin architecture or simply
+with the annotation <code class="docutils literal"><span class="pre">&#64;CordaSerializable</span></code>.  See <a class="reference internal" href="creating-a-cordapp.html"><span class="doc">CorDapp basics</span></a> or <a class="reference internal" href="serialization.html"><span class="doc">Object Serialization</span></a>.  An example is shown in <a class="reference internal" href="tutorial-clientrpc-api.html"><span class="doc">Client RPC API tutorial</span></a>.</p>
 <div class="admonition warning">
 <p class="first admonition-title">Warning</p>
-<p class="last">We will be replacing the use of Kryo in RPC with a stable message format and this will mean that this plugin
-customisation point will either go away completely or change.</p>
+<p class="last">We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.</p>
 </div>
 </div>
 </div>
@@ -334,7 +334,7 @@ customisation point will either go away completely or change.</p>
         <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="tutorial-cordapp.html" class="btn btn-neutral" title="The example CorDapp" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="serialization.html" class="btn btn-neutral" title="Object Serialization" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

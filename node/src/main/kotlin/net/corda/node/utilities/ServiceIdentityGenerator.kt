@@ -45,7 +45,8 @@ fun main(args: Array<String>) {
     val dirs = args[0].split(",").map { Paths.get(it) }
     val serviceId = args[1]
     val serviceName = args[2]
+    val quorumSize = args.getOrNull(3)?.toInt() ?: 1
 
     println("Generating service identity for \"$serviceName\"")
-    ServiceIdentityGenerator.generateToDisk(dirs, serviceId, serviceName)
+    ServiceIdentityGenerator.generateToDisk(dirs, serviceId, serviceName, quorumSize)
 }

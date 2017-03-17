@@ -2,7 +2,7 @@ package net.corda.webserver.servlets
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.webserver.utilities.JsonSupport
+import net.corda.jackson.JacksonSupport
 import javax.ws.rs.ext.ContextResolver
 import javax.ws.rs.ext.Provider
 
@@ -12,6 +12,6 @@ import javax.ws.rs.ext.Provider
  */
 @Provider
 class ObjectMapperConfig(rpc: CordaRPCOps) : ContextResolver<ObjectMapper> {
-    val defaultObjectMapper = JsonSupport.createDefaultMapper(rpc)
+    val defaultObjectMapper = JacksonSupport.createDefaultMapper(rpc)
     override fun getContext(type: Class<*>) = defaultObjectMapper
 }

@@ -55,6 +55,9 @@ To look at the Corda source and run some sample applications:
 * [Documentation](https://docs.corda.net)
 * [Slack channel] (https://slack.corda.net/)
 * [Forum](https://discourse.corda.net)
+* [Meetups](https://www.meetup.com/pro/corda/)
+* [Training Course](https://www.corda.net/corda-training/)
+
 
 ## Development State
  
@@ -77,7 +80,7 @@ Please read [here](./CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0](./LICENCE)
+[Apache 2.0](./LICENSE)
 
 ## Acknowledgements
 

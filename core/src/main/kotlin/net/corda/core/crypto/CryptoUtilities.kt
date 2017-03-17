@@ -22,11 +22,7 @@ fun newSecureRandom(): SecureRandom {
     }
 }
 
-/**
- * A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
- * signature. It isn't used currently, but experience from Bitcoin suggests such a feature is useful, especially when
- * building partially signed transactions.
- */
+/** A wrapper around a digital signature. */
 @CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by. */

@@ -117,6 +117,7 @@ each side.
           }
 
           // This object is serialised to the network and is the first flow message the seller sends to the buyer.
+          @CordaSerializable
           data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
                   val price: Amount<Currency>,
@@ -187,6 +188,15 @@ get a useful error message telling you which methods you didn't mark. The fix is
 and try again.
 
 .. note:: Java 9 is likely to remove this pre-marking requirement completely.
+
+Whitelisted classes with the Corda node
+---------------------------------------
+
+For security reasons, we do not want Corda nodes to be able to receive instances of any class on the classpath
+via messaging, since this has been exploited in other Java application containers in the past.  Instead, we require
+that every class contained in messages is whitelisted.  Some classes are whitelisted by default (see ``DefaultWhitelist``),
+but others outside of that set need to be whitelisted either by using the annotation ``@CordaSerializable`` or via the
+plugin framework.  See :doc:`serialization`.  You can see above that the ``SellerTradeInfo`` has been annotated.
 
 Starting your flow
 ------------------

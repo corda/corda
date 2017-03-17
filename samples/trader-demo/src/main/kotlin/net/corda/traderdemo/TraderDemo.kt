@@ -31,7 +31,6 @@ private class TraderDemo {
 
     fun main(args: Array<String>) {
         val parser = OptionParser()
-        val certsPath = parser.accepts("certificates").withRequiredArg()
 
         val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
         val options = try {
@@ -46,13 +45,13 @@ private class TraderDemo {
         // will contact the buyer and actually make something happen.
         val role = options.valueOf(roleArg)!!
         if (role == Role.BUYER) {
-            val host = HostAndPort.fromString("localhost:10004")
-            CordaRPCClient(host, sslConfigFor("BankA", options.valueOf(certsPath))).use("demo", "demo") {
+            val host = HostAndPort.fromString("localhost:10006")
+            CordaRPCClient(host).use("demo", "demo") {
                 TraderDemoClientApi(this).runBuyer()
             }
         } else {
-            val host = HostAndPort.fromString("localhost:10006")
-            CordaRPCClient(host, sslConfigFor("BankB", options.valueOf(certsPath))).use("demo", "demo") {
+            val host = HostAndPort.fromString("localhost:10009")
+            CordaRPCClient(host).use("demo", "demo") {
                 TraderDemoClientApi(this).runSeller(1000.DOLLARS, "Bank A")
             }
         }
@@ -65,14 +64,5 @@ private class TraderDemo {
 
         """.trimIndent())
         parser.printHelpOn(System.out)
-    }
-
-    // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-    private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
-        return object : SSLConfiguration {
-            override val keyStorePassword: String = "cordacadevpass"
-            override val trustStorePassword: String = "trustpass"
-            override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
-        }
     }
 }

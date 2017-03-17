@@ -59,6 +59,8 @@ R3
     The consortium behind Corda
 SIMM
     Standard Initial Margin Model. A way of determining a counterparty's margin payment to another counterparty based on a collection of trades such that, in the event of default, the receiving counterparty has limited exposure.
+Serialization
+    Object serialization is the process of converting objects into a stream of bytes and, deserialization, the reverse process.
 Service Hub
     A hub in each Corda node that manages the services upon which other components of the node depend. Services may include facilities for identity management, storage management, network map management etc.
 Signed Transaction
@@ -71,3 +73,5 @@ UTXO
     Unspent Transaction Output. First introduced by the bitcoin model, an unspent transaction is data that has been output from a transaction but not yet used in another transaction.
 Verify
     To confirm that the transaction is valid by ensuring the the outputs are correctly derived from the inputs combined with the command of the transaction.
+Whitelisting
+    To indicate that a class is intended to be passed between nodes or between a node and an RPC client, it is added to a whitelist.  This prevents the node presenting a large surface area of all classes in all dependencies of the node as containing possible vulnerabilities.
