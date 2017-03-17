@@ -1,17 +1,19 @@
-package net.corda.node
+package net.corda.nodeapi
 
 import com.google.common.net.HostAndPort
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
 import java.nio.file.FileSystems
 import java.nio.file.Path
 
 sealed class ConnectionDirection {
-    object Inbound : ConnectionDirection()
-    class Outbound(val expectedCommonName: String? = null) : ConnectionDirection()
+    class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
+    class Outbound(
+            val expectedCommonName: String? = null,
+            val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
+    ) : ConnectionDirection()
 }
 
 class ArtemisTcpTransport {
@@ -35,8 +37,6 @@ class ArtemisTcpTransport {
                 direction: ConnectionDirection,
                 hostAndPort: HostAndPort,
                 config: SSLConfiguration?,
-                acceptorFactoryClassName: String = NettyAcceptorFactory::class.java.name,
-                connectorFactoryClassName: String = NettyConnectorFactory::class.java.name,
                 enableSSL: Boolean = true
         ): TransportConfiguration {
             val options = mutableMapOf<String, Any?>(
@@ -72,8 +72,8 @@ class ArtemisTcpTransport {
                 options.putAll(tlsOptions)
             }
             val factoryName = when (direction) {
-                is ConnectionDirection.Inbound -> acceptorFactoryClassName
-                is ConnectionDirection.Outbound -> connectorFactoryClassName
+                is ConnectionDirection.Inbound -> direction.acceptorFactoryClassName
+                is ConnectionDirection.Outbound -> direction.connectorFactoryClassName
             }
             return TransportConfiguration(factoryName, options)
         }

@@ -16,9 +16,9 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.ArtemisTcpTransport
-import net.corda.node.ConnectionDirection
-import net.corda.node.expectedOnDefaultFileSystem
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.expectedOnDefaultFileSystem
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
@@ -34,6 +34,7 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
@@ -152,9 +153,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        val acceptors = mutableSetOf(verifyingTcpTransport(ConnectionDirection.Inbound, "0.0.0.0", p2pHostPort.port))
+        val connectionDirection = ConnectionDirection.Inbound(
+                acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
+        )
+        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pHostPort.port))
         if (rpcHostPort != null) {
-            acceptors.add(verifyingTcpTransport(ConnectionDirection.Inbound, "0.0.0.0", rpcHostPort.port, enableSSL = false))
+            acceptors.add(createTcpTransport(connectionDirection, "0.0.0.0", rpcHostPort.port, enableSSL = false))
         }
         acceptorConfigurations = acceptors
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
@@ -328,11 +332,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         deployBridge(address.queueName, address.hostAndPort, legalName)
     }
 
-    private fun verifyingTcpTransport(direction: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
-            ArtemisTcpTransport.tcpTransport(direction, HostAndPort.fromParts(host, port), config,
-                    enableSSL = enableSSL,
-                    connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name
-            )
+    private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
+            ArtemisTcpTransport.tcpTransport(connectionDirection, HostAndPort.fromParts(host, port), config, enableSSL = enableSSL)
 
     /**
      * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
@@ -341,7 +342,11 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * P2P address.
      */
     private fun deployBridge(queueName: String, target: HostAndPort, legalName: String) {
-        val tcpTransport = verifyingTcpTransport(ConnectionDirection.Outbound(expectedCommonName = legalName), target.hostText, target.port)
+        val connectionDirection = ConnectionDirection.Outbound(
+                connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
+                expectedCommonName = legalName
+        )
+        val tcpTransport = createTcpTransport(connectionDirection, target.hostText, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
         // We intentionally overwrite any previous connector config in case the peer legal name changed
         activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)

@@ -7,7 +7,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.copyTo
 import net.corda.core.createDirectories
 import net.corda.core.crypto.X509Utilities

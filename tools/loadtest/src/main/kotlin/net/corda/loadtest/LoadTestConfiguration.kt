@@ -1,7 +1,7 @@
 package net.corda.loadtest
 
 import com.typesafe.config.Config
-import net.corda.config.getValue
+import net.corda.nodeapi.config.getValue
 import java.nio.file.Path
 
 /**

@@ -2,7 +2,7 @@ package net.corda.node.services.messaging
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients

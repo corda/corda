@@ -1,15 +1,15 @@
 package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.minutes
 import net.corda.core.seconds
 import net.corda.core.utilities.loggerFor
-import net.corda.node.ArtemisTcpTransport.Companion.tcpTransport
-import net.corda.node.ConnectionDirection
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
+import net.corda.nodeapi.ConnectionDirection
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession

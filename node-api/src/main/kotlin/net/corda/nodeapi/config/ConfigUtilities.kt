@@ -1,9 +1,8 @@
-package net.corda.config
+package net.corda.nodeapi.config
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import java.net.URL
-import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant

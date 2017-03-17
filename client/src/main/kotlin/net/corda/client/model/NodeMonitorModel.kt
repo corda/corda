@@ -2,7 +2,7 @@ package net.corda.client.model
 
 import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineInfo

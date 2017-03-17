@@ -2,10 +2,10 @@ package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
-import net.corda.config.SSLConfiguration
-import net.corda.config.getListOrElse
-import net.corda.config.getOrElse
-import net.corda.config.getValue
+import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.getListOrElse
+import net.corda.nodeapi.config.getOrElse
+import net.corda.nodeapi.config.getValue
 import net.corda.core.div
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo

@@ -3,7 +3,7 @@ package net.corda.notarydemo
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import joptsimple.OptionParser
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.crypto.toStringShort
 import net.corda.core.div
 import net.corda.core.getOrThrow

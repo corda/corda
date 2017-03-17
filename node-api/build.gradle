@@ -42,11 +42,15 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
-    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
+}
+
+configurations.compile {
+    // We want to use SLF4J's version of these binding: jcl-over-slf4j
+    // Remove any transitive dependency on Apache's version.
+    exclude group: 'commons-logging', module: 'commons-logging'
 }

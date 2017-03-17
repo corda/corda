@@ -2,7 +2,7 @@ package net.corda.traderdemo
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.div
 import net.corda.core.utilities.loggerFor

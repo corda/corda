@@ -2,7 +2,7 @@ package net.corda.attachmentdemo
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
-import net.corda.config.SSLConfiguration
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
