@@ -27,7 +27,12 @@ sourceSets {
     generated {
         java {
             srcDir "${projectDir}/generated/source/kapt/main/"
+            compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
         }
+    }
+    test {
+        compileClasspath += sourceSets.generated.output + sourceSets.main.compileClasspath
+        runtimeClasspath += compileClasspath
     }
 }
 
@@ -60,8 +65,10 @@ project.afterEvaluate {
     jar.dependsOn.each { jar.dependsOn.remove it }
     buildGenerated.dependsOn.each { buildGenerated.dependsOn.remove it }
     jar.dependsOn buildGenerated
+    compileTestKotlin.dependsOn buildGenerated
     buildGenerated.dependsOn classes
     compileKotlin.dependsOn.remove kaptKotlin
+    compileTestKotlin.dependsOn.remove kaptTestKotlin
     buildKapt.dependsOn kaptKotlin
     buildKapt.mustRunAfter kaptKotlin
 }
