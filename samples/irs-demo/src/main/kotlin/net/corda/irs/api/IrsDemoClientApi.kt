@@ -14,8 +14,7 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
 
     fun runTrade(tradeId: String): Boolean {
         val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("example-irs-trade.json"))
-        val (keyA, keyB) = api.getJson<Pair<String, String>>("partykeys")
-        val tradeFile = fileContents.replace("tradeXXX", tradeId).replace("fixedRatePayerKey", keyA).replace("floatingRatePayerKey", keyB)
+        val tradeFile = fileContents.replace("tradeXXX", tradeId)
         return api.postJson("deals", tradeFile)
     }
 

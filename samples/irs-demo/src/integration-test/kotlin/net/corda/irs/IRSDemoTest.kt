@@ -61,7 +61,7 @@ class IRSDemoTest : IntegrationTestCategory {
         val vaultUpdates = proxy.vaultAndUpdates().second
 
         val fixingDates = vaultUpdates.map { update ->
-            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()
+            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State<*>>()
             irsStates.mapNotNull { it.calculation.nextFixingDate() }.max()
         }.cache().toBlocking()
 
@@ -76,8 +76,6 @@ class IRSDemoTest : IntegrationTestCategory {
     private fun runTrade(nodeAddr: HostAndPort, fixedRatePayer: Party, floatingRatePayer: Party) {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"))
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
-                .replace("fixedRatePayerKey", fixedRatePayer.owningKey.toBase58String())
-                .replace("floatingRatePayerKey", floatingRatePayer.owningKey.toBase58String())
         val url = URL("http://$nodeAddr/api/irs/deals")
         assert(postJson(url, tradeFile))
     }
