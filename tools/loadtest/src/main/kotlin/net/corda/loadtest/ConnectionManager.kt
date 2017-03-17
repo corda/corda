@@ -11,7 +11,7 @@ import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.driver.PortAllocation
-import net.corda.node.services.config.SSLConfiguration
+import net.corda.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream

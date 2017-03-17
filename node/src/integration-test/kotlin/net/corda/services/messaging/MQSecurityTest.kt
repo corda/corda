@@ -2,6 +2,7 @@ package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
+import net.corda.config.SSLConfiguration
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
@@ -13,7 +14,6 @@ import net.corda.core.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.node.services.User
-import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE

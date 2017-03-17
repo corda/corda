@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
+import net.corda.config.SSLConfiguration
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -18,7 +19,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.messaging.NodeMessagingClient

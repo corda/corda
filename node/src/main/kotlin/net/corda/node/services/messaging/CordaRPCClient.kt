@@ -1,14 +1,15 @@
 package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
+import net.corda.config.SSLConfiguration
 import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.minutes
 import net.corda.core.seconds
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.SSLConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
+import net.corda.node.ArtemisTcpTransport.Companion.tcpTransport
+import net.corda.node.ConnectionDirection
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
@@ -52,7 +53,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
             check(!running)
             log.logElapsedTime("Startup") {
                 checkStorePasswords()
-                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port, enableSSL = config != null)).apply {
+                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(ConnectionDirection.Outbound(), host, config, enableSSL = config != null)).apply {
                     // TODO: Put these in config file or make it user configurable?
                     threadPoolMaxSize = 1
                     confirmationWindowSize = 100000 // a guess

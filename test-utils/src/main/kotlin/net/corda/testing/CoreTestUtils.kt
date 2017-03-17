@@ -6,6 +6,7 @@ package net.corda.testing
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.typesafe.config.Config
+import net.corda.config.SSLConfiguration
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -20,7 +21,6 @@ import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AddOrRemove.ADD

@@ -12,10 +12,11 @@ import net.corda.core.serialization.opaque
 import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.ArtemisTcpTransport
+import net.corda.node.ConnectionDirection
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -129,7 +130,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
             log.info("Connecting to server: $serverHostPort")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = tcpTransport(Outbound(), serverHostPort.hostText, serverHostPort.port)
+            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverHostPort, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
             clientFactory = locator.createSessionFactory()
 

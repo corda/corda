@@ -20,7 +20,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.SSLConfiguration
+import net.corda.config.SSLConfiguration
 import org.jetbrains.exposed.sql.Database
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture

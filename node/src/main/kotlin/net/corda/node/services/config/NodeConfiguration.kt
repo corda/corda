@@ -2,6 +2,10 @@ package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import net.corda.config.SSLConfiguration
+import net.corda.config.getListOrElse
+import net.corda.config.getOrElse
+import net.corda.config.getValue
 import net.corda.core.div
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo
@@ -15,13 +19,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-interface SSLConfiguration {
-    val keyStorePassword: String
-    val trustStorePassword: String
-    val certificatesDirectory: Path
-    val keyStoreFile: Path get() = certificatesDirectory / "sslkeystore.jks"
-    val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
-}
 
 interface NodeConfiguration : SSLConfiguration {
     val baseDirectory: Path
