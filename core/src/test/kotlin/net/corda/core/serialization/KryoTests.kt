@@ -10,6 +10,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.InputStream
@@ -25,12 +26,8 @@ class KryoTests {
 
     @Before
     fun setup() {
+        // We deliberately do not return this, since we do some unorthodox registering below and do not want to pollute the pool.
         kryo = p2PKryo().borrow()
-    }
-
-    @After
-    fun teardown() {
-        p2PKryo().release(kryo)
     }
 
     @Test

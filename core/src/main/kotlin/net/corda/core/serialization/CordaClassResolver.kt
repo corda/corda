@@ -92,6 +92,24 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(it) }
                 || (type.superclass != null && hasAnnotationOnInterface(type.superclass))
     }
+
+    // Need to clear out class names from attachments.
+    override fun reset() {
+        super.reset()
+        // Kryo creates a cache of class name to Class<*> which does not work so well with multiple class loaders.
+        // TODO: come up with a more efficient way.  e.g. segregate the name space by class loader.
+        if(nameToClass != null) {
+            val classesToRemove: MutableList<String> = ArrayList(nameToClass.size)
+            for (entry in nameToClass.entries()) {
+                if (entry.value.classLoader is AttachmentsClassLoader) {
+                    classesToRemove += entry.key
+                }
+            }
+            for (className in classesToRemove) {
+                nameToClass.remove(className)
+            }
+        }
+    }
 }
 
 interface ClassWhitelist {

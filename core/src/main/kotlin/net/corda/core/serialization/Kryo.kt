@@ -527,11 +527,18 @@ object ReferencesAwareJavaSerializer : JavaSerializer() {
 
 val ATTACHMENT_STORAGE = "ATTACHMENT_STORAGE"
 
-var Kryo.attachmentStorage: AttachmentStorage?
+val Kryo.attachmentStorage: AttachmentStorage?
     get() = this.context.get(ATTACHMENT_STORAGE, null) as AttachmentStorage?
-    set(value) {
-        this.context.put(ATTACHMENT_STORAGE, value)
+
+fun <T> Kryo.withAttachmentStorage(attachmentStorage: AttachmentStorage?, block: () -> T): T {
+    val priorAttachmentStorage = this.attachmentStorage
+    this.context.put(ATTACHMENT_STORAGE, attachmentStorage)
+    try {
+        return block()
+    } finally {
+        this.context.put(ATTACHMENT_STORAGE, priorAttachmentStorage)
     }
+}
 
 object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
     override fun write(kryo: Kryo, output: Output, obj: HashMap<Any, Any>) {

@@ -83,14 +83,9 @@ class AttachmentClassLoaderTests {
 
     @Before
     fun setup() {
+        // Do not release these back to the pool, since we do some unorthodox modifications to them below.
         kryo = p2PKryo().borrow()
         kryo2 = p2PKryo().borrow()
-    }
-
-    @After
-    fun teardown() {
-        p2PKryo().release(kryo)
-        p2PKryo().release(kryo2)
     }
 
     @Test
@@ -258,7 +253,18 @@ class AttachmentClassLoaderTests {
         val state2 = bytes.deserialize(kryo)
         assertEquals(cl, state2.contract.javaClass.classLoader)
         assertNotNull(state2)
+
+        // We should be able to load same class from a different class loader and have them be distinct.
+        val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
+
+        kryo.classLoader = cl2
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
+
+        val state3 = bytes.deserialize(kryo)
+        assertEquals(cl2, state3.contract.javaClass.classLoader)
+        assertNotNull(state3)
     }
+
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
@@ -283,24 +289,25 @@ class AttachmentClassLoaderTests {
         kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$Commands\$Create", true, child))
 
         // todo - think about better way to push attachmentStorage down to serializer
-        kryo.attachmentStorage = storage
+        val bytes = kryo.withAttachmentStorage(storage) {
 
-        val attachmentRef = importJar(storage)
+            val attachmentRef = importJar(storage)
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
+            tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
-        val wireTransaction = tx.toWireTransaction()
+            val wireTransaction = tx.toWireTransaction()
 
-        val bytes = wireTransaction.serialize(kryo)
-
+            wireTransaction.serialize(kryo)
+        }
         // use empty attachmentStorage
-        kryo2.attachmentStorage = storage
+        kryo2.withAttachmentStorage(storage) {
 
-        val copiedWireTransaction = bytes.deserialize(kryo2)
+            val copiedWireTransaction = bytes.deserialize(kryo2)
 
-        assertEquals(1, copiedWireTransaction.outputs.size)
-        val contract2 = copiedWireTransaction.outputs[0].data.contract as DummyContractBackdoor
-        assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0].data))
+            assertEquals(1, copiedWireTransaction.outputs.size)
+            val contract2 = copiedWireTransaction.outputs[0].data.contract as DummyContractBackdoor
+            assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0].data))
+        }
     }
 
     @Test
@@ -312,22 +319,22 @@ class AttachmentClassLoaderTests {
         val storage = MockAttachmentStorage()
 
         // todo - think about better way to push attachmentStorage down to serializer
-        kryo.attachmentStorage = storage
-
         val attachmentRef = importJar(storage)
+        val bytes = kryo.withAttachmentStorage(storage) {
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
+            tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
-        val wireTransaction = tx.toWireTransaction()
+            val wireTransaction = tx.toWireTransaction()
 
-        val bytes = wireTransaction.serialize(kryo)
-
-        // use empty attachmentStorage
-        kryo2.attachmentStorage = MockAttachmentStorage()
-
-        val e = assertFailsWith(MissingAttachmentsException::class) {
-            bytes.deserialize(kryo2)
+            wireTransaction.serialize(kryo)
         }
-        assertEquals(attachmentRef, e.ids.single())
+        // use empty attachmentStorage
+        kryo2.withAttachmentStorage(MockAttachmentStorage()) {
+
+            val e = assertFailsWith(MissingAttachmentsException::class) {
+                bytes.deserialize(kryo2)
+            }
+            assertEquals(attachmentRef, e.ids.single())
+        }
     }
 }
