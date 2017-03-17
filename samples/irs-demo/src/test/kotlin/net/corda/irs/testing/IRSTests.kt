@@ -1,6 +1,7 @@
 package net.corda.irs.testing
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.AnonymousParty
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -14,7 +15,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
 
-fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
+fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
     return when (irsSelect) {
         1 -> {
 
@@ -244,8 +245,8 @@ class IRSTests {
     /**
      * Utility so I don't have to keep typing this.
      */
-    fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
-        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+    fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State<AnonymousParty> {
+        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State<AnonymousParty>>().single()
     }
 
     /**
@@ -299,7 +300,7 @@ class IRSTests {
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
-        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
+        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State<AnonymousParty>>().single()
 
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
@@ -379,7 +380,7 @@ class IRSTests {
 
             transaction("Fix") {
                 input("irs post agreement")
-                val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
+                val postAgreement = "irs post agreement".output<InterestRateSwap.State<AnonymousParty>>()
                 output("irs post first fixing") {
                     postAgreement.copy(
                             postAgreement.fixedLeg,
@@ -686,7 +687,7 @@ class IRSTests {
             transaction("Fix") {
                 input("irs post agreement1")
                 input("irs post agreement2")
-                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
+                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State<AnonymousParty>>()
                 output("irs post first fixing1") {
                     postAgreement1.copy(
                             postAgreement1.fixedLeg,
@@ -695,7 +696,7 @@ class IRSTests {
                             postAgreement1.common.copy(tradeID = "t1")
                     )
                 }
-                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
+                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State<AnonymousParty>>()
                 output("irs post first fixing2") {
                     postAgreement2.copy(
                             postAgreement2.fixedLeg,
