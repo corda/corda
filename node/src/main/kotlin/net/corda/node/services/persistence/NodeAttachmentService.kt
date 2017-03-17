@@ -172,5 +172,5 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     // Implementations for AcceptsFileUpload
     override val dataTypePrefix = "attachment"
     override val acceptableFileExtensions = listOf(".jar", ".zip")
-    override fun upload(data: InputStream) = importAttachment(data).toString()
+    override fun upload(file: InputStream) = importAttachment(file).toString()
 }
