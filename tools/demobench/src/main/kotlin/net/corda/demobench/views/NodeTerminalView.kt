@@ -46,7 +46,7 @@ class NodeTerminalView : Fragment() {
 
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
-        p2pPort.value = config.messagingPort.toString()
+        p2pPort.value = config.p2pPort.toString()
         launchWebButton.text = "Launch\nWeb Server\n(Port ${config.webPort})"
 
         val swingTerminal = SwingNode()

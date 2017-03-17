@@ -115,7 +115,7 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.messagingPort.value = nodeController.nextPort
+        model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
@@ -158,7 +158,7 @@ class NodeTabView : Fragment() {
         }
     }
 
-    private fun Pane.p2pPortField() = textfield(model.messagingPort, NumberStringConverter(integerFormat)) {
+    private fun Pane.p2pPortField() = textfield(model.p2pPort, NumberStringConverter(integerFormat)) {
         minWidth = numberWidth
         validator {
             if ((it == null) || it.isEmpty()) {
@@ -193,7 +193,7 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
-                } else if (port == model.messagingPort.value) {
+                } else if (port == model.p2pPort.value) {
                     error("Clashes with P2P port")
                 } else if (port == model.webPort.value) {
                     error("Clashes with web port")
@@ -217,7 +217,7 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
-                } else if (port == model.messagingPort.value) {
+                } else if (port == model.p2pPort.value) {
                     error("Clashes with P2P port")
                 } else if (port == model.rpcPort.value) {
                     error("Clashes with RPC port")
@@ -241,7 +241,7 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
-                } else if (port == model.messagingPort.value) {
+                } else if (port == model.p2pPort.value) {
                     error("Clashes with P2P port")
                 } else if (port == model.rpcPort.value) {
                     error("Clashes with RPC port")

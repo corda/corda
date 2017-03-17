@@ -9,7 +9,7 @@ import java.nio.file.StandardCopyOption
 class NodeConfig(
         baseDir: Path,
         legalName: String,
-        messagingPort: Int,
+        p2pPort: Int,
         val rpcPort: Int,
         val nearestCity: String,
         val webPort: Int,
@@ -17,7 +17,7 @@ class NodeConfig(
         val extraServices: List<String>,
         val users: List<User> = listOf(defaultUser),
         var networkMap: NetworkMapConfig? = null
-) : NetworkMapConfig(legalName, messagingPort), HasPlugins {
+) : NetworkMapConfig(legalName, p2pPort), HasPlugins {
 
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
@@ -42,11 +42,11 @@ class NodeConfig(
      */
     fun toFileConfig(): Config = ConfigFactory.empty()
             .withValue("myLegalName", valueFor(legalName))
-            .withValue("artemisAddress", addressValueFor(messagingPort))
+            .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("nearestCity", valueFor(nearestCity))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
             .withFallback(optional("networkMapService", networkMap, {
-                c, n -> c.withValue("address", addressValueFor(n.messagingPort))
+                c, n -> c.withValue("address", addressValueFor(n.p2pPort))
                     .withValue("legalName", valueFor(n.legalName))
             } ))
             .withValue("webAddress", addressValueFor(webPort))
@@ -58,7 +58,7 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-        baseDir, legalName, messagingPort, rpcPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
+        baseDir, legalName, p2pPort, rpcPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {

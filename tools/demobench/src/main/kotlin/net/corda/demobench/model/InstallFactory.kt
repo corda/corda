@@ -13,7 +13,7 @@ class InstallFactory : Controller() {
 
     @Throws(IOException::class)
     fun toInstallConfig(config: Config, baseDir: Path): InstallConfig {
-        val messagingPort = config.parsePort("artemisAddress")
+        val p2pPort = config.parsePort("p2pAddress")
         val rpcPort = config.parsePort("rpcAddress")
         val webPort = config.parsePort("webAddress")
         val h2Port = config.getInt("h2port")
@@ -23,7 +23,7 @@ class InstallFactory : Controller() {
         val nodeConfig = NodeConfig(
             tempDir,
             config.getString("myLegalName"),
-            messagingPort,
+            p2pPort,
             rpcPort,
             config.getString("nearestCity"),
             webPort,

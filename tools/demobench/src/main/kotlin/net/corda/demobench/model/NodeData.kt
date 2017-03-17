@@ -9,7 +9,7 @@ class NodeData {
 
     val legalName = SimpleStringProperty("")
     val nearestCity = SimpleStringProperty("London")
-    val messagingPort = SimpleIntegerProperty()
+    val p2pPort = SimpleIntegerProperty()
     val rpcPort = SimpleIntegerProperty()
     val webPort = SimpleIntegerProperty()
     val h2Port = SimpleIntegerProperty()

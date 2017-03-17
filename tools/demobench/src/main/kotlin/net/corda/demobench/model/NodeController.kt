@@ -48,7 +48,7 @@ class NodeController : Controller() {
         val config = NodeConfig(
             baseDir,
             nodeData.legalName.value.trim(),
-            nodeData.messagingPort.value,
+            nodeData.p2pPort.value,
             nodeData.rpcPort.value,
             nodeData.nearestCity.value.trim(),
             nodeData.webPort.value,
@@ -179,7 +179,7 @@ class NodeController : Controller() {
     }
 
     private fun updatePort(config: NodeConfig) {
-        val nextPort = 1 + arrayOf(config.messagingPort, config.rpcPort, config.webPort, config.h2Port).max() as Int
+        val nextPort = 1 + arrayOf(config.p2pPort, config.rpcPort, config.webPort, config.h2Port).max() as Int
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 

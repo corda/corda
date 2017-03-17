@@ -46,7 +46,7 @@ class NodeControllerTest {
     fun `test first validated node becomes network map`() {
         val data = NodeData()
         data.legalName.value = "Node 1"
-        data.messagingPort.value = 100000
+        data.p2pPort.value = 100000
 
         assertFalse(controller.hasNetworkMap())
         controller.validate(data)
@@ -112,9 +112,9 @@ class NodeControllerTest {
     }
 
     @Test
-    fun `test messaging port is max`() {
+    fun `test P2P port is max`() {
         val portNumber = NodeController.firstPort + 1234
-        val config = createConfig(messagingPort = portNumber)
+        val config = createConfig(p2pPort = portNumber)
         assertEquals(NodeController.firstPort, controller.nextPort)
         controller.register(config)
         assertEquals(portNumber + 1, controller.nextPort)
@@ -162,7 +162,7 @@ class NodeControllerTest {
     private fun createConfig(
             legalName: String = "Unknown",
             nearestCity: String = "Nowhere",
-            messagingPort: Int = -1,
+            p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
@@ -172,7 +172,7 @@ class NodeControllerTest {
             baseDir,
             legalName = legalName,
             nearestCity = nearestCity,
-            messagingPort = messagingPort,
+            p2pPort = p2pPort,
             rpcPort = rpcPort,
             webPort = webPort,
             h2Port = h2Port,

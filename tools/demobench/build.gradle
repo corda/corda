@@ -45,7 +45,6 @@ repositories {
 dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
@@ -63,6 +62,7 @@ dependencies {
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     compile "com.typesafe:config:$typesafe_config_version"
 
     // These libraries don't exist in any Maven repository I can find.
@@ -112,7 +112,7 @@ distributions {
                 rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
             }
-            from(project(':node:webserver').tasks.buildWebserverJar) {
+            from(project(':node:webserver:webcapsule').tasks.buildWebserverJar) {
                 rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
             }

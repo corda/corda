@@ -41,9 +41,9 @@ class NodeConfigTest {
     }
 
     @Test
-    fun `test messaging port`() {
-        val config = createConfig(messagingPort = 10001)
-        assertEquals(10001, config.messagingPort)
+    fun `test P2P port`() {
+        val config = createConfig(p2pPort = 10001)
+        assertEquals(10001, config.p2pPort)
     }
 
     @Test
@@ -106,7 +106,7 @@ class NodeConfigTest {
         val config = createConfig(
             legalName = "My Name",
             nearestCity = "Stockholm",
-            messagingPort = 10001,
+            p2pPort = 10001,
             rpcPort = 40002,
             webPort = 20001,
             h2Port = 30001,
@@ -114,11 +114,11 @@ class NodeConfigTest {
             users = listOf(user("jenny"))
         )
         assertEquals("{"
-                +     "\"artemisAddress\":\"localhost:10001\","
                 +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 +     "\"h2port\":30001,"
                 +     "\"myLegalName\":\"MyName\","
                 +     "\"nearestCity\":\"Stockholm\","
+                +     "\"p2pAddress\":\"localhost:10001\","
                 +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
                 +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
@@ -133,7 +133,7 @@ class NodeConfigTest {
         val config = createConfig(
             legalName = "My Name",
             nearestCity = "Stockholm",
-            messagingPort = 10001,
+            p2pPort = 10001,
             rpcPort = 40002,
             webPort = 20001,
             h2Port = 30001,
@@ -143,12 +143,12 @@ class NodeConfigTest {
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
         assertEquals("{"
-                +     "\"artemisAddress\":\"localhost:10001\","
                 +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 +     "\"h2port\":30001,"
                 +     "\"myLegalName\":\"MyName\","
                 +     "\"nearestCity\":\"Stockholm\","
                 +     "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"Notary\"},"
+                +     "\"p2pAddress\":\"localhost:10001\","
                 +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
                 +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
@@ -172,7 +172,7 @@ class NodeConfigTest {
     private fun createConfig(
             legalName: String = "Unknown",
             nearestCity: String = "Nowhere",
-            messagingPort: Int = -1,
+            p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
@@ -182,7 +182,7 @@ class NodeConfigTest {
             baseDir,
             legalName = legalName,
             nearestCity = nearestCity,
-            messagingPort = messagingPort,
+            p2pPort = p2pPort,
             rpcPort = rpcPort,
             webPort = webPort,
             h2Port = h2Port,
