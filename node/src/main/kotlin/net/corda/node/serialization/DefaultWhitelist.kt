@@ -6,6 +6,7 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializationCustomization
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
+import rx.exceptions.OnErrorNotImplementedException
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Period
@@ -49,6 +50,7 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(LocalDate::class.java)
             addToWhitelist(Period::class.java)
             addToWhitelist(BitSet::class.java)
+            addToWhitelist(OnErrorNotImplementedException::class.java)
         }
         return true
     }

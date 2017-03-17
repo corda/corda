@@ -83,14 +83,9 @@ class AttachmentClassLoaderTests {
 
     @Before
     fun setup() {
+        // Do not release these back to the pool, since we do some unorthodox modifications to them below.
         kryo = p2PKryo().borrow()
         kryo2 = p2PKryo().borrow()
-    }
-
-    @After
-    fun teardown() {
-        p2PKryo().release(kryo)
-        p2PKryo().release(kryo2)
     }
 
     @Test
