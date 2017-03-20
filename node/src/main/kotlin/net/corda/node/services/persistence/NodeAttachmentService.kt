@@ -21,7 +21,9 @@ import net.corda.node.services.persistence.schemas.Models
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.nio.file.*
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
@@ -159,14 +161,21 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
 
     private fun checkIsAValidJAR(stream: InputStream) {
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
+        // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
+        // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
+        // So we have to check to ensure we found at least one item.
         val jar = JarInputStream(stream)
+        var count = 0
         while (true) {
             val cursor = jar.nextJarEntry ?: break
             val entryPath = Paths.get(cursor.name)
             // Security check to stop zips trying to escape their rightful place.
-            if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name)
+            if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name || cursor.name == "." || cursor.name == "..")
                 throw IllegalArgumentException("Path is either absolute or non-normalised: $entryPath")
+            count++
         }
+        if (count == 0)
+            throw IllegalArgumentException("Stream is either empty or not a JAR/ZIP")
     }
 
     // Implementations for AcceptsFileUpload

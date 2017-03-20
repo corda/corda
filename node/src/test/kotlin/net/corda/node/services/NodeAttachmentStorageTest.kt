@@ -9,6 +9,7 @@ import net.corda.core.read
 import net.corda.core.readAll
 import net.corda.core.utilities.LogHelper
 import net.corda.core.write
+import net.corda.core.writeLines
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.AttachmentEntity
@@ -86,7 +87,6 @@ class NodeAttachmentStorageTest {
 
     @Test
     fun `duplicates not allowed`() {
-
         val testJar = makeTestJar()
         val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
         testJar.read {
@@ -124,6 +124,14 @@ class NodeAttachmentStorageTest {
             it.nextJarEntry
             it.readBytes()
         }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `non jar rejected`() {
+        val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+        val path = fs.getPath("notajar")
+        path.writeLines(listOf("Hey", "there!"))
+        path.read { storage.importAttachment(it) }
     }
 
     private var counter = 0
