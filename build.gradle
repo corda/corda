@@ -31,6 +31,7 @@ buildscript {
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
+    ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
     ext.requery_version = '1.1.1'
     ext.dokka_version = '0.9.13'
