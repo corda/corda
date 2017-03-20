@@ -60,7 +60,7 @@ public class run extends InteractiveShellCommand {
 
     private Object processResult(Object result) {
         if (result != null && !(result instanceof kotlin.Unit) && !(result instanceof Void)) {
-            result = printAndFollowRPCResponse(RpcResponsePrintingFormat.yaml, result, out);
+            result = printAndFollowRPCResponse(result, out);
         }
         if (result instanceof Future) {
             Future future = (Future) result;
