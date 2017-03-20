@@ -22,7 +22,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.driver
 import net.corda.node.services.User
 import net.corda.node.services.network.NetworkMapService
@@ -30,6 +29,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
+import net.corda.testing.node.DriverBasedTest
 import net.corda.testing.sequence
 import org.junit.Test
 import rx.Observable

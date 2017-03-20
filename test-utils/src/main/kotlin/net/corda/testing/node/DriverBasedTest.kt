@@ -1,5 +1,6 @@
-package net.corda.node.driver
+package net.corda.testing.node
 
+import net.corda.node.driver.DriverDSLExposedInterface
 import org.junit.After
 import org.junit.Before
 import java.util.concurrent.CountDownLatch
