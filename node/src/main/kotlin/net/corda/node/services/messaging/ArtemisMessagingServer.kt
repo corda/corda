@@ -16,14 +16,15 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.expectedOnDefaultFileSystem
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Inbound
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
@@ -33,6 +34,7 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
@@ -151,9 +153,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        val acceptors = mutableSetOf(tcpTransport(Inbound, "0.0.0.0", p2pHostPort.port))
+        val connectionDirection = ConnectionDirection.Inbound(
+                acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
+        )
+        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pHostPort.port))
         if (rpcHostPort != null) {
-            acceptors.add(tcpTransport(Inbound, "0.0.0.0", rpcHostPort.port, enableSSL = false))
+            acceptors.add(createTcpTransport(connectionDirection, "0.0.0.0", rpcHostPort.port, enableSSL = false))
         }
         acceptorConfigurations = acceptors
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
@@ -191,8 +196,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     /**
-     * Authenticated clients connecting to us fall in one of three groups:
-     * 1. The node hosting us and any of its logically connected components. These are given full access to all valid queues.
+     * Authenticated clients connecting to us fall in one of the following groups:
+     * 1. The node itself. It is given full access to all valid queues.
      * 2. Peers on the same network as us. These are only given permission to send to our P2P inbound queue.
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      */
@@ -327,6 +332,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         deployBridge(address.queueName, address.hostAndPort, legalName)
     }
 
+    private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
+            ArtemisTcpTransport.tcpTransport(connectionDirection, HostAndPort.fromParts(host, port), config, enableSSL = enableSSL)
+
     /**
      * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
      * messages from other nodes. When we want to send a message to a node we send it to our internal address/queue for it,
@@ -334,7 +342,11 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * P2P address.
      */
     private fun deployBridge(queueName: String, target: HostAndPort, legalName: String) {
-        val tcpTransport = tcpTransport(Outbound(expectedCommonName = legalName), target.hostText, target.port)
+        val connectionDirection = ConnectionDirection.Outbound(
+                connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
+                expectedCommonName = legalName
+        )
+        val tcpTransport = createTcpTransport(connectionDirection, target.hostText, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
         // We intentionally overwrite any previous connector config in case the peer legal name changed
         activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)
@@ -407,7 +419,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expectedCommonName = configuration?.get(ArtemisMessagingComponent.VERIFY_PEER_COMMON_NAME) as? String
+    private val expectedCommonName = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as? String
 
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as NettyConnection?
