@@ -68,6 +68,7 @@ dependencies {
     compile (project(':node-schemas')) {
         exclude group: 'javassist', module: 'javassist'
     }
+    compile project(':node-api')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 

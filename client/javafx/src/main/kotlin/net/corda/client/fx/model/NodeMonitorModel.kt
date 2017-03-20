@@ -11,7 +11,6 @@ import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import rx.Observable
 import rx.subjects.PublishSubject
