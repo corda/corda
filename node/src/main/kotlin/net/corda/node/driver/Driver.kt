@@ -8,7 +8,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -16,6 +15,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.loggerFor
+import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -25,6 +25,7 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.config.SSLConfiguration
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.Logger
@@ -146,6 +147,7 @@ sealed class PortAllocation {
  *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
+ * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
  * @param useTestClock If true the test clock will be used in Node.
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param dsl The dsl itself.
@@ -157,12 +159,14 @@ fun <A> driver(
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
                 debugPortAllocation = debugPortAllocation,
+                systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
                 isDebug = isDebug
@@ -266,6 +270,7 @@ private fun <A> poll(
 open class DriverDSL(
         val portAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
+        val systemProperties: Map<String, String>,
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean
@@ -378,7 +383,7 @@ open class DriverDSL(
                 )
         )
 
-        val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort)
+        val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
@@ -474,7 +479,7 @@ open class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        val startNode = startNode(executorService, FullNodeConfiguration(baseDirectory, config), quasarJarPath, debugPort)
+        val startNode = startNode(executorService, FullNodeConfiguration(baseDirectory, config), quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
         return startNode
     }
@@ -492,7 +497,8 @@ open class DriverDSL(
                 executorService: ScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 quasarJarPath: String,
-                debugPort: Int?
+                debugPort: Int?,
+                overriddenSystemProperties: Map<String, String>
         ): ListenableFuture<Process> {
             // Write node.conf
             writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
@@ -507,36 +513,28 @@ open class DriverDSL(
             else
                 ""
 
-            val inheritedProperties = listOf("amq.delivery.delay.ms")
-
-            val systemArgs = mutableMapOf(
+            val systemProperties = mapOf(
                     "name" to nodeConf.myLegalName,
                     "visualvm.display.name" to "Corda"
-            )
-
-            inheritedProperties.forEach {
-                val property = System.getProperty(it)
-                if (property != null) systemArgs[it] = property
-            }
+            ) + overriddenSystemProperties
 
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
             val javaArgs = listOf(path) +
-                    systemArgs.map { "-D${it.key}=${it.value}" } +
+                    systemProperties.map { "-D${it.key}=${it.value}" } +
                     listOf(
                             "-javaagent:$quasarJarPath",
                             debugPortArg,
                             "-Xmx200m",
                             "-XX:+UseG1GC",
-                            "-cp", classpath,
-                            className,
+                            "-cp", classpath, className,
                             "--base-directory=${nodeConf.baseDirectory}",
                             "--logging-level=$loggingLevel"
                     ).filter(String::isNotEmpty)
-            val builder = ProcessBuilder(javaArgs)
-            builder.redirectError(Paths.get("error.$className.log").toFile())
-            builder.inheritIO()
-            builder.directory(nodeConf.baseDirectory.toFile())
-            val process = builder.start()
+            val process = ProcessBuilder(javaArgs)
+                    .redirectError((nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log").toFile())
+                    .inheritIO()
+                    .directory(nodeConf.baseDirectory.toFile())
+                    .start()
             // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
             // the handlers for the advertised services are not yet registered. Needs rethinking.
             return addressMustBeBound(executorService, nodeConf.p2pAddress).map { process }
