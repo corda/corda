@@ -160,7 +160,7 @@ fun main(args: Array<String>) {
             issuerClientGBP.start(manager.username, manager.password)
             val issuerRPCGBP = issuerClientGBP.proxy()
 
-            val issuerClientUSD = issuerNodeGBP.rpcClientToNode()  // TODO This should be issuerNodeUSD
+            val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
             issuerClientUSD.start(manager.username, manager.password)
             val issuerRPCUSD = issuerClientUSD.proxy()
 
