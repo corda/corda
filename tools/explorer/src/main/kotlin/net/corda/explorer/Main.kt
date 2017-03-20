@@ -128,7 +128,8 @@ class Main : App(MainView::class) {
 }
 
 /**
- *  This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing, they will be on localhost:20002, 20004, 20006, 20008, 20010 respectively.
+ * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
+ * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
  */
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
