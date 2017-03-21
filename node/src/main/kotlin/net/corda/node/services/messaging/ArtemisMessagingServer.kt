@@ -142,9 +142,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Node ${this.config.myLegalName} listening on address", p2pHostPort.toString())
+        printBasicNodeInfo("Listening on address", p2pHostPort.toString())
         if (rpcHostPort != null) {
-            printBasicNodeInfo("Node ${this.config.myLegalName} RPC service listening on address", rpcHostPort.toString())
+            printBasicNodeInfo("RPC service listening on address", rpcHostPort.toString())
         }
     }
 
