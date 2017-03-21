@@ -2,16 +2,21 @@ package net.corda.node
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.google.common.io.Closeables
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.div
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.rootCause
+import net.corda.core.then
 import net.corda.core.utilities.Emoji
+import net.corda.core.write
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
@@ -35,16 +40,16 @@ import org.crsh.vfs.spi.file.FileMountFactory
 import org.crsh.vfs.spi.url.ClassPathMountFactory
 import rx.Observable
 import rx.Subscriber
-import java.io.FileDescriptor
-import java.io.FileInputStream
-import java.io.PrintWriter
+import java.io.*
 import java.lang.reflect.Constructor
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Future
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.concurrent.thread
@@ -52,7 +57,6 @@ import kotlin.concurrent.thread
 // TODO: Add command history.
 // TODO: Command completion.
 // TODO: Find a way to inject this directly into CRaSH as a command, without needing JIT source compilation.
-// TODO: Add serialisers for InputStream so attachments can be uploaded through the shell.
 // TODO: Do something sensible with commands that return a future.
 // TODO: Configure default renderers, send objects down the pipeline, add commands to do json/xml/yaml outputs.
 // TODO: Add a command to view last N lines/tail/control log4j2 loggers.
@@ -76,7 +80,7 @@ object InteractiveShell {
         Logger.getLogger("").level = Level.OFF   // TODO: Is this really needed?
 
         val classpathDriver = ClassPathMountFactory(Thread.currentThread().contextClassLoader)
-        val fileDriver = FileMountFactory(Utils.getCurrentDirectory());
+        val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
 
         val extraCommandsPath = (dir / "shell-commands").toAbsolutePath()
         Files.createDirectories(extraCommandsPath)
@@ -158,12 +162,10 @@ object InteractiveShell {
     private val yamlInputMapper: ObjectMapper by lazy {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
-        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory())
-    }
-
-    private object ObservableSerializer : JsonSerializer<Observable<*>>() {
-        override fun serialize(value: Observable<*>, gen: JsonGenerator, serializers: SerializerProvider) {
-            gen.writeString("(observable)")
+        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory()).apply {
+            val rpcModule = SimpleModule()
+            rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
+            registerModule(rpcModule)
         }
     }
 
@@ -171,8 +173,9 @@ object InteractiveShell {
         return JacksonSupport.createNonRpcMapper(factory).apply({
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
-            val rpcModule = SimpleModule("RPC module")
+            val rpcModule = SimpleModule()
             rpcModule.addSerializer(Observable::class.java, ObservableSerializer)
+            rpcModule.addSerializer(InputStream::class.java, InputStreamSerializer)
             registerModule(rpcModule)
 
             disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
@@ -222,6 +225,8 @@ object InteractiveShell {
         } catch(e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
             e.errors.forEach { output.println("- $it", Color.red) }
+        } finally {
+            InputStreamDeserializer.closeAll()
         }
     }
 
@@ -283,7 +288,54 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): CompletableFuture<Unit>? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>): Any? {
+        val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
+
+        val cmd = input.joinToString(" ").trim({ it <= ' ' })
+        if (cmd.toLowerCase().startsWith("startflow")) {
+            // The flow command provides better support and startFlow requires special handling anyway due to
+            // the generic startFlow RPC interface which offers no type information with which to parse the
+            // string form of the command.
+            out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow)
+            return null
+        }
+
+        var result: Any? = null
+        try {
+            InputStreamSerializer.invokeContext = context
+            val call = parser.parse(context.attributes["ops"] as CordaRPCOps, cmd)
+            result = call.call()
+            if (result != null && result !is kotlin.Unit && result !is Void) {
+                result = printAndFollowRPCResponse(result, out)
+            }
+            if (result is Future<*>) {
+                if (!result.isDone) {
+                    out.println("Waiting for completion or Ctrl-C ... ")
+                    out.flush()
+                }
+                try {
+                    result = result.get()
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (e: ExecutionException) {
+                    throw RuntimeException(e.rootCause)
+                } catch (e: InvocationTargetException) {
+                    throw RuntimeException(e.rootCause)
+                }
+            }
+        } catch (e: StringToMethodCallParser.UnparseableCallException) {
+            out.println(e.message, Color.red)
+            out.println("Please try 'man run' to learn what syntax is acceptable")
+        } catch (e: Exception) {
+            out.println("RPC failed: ${e.rootCause}", Color.red)
+        } finally {
+            InputStreamSerializer.invokeContext = null
+            InputStreamDeserializer.closeAll()
+        }
+        return result
+    }
+
+    private fun printAndFollowRPCResponse(response: Any?, toStream: PrintWriter): ListenableFuture<Unit>? {
         val printerFun = { obj: Any? -> yamlMapper.writeValueAsString(obj) }
         toStream.println(printerFun(response))
         toStream.flush()
@@ -291,13 +343,13 @@ object InteractiveShell {
     }
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
-        private var count = 0;
-        val future = CompletableFuture<Unit>()
+        private var count = 0
+        val future = SettableFuture.create<Unit>()!!
 
         init {
             // The future is public and can be completed by something else to indicate we don't wish to follow
             // anymore (e.g. the user pressing Ctrl-C).
-            future.thenAccept {
+            future then {
                 if (!isUnsubscribed)
                     unsubscribe()
             }
@@ -306,7 +358,7 @@ object InteractiveShell {
         @Synchronized
         override fun onCompleted() {
             toStream.println("Observable has completed")
-            future.complete(Unit)
+            future.set(Unit)
         }
 
         @Synchronized
@@ -320,13 +372,13 @@ object InteractiveShell {
         override fun onError(e: Throwable) {
             toStream.println("Observable completed with an error")
             e.printStackTrace()
-            future.completeExceptionally(e)
+            future.setException(e)
         }
     }
 
     // Kotlin bug: USELESS_CAST warning is generated below but the IDE won't let us remove it.
     @Suppress("USELESS_CAST", "UNCHECKED_CAST")
-    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): CompletableFuture<Unit>? {
+    private fun maybeFollow(response: Any?, printerFun: (Any?) -> String, toStream: PrintWriter): SettableFuture<Unit>? {
         // Match on a couple of common patterns for "important" observables. It's tough to do this in a generic
         // way because observables can be embedded anywhere in the object graph, and can emit other arbitrary
         // object graphs that contain yet more observables. So we just look for top level responses that follow
@@ -347,4 +399,63 @@ object InteractiveShell {
         (observable as Observable<Any>).subscribe(subscriber)
         return subscriber.future
     }
+
+    //region Extra serializers
+    //
+    // These serializers are used to enable the user to specify objects that aren't natural data containers in the shell,
+    // and for the shell to print things out that otherwise wouldn't be usefully printable.
+
+    private object ObservableSerializer : JsonSerializer<Observable<*>>() {
+        override fun serialize(value: Observable<*>, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeString("(observable)")
+        }
+    }
+
+    // A file name is deserialized to an InputStream if found.
+    object InputStreamDeserializer : JsonDeserializer<InputStream>() {
+        // Keep track of them so we can close them later.
+        private val streams = Collections.synchronizedSet(HashSet<InputStream>())
+
+        override fun deserialize(p: JsonParser, ctxt: DeserializationContext): InputStream {
+            val stream = object : FilterInputStream(BufferedInputStream(Files.newInputStream(Paths.get(p.text)))) {
+                override fun close() {
+                    super.close()
+                    streams.remove(this)
+                }
+            }
+            streams += stream
+            return stream
+        }
+
+        fun closeAll() {
+            // Clone the set with toList() here so each closed stream can be removed from the set inside close().
+            streams.toList().forEach { Closeables.closeQuietly(it) }
+        }
+    }
+
+    // An InputStream found in a response triggers a request to the user to provide somewhere to save it.
+    private object InputStreamSerializer : JsonSerializer<InputStream>() {
+        var invokeContext: InvocationContext<*>? = null
+
+        override fun serialize(value: InputStream, gen: JsonGenerator, serializers: SerializerProvider) {
+            try {
+                val toPath = invokeContext!!.readLine("Path to save stream to (enter to ignore): ", true)
+                if (toPath == null || toPath.isBlank()) {
+                    gen.writeString("<not saved>")
+                } else {
+                    val path = Paths.get(toPath)
+                    path.write { value.copyTo(it) }
+                    gen.writeString("<saved to: $path>")
+                }
+            } finally {
+                try {
+                    value.close()
+                } catch(e: IOException) {
+                    // Ignore.
+                }
+            }
+        }
+    }
+
+    //endregion
 }

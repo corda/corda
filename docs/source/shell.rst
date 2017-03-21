@@ -13,6 +13,7 @@ Some of its features include:
 * Invoking any of the RPCs the node exposes to applications.
 * Starting flows.
 * View a dashboard of threads, heap usage, VM properties.
+* Uploading and downloading zips from the attachment store.
 * Issue SQL queries to the underlying database.
 * View JMX metrics and monitoring exports.
 * UNIX style pipes for both text and objects, an ``egrep`` command and a command for working with columnular data.
@@ -101,6 +102,12 @@ The same syntax is also used to specify the parameters for RPCs, accessed via th
 
 ``run getCashBalances``
 
+Attachments
+-----------
+
+The shell can be used to upload and download attachments from the node interactively. To learn more, see
+the tutorial ":doc:`tutorial-attachments`".
+
 Extending the shell
 -------------------
 
@@ -123,7 +130,6 @@ Limitations
 
 The shell will be enhanced over time. The currently known limitations include:
 
-* You cannot use it to upload/download attachments.
 * SSH access is currently not available.
 * There is no command completion for flows or RPCs.
 * Command history is not preserved across restarts.
