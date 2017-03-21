@@ -127,7 +127,7 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node ${node.info.legalIdentity.name} started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node for \"${node.info.legalIdentity.name}\" started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)
@@ -186,7 +186,22 @@ private fun messageOfTheDay(): Pair<String, String> {
             "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
             "It's kind of like a block chain but\ncords sounded healthier than chains.",
-            "Computer science and finance together.\nYou should see our crazy Christmas parties!"
+            "Computer science and finance together.\nYou should see our crazy Christmas parties!",
+            "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!",
+            "A banker with nobody around may find\nthemselves .... a-loan! <applause>",
+            "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}",
+            "There was an earthquake in California,\na local bank went into de-fault.",
+            "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
+            "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
+            "Check your contracts carefully. The\nfine print is usually a clause for suspicion ${Emoji.santaClaus}",
+            "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
+            "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
+            "Old bankers never die, they just\n... pass the buck",
+            "My wife made me into millionaire.\nI was a multi-millionaire before we met.",
+            "I won $3M on the lottery so I donated\na quarter of it to charity. Now I have $2,999,999.75.",
+            "There are two rules for financial success:\n1) Don't tell everything you know.",
+            "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
+            "Computers are useless. They can only\ngive you answers.  -- Picasso"
     )
     if (Emoji.hasEmojiTerminal)
         messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
