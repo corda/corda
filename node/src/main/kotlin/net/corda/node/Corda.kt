@@ -1,8 +1,8 @@
 @file:JvmName("Corda")
 package net.corda.node
 
-import com.typesafe.config.Config
 import com.jcabi.manifests.Manifests
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -31,18 +31,11 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
     LoggerFactory.getLogger(loggerName).info(msg)
 }
 
+val LOGS_DIRECTORY_NAME = "logs"
+
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
-
-    // Manifest properties are only available if running from the corda jar
-    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
-    val nodeVersionInfo = NodeVersionInfo(
-            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
-            manifestValue("Corda-Revision") ?: "Unknown",
-            manifestValue("Corda-Vendor") ?: "Unknown"
-    )
 
     val argsParser = ArgsParser()
 
@@ -53,6 +46,23 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    // Set up logging. These properties are referenced from the XML config file.
+    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase()
+    System.setProperty("defaultLogLevel", loggingLevel)
+    if (cmdlineOptions.logToConsole) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        renderBasicInfoToConsole = false
+    }
+
+    // Manifest properties are only available if running from the corda jar
+    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+    val nodeVersionInfo = NodeVersionInfo(
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Revision") ?: "Unknown",
+            manifestValue("Corda-Vendor") ?: "Unknown"
+    )
 
     if (cmdlineOptions.isVersion) {
         println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
@@ -66,16 +76,9 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    // Set up logging. These properties are referenced from the XML config file.
-    System.setProperty("defaultLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-    if (cmdlineOptions.logToConsole) {
-        System.setProperty("consoleLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-        renderBasicInfoToConsole = false
-    }
-
     drawBanner(nodeVersionInfo)
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
