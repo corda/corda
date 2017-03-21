@@ -57,9 +57,12 @@ case the ``node_dir`` is the location where your node server's JAR and configura
 Starting your node
 ------------------
 
-Now you have a node server with your app installed, you can run it by navigating to ``<node_dir>`` and running
+Now you have a node server with your app installed, you can run it by navigating to ``<node_dir>`` and running:
 
-    java -jar corda.jar
+.. code-block:: shell
+
+   Windows:   java -jar corda.jar
+   UNIX:      ./corda.jar
 
 The plugin should automatically be registered and the configuration file used.
 
@@ -67,7 +70,7 @@ The plugin should automatically be registered and the configuration file used.
 
 The configuration file and workspace paths can be overidden on the command line e.g.
 
-``java -jar corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``.
+``./corda.jar --config-file=test.conf --base-directory=/opt/r3corda/nodes/test``.
 
 Otherwise the workspace folder for the node is the current working path.
 
@@ -99,46 +102,28 @@ at the present time, and should certainly be treated as read-only.
 Building against Corda
 ----------------------
 
-.. warning:: This feature is subject to rapid change
-
-Corda now supports publishing to Maven local to build against it. To publish to Maven local run the following in the
-root directory of Corda
+To publish to your local Maven repository (in ``~/.m2`` on Unix and ``%HOMEPATH%\.m2`` on Windows) run the following
+in the root directory of the Corda code:
 
 .. code-block:: shell
 
     ./gradlew install
 
 This will publish corda-$version.jar, finance-$version.jar, core-$version.jar and node-$version.jar to the
-group net.corda. You can now depend on these as you normally would a Maven dependency.
-
-Gradle plugins for CorDapps
----------------------------
+group net.corda. You can now depend on these as you normally would a Maven dependency, using the group id
+``net.corda``.
 
 There are several Gradle plugins that reduce your build.gradle boilerplate and make development of CorDapps easier.
 The available plugins are in the gradle-plugins directory of the Corda repository.
 
-Building Gradle plugins
-~~~~~~~~~~~~~~~~~~~~~~~
-
-To install to your local Maven repository the plugins that CorDapp gradle files require, run the following from the
-root of the Corda project:
-
-.. code-block:: text
-
-    ./gradlew install
-
-The plugins will now be installed to your local Maven repository in ~/.m2 on Unix and %HOMEPATH%\.m2 on Windows.
+To install to your local Maven repository the plugins that CorDapp gradle files require, enter the ``gradle-plugins``
+directory and then run ``../gradle install``. The plugins will now be installed to your local Maven repository.
 
 Using Gradle plugins
 ~~~~~~~~~~~~~~~~~~~~
 
 To use the plugins, if you are not already using the CorDapp template project, you must modify your build.gradle. Add
 the following segments to the relevant part of your build.gradle.
-
-Template build.gradle
-~~~~~~~~~~~~~~~~~~~~~
-
-To build against Corda and the plugins that CorDapps use, update your build.gradle to contain the following:
 
 .. code-block:: groovy
 
@@ -242,10 +227,9 @@ is a three node example;
 You can create more configurations with new tasks that extend Cordform.
 
 New nodes can be added by simply adding another node block and giving it a different name, directory and ports. When you
-run this task it will install the nodes to the directory specified and a script will be generated (for UNIX users only
-at present) to run the nodes with one command (``runnodes``). On MacOS X this script will run each node in a new
-terminal tab, and on Linux it will open up a new XTerm for each node. On Windows the (``runnodes.bat``) script will run
-one node per window.
+run this task it will install the nodes to the directory specified and a script will be generated to run the nodes with
+one command (``runnodes``). On MacOS X this script will run each node in a new terminal tab, and on Linux it will open
+up a new XTerm for each node. On Windows the (``runnodes.bat``) script will run one node per window.
 
 Other CorDapps can also be specified if they are already specified as classpath or compile dependencies in your
 ``build.gradle``.

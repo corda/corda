@@ -105,20 +105,19 @@ Validation
 
 One of the design decisions for a notary is whether or not to **validate** a transaction before accepting it.
 
-If a transaction is not checked for validity, it opens the platform to "denial of state" attacks, where anyone can build an invalid transaction consuming someone else's states and submit it to the notary to get the states "blocked".
-However, if the transaction is validated, this requires the notary to be able to see the full contents of the transaction in question and its dependencies.
-This is an obvious privacy leak.
+If a transaction is not checked for validity, it opens the platform to "denial of state" attacks, where anyone can build
+an invalid transaction consuming someone else's states and submit it to the notary to get the states blocked. However,
+if the transaction is validated, this requires the notary to be able to see the full contents of the transaction in
+question and its dependencies. This is an obvious privacy leak.
 
-The platform is flexible and currently supports both validating and non-validating notary implementations -- a party can select which one to use based on its own privacy requirements.
+The platform is flexible and currently supports both validating and non-validating notary implementations -- a
+party can select which one to use based on its own privacy requirements.
 
 .. note:: In the non-validating model, the "denial of state" attack is partially alleviated by requiring the calling
    party to authenticate and storing its identity for the request. The conflict information returned by the notary
    specifies the consuming transaction ID along with the identity of the party that had created the transaction. If the
    conflicting transaction is valid, the current one is aborted; if not, a dispute can be raised and the input states
    of the conflicting invalid transaction are "un-committed" (via a legal process).
-
-.. note:: At present, all notaries can see the entire contents of a submitted transaction. A future piece of work
-   will enable the processing of :doc:`merkle-trees`, thus providing data hiding of sensitive information.
 
 Timestamping
 ------------
