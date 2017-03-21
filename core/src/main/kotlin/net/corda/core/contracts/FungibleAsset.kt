@@ -3,9 +3,7 @@ package net.corda.core.contracts
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.flows.FlowException
 
-class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException() {
-    override fun toString() = "Insufficient balance, missing $amountMissing"
-}
+class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
 /**
  * Interface for contract states representing assets which are fungible, countable and issued by a

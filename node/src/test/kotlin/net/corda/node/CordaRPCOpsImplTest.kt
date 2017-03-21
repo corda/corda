@@ -126,10 +126,7 @@ class CordaRPCOpsImplTest {
 
         network.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow,
-                Amount(100, Issued(PartyAndReference(aliceNode.info.legalIdentity, OpaqueBytes(ByteArray(1, { 1 }))), USD)),
-                aliceNode.info.legalIdentity
-        )
+        rpc.startFlow(::CashPaymentFlow, Amount(100, USD), aliceNode.info.legalIdentity)
 
         network.runNetwork()
 

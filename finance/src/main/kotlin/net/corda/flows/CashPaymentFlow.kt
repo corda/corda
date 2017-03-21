@@ -1,7 +1,9 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Amount
+import net.corda.core.contracts.InsufficientBalanceException
+import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.toStringShort
@@ -12,13 +14,19 @@ import java.security.KeyPair
 import java.util.*
 
 /**
- * Initiates a flow that produces an cash move transaction.
+ * Initiates a flow that sends cash to a recipient.
  *
  * @param amount the amount of a currency to pay to the recipient.
  * @param recipient the party to pay the currency to.
+ * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
  */
-open class CashPaymentFlow(val amount: Amount<Issued<Currency>>, val recipient: Party, progressTracker: ProgressTracker) : AbstractCashFlow(progressTracker) {
-    constructor(amount: Amount<Issued<Currency>>, recipient: Party) : this(amount, recipient, tracker())
+open class CashPaymentFlow(
+        val amount: Amount<Currency>,
+        val recipient: Party,
+        progressTracker: ProgressTracker,
+        val issuerConstraint: Set<Party>? = null) : AbstractCashFlow(progressTracker) {
+    /** A straightforward constructor that constructs spends using cash states of any issuer. */
+    constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, tracker())
 
     @Suspendable
     override fun call(): SignedTransaction {
@@ -28,11 +36,11 @@ open class CashPaymentFlow(val amount: Amount<Issued<Currency>>, val recipient: 
         val (spendTX, keysForSigning) = try {
             serviceHub.vaultService.generateSpend(
                     builder,
-                    amount.withoutIssuer(),
+                    amount,
                     recipient.owningKey,
-                    setOf(amount.token.issuer.party))
+                    issuerConstraint)
         } catch (e: InsufficientBalanceException) {
-            throw CashException("Insufficient cash for spend", e)
+            throw CashException("Insufficient cash for spend: ${e.message}", e)
         }
 
         progressTracker.currentStep = SIGNING_TX

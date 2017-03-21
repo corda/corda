@@ -1,8 +1,8 @@
 package net.corda.loadtest
 
 import com.typesafe.config.Config
+import net.corda.nodeapi.config.getValue
 import java.nio.file.Path
-import net.corda.node.services.config.*
 
 /**
  * @param sshUser The UNIX username to use for SSH auth.

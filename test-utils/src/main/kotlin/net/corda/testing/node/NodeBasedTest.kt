@@ -15,7 +15,6 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.MOCK_NODE_VERSION_INFO
-import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.getFreeLocalPorts
 import org.junit.After
 import org.junit.Rule
@@ -116,13 +115,14 @@ abstract class NodeBasedTest {
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
         val baseDirectory = (tempFolder.root.toPath() / legalName).createDirectories()
+        val localPort = getFreeLocalPorts("localhost", 2)
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
                         "myLegalName" to legalName,
-                        "p2pAddress" to freeLocalHostAndPort().toString(),
-                        "rpcAddress" to freeLocalHostAndPort().toString(),
+                        "p2pAddress" to localPort[0].toString(),
+                        "rpcAddress" to localPort[1].toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                         "rpcUsers" to rpcUsers.map {
                             mapOf(
