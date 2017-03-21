@@ -1,0 +1,59 @@
+/**
+ * This build.gradle exists to package Node Explorer as an executable fat jar.
+ */
+apply plugin: 'us.kirchmeier.capsule'
+
+description 'Node Explorer'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+// Force the Caplet to target Java 6. This ensures that running 'java -jar explorer.jar' on any Java 6 VM upwards
+// will get as far as the Capsule version checks, meaning that if your JVM is too old, you will at least get
+// a sensible error message telling you what to do rather than a bytecode version exception that doesn't.
+// If we introduce .java files into this module that need Java 8+ then we will have to push the caplet into
+// its own module so its target can be controlled individually, but for now this suffices.
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+dependencies {
+    compile project(':tools:explorer')
+}
+
+task buildExplorerJAR(type: FatCapsule) {
+    applicationClass 'net.corda.explorer.Main'
+    archiveName "node-explorer-${corda_version}.jar"
+    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/ExplorerCaplet.class')
+    classifier 'fat'
+
+    capsuleManifest {
+        applicationVersion = corda_version
+        systemProperties['visualvm.display.name'] = 'Node Explorer'
+        minJavaVersion = '1.8.0'
+        // This version is known to work and avoids earlier 8u versions that have bugs.
+        minUpdateVersion['1.8'] = '102'
+        caplets = ['ExplorerCaplet']
+
+        // JVM configuration:
+        // - Constrain to small heap sizes to ease development on low end devices.
+        // - Switch to the G1 GC which is going to be the default in Java 9 and gives low pause times/string dedup.
+        //
+        // If you change these flags, please also update Driver.kt
+        jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
+    }
+
+    manifest {
+        attributes('Corda-Version': corda_version)
+    }
+}
+
+build.dependsOn buildExplorerJAR
