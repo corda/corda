@@ -7,8 +7,10 @@ description 'Corda node database schemas'
 
 dependencies {
     compile project(':core')
+    compile project(':finance')
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
+    testCompile project(':test-utils')
 
     // Requery: SQL based query & persistence for Kotlin
     kapt "io.requery:requery-processor:$requery_version"

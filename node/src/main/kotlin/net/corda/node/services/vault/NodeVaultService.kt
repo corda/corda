@@ -27,6 +27,7 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
@@ -219,6 +220,10 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 }
 
         return stateAndRefs.associateBy({ it.ref }, { it.state })
+    }
+
+    override fun <T : ContractState> queryBy(criteria: QueryCriteria): Iterable<StateAndRef<T>> {
+        throw UnsupportedOperationException("not implemented")
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {

@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
@@ -130,6 +131,14 @@ interface VaultService {
      * first subscriber is registered so as to avoid racing with early updates.
      */
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
+
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters
+     * and returns an [Iterable] set of [StateAndRef]
+     *
+     * Note: the iterator is lazy and client driven.
+     */
+    fun <T : ContractState> queryBy(criteria: QueryCriteria): Iterable<StateAndRef<T>>
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
