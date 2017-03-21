@@ -132,7 +132,7 @@ downloading any missing transactions into local storage and validating them. The
 .. note:: Non-validating notaries assume transaction validity and do not request transaction data or their dependencies
           beyond the list of states consumed.
 
-The tutorial " :doc:`tutorial-contract` "provides a hand-ons walk-through using these concepts.
+The tutorial ":doc:`tutorial-contract`" provides a hand-ons walk-through using these concepts.
 
 Transaction Representation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

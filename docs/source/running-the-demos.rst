@@ -17,9 +17,9 @@ The demos can be run either from the command line, or from inside IntelliJ. Runn
 recommended if you just want to see the demos run, whereas using IntelliJ can be helpful if you want to debug or
 extend the demos. For more details about running via the command line or from within IntelliJ, see :doc:`CLI-vs-IDE`.
 
-.. note:: If you are running the demos from the command line in Unix, you may have to install xterm.
+If any of the demos don't work, please raise an issue on GitHub.
 
-.. note:: If any of the demos don't work, please raise an issue on GitHub.
+.. note:: If you are running the demos from the command line in Linux (but not macOS), you may have to install xterm.
 
 .. _trader-demo:
 
