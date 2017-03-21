@@ -1,10 +1,10 @@
 package net.corda.explorer.model
 
 import javafx.beans.value.ObservableValue
-import net.corda.client.fxutils.AmountBindings
-import net.corda.client.model.ExchangeRate
-import net.corda.client.model.ExchangeRateModel
-import net.corda.client.model.observableValue
+import net.corda.client.jfx.utils.AmountBindings
+import net.corda.client.jfx.model.ExchangeRate
+import net.corda.client.jfx.model.ExchangeRateModel
+import net.corda.client.jfx.model.observableValue
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.CHF
 import net.corda.core.contracts.GBP

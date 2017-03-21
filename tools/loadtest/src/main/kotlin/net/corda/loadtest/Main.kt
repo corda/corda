@@ -5,7 +5,6 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.loadtest.tests.crossCashTest
 import net.corda.loadtest.tests.selfIssueTest
 import java.io.File
-import java.nio.file.Paths
 
 /**
  * This is how load testing works:

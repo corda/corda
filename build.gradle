@@ -125,7 +125,8 @@ dependencies {
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
-    runtime project(':client')
+    runtime project(':client:jfx')
+    runtime project(':client:mock')
     runtime project(':core')
     runtime project(':finance')
     runtime project(':node:webserver')
@@ -197,7 +198,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'webserver']
+    publications = ['jfx', 'mock', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -216,7 +217,7 @@ dokka {
     moduleName = 'corda'
     outputDirectory = 'docs/build/html/api/kotlin'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
@@ -224,7 +225,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     outputFormat = "javadoc"
     outputDirectory = 'docs/build/html/api/javadoc'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])

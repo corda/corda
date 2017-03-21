@@ -48,7 +48,7 @@ dependencies {
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
-    compile project(':client')
+    compile project(':client:jfx')
     compile project(':node')
     compile project(':test-utils')
 

@@ -24,7 +24,7 @@ sourceSets {
 mainClassName = 'net.corda.loadtest.MainKt'
 
 dependencies {
-    compile project(':client')
+    compile project(':client:mock')
 
     // https://mvnrepository.com/artifact/com.jcraft/jsch
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
