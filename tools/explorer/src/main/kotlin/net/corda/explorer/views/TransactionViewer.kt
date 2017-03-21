@@ -15,11 +15,11 @@ import javafx.scene.control.TableView
 import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
-import net.corda.client.fx.model.*
-import net.corda.client.fx.utils.filterNotNull
-import net.corda.client.fx.utils.lift
-import net.corda.client.fx.utils.map
-import net.corda.client.fx.utils.sequence
+import net.corda.client.jfx.model.*
+import net.corda.client.jfx.utils.filterNotNull
+import net.corda.client.jfx.utils.lift
+import net.corda.client.jfx.utils.map
+import net.corda.client.jfx.utils.sequence
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.AbstractParty

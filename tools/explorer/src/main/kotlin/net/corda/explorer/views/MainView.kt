@@ -17,12 +17,12 @@ import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
 import javafx.stage.WindowEvent
-import net.corda.client.fx.model.NetworkIdentityModel
-import net.corda.client.fx.model.objectProperty
-import net.corda.client.fx.model.observableList
-import net.corda.client.fx.model.observableValue
-import net.corda.client.fx.utils.ChosenList
-import net.corda.client.fx.utils.map
+import net.corda.client.jfx.model.NetworkIdentityModel
+import net.corda.client.jfx.model.objectProperty
+import net.corda.client.jfx.model.observableList
+import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.utils.ChosenList
+import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaViewModel
 import tornadofx.*
 

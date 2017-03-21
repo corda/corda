@@ -17,8 +17,8 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
-import net.corda.client.fx.utils.*
-import net.corda.client.fx.model.*
+import net.corda.client.jfx.utils.*
+import net.corda.client.jfx.model.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef

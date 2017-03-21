@@ -14,8 +14,8 @@ import javafx.scene.control.ListCell
 import javafx.scene.control.TextField
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
-import net.corda.client.fx.utils.ChosenList
-import net.corda.client.fx.utils.map
+import net.corda.client.jfx.utils.ChosenList
+import net.corda.client.jfx.utils.map
 import tornadofx.UIComponent
 import tornadofx.observable
 
