@@ -33,7 +33,6 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
-import rx.functions.Actions
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
