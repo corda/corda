@@ -108,7 +108,7 @@ class NodeVaultServiceTest {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val w1 = vaultSvc.unconsumedStates<Cash.State>()
+            val w1 = vaultSvc.unconsumedStates<Cash.State>().toList()
             assertThat(w1).hasSize(3)
 
             val stateRefs = listOf(w1[1].ref, w1[2].ref)
