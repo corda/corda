@@ -27,6 +27,7 @@ buildscript {
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.5.Final'
     ext.typesafe_config_version = '1.3.1'
+    ext.fileupload_version = '1.3.2'
     ext.junit_version = '4.12'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
@@ -127,6 +128,7 @@ dependencies {
     // For the buildCordappDependenciesJar task
     runtime project(':client:jfx')
     runtime project(':client:mock')
+    runtime project(':client:rpc')
     runtime project(':core')
     runtime project(':finance')
     runtime project(':node:webserver')

@@ -48,6 +48,7 @@ dependencies {
     compile project(':node-api')
 
     // Unit testing helpers.
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
