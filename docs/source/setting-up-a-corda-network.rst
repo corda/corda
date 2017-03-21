@@ -1,6 +1,6 @@
 .. _log4j2: http://logging.apache.org/log4j/2.x/
 
-What is a corda network?
+What is a Corda network?
 ========================
 
 A Corda network consists of a number of machines running nodes, including a single node operating as the network map
@@ -47,8 +47,7 @@ The most important fields regarding network configuration are:
   is the hostname *that must be externally resolvable by other nodes in the network*. In the above configuration this is the
   resolvable name of a machine in a VPN.
 * ``rpcAddress``: The address to which Artemis will bind for RPC calls.
-* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress``
-                  and ``rpcAddress`` if they are on the same machine.
+* ``webAddress``: The address the webserver should bind. Note that the port must be distinct from that of ``p2pAddress`` and ``rpcAddress`` if they are on the same machine.
 * ``networkMapService``: Details of the node running the network map service. If it's this node that's running the service
   then this field must not be specified.
 

@@ -413,9 +413,6 @@ This code is longer but no more complicated. Here are some things to pay attenti
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
 
-.. warning:: In the current version of the platform, exceptions thrown during flow execution are not propagated
-   back to the sender. A thorough error handling and exceptions framework will be in a future version of the platform.
-
 Progress tracking
 -----------------
 
@@ -530,10 +527,8 @@ Future features
 The flow framework is a key part of the platform and will be extended in major ways in future. Here are some of
 the features we have planned:
 
-* Identity based addressing
 * Exception management, with a "flow hospital" tool to manually provide solutions to unavoidable
   problems (e.g. the other side doesn't know the trade)
-* Being able to interact with internal apps and tools via RPC
 * Being able to interact with people, either via some sort of external ticketing system, or email, or a custom UI.
   For example to implement human transaction authorisations.
 * A standard library of flows that can be easily sub-classed by local developers in order to integrate internal

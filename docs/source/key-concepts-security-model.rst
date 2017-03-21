@@ -19,8 +19,8 @@ The security model plays a role in the following areas:
   beyond the list of states consumed (and thus, their level of trust is much lower and exposed to malicious use of transaction inputs).
   From an algorithm perspective, Corda currently provides a distributed notary implementation that uses Raft.
 
-.. note:: Future notary algorithms may include BFT and hardware assisted non-BFT algorithms (where non-BFT algorithms
-    are converted into a more trusted form using remote attestation and hardware protection).
+.. note:: A byzantine fault tolerant notary based on the BFT-SMaRT algorithm is included in the code, but is
+  still incubating and is not yet ready for use.
 
 * Authentication, authorisation and entitlements:
   Network permissioning, including node to node authentication, is performed using TLS and certificates.
@@ -28,7 +28,6 @@ The security model plays a role in the following areas:
 
 .. warning:: API level authentication (RPC, Web) is currently simple username/password for demonstration purposes and will be revised.
     Similarly, authorisation is currently based on permission groups applied to flow execution.
-    This is subject to design review with views to selecting a proven, mature entitlements solution.
 
 Privacy techniques
 
