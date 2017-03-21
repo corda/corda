@@ -182,48 +182,44 @@ fun main(args: Array<String>) {
                     currencies = listOf(USD)
             )
 
-            val flowHandles: Array<FlowHandle<SignedTransaction>?> = kotlin.arrayOfNulls(6)
+            val flowHandles = mutableListOf<FlowHandle<SignedTransaction>>()
             for (i in 0..1000) {
                 Thread.sleep(500)
                 // Parties pay requests
                 // Alice
                 eventGenerator.clientCommandGenerator.map { command ->
-                    flowHandles[0] = command.startFlow(aliceRPC)
+                    flowHandles.add(command.startFlow(aliceRPC))
                     Unit
                 }.generate(SplittableRandom())
 
                 // Bob
                 eventGenerator.clientCommandGenerator.map { command ->
-                    flowHandles[1] = command.startFlow(bobRPC)
+                    flowHandles.add(command.startFlow(bobRPC))
                     Unit
                 }.generate(SplittableRandom())
 
                 // Exit requests
                 issuerGBPEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    flowHandles[2] = command.startFlow(issuerRPCGBP)
+                    flowHandles.add(command.startFlow(issuerRPCGBP))
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    flowHandles[3] = command.startFlow(issuerRPCUSD)
+                    flowHandles.add(command.startFlow(issuerRPCUSD))
                     Unit
                 }.generate(SplittableRandom())
 
                 // Issuer requests
                 issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    flowHandles[4] = command.startFlow(issuerRPCGBP)
+                    flowHandles.add(command.startFlow(issuerRPCGBP))
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    flowHandles[5] = command.startFlow(issuerRPCUSD)
+                    flowHandles.add(command.startFlow(issuerRPCUSD))
                     Unit
                 }.generate(SplittableRandom())
 
-                flowHandles.forEach {
-                    it?.let {
-                        it.returnValue.cancel(false)
-                        it.progress.subscribe({}, {}).unsubscribe()
-                    }
-                }
+                flowHandles.forEach(FlowHandle<SignedTransaction>::finalize)
+                flowHandles.clear()
             }
             aliceClient.close()
             bobClient.close()

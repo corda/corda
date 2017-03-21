@@ -222,5 +222,17 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
 data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,
-        val returnValue: ListenableFuture<A>
-)
+        val returnValue: ListenableFuture<A>) {
+
+    /**
+     * This function should be invoked on unused Observables to release the server resources.
+     * subscribe({}, {}) was used instead of simply calling subscribe()
+     * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
+     * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
+     * empty inputs are used to subscribe({}, {}).
+     */
+    fun finalize() {
+        returnValue.cancel(false)
+        progress.subscribe({}, {}).unsubscribe()
+    }
+}
