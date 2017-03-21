@@ -6,6 +6,7 @@ import org.crsh.cli.*;
 import org.crsh.command.*;
 import org.crsh.text.*;
 
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -37,46 +38,7 @@ public class run extends InteractiveShellCommand {
             return null;
         }
 
-        String cmd = String.join(" ", command).trim();
-        if (cmd.toLowerCase().startsWith("startflow")) {
-            // The flow command provides better support and startFlow requires special handling anyway due to
-            // the generic startFlow RPC interface which offers no type information with which to parse the
-            // string form of the command.
-            out.println("Please use the 'flow' command to interact with flows rather than the 'run' command.", Color.yellow);
-            return null;
-        }
-
-        Object result = null;
-        try {
-            StringToMethodCallParser.ParsedMethodCall call = parser.parse(ops(), cmd);
-            result = call.call();
-            result = processResult(result);
-        } catch (StringToMethodCallParser.UnparseableCallException e) {
-            out.println(e.getMessage(), Color.red);
-            out.println("Please try 'man run' to learn what syntax is acceptable", Color.red);
-        }
-        return result;
-    }
-
-    private Object processResult(Object result) {
-        if (result != null && !(result instanceof kotlin.Unit) && !(result instanceof Void)) {
-            result = printAndFollowRPCResponse(result, out);
-        }
-        if (result instanceof Future) {
-            Future future = (Future) result;
-            if (!future.isDone()) {
-                out.println("Waiting for completion or Ctrl-C ... ");
-                out.flush();
-            }
-            try {
-                result = future.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return result;
+        return InteractiveShell.runRPCFromString(command, out, context);
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

@@ -18,7 +18,11 @@ import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.security.SignatureException
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -134,9 +138,18 @@ class ResolveTransactionsFlowTest {
 
     @Test
     fun attachment() {
+        fun makeJar(): InputStream {
+            val bs = ByteArrayOutputStream()
+            val jar = JarOutputStream(bs)
+            jar.putNextEntry(JarEntry("TEST"))
+            jar.write("Some test file".toByteArray())
+            jar.closeEntry()
+            jar.close()
+            return bs.toByteArray().opaque().open()
+        }
         // TODO: this operation should not require an explicit transaction
         val id = databaseTransaction(a.database) {
-            a.services.storageService.attachments.importAttachment("Some test file".toByteArray().opaque().open())
+            a.services.storageService.attachments.importAttachment(makeJar())
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)

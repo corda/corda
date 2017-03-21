@@ -117,9 +117,15 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {
         require(jar !is JarInputStream)
+
+        // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
+        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+        // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+        // set the hash field of the new attachment record.
         val hs = HashingInputStream(Hashing.sha256(), jar)
         val bytes = hs.readBytes()
-        checkIsAValidJAR(hs)
+        checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
         val count = session.withTransaction {
@@ -147,7 +153,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
             val extractTo = storePath / "$id.jar"
             try {
                 extractTo.createDirectory()
-                extractZipFile(hs, extractTo)
+                extractZipFile(ByteArrayInputStream(bytes), extractTo)
             } catch(e: FileAlreadyExistsException) {
                 log.trace("Did not extract attachment jar to directory because it already exists")
             } catch(e: Exception) {
@@ -164,7 +170,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
         // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
         // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
         // So we have to check to ensure we found at least one item.
-        val jar = JarInputStream(stream)
+        val jar = JarInputStream(stream, true)
         var count = 0
         while (true) {
             val cursor = jar.nextJarEntry ?: break
