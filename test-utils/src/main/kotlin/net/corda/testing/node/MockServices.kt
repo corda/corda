@@ -13,6 +13,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.getTestPartyAndCertificate
+import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
 import net.corda.node.services.keys.getSigner
@@ -50,11 +51,9 @@ import javax.annotation.concurrent.ThreadSafe
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(vararg val keys: KeyPair) : ServiceHub {
-    constructor() : this(generateKeyPair())
+open class MockServices(vararg keys: KeyPair ) : ServiceHub {constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
-
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
             storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
@@ -69,15 +68,15 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
+    override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, getTestPartyAndCertificate(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
-    fun makeVaultService(dataSourceProps: Properties): VaultService {
+    fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService())): VaultService {
         val vaultService = NodeVaultService(this, dataSourceProps)
-        // Vault cash spending requires access to contract_cash_states and their updates
-        HibernateObserver(vaultService.rawUpdates, NodeSchemaService())
+        HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
 

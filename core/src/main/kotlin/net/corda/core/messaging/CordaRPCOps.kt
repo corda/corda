@@ -111,12 +111,12 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultQueryAPIJavaHelpers
-    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria = criteria)
-    fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging = paging)
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria)
+    fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging)
     fun <T : ContractState> vaultQueryByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting = sorting)
 
-    fun <T : ContractState> vaultTrackByCriteria(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria = criteria)
-    fun <T : ContractState> vaultTrackByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging = paging)
+    fun <T : ContractState> vaultTrackByCriteria(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria)
+    fun <T : ContractState> vaultTrackByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging)
     fun <T : ContractState> vaultTrackByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, sorting = sorting)
     // DOCEND VaultQueryAPIJavaHelpers
 
@@ -125,7 +125,7 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     // TODO: Remove this from the interface
-    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**

@@ -9,7 +9,7 @@ Corda provides a number of flexible query mechanisms for accessing the Vault:
 - custom JPA_/JPQL_ queries
 - custom 3rd party Data Access frameworks such as `Spring Data <http://projects.spring.io/spring-data>`_
 
-The majority of query requirements can be satified by using the Vault Query API, which is exposed via the ``VaultService`` for use directly by flows:
+The majority of query requirements can be satisfied by using the Vault Query API, which is exposed via the ``VaultQueryService`` for use directly by flows:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/services/Services.kt
     :language: kotlin
@@ -39,52 +39,64 @@ The API provides both static (snapshot) and dynamic (snapshot with streaming upd
 
 - Use ``queryBy`` to obtain a only current snapshot of data (for a given ``QueryCriteria``)
 - Use ``trackBy`` to obtain a both a current snapshot and a future stream of updates (for a given ``QueryCriteria``)
+  
+.. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
 
-Simple pagination (page number and size) and sorting (directional ordering, null handling, custom property sort) is also specifiable.
-Defaults are defined for Paging (pageNumber = 0, pageSize = 200) and Sorting (direction = ASC, nullHandling = NULLS_LAST).
+Simple pagination (page number and size) and sorting (directional ordering using standard or custom property attributes) is also specifiable.
+Defaults are defined for Paging (pageNumber = 0, pageSize = 200) and Sorting (direction = ASC).
 
-The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of logical operators. There are four implementations of this interface which can be chained together to define advanced filters.
+The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of operators to include: binary logical (AND, OR), comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL), equality (EQUAL, NOT_EQUAL), likeness (LIKE, NOT_LIKE), nullability (IS_NULL, NOT_NULL), and collection based (IN, NOT_IN).
+
+There are four implementations of this interface which can be chained together to define advanced filters.
 
 	1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED, CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
 
 	   .. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, includeSoftlockedStates = true).
 
-	2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). 
+	2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). Filterable attributes include: participants(s), owner(s), quantity, issuer party(s) and issuer reference(s).
 	   
-	   .. note:: Contract states that extend the ``FungibleAsset`` interface now automatically persist associated state attributes. 
+	   .. note:: All contract states that extend the ``FungibleAsset`` now automatically persist that interfaces common state attributes to the **vault_fungible_states** table.
 
-	3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo)
+	3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo). Filterable attributes include: participant(s), linearId(s), dealRef(s).
 	   
-	   .. note:: Contract states that extend the ``LinearState`` or ``DealState`` interfaces now automatically persist associated state attributes. 
+	   .. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those interfaces common state attributes to the **vault_linear_states** table.
 
-	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the Persistence_ documentation and associated examples. 
-	Custom criteria expressions are expressed as JPA Query like WHERE clauses as follows: [JPA entityAttributeName] [Operand] [Value]
+	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the api-persistence_ documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression. The ColumnPredicateExpression allows for specification arbitrary criteria using the previously enumerated operator types. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``.
 
-	An example is illustrated here:
+    .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
+
+    An example is illustrated here:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
-    :start-after: DOCSTART VaultQueryExample16
-    :end-before: DOCEND VaultQueryExample16
+    :start-after: DOCSTART VaultQueryExample20
+    :end-before: DOCEND VaultQueryExample20
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
 	   
-Additional notes
-
-	.. note:: Custom contract states that implement the ``Queryable`` interface may now extend the ``FungiblePersistentState``, ``LinearPersistentState`` or ``DealPersistentState`` classes when implementing their ``MappedSchema``. Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset``, ``LinearState`` and ``DealState`` attributes.
+.. note:: Custom contract states that implement the ``Queryable`` interface may now extend common schemas types ``FungiblePersistentState`` or, ``LinearPersistentState``.  Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset`` and ``LinearState`` attributes. See ``SampleCashSchemaV2`` and ``DummyLinearStateSchemaV2`` as examples.
 
 Examples of these ``QueryCriteria`` objects are presented below for Kotlin and Java.
 
-The Vault Query API leverages the rich semantics of the underlying Requery_ persistence framework adopted by Corda.
+.. note:: When specifying the Contract Type as a parameterised type to the QueryCriteria in Kotlin, queries now include all concrete implementations of that type if this is an interface. Previously, it was only possible to query on Concrete types (or the universe of all Contract States).
 
-.. _Requery: https://github.com/requery/requery/wiki
-.. _Persistence: https://docs.corda.net/persistence.html
+The Vault Query API leverages the rich semantics of the underlying JPA Hibernate_ based Persistence_ framework adopted by Corda.
+
+.. _Hibernate: https://docs.jboss.org/hibernate/jpa/2.1/api/
+.. _Persistence: https://docs.corda.net/api-persistence.html
 
 .. note:: Permissioning at the database level will be enforced at a later date to ensure authenticated, role-based, read-only access to underlying Corda tables.
 
-.. note:: API's now provide ease of use calling semantics from both Java and Kotlin.
+.. note:: API's now provide ease of use calling semantics from both Java and Kotlin. However, it should be noted that Java custom queries are significantly more verbose due to the use of reflection fields to reference schema attribute types.
 
-.. note:: Current queries by ``Party`` specify only a party name as the underlying identity framework is being re-designed. In future it may be possible to query on specific elements of a parties identity such as a ``CompositeKey`` hierarchy (parent and child nodes, weightings). 
+An example of a custom query in Java is illustrated here:
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultJavaQueryExample3
+    :end-before: DOCEND VaultJavaQueryExample3
+
+.. note:: Current queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, then no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria. Ongoing design work on identity manangement is likely to enhance identity based queries (including composite key criteria selection).
 
 Example usage
 -------------
@@ -94,7 +106,7 @@ Kotlin
 
 **General snapshot queries using** ``VaultQueryCriteria``
 
-Query for all unconsumed states:
+Query for all unconsumed states (simplest query possible):
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
@@ -122,6 +134,8 @@ Query for unconsumed states for a given notary:
     :start-after: DOCSTART VaultQueryExample4
     :end-before: DOCEND VaultQueryExample4
 
+.. note:: We are using the notaries X500Name as our search identifier.
+
 Query for unconsumed states for a given set of participants:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
@@ -136,12 +150,16 @@ Query for unconsumed states recorded between two time intervals:
     :start-after: DOCSTART VaultQueryExample6
     :end-before: DOCEND VaultQueryExample6
 
-Query for all states with pagination specification:
+.. note:: This example illustrates usage of a Between ColumnPredicate.
+
+Query for all states with pagination specification (10 results per page):
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample7
     :end-before: DOCEND VaultQueryExample7
+
+.. note:: The result set metadata field `totalStatesAvailable` allows you to further paginate accordingly.
 
 **LinearState and DealState queries using** ``LinearStateQueryCriteria``
 
@@ -152,12 +170,12 @@ Query for unconsumed linear states for given linear ids:
     :start-after: DOCSTART VaultQueryExample8
     :end-before: DOCEND VaultQueryExample8
 
-.. note:: This example was previously executed using the deprecated extension method:
+This example was previously executed using the deprecated extension method:
 
-	.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-	    :language: kotlin
-	    :start-after: DOCSTART VaultDeprecatedQueryExample1
-	    :end-before: DOCEND VaultDeprecatedQueryExample1
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultDeprecatedQueryExample1
+    :end-before: DOCEND VaultDeprecatedQueryExample1
 
 Query for all linear states associated with a linear id:
 
@@ -166,12 +184,12 @@ Query for all linear states associated with a linear id:
     :start-after: DOCSTART VaultQueryExample9
     :end-before: DOCEND VaultQueryExample9
 
-.. note:: This example was previously executed using the deprecated method:
+This example was previously executed using the deprecated method:
 
-	.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-	    :language: kotlin
-	    :start-after: DOCSTART VaultDeprecatedQueryExample2
-	    :end-before: DOCEND VaultDeprecatedQueryExample2
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultDeprecatedQueryExample2
+    :end-before: DOCEND VaultDeprecatedQueryExample2
 
 Query for unconsumed deal states with deals references:
 
@@ -196,12 +214,14 @@ Query for fungible assets for a given currency:
     :start-after: DOCSTART VaultQueryExample12
     :end-before: DOCEND VaultQueryExample12
 
-Query for fungible assets for a given currency and minimum quantity:
+Query for fungible assets for a minimum quantity:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample13
     :end-before: DOCEND VaultQueryExample13
+
+.. note:: This example uses the builder DSL.
 
 Query for fungible assets for a specifc issuer party:
 
@@ -210,12 +230,32 @@ Query for fungible assets for a specifc issuer party:
     :start-after: DOCSTART VaultQueryExample14
     :end-before: DOCEND VaultQueryExample14
 
-Query for consumed fungible assets with a specific exit key:
+**Dynamic queries** (also using ``VaultQueryCriteria``) are an extension to the snapshot queries by returning an additional ``QueryResults`` return type in the form of an ``Observable<Vault.Update>``. Refer to `ReactiveX Observable <http://reactivex.io/documentation/observable.html>`_ for a detailed understanding and usage of this type. 
+
+Track unconsumed cash states:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample15
     :end-before: DOCEND VaultQueryExample15
+
+Track unconsumed linear states:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample16
+    :end-before: DOCEND VaultQueryExample16
+
+.. note:: This will return both Deal and Linear states.
+    
+Track unconsumed deal states:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample17
+    :end-before: DOCEND VaultQueryExample17
+
+.. note:: This will return only Deal states.
 
 Java examples
 ^^^^^^^^^^^^^
@@ -227,28 +267,40 @@ Query for all consumed contract states:
     :start-after: DOCSTART VaultJavaQueryExample1
     :end-before: DOCEND VaultJavaQueryExample1
 
-.. note:: This example was previously executed using the deprecated method:
+This example was previously executed using the deprecated method:
 
-	.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-	    :language: java
-	    :start-after: DOCSTART VaultDeprecatedJavaQueryExample1
-	    :end-before: DOCEND VaultDeprecatedJavaQueryExample1
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultDeprecatedJavaQueryExample1
+    :end-before: DOCEND VaultDeprecatedJavaQueryExample1
 
-Query for all deal states:
+Query for consumed deal states or linear ids, specify a paging specification and sort by unique identifier:
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
 
-.. note:: This example was previously executed using the deprecated method:
+This example was previously executed using the deprecated method:
 
-	.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-	    :language: java
-	    :start-after: DOCSTART VaultDeprecatedJavaQueryExample2
-	    :end-before: DOCEND VaultDeprecatedJavaQueryExample2
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultDeprecatedJavaQueryExample2
+    :end-before: DOCEND VaultDeprecatedJavaQueryExample2
 
-**Dynamic queries** (also using ``VaultQueryCriteria``) are an extension to the snapshot queries by returning an additional ``QueryResults`` return type in the form of an ``Observable<Vault.Update>``. Refer to `ReactiveX Observable <http://reactivex.io/documentation/observable.html>`_ for a detailed understanding and usage of this type. 
+Track unconsumed cash states:
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultJavaQueryExample4
+    :end-before: DOCEND VaultJavaQueryExample4
+
+Track unconsumed deal states or linear states (with snapshot including specification of paging and sorting by unique identifier):
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultJavaQueryExample4
+    :end-before: DOCEND VaultJavaQueryExample4
 
 Other use case scenarios
 ------------------------

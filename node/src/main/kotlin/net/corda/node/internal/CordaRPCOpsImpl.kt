@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -59,7 +60,7 @@ class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort): Vault.Page<T> {
         return database.transaction {
-            services.vaultService.queryBy<T>(criteria, paging, sorting)
+            services.vaultQueryService._queryBy(criteria, paging, sorting, ContractState::class.java as Class<T>)
         }
     }
 
@@ -68,7 +69,7 @@ class CordaRPCOpsImpl(
                                                   paging: PageSpecification,
                                                   sorting: Sort): Vault.PageAndUpdates<T> {
         return database.transaction {
-            services.vaultService.trackBy<T>(criteria, paging, sorting)
+            services.vaultQueryService._trackBy<T>(criteria, paging, sorting, ContractState::class.java as Class<T>)
         }
     }
 

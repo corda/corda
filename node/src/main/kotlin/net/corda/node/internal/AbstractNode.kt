@@ -32,6 +32,7 @@ import net.corda.node.services.api.*
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -51,6 +52,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AddOrRemove.ADD
@@ -121,6 +123,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
+        override val vaultQueryService: VaultQueryService get() = vaultQuery
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
@@ -164,6 +167,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var vault: VaultService
+    lateinit var vaultQuery: VaultQueryService
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var txVerifierService: TransactionVerifierService
@@ -447,6 +451,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         network = makeMessagingService()
         schemas = makeSchemaService()
         vault = makeVaultService(configuration.dataSourceProperties)
+        vaultQuery = makeVaultQueryService(schemas)
         txVerifierService = makeTransactionVerifierService()
         auditService = DummyAuditService()
 
@@ -525,7 +530,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         VaultSoftLockManager(vault, smm)
         CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(vault.rawUpdates, schemas)
+        HibernateObserver(vault.rawUpdates, HibernateConfiguration(schemas))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -704,7 +709,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
-    protected open fun makeSchemaService(): SchemaService = NodeSchemaService()
+    protected open fun makeVaultQueryService(schemas: SchemaService): VaultQueryService = HibernateVaultQueryImpl(HibernateConfiguration(schemas), vault.updatesPublisher)
+
+    protected open fun makeSchemaService(): SchemaService = NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet())
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
 

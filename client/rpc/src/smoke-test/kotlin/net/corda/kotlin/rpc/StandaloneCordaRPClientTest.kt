@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.notUsed
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.SWISS_FRANCS
@@ -14,12 +15,18 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
+import net.corda.flows.CashPaymentFlow
 import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
@@ -156,6 +163,55 @@ class StandaloneCordaRPClientTest {
         assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
     }
 
+    @Test
+    fun `test vault track by`() {
+        val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>()
+        assertEquals(0, vault.totalStatesAvailable)
+
+        var updateCount = 0
+        vaultUpdates.subscribe { update ->
+            log.info("Vault>> FlowId=${update.flowId}")
+            ++updateCount
+        }
+
+        // Now issue some cash
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
+                .returnValue.getOrThrow(timeout)
+        assertNotEquals(0, updateCount)
+
+        // Check that this cash exists in the vault
+        val cashBalance = rpcProxy.getCashBalances()
+        log.info("Cash Balances: $cashBalance")
+        assertEquals(1, cashBalance.size)
+        assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
+    }
+
+    @Test
+    fun `test vault query by`() {
+
+        // Now issue some cash
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
+                .returnValue.getOrThrow(timeout)
+
+        val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+        val paging = PageSpecification(0, 10)
+        val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.DESC)))
+
+        val queryResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
+        assertEquals(1, queryResults.totalStatesAvailable)
+        assertEquals(queryResults.states.first().state.data.amount.quantity, 629.POUNDS.quantity)
+
+        rpcProxy.startFlow(::CashPaymentFlow, 100.POUNDS, notaryIdentity).returnValue.getOrThrow()
+
+        val moreResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
+        assertEquals(3, moreResults.totalStatesAvailable)   // 629 - 100 + 100
+
+        // Check that this cash exists in the vault
+        val cashBalance = rpcProxy.getCashBalances()
+        log.info("Cash Balances: $cashBalance")
+        assertEquals(1, cashBalance.size)
+        assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
+    }
 
     private fun fetchNotaryIdentity(): Party {
         val (nodeInfo, nodeUpdates) = rpcProxy.networkMapUpdates()

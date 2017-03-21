@@ -21,8 +21,8 @@ import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.services.database.RequeryConfiguration
-import net.corda.node.services.persistence.schemas.AttachmentEntity
-import net.corda.node.services.persistence.schemas.Models
+import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
+import net.corda.node.services.persistence.schemas.requery.Models
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
