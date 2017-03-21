@@ -73,11 +73,9 @@ class EventGenerator(
             }
 
     val moveCashGenerator =
-            amountIssuedGenerator.combine(
-                    partyGenerator
-            ) { amountIssued, recipient ->
+            amountIssuedGenerator.combine(partyGenerator) { amountIssued, recipient ->
                 CashFlowCommand.PayCash(
-                        amount = amountIssued,
+                        amount = amountIssued.withoutIssuer(),
                         recipient = recipient
                 )
             }

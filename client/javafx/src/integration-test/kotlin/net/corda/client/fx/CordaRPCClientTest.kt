@@ -1,7 +1,6 @@
 package net.corda.client.fx
 
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
@@ -84,10 +83,7 @@ class CordaRPCClientTest : NodeBasedTest() {
     fun `FlowException thrown by flow`() {
         client.start(rpcUser.username, rpcUser.password)
         val proxy = client.proxy()
-        val handle = proxy.startFlow(::CashPaymentFlow,
-                100.DOLLARS.issuedBy(node.info.legalIdentity.ref(1)),
-                node.info.legalIdentity
-        )
+        val handle = proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity)
         // TODO Restrict this to CashException once RPC serialisation has been fixed
         assertThatExceptionOfType(FlowException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()

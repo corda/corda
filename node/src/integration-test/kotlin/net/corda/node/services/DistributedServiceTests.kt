@@ -144,9 +144,7 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(
-                ::CashPaymentFlow,
-                amount.issuedBy(alice.nodeInfo.legalIdentity.ref(0)), alice.nodeInfo.legalIdentity)
+        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
         payHandle.returnValue.getOrThrow()
     }
 }
