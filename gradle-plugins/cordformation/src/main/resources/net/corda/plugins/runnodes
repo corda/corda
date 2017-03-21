@@ -6,4 +6,8 @@ set -euo pipefail
 basedir=$( dirname "$0" )
 cd "$basedir"
 
-java -jar runnodes.jar
+if which osascript >/dev/null; then
+    /usr/libexec/java_home -v 1.8 --exec -jar runnodes.jar
+else
+    java -jar runnodes.jar
+fi

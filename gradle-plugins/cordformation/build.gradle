@@ -48,9 +48,7 @@ dependencies {
 
 task createNodeRunner(type: Jar, dependsOn: [classes]) {
     manifest {
-        attributes 'Implementation-Title': 'Gradle Jar File Example',
-                'Implementation-Version': version,
-                'Main-Class': 'net.corda.plugins.NodeRunnerKt'
+        attributes('Main-Class': 'net.corda.plugins.NodeRunnerKt')
     }
     baseName = project.name + '-fatjar'
     from { configurations.noderunner.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -58,7 +56,7 @@ task createNodeRunner(type: Jar, dependsOn: [classes]) {
 }
 
 jar {
-    from (createNodeRunner) {
+    from(createNodeRunner) {
         rename { 'net/corda/plugins/runnodes.jar' }
     }
 }
