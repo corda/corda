@@ -16,7 +16,7 @@ fun main(args: Array<String>) {
     val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
     val javaArgs = listOf<String>() // TODO: Add args passthrough
-    println("Starting node runner in $workingDir")
+    println("Starting nodes in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
         if (isNode(it)) {
@@ -31,7 +31,7 @@ fun main(args: Array<String>) {
     }
 
     println("Started ${startedProcesses.size} processes")
-    println("Node runner finished")
+    println("Finished starting nodes")
 }
 
 private fun isNode(maybeNodeDir: File) = maybeNodeDir.isDirectory
