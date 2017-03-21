@@ -52,10 +52,10 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
 
     private var registeredForPush = false
-    protected var registeredNodes: MutableMap<CompositeKey, NodeInfo> = Collections.synchronizedMap(HashMap())
+    protected var registeredNodes: MutableMap<Party, NodeInfo> = Collections.synchronizedMap(HashMap())
 
     override fun getPartyInfo(party: Party): PartyInfo? {
-        val node = registeredNodes[party.owningKey]
+        val node = registeredNodes[party]
         if (node != null) {
             return PartyInfo.Node(node)
         }
@@ -69,7 +69,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         return null
     }
 
-    override fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? = registeredNodes[compositeKey]
+    override fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? = registeredNodes.keys.find { it.owningKey == compositeKey }.let { registeredNodes[it] }
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
@@ -111,7 +111,12 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun addNode(node: NodeInfo) {
         synchronized(_changed) {
-            val previousNode = registeredNodes.put(node.legalIdentity.owningKey, node)
+            // TODO: Remove this when identity work complete.
+            // Checks legal identity name and remove duplicate registration.
+            val previousKey = registeredNodes.keys.find { it.name == node.legalIdentity.name }
+            val previousNode = previousKey?.let { registeredNodes[it] }
+            previousNode?.apply { registeredNodes.remove(previousKey) }
+            registeredNodes.put(node.legalIdentity, node)
             if (previousNode == null) {
                 changePublisher.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
@@ -122,7 +127,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
-            registeredNodes.remove(node.legalIdentity.owningKey)
+            registeredNodes.remove(node.legalIdentity)
             changePublisher.onNext(MapChange.Removed(node))
         }
     }

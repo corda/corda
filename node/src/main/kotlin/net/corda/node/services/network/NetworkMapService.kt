@@ -57,7 +57,6 @@ import javax.annotation.concurrent.ThreadSafe
 // a concept of identity changes over time, should that include the node for an identity? If so, that is likely to
 // replace this service.
 interface NetworkMapService {
-
     companion object {
         val DEFAULT_EXPIRATION_PERIOD: Period = Period.ofWeeks(4)
         val FETCH_TOPIC = "platform.network_map.fetch"
@@ -113,7 +112,6 @@ interface NetworkMapService {
 
 @ThreadSafe
 class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
-
     override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
 
@@ -236,6 +234,17 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
+            // TODO: Remove this when identity work complete.
+            // Checks legal identity name and remove duplicate registration.
+            synchronized(nodeRegistrations) {
+                if (change.type == ADD) {
+                    val existingKey = nodeRegistrations.keys.find { it.name == change.node.legalIdentity.name }
+                    val existing = existingKey?.let { nodeRegistrations[it] }
+                    if (existing != null && existing.reg.serial < change.serial) {
+                        nodeRegistrations.remove(existingKey)
+                    }
+                }
+            }
             nodeRegistrations.compute(node.legalIdentity) { _: Party, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"

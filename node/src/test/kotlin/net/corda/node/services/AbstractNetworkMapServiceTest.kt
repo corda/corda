@@ -1,6 +1,8 @@
 package net.corda.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.send
@@ -78,6 +80,20 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         swizzle()
         assertThat(response.getOrThrow().error).isNull()
         assertThat(alice.fetchMap()).containsOnly(Added(mapServiceNode), Added(alice))  // Confirm it's a no-op
+    }
+
+    @Test
+    fun `re-register the same node with different key`() {
+        val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
+        val newKeyPair = generateKeyPair()
+        val newAlice = NodeInfo(alice.info.address, Party(alice.info.legalIdentity.name, newKeyPair.public), alice.info.version, alice.info.advertisedServices, alice.info.physicalLocation)
+        val nodeRegistration = NodeRegistration(newAlice, System.currentTimeMillis(), ADD, expires)
+        val request = RegistrationRequest(nodeRegistration.toWire(newKeyPair.private), alice.info.address)
+        val response = alice.services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.info.address)
+        network.runNetwork()
+
+        assertThat(response.getOrThrow().error).isNull()
+        assertThat(alice.fetchMap().map { it.node }).containsOnly(mapServiceNode.info, newAlice)  // Confirm it's a no-op
     }
 
     @Test
