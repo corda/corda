@@ -172,6 +172,7 @@ class Node {
             from cordaJar
             into nodeDir
             rename cordaJar.name, NODEJAR_NAME
+            fileMode 0755
         }
     }
 
