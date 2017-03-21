@@ -13,18 +13,20 @@ private val nodeConfName = "node.conf"
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
+    val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
+    val javaArgs = listOf<String>() // TODO: Add args passthrough
     println("Starting node runner in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
         if (isNode(it)) {
-            println("Starting node in $nodeDir")
-            startedProcesses.add(startJava(nodeJarName, it, headless))
+            println("Starting node in $it")
+            startedProcesses.add(runJar(nodeJarName, it, javaArgs))
         }
 
         if (isWebserver(it)) {
-            println("Starting webserver in $webserverDir")
-            startedProcesses.add(startJava(webJarName, it, headless))
+            println("Starting webserver in $it")
+            startedProcesses.add(runJar(webJarName, it, javaArgs))
         }
     }
 
@@ -42,21 +44,7 @@ private fun isWebserver(maybeWebserverDir: File) = isNode(maybeWebserverDir) && 
 // TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
 private fun hasWebserverPort(nodeConfDir: File) = Files.readAllLines(File(nodeConfDir, nodeConfName).toPath()).joinToString { it }.contains("webAddress")
 
-private fun startJava(jarName: String, dir: File, headless: Boolean, args: List<String> = listOf()): Process {
-    return if (headless) {
-        execJar(jarName, dir, args)
-    } else {
-        execJarInTerminalWindow(jarName, dir, args)
-    }
-}
-
-private fun getJavaFunc(headless: Boolean) {
-    return if (headless) {
-        execJar
-    } else {
-        execJarInTerminalWindow
-    }
-}
+private fun getJarRunner(headless: Boolean): (String, File, List<String>) -> Process = if (headless) ::execJar else ::execJarInTerminalWindow
 
 private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): Process {
     val nodeName = dir.toPath().fileName
