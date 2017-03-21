@@ -85,6 +85,12 @@ Documentation Contents:
 
 .. toctree::
    :maxdepth: 2
+   :caption: DemoBench
+
+   demobench
+
+.. toctree::
+   :maxdepth: 2
    :caption: Tutorials
 
    tutorial-contract

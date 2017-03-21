@@ -13,6 +13,14 @@ ports. To upgrade, you *must*:
  1. In Gradle build configurations replace any references to ``artemisPort`` with ``p2pPort``.
  2. In node configurations replace ``artemisAddress`` with ``p2pAddress``.
 
+There is a new tool "DemoBench", which makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following features:
+ #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
+ #. Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
+ #. You can launch an Explorer instance for each node at the click of a button. Credentials are handed to the Explorer so it starts out logged in already.
+ #. Some basic statistics are shown about each node, informed via the RPC connection.
+ #. Another button launches a database viewer in the system browser.
+ #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+
 Milestone 9
 -----------
 
