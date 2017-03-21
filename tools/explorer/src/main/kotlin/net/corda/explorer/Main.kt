@@ -14,8 +14,10 @@ import net.corda.client.model.Models
 import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.transactions.SignedTransaction
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
@@ -31,6 +33,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
+import rx.functions.Actions
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
@@ -180,33 +183,48 @@ fun main(args: Array<String>) {
                     currencies = listOf(USD)
             )
 
+            val flowHandles: Array<FlowHandle<SignedTransaction>?> = kotlin.arrayOfNulls(6)
             for (i in 0..1000) {
                 Thread.sleep(500)
-                // Party pay requests
-                listOf(aliceRPC, bobRPC).forEach {
-                    eventGenerator.clientCommandGenerator.map { command ->
-                        command.startFlow(it)
-                        Unit
-                    }.generate(SplittableRandom())
-                }
+                // Parties pay requests
+                // Alice
+                eventGenerator.clientCommandGenerator.map { command ->
+                    flowHandles[0] = command.startFlow(aliceRPC)
+                    Unit
+                }.generate(SplittableRandom())
+
+                // Bob
+                eventGenerator.clientCommandGenerator.map { command ->
+                    flowHandles[1] = command.startFlow(bobRPC)
+                    Unit
+                }.generate(SplittableRandom())
+
                 // Exit requests
                 issuerGBPEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    command.startFlow(issuerRPCGBP)
+                    flowHandles[2] = command.startFlow(issuerRPCGBP)
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    command.startFlow(issuerRPCUSD)
+                    flowHandles[3] = command.startFlow(issuerRPCUSD)
                     Unit
                 }.generate(SplittableRandom())
+
                 // Issuer requests
                 issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    command.startFlow(issuerRPCGBP)
+                    flowHandles[4] = command.startFlow(issuerRPCGBP)
                     Unit
                 }.generate(SplittableRandom())
                 issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    command.startFlow(issuerRPCUSD)
+                    flowHandles[5] = command.startFlow(issuerRPCUSD)
                     Unit
                 }.generate(SplittableRandom())
+
+                flowHandles.forEach {
+                    it?.let {
+                        it.returnValue.cancel(false)
+                        it.progress.subscribe({}, {}).unsubscribe()
+                    }
+                }
             }
             aliceClient.close()
             bobClient.close()
