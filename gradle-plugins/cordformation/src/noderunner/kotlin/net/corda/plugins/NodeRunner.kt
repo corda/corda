@@ -76,9 +76,16 @@ do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && ex
         )
     } else {
         // Assume Linux
-        ProcessBuilder(
-                "xterm", "-T", nodeName, "-e", javaCmd
-        )
+        val isTmux = System.getenv("TMUX")?.isNotEmpty() ?: false
+        if (isTmux) {
+            ProcessBuilder(
+                    "tmux", "new-window", "-n", nodeName, javaCmd
+            )
+        } else {
+            ProcessBuilder(
+                    "xterm", "-T", nodeName, "-e", javaCmd
+            )
+        }
     }
     return builder.directory(dir).start()
 }
