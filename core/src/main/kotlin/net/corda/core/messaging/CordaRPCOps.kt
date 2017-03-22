@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.notUsed
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
@@ -224,15 +225,9 @@ data class FlowHandle<A>(
         val progress: Observable<String>,
         val returnValue: ListenableFuture<A>) {
 
-    /**
-     * This function should be invoked on unused Observables to release the server resources.
-     * subscribe({}, {}) was used instead of simply calling subscribe()
-     * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
-     * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
-     * empty inputs are used to subscribe({}, {}).
-     */
+    /* Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources. */
     fun discard() {
         returnValue.cancel(false)
-        progress.subscribe({}, {}).unsubscribe()
+        progress.notUsed()
     }
 }
