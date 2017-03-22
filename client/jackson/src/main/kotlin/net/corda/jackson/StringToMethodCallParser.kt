@@ -3,10 +3,14 @@ package net.corda.jackson
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.google.common.collect.HashMultimap
+import com.google.common.collect.Multimap
+import com.google.common.collect.MultimapBuilder
 import net.corda.jackson.StringToMethodCallParser.ParsedMethodCall
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
+import java.util.*
 import java.util.concurrent.Callable
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
@@ -79,14 +83,19 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
     companion object {
         @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         private val ignoredNames = Object::class.java.methods.map { it.name }
-        private fun methodsFromType(clazz: Class<*>): Map<String, Method> {
-            return clazz.methods.filterNot { it.isSynthetic && it.name !in ignoredNames }.map { it.name to it }.toMap()
+        private fun methodsFromType(clazz: Class<*>): Multimap<String, Method> {
+            val result = HashMultimap.create<String, Method>()
+            for ((key, value) in clazz.methods.filterNot { it.isSynthetic && it.name !in ignoredNames }.map { it.name to it }) {
+                result.put(key, value)
+            }
+            return result
         }
         private val log = LoggerFactory.getLogger(StringToMethodCallParser::class.java)!!
     }
 
     /** The methods that can be invoked via this parser. */
-    protected val methodMap = methodsFromType(targetType)
+    protected val methodMap: Multimap<String, Method> = methodsFromType(targetType)
+
     /** A map of method name to parameter names for the target type. */
     val methodParamNames: Map<String, List<String>> = targetType.declaredMethods.mapNotNull {
         try {
@@ -98,14 +107,14 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         }
     }.toMap()
 
-    inner class ParsedMethodCall(private val target: T?, val methodName: String, val args: Array<Any?>) : Callable<Any?> {
+    inner class ParsedMethodCall(private val target: T?, val method: Method, val args: Array<Any?>) : Callable<Any?> {
         operator fun invoke(): Any? = call()
         override fun call(): Any? {
             if (target == null)
                 throw IllegalStateException("No target object was specified")
             if (log.isDebugEnabled)
-                log.debug("Invoking call $methodName($args)")
-            return methodMap[methodName]!!.invoke(target, *args)
+                log.debug("Invoking call ${method.name}($args)")
+            return method.invoke(target, *args)
         }
     }
 
@@ -155,10 +164,22 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         val spaceIndex = command.indexOf(' ')
         val name = if (spaceIndex != -1) command.substring(0, spaceIndex) else command
         val argStr = if (spaceIndex != -1) command.substring(spaceIndex) else ""
-        val method = methodMap[name] ?: throw UnparseableCallException.UnknownMethod(name)
+        val methods: Collection<Method> = methodMap[name]
+        if (methods.isEmpty())
+            throw UnparseableCallException.UnknownMethod(name)
         log.debug("Parsing call for method {}", name)
-        val args = parseArguments(name, paramNamesFromMethod(method).zip(method.parameterTypes), argStr)
-        return ParsedMethodCall(target, name, args)
+        // Attempt to parse for each method in turn, allowing the exception to leak if we're on the last one
+        // and fail for that too.
+        for ((index, method) in methods.withIndex()) {
+            try {
+                val args = parseArguments(name, paramNamesFromMethod(method).zip(method.parameterTypes), argStr)
+                return ParsedMethodCall(target, method, args)
+            } catch(e: UnparseableCallException) {
+                if (index == methods.size - 1)
+                    throw e
+            }
+        }
+        throw UnparseableCallException("No overloads of the method matched")  // Should be unreachable!
     }
 
     /**
@@ -188,14 +209,15 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
 
     /** Returns a string-to-string map of commands to a string describing available parameter types. */
     val availableCommands: Map<String, String> get() {
-        return methodMap.mapValues { entry ->
+        return methodMap.entries().map { entry ->
             val (name, args) = entry   // TODO: Kotlin 1.1
-            if (args.parameterCount == 0) "" else {
+            val argStr = if (args.parameterCount == 0) "" else {
                 val paramNames = methodParamNames[name]!!
                 val typeNames = args.parameters.map { it.type.simpleName }
                 val paramTypes = paramNames.zip(typeNames)
                 paramTypes.map { "${it.first}: ${it.second}" }.joinToString(", ")
             }
-        }
+            Pair(name, argStr)
+        }.toMap()
     }
 }
