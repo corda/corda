@@ -88,19 +88,20 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val result = try {
             logic.call()
         } catch (e: FlowException) {
+            recordDuration(startTime, success = false)
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
             processException(e, propagated)
             logger.debug(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
             return
         } catch (t: Throwable) {
+            recordDuration(startTime, success = false)
             logger.warn("Terminated by unexpected exception", t)
             processException(t, false)
             return
-        } finally {
-            recordDuration(startTime)
         }
 
+        recordDuration(startTime)
         // Only sessions which have done a single send and nothing else will block here
         openSessions.values
                 .filter { it.state is FlowSessionState.Initiating }
@@ -383,8 +384,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * Note that the duration will include the time the flow spent being parked, and not just the total
      * execution time.
      */
-    private fun recordDuration(startTime: Long) {
-        val timer = serviceHub.monitoringService.metrics.timer("FlowDuration.${logic.javaClass}")
+    private fun recordDuration(startTime: Long, success: Boolean = true) {
+        val timerName = "FlowDuration.${if (success) "Success" else "Failure"}.${logic.javaClass.name}"
+        val timer = serviceHub.monitoringService.metrics.timer(timerName)
         // Start time gets serialized along with the fiber when it suspends
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
