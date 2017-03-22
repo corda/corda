@@ -66,9 +66,13 @@ class Cordform extends DefaultTask {
      */
     protected void installRunScript() {
         project.copy {
+            from Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.jar")
+            fileMode 0755
+            into "${directory}/"
+        }
+
+        project.copy {
             from Cordformation.getPluginFile(project, "net/corda/plugins/runnodes")
-            filter { String line -> line.replace("NODEJAR_NAME", Node.NODEJAR_NAME) }
-            filter { String line -> line.replace("WEBJAR_NAME", Node.WEBJAR_NAME) }
             // Replaces end of line with lf to avoid issues with the bash interpreter and Windows style line endings.
             filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
             fileMode 0755
@@ -77,8 +81,6 @@ class Cordform extends DefaultTask {
 
         project.copy {
             from Cordformation.getPluginFile(project, "net/corda/plugins/runnodes.bat")
-            filter { String line -> line.replace("NODEJAR_NAME", Node.NODEJAR_NAME) }
-            filter { String line -> line.replace("WEBJAR_NAME", Node.WEBJAR_NAME) }
             into "${directory}/"
         }
     }
