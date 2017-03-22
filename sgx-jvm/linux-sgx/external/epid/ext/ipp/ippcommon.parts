@@ -1,0 +1,56 @@
+############################################################################
+# Copyright 2016 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+############################################################################
+Import('*')
+
+env.PartVersion("9.0.1")
+env.PartName("ippcommon")
+env.DependsOn([])
+
+#prebuild installs prebuild headers instead of src headers.
+#internal ipp includes src/primitives/ipp/
+env.Append(CPPPATH=[AbsDir('sources/include/')])
+
+# env.Append(CPPDEFINES = '_IPP_BE')  #only for BE targets
+
+#includes to install
+install_headers = Pattern(src_dir='include/',
+                          includes=['ippdefs.h',
+                                    'ippversion.h',
+                                    'ippcore.h',
+                                    'ippbase.h',
+                                    'ipptypes.h'
+                                   ],
+                          excludes=[],
+                          recursive=True)
+
+source_headers = Pattern(src_dir='sources/include/',
+                         includes=['*'],
+                         excludes=[],
+                         recursive=True)
+parts_file = Pattern(src_dir='.',
+                     includes=['ippcommon.parts'],
+                     excludes=[],
+                     recursive=True)
+
+env.ExportCPPPATH([AbsDir('sources/include/')])
+
+if 'install_package' in env['MODE']:
+    # All files at /ext/ipp/include
+    env.InstallTopLevel(install_headers, sub_dir='ext/ipp/include')
+    env.InstallTopLevel(source_headers, sub_dir='ext/ipp/sources/include')
+    env.InstallTopLevel(parts_file, sub_dir='ext/ipp/')
+#else
+    env.SdkInclude(install_headers)

@@ -1,0 +1,1 @@
+add_library(avian_util arg-parser.cpp fixed-allocator.cpp)

@@ -1,0 +1,25 @@
+language: cpp
+cache: apt
+
+os:
+  - linux
+  - osx
+
+env:
+  matrix:
+  - BUILD_STEP=""
+# disabled until/unless jfrog.org credentials are updated and someone
+# decides they care about published artifacts:
+#  - BUILD_STEP="PUBLISH"
+  global:
+  - TERM=dumb
+  - secure: rh1utD4shKmYtokItuRYEF9WsfTnvZO5XqnTU4DHTS7quHHgLihtOO2/3+B+2W2hEd5Obr2or8zx+zmzWcNUyLokZ0j/FRLWSScNkLzTtm12pupLrncY+/g1NIdfbhn+OLRIzBz6zB6m6a2qWFEJ+bScUNGD/7wZVtzkujqlDEE=
+  - secure: j9DOzZMCYk/BzhKK9u4XMKpCzyGOsvP2cLTp6cXE7/tkWDAPVv6BFmeqNbiLTEqk0aGX+HYbY/2YVtpRZmDzfeWtnBFF5mL1Y1tgzx1Kf155C+P6rZgt5PiQTUdXlp2umuRifY1BbXAPc3DZ2UOPUjWKnLHVbZLQRgO1zimmMx8=
+
+matrix:
+  fast_finish: true
+  exclude:
+    - os: osx
+      env: BUILD_STEP=""
+
+script: ./test/ci.sh ${BUILD_STEP}
