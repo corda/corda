@@ -14,6 +14,7 @@ repositories {
 dependencies {
     compile project(':core')
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"

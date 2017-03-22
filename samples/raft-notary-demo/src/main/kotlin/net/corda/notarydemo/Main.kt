@@ -2,8 +2,8 @@ package net.corda.notarydemo
 
 import net.corda.core.div
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.nodeapi.User
 import java.nio.file.Paths
 
 /** Creates and starts all nodes required for the demo. */

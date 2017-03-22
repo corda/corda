@@ -1,13 +1,13 @@
 package net.corda.traderdemo
 
 import com.google.common.util.concurrent.Futures
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.IssuerFlow
-import net.corda.node.services.User
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import net.corda.testing.node.NodeBasedTest
 import org.junit.Test
 

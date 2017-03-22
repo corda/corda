@@ -1,4 +1,4 @@
-package net.corda.node.serialization
+package net.corda.nodeapi.serialization
 
 import com.esotericsoftware.kryo.KryoException
 import com.google.common.net.HostAndPort
