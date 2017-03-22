@@ -132,8 +132,8 @@ class NodeTerminalView : Fragment() {
             )
 
             Platform.runLater {
-                states.value = statesInVault.first.size.toString()
-                transactions.value = verifiedTx.first.size.toString()
+                states.value = fetchAndDrop(statesInVault).size.toString()
+                transactions.value = fetchAndDrop(verifiedTx).size.toString()
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
         } catch (e: Exception) {
@@ -162,4 +162,9 @@ class NodeTerminalView : Fragment() {
         override fun emulateX11CopyPaste() = true
     }
 
+    // TODO - This function is working around a misunderstanding of how RPC is supposed to work!
+    private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
+        pair.second.subscribe().unsubscribe()
+        return pair.first
+    }
 }
