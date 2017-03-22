@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DummyContract
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.recordTransactions
 import net.corda.core.transactions.SignedTransaction
 import java.util.*
 

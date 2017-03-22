@@ -1,10 +1,11 @@
-package net.corda.node.services.messaging
+package net.corda.client.rpc
 
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.cache.CacheBuilder
 import net.corda.core.ErrorOr
 import net.corda.core.bufferUntilSubscribed
@@ -14,6 +15,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.debug
+import net.corda.nodeapi.*
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -382,4 +384,19 @@ class CordaRPCClientImpl(private val session: ClientSession,
         }
     }
     //endregion
+}
+
+private val rpcDesKryoPool = KryoPool.Builder { RPCKryo(CordaRPCClientImpl.ObservableDeserializer()) }.build()
+
+fun createRPCKryoForDeserialization(rpcClient: CordaRPCClientImpl, qName: String? = null, rpcName: String? = null, rpcLocation: Throwable? = null): Kryo {
+    val kryo = rpcDesKryoPool.borrow()
+    kryo.context.put(RPCKryoClientKey, rpcClient)
+    kryo.context.put(RPCKryoQNameKey, qName)
+    kryo.context.put(RPCKryoMethodNameKey, rpcName)
+    kryo.context.put(RPCKryoLocationKey, rpcLocation)
+    return kryo
+}
+
+fun releaseRPCKryoForDeserialization(kryo: Kryo) {
+    rpcDesKryoPool.release(kryo)
 }

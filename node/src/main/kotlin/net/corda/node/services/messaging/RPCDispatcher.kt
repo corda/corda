@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.HashMultimap
 import net.corda.core.ErrorOr
@@ -14,11 +15,11 @@ import net.corda.core.messaging.RPCReturnsObservables
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.debug
 import net.corda.node.services.RPCUserService
-import net.corda.node.services.User
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.core.utilities.debug
+import net.corda.nodeapi.*
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import org.apache.activemq.artemis.api.core.Message
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -192,4 +193,17 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
             if (required) throw RPCException("missing $property property") else null
         }
     }
+}
+
+private val rpcSerKryoPool = KryoPool.Builder { RPCKryo(RPCDispatcher.ObservableSerializer()) }.build()
+
+fun createRPCKryoForSerialization(qName: String? = null, dispatcher: RPCDispatcher? = null): Kryo {
+    val kryo = rpcSerKryoPool.borrow()
+    kryo.context.put(RPCKryoQNameKey, qName)
+    kryo.context.put(RPCKryoDispatcherKey, dispatcher)
+    return kryo
+}
+
+fun releaseRPCKryoForSerialization(kryo: Kryo) {
+    rpcSerKryoPool.release(kryo)
 }

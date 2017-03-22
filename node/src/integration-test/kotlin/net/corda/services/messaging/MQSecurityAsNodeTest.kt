@@ -1,8 +1,8 @@
 package net.corda.services.messaging
 
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException

@@ -13,13 +13,13 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
-import net.corda.node.services.User
-import net.corda.node.services.messaging.CURRENT_RPC_USER
-import net.corda.node.services.messaging.PermissionException
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.databaseTransaction
+import net.corda.nodeapi.CURRENT_RPC_USER
+import net.corda.nodeapi.PermissionException
+import net.corda.nodeapi.User
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.MockNetwork

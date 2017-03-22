@@ -3,8 +3,8 @@ package net.corda.attachmentdemo
 import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import java.nio.file.Paths
 
 /**

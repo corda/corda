@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import com.typesafe.config.ConfigFactory
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.nodeapi.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test

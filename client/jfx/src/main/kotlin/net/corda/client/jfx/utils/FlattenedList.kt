@@ -6,7 +6,6 @@ import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 import java.util.*
-import kotlin.test.assertEquals
 
 /**
  * [FlattenedList] flattens the passed in list of [ObservableValue]s so that changes in individual updates to the values
@@ -107,7 +106,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
             }
         }
         endChange()
-        assertEquals(sourceList.size, indexMap.size)
+        assert(sourceList.size == indexMap.size)
     }
 
     override fun get(index: Int) = sourceList.get(index).value

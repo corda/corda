@@ -1,4 +1,4 @@
-package net.corda.node.messaging
+package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.User

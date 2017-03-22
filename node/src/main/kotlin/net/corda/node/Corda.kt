@@ -172,7 +172,7 @@ private fun printPluginsAndServices(node: Node) {
     }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
-            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }
+            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.")}
             .map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())

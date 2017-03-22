@@ -31,6 +31,7 @@ sealed class ServiceType(val id: String) {
 
         val notary: ServiceType = corda.getSubType("notary")
         val regulator: ServiceType = corda.getSubType("regulator")
+        val networkMap: ServiceType = corda.getSubType("network_map")
 
         fun getServiceType(namespace: String, typeId: String): ServiceType {
             require(!namespace.startsWith("corda")) { "Corda namespace is protected" }
@@ -47,7 +48,8 @@ sealed class ServiceType(val id: String) {
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
     fun isNotary() = isSubTypeOf(notary)
     fun isValidatingNotary() = isNotary() && id.contains(".validating")
+    fun isNetworkMap() = id == networkMap.id
 
     override fun hashCode(): Int = id.hashCode()
-    override fun toString(): String = id.toString()
+    override fun toString(): String = id
 }

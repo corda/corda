@@ -12,9 +12,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.internal.Node
 import net.corda.node.serialization.NodeClock
-import net.corda.node.services.User
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.TestClock
+import net.corda.nodeapi.User
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
