@@ -231,7 +231,7 @@ data class FlowHandle<A>(
      * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
      * empty inputs are used to subscribe({}, {}).
      */
-    fun finalize() {
+    fun discard() {
         returnValue.cancel(false)
         progress.subscribe({}, {}).unsubscribe()
     }
