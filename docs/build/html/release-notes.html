@@ -167,6 +167,7 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
 <li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Release notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#milestone-9-2">Milestone 9.2</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#milestone-9">Milestone 9</a></li>
 </ul>
 </li>
@@ -228,15 +229,21 @@ API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/ja
 <h1>Release notes<a class="headerlink" href="#release-notes" title="Permalink to this headline">¶</a></h1>
 <p>Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.</p>
+<div class="section" id="milestone-9-2">
+<h2>Milestone 9.2<a class="headerlink" href="#milestone-9-2" title="Permalink to this headline">¶</a></h2>
+<p>This release is a minor stability and developer experience update with corrections to how Corda is published and
+referred to by the CorDapp template and tutorial, and an improvement to data reliability during node restarts.</p>
+<p>For a full list of changes please see <a class="reference internal" href="changelog.html"><span class="doc">Changelog</span></a>.</p>
+</div>
 <div class="section" id="milestone-9">
 <h2>Milestone 9<a class="headerlink" href="#milestone-9" title="Permalink to this headline">¶</a></h2>
 <p>This release focuses on improvements to resiliency of the core infrastructure, with highlights including a Byzantine
 fault tolerant (BFT) decentralised notary, based on the BFT-SMaRT protocol and isolating the web server from the
 Corda node.</p>
-<p>With thanks to open source contributor Thomas Schroeter for providing the BFT notary, Corda can now resist malicious
-attacks by members of a distributed notary service. If your notary has five members, two can become hacked or malicious
-simultaneously and the system continues unaffected!
-.. You can read more about this new feature &lt;here&gt;.</p>
+<p>With thanks to open source contributor Thomas Schroeter for providing the BFT notary prototype, Corda can now resist
+malicious attacks by members of a distributed notary service. If your notary service cluster has seven members, two can
+become hacked or malicious simultaneously and the system continues unaffected! This work is still in development stage,
+and more features are coming in the next snapshot!</p>
 <p>The web server has been split out of the Corda node as part of our ongoing hardening of the node. We now provide a Jetty
 servlet container pre-configured to contact a Corda node as a backend service out of the box, which means individual
 webapps can have their REST APIs configured for the specific security environment of that app without affecting the
@@ -259,7 +266,7 @@ they manage the issuance, movement or ledger exit of cash tokens.</p>
 clients.</p>
 <p>There have also been dozens of bug fixes, performance improvements and usability tweaks. Upgrading is definitely
 worthwhile and will only take a few minutes for most apps.</p>
-<p>For a full list of changes please see <span class="xref doc">change-log</span>.</p>
+<p>For a full list of changes please see <a class="reference internal" href="changelog.html"><span class="doc">Changelog</span></a>.</p>
 </div>
 </div>
 
