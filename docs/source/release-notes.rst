@@ -4,6 +4,14 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Milestone 9.2
+-------------
+
+This release is a minor stability and developer experience update with corrections to how Corda is published and
+referred to by the CorDapp template and tutorial, and an improvement to data reliability during node restarts.
+
+For a full list of changes please see :doc:`changelog`.
+
 Milestone 9
 -----------
 
@@ -46,4 +54,4 @@ clients.
 There have also been dozens of bug fixes, performance improvements and usability tweaks. Upgrading is definitely
 worthwhile and will only take a few minutes for most apps.
 
-For a full list of changes please see :doc:`change-log`.
+For a full list of changes please see :doc:`changelog`.

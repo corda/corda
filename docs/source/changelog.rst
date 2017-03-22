@@ -3,6 +3,13 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release.
 
+Milestone 9.2
+-------------
+
+* Correct web server ports for IRS demo.
+* Correct which corda-webserver JAR is published to Maven.
+* Database tables are not dropped during node startup.
+
 Milestone 9.1
 -------------
 
