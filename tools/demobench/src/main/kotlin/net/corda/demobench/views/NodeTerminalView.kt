@@ -156,7 +156,7 @@ class NodeTerminalView : Fragment() {
         // TODO - Force a repaint somehow? My naive attempts have not worked.
     }
 
-    // TODO - This function is working around a misunderstanding of how RPC is supposed to work!
+    // TODO - Will change when we modify RPC Observables handling.
     private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
         pair.second.subscribe().unsubscribe()
         return pair.first
