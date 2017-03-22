@@ -9,14 +9,11 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.io.Closeables
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.div
+import net.corda.core.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.rootCause
-import net.corda.core.then
 import net.corda.core.utilities.Emoji
-import net.corda.core.write
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
@@ -82,8 +79,7 @@ object InteractiveShell {
         val classpathDriver = ClassPathMountFactory(Thread.currentThread().contextClassLoader)
         val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
 
-        val extraCommandsPath = (dir / "shell-commands").toAbsolutePath()
-        Files.createDirectories(extraCommandsPath)
+        val extraCommandsPath = (dir / "shell-commands").toAbsolutePath().createDirectories()
         val commandsFS = FS.Builder()
                 .register("file", fileDriver)
                 .mount("file:" + extraCommandsPath)
@@ -195,7 +191,10 @@ object InteractiveShell {
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter) {
         val matches = node.flowLogicFactory.flowWhitelist.keys.filter { nameFragment in it }
-        if (matches.size > 1) {
+        if (matches.isEmpty()) {
+            output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
+            return
+        } else if (matches.size > 1) {
             output.println("Ambigous name provided, please be more specific. Your options are:")
             matches.forEachIndexed { i, s -> output.println("${i+1}. $s", Color.yellow) }
             return
@@ -219,8 +218,6 @@ object InteractiveShell {
             } catch(e: InterruptedException) {
                 ANSIProgressRenderer.progressTracker = null
                 // TODO: When the flow framework allows us to kill flows mid-flight, do so here.
-            } catch(e: ExecutionException) {
-                // It has already been logged by the framework code and printed by the ANSI progress renderer.
             }
         } catch(e: NoApplicableConstructor) {
             output.println("No matching constructor found:", Color.red)
@@ -246,7 +243,8 @@ object InteractiveShell {
      */
     @Throws(NoApplicableConstructor::class)
     fun runFlowFromString(invoke: (FlowLogic<*>) -> FlowStateMachine<*>,
-                          inputData: String, clazz: Class<out FlowLogic<*>>,
+                          inputData: String,
+                          clazz: Class<out FlowLogic<*>>,
                           om: ObjectMapper = yamlInputMapper): FlowStateMachine<*> {
         // For each constructor, attempt to parse the input data as a method call. Use the first that succeeds,
         // and keep track of the reasons we failed so we can print them out if no constructors are usable.
@@ -291,7 +289,7 @@ object InteractiveShell {
     fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>): Any? {
         val parser = StringToMethodCallParser(CordaRPCOps::class.java, context.attributes["mapper"] as ObjectMapper)
 
-        val cmd = input.joinToString(" ").trim({ it <= ' ' })
+        val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.toLowerCase().startsWith("startflow")) {
             // The flow command provides better support and startFlow requires special handling anyway due to
             // the generic startFlow RPC interface which offers no type information with which to parse the
@@ -318,9 +316,9 @@ object InteractiveShell {
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
                 } catch (e: ExecutionException) {
-                    throw RuntimeException(e.rootCause)
+                    throw e.rootCause
                 } catch (e: InvocationTargetException) {
-                    throw RuntimeException(e.rootCause)
+                    throw e.rootCause
                 }
             }
         } catch (e: StringToMethodCallParser.UnparseableCallException) {
@@ -344,15 +342,12 @@ object InteractiveShell {
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {
         private var count = 0
-        val future = SettableFuture.create<Unit>()!!
+        val future: SettableFuture<Unit> = SettableFuture.create()
 
         init {
             // The future is public and can be completed by something else to indicate we don't wish to follow
             // anymore (e.g. the user pressing Ctrl-C).
-            future then {
-                if (!isUnsubscribed)
-                    unsubscribe()
-            }
+            future then { unsubscribe() }
         }
 
         @Synchronized
@@ -417,7 +412,7 @@ object InteractiveShell {
         private val streams = Collections.synchronizedSet(HashSet<InputStream>())
 
         override fun deserialize(p: JsonParser, ctxt: DeserializationContext): InputStream {
-            val stream = object : FilterInputStream(BufferedInputStream(Files.newInputStream(Paths.get(p.text)))) {
+            val stream = object : BufferedInputStream(Files.newInputStream(Paths.get(p.text))) {
                 override fun close() {
                     super.close()
                     streams.remove(this)

@@ -32,7 +32,7 @@ To download an attachment, you can do:
 
 ``>>> run openAttachment id: AB7FED7663A3F195A59A0F01091932B15C22405CB727A1518418BF53C6E6663A``
 
-which will then ask you to provide a path to save the file to. To do the same thing programmatically, you would
+which will then ask you to provide a path to save the file to. To do the same thing programmatically, you
 can pass a simple ``InputStream`` or ``SecureHash`` to the ``uploadAttachment``/``openAttachment`` RPCs from
 a JVM client.
 
