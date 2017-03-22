@@ -52,9 +52,17 @@ else
     for dir in `ls`; do
         if [ -d $dir ]; then
             pushd $dir >/dev/null
-            xterm -T "`basename $dir`" -e './NODEJAR_NAME' &
+            if [ -n "$TMUX" ]; then
+                tmux new-window 'java -jar NODEJAR_NAME'
+            else
+                xterm -T "`basename $dir`" -e 'java -jar NODEJAR_NAME' &
+            fi
             if [[ "${NO_WEB_SERVER:-}" == "" ]]; then
-                xterm -T "`basename $dir` Web Server" -e 'java -jar WEBJAR_NAME' &
+                if [ -n "$TMUX" ]; then
+                    tmux new-window 'java -jar WEBJAR_NAME'
+                else
+                    xterm -T "`basename $dir` Web Server" -e 'java -jar WEBJAR_NAME' &
+                fi
             fi
             popd >/dev/null
         fi
