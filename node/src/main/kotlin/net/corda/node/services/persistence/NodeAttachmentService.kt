@@ -176,12 +176,12 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
             val cursor = jar.nextJarEntry ?: break
             val entryPath = Paths.get(cursor.name)
             // Security check to stop zips trying to escape their rightful place.
-            if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name || cursor.name == "." || cursor.name == "..")
-                throw IllegalArgumentException("Path is either absolute or non-normalised: $entryPath")
+            require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
+            require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
+            require(!('\\' in cursor.name || cursor.name == "." || cursor.name == "..")) { "Bad character in $entryPath" }
             count++
         }
-        if (count == 0)
-            throw IllegalArgumentException("Stream is either empty or not a JAR/ZIP")
+        require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
     }
 
     // Implementations for AcceptsFileUpload

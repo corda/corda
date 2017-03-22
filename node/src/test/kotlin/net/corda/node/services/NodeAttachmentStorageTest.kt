@@ -126,12 +126,16 @@ class NodeAttachmentStorageTest {
         }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun `non jar rejected`() {
         val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
         val path = fs.getPath("notajar")
         path.writeLines(listOf("Hey", "there!"))
-        path.read { storage.importAttachment(it) }
+        path.read {
+            assertFailsWith<IllegalArgumentException>("either empty or not a JAR") {
+                storage.importAttachment(it)
+            }
+        }
     }
 
     private var counter = 0

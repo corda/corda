@@ -40,27 +40,27 @@ class InteractiveShellTest {
     }
 
     @Test
-    fun success() {
+    fun flowStartSimple() {
         check("a: Hi there", "Hi there")
         check("b: 12", "12")
         check("b: 12, c: Yo", "12Yo")
     }
 
-    @Test fun complex1() = check("amount: £10", "10.00 GBP")
+    @Test fun flowStartWithComplexTypes() = check("amount: £10", "10.00 GBP")
 
-    @Test fun complex2() = check(
+    @Test fun flowStartWithNestedTypes() = check(
             "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
             "($100.12, df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587)"
     )
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
-    fun noArgs() = check("", "")
+    fun flowStartNoArgs() = check("", "")
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
-    fun missingParam() = check("c: Yo", "")
+    fun flowMissingParam() = check("c: Yo", "")
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)
-    fun tooManyArgs() = check("b: 12, c: Yo, d: Bar", "")
+    fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
     fun party() = check("party: SomeCorp", "SomeCorp")

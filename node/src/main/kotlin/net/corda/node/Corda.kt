@@ -132,7 +132,7 @@ fun main(args: Array<String>) {
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.startupComplete.thenAccept {
+            node.startupComplete then {
                 InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
             }
         } failure {
