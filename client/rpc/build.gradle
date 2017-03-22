@@ -45,6 +45,7 @@ sourceSets {
 
 dependencies {
     compile project(':core')
+    compile project(':finance')
     compile project(':node-api')
 
     // Unit testing helpers.
