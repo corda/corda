@@ -11,7 +11,6 @@ import net.corda.client.jfx.utils.map
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.node.services.network.NetworkMapService
 import java.security.PublicKey
 
 class NetworkIdentityModel {
@@ -37,7 +36,7 @@ class NetworkIdentityModel {
 
     private fun NodeInfo.isCordaService(): Boolean {
         // TODO: better way to identify Corda service?
-        return advertisedServices.any { it.info.type == NetworkMapService.type || it.info.type.isNotary() }
+        return advertisedServices.any { it.info.type.isNetworkMap() || it.info.type.isNotary() }
     }
 
     // TODO: Use Identity Service in service hub instead?

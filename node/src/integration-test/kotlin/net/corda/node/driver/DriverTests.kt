@@ -8,9 +8,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.readLines
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.api.RegulatorService
-import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.assertj.core.api.Assertions.assertThat
+import net.corda.nodeapi.ArtemisMessagingComponent
 import org.junit.Test
 import java.nio.file.Paths
 import java.util.concurrent.Executors

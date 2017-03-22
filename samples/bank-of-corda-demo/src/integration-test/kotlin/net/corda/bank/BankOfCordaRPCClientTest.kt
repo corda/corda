@@ -7,9 +7,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import net.corda.testing.BOC_PARTY_REF
 import net.corda.testing.expect
 import net.corda.testing.expectEvents

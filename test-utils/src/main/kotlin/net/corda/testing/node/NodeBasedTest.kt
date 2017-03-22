@@ -9,11 +9,11 @@ import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.node.internal.Node
-import net.corda.node.services.User
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
+import net.corda.nodeapi.User
 import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.testing.getFreeLocalPorts
 import org.junit.After

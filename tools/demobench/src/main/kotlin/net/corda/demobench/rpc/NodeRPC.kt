@@ -3,10 +3,10 @@ package net.corda.demobench.rpc
 import com.google.common.net.HostAndPort
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
-import net.corda.node.services.messaging.CordaRPCClient
 
 class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
 

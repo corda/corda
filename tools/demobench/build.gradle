@@ -49,8 +49,7 @@ dependencies {
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
-    // ONLY USING THE RPC CLIENT!?
-    compile (project(':node')) {
+    compile (project(':client:rpc')) {
         exclude module: 'kotlin-test'
         exclude module: 'junit'
     }

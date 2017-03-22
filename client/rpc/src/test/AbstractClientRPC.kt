@@ -1,4 +1,4 @@
-package net.corda.node.messaging
+package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializedBytes
@@ -6,7 +6,6 @@ import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.User
 import net.corda.node.services.messaging.ArtemisMessagingComponent
-import net.corda.node.services.messaging.CordaRPCClientImpl
 import net.corda.node.services.messaging.RPCDispatcher
 import net.corda.node.utilities.AffinityExecutor
 import org.apache.activemq.artemis.api.core.Message

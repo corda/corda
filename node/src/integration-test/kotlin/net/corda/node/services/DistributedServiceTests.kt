@@ -16,6 +16,7 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.nodeapi.User
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.DriverBasedTest
