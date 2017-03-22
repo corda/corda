@@ -17,7 +17,7 @@ import java.time.Duration
 object WorkflowTransactionBuildTutorial {
     // Would normally be called by custom service init in a CorDapp
     fun registerWorkflowProtocols(pluginHub: PluginServiceHub) {
-        pluginHub.registerFlowInitiator(SubmitCompletionFlow::class, ::RecordCompletionFlow)
+        pluginHub.registerFlowInitiator(SubmitCompletionFlow::class.java, ::RecordCompletionFlow)
     }
 }
 

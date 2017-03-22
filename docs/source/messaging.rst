@@ -104,8 +104,8 @@ validated user is the X.500 subject DN of the client TLS certificate and we assu
 the peer. This allows the flow framework to authentically determine the ``Party`` initiating a new flow. For RPC clients
 the validated user is the username itself and the RPC framework uses this to determine what permissions the user has.
 
-.. note:: ``Party`` lookup is currently done by the legal name which isn't guaranteed to be unique. A future version will
-   use the full X.500 name as it can provide additional structures for uniqueness.
+.. note:: ``Party`` lookup is currently done by the legal name. A future version will use the full X.500 name as
+   it can provide additional structures for uniqueness.
 
 The broker also does host verification when connecting to another peer. It checks that the TLS certificate common name
 matches with the advertised legal name from the network map service.

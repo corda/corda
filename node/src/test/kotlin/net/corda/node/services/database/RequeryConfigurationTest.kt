@@ -10,8 +10,8 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
-import net.corda.core.serialization.createKryo
 import net.corda.core.serialization.serialize
+import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -128,7 +128,7 @@ class RequeryConfigurationTest {
             index = txnState.index
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = DummyContract.SingleOwnerState::class.java.name
-            contractState = DummyContract.SingleOwnerState(owner = DUMMY_PUBKEY_1).serialize(createKryo()).bytes
+            contractState = DummyContract.SingleOwnerState(owner = DUMMY_PUBKEY_1).serialize(storageKryo()).bytes
             notaryName = txn.tx.notary!!.name
             notaryKey = txn.tx.notary!!.owningKey.toBase58String()
             recordedTime = Instant.now()

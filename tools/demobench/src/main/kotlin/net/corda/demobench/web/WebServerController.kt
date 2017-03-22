@@ -6,13 +6,13 @@ import tornadofx.Controller
 class WebServerController : Controller() {
 
     private val jvm by inject<JVMConfig>()
-    private val cordaPath = jvm.applicationDir.resolve("corda").resolve("corda.jar")
+    private val webserverPath = jvm.applicationDir.resolve("corda").resolve("corda-webserver.jar")
 
     init {
-        log.info("Web Server JAR: $cordaPath")
+        log.info("Web Server JAR: $webserverPath")
     }
 
-    internal fun process() = jvm.processFor(cordaPath, "--webserver")
+    internal fun process() = jvm.processFor(webserverPath)
 
     fun webServer() = WebServer(this)
 

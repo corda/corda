@@ -163,7 +163,6 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             configuration.nodeHosts.map { it to configuration.remoteNodeDirectory / "certificates" },
             configuration.remoteMessagingPort,
             PortAllocation.Incremental(configuration.localTunnelStartingPort),
-            configuration.localCertificatesBaseDirectory,
             configuration.rpcUsername,
             configuration.rpcPassword
     ) { connections ->

@@ -36,18 +36,11 @@ class UserTest {
     }
 
     @Test
-    fun `adding extra permissions`() {
-        val user = User("MyName", "MyPassword", listOf("Flow.MyFlow"))
-        user.extendPermissions(listOf("Flow.MyFlow", "Flow.MyNewFlow"))
-        assertEquals(listOf("Flow.MyFlow", "Flow.MyNewFlow"), user.permissions)
-    }
-
-    @Test
     fun `default user`() {
         val user = user("guest")
         assertEquals("guest", user.user)
         assertEquals("letmein", user.password)
-        assertEquals(listOf("StartFlow.net.corda.flows.CashFlow"), user.permissions)
+        assertEquals(listOf("ALL"), user.permissions)
     }
 
 }

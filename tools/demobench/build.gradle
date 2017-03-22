@@ -1,11 +1,8 @@
 buildscript {
-    ext.kotlin_version = '1.0.6'
     ext.tornadofx_version = '1.6.2'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
     ext.guava_version = '14.0.1'
-    ext.slf4j_version = '1.7.22'
-    ext.logback_version = '1.1.10'
     ext.controlsfx_version = '8.40.12'
 
     ext.java_home = System.properties.'java.home'
@@ -18,9 +15,6 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
 }
 
 apply plugin: 'java'
@@ -29,9 +23,8 @@ apply plugin: 'application'
 
 evaluationDependsOn(':tools:explorer:capsule')
 
-sourceCompatibility = 1.8
 mainClassName = 'net.corda.demobench.DemoBench'
-applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig']
+applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig', '-Dorg.jboss.logging.provider=slf4j']
 
 repositories {
     flatDir {
@@ -52,24 +45,24 @@ repositories {
 dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
     // ONLY USING THE RPC CLIENT!?
-    compile project(':node')
+    compile (project(':node')) {
+        exclude module: 'kotlin-test'
+        exclude module: 'junit'
+    }
 
     compile "com.h2database:h2:$h2_version"
-    compile "net.java.dev.jna:jna:$jna_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
     compile "com.google.guava:guava:$guava_version"
     compile "com.sparetimelabs:purejavacomm:$purejavacomm_version"
-    compile "org.apache.logging.log4j:log4j-to-slf4j:$log4j_version"
     compile "org.slf4j:log4j-over-slf4j:$slf4j_version"
-    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
-    compile "ch.qos.logback:logback-classic:$logback_version"
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     compile "com.typesafe:config:$typesafe_config_version"
 
     // These libraries don't exist in any Maven repository I can find.
@@ -80,14 +73,8 @@ dependencies {
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
-    testCompile group: 'junit', name: 'junit', version: junit_version
-}
-
-// We don't want the Node to drag these transitive dependencies in either!
-configurations.all {
-    exclude module: 'commons-logging'
-    exclude module: 'log4j-slf4j-impl'
-    exclude module: 'log4j-core'
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }
 
 jar {
@@ -102,6 +89,7 @@ jar {
 
 test {
     systemProperty 'java.util.logging.config.class', 'net.corda.demobench.config.LoggingConfig'
+    systemProperty 'org.jboss.logging.provider', 'slf4j'
 }
 
 distributions {
@@ -122,6 +110,10 @@ distributions {
             }
             from(project(':node:capsule').tasks.buildCordaJAR) {
                 rename 'corda-(.*)', 'corda.jar'
+                into 'corda'
+            }
+            from(project(':node:webserver:webcapsule').tasks.buildWebserverJar) {
+                rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
             }
             from(project(':samples:bank-of-corda-demo').jar) {
@@ -204,10 +196,10 @@ task javapackage(dependsOn: 'distZip') {
 
             platform {
                 property(name: 'java.util.logging.config.class', value: 'net.corda.demobench.config.LoggingConfig')
+                property(name: 'org.jboss.logging.provider', value: 'slf4j')
             }
 
             preferences(install: false)
         }
     }
 }
-

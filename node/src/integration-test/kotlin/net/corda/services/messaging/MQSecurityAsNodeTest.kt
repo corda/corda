@@ -14,6 +14,9 @@ import org.junit.Test
  * Runs the security tests with the attacker pretending to be a node on the network.
  */
 class MQSecurityAsNodeTest : MQSecurityTest() {
+    override fun createAttacker(): SimpleMQClient {
+        return clientTo(alice.configuration.p2pAddress)
+    }
 
     override fun startAttacker(attacker: SimpleMQClient) {
         attacker.start(PEER_USER, PEER_USER)  // Login as a peer
@@ -26,7 +29,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `only the node running the broker can login using the special node user`() {
-        val attacker = clientTo(alice.configuration.artemisAddress)
+        val attacker = clientTo(alice.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(NODE_USER, NODE_USER)
         }
@@ -34,7 +37,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login as the default cluster user`() {
-        val attacker = clientTo(alice.configuration.artemisAddress)
+        val attacker = clientTo(alice.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQClusterSecurityException::class.java).isThrownBy {
             attacker.start(ActiveMQDefaultConfiguration.getDefaultClusterUser(), ActiveMQDefaultConfiguration.getDefaultClusterPassword())
         }
@@ -42,9 +45,25 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `login without a username and password`() {
-        val attacker = clientTo(alice.configuration.artemisAddress)
+        val attacker = clientTo(alice.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start()
+        }
+    }
+
+    @Test
+    fun `login to a non ssl port as a node user`() {
+        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.start(NODE_USER, NODE_USER, enableSSL = false)
+        }
+    }
+
+    @Test
+    fun `login to a non ssl port as a peer user`() {
+        val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
+        assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
+            attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
         }
     }
 }

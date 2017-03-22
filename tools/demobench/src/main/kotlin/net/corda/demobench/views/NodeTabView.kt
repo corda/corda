@@ -53,6 +53,7 @@ class NodeTabView : Fragment() {
                 field("Node Name", op = { nodeNameField() })
                 field("Nearest City", op = { nearestCityField() })
                 field("P2P Port", op = { p2pPortField() })
+                field("RPC port", op = { rpcPortField() })
                 field("Web Port", op = { webPortField() })
                 field("Database Port", op = { databasePortField() })
             }
@@ -114,7 +115,8 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.artemisPort.value = nodeController.nextPort
+        model.p2pPort.value = nodeController.nextPort
+        model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
 
@@ -156,7 +158,7 @@ class NodeTabView : Fragment() {
         }
     }
 
-    private fun Pane.p2pPortField() = textfield(model.artemisPort, NumberStringConverter(integerFormat)) {
+    private fun Pane.p2pPortField() = textfield(model.p2pPort, NumberStringConverter(integerFormat)) {
         minWidth = numberWidth
         validator {
             if ((it == null) || it.isEmpty()) {
@@ -167,6 +169,32 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
+                } else if (port == model.rpcPort.value) {
+                    error("Clashes with RPC port")
+                } else if (port == model.webPort.value) {
+                    error("Clashes with web port")
+                } else if (port == model.h2Port.value) {
+                    error("Clashes with database port")
+                } else {
+                    null
+                }
+            }
+        }
+    }
+
+    private fun Pane.rpcPortField() = textfield(model.rpcPort, NumberStringConverter(integerFormat)) {
+        minWidth = 100.0
+        validator {
+            if ((it == null) || it.isEmpty()) {
+                error("Port number required")
+            } else if (it.contains(notNumber)) {
+                error("Invalid port number")
+            } else {
+                val port = it.toInt()
+                if (!nodeController.isPortAvailable(port)) {
+                    error("Port $it is unavailable")
+                } else if (port == model.p2pPort.value) {
+                    error("Clashes with P2P port")
                 } else if (port == model.webPort.value) {
                     error("Clashes with web port")
                 } else if (port == model.h2Port.value) {
@@ -189,8 +217,10 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
-                } else if (port == model.artemisPort.value) {
+                } else if (port == model.p2pPort.value) {
                     error("Clashes with P2P port")
+                } else if (port == model.rpcPort.value) {
+                    error("Clashes with RPC port")
                 } else if (port == model.h2Port.value) {
                     error("Clashes with database port")
                 } else {
@@ -211,8 +241,10 @@ class NodeTabView : Fragment() {
                 val port = it.toInt()
                 if (!nodeController.isPortAvailable(port)) {
                     error("Port $it is unavailable")
-                } else if (port == model.artemisPort.value) {
+                } else if (port == model.p2pPort.value) {
                     error("Clashes with P2P port")
+                } else if (port == model.rpcPort.value) {
+                    error("Clashes with RPC port")
                 } else if (port == model.webPort.value) {
                     error("Clashes with web port")
                 } else {

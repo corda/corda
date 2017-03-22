@@ -1,15 +1,3 @@
-buildscript {
-    ext.kotlin_version = '1.0.3'
-
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 repositories {
     mavenCentral()
     maven {
@@ -52,7 +40,8 @@ dependencies {
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
-    compile project(':client')
+    compile project(':client:jfx')
+    compile project(':client:mock')
     compile project(':node')
     compile project(':finance')
 

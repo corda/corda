@@ -2,6 +2,10 @@ package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.getListOrElse
+import net.corda.nodeapi.config.getOrElse
+import net.corda.nodeapi.config.getValue
 import net.corda.core.div
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo
@@ -15,13 +19,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-interface SSLConfiguration {
-    val keyStorePassword: String
-    val trustStorePassword: String
-    val certificatesDirectory: Path
-    val keyStoreFile: Path get() = certificatesDirectory / "sslkeystore.jks"
-    val trustStoreFile: Path get() = certificatesDirectory / "truststore.jks"
-}
 
 interface NodeConfiguration : SSLConfiguration {
     val baseDirectory: Path
@@ -65,15 +62,16 @@ class FullNodeConfiguration(override val baseDirectory: Path, val config: Config
                 User(username, password, permissions)
             }
     val useHTTPS: Boolean by config
-    val artemisAddress: HostAndPort by config
+    val p2pAddress: HostAndPort by config
+    val rpcAddress: HostAndPort? by config
     val webAddress: HostAndPort by config
-    // TODO This field is slightly redundant as artemisAddress is sufficient to hold the address of the node's MQ broker.
+    // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
     // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
-    val messagingServerAddress: HostAndPort? by config.getOrElse { null }
+    val messagingServerAddress: HostAndPort? by config
     val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }
     val useTestClock: Boolean by config.getOrElse { false }
-    val notaryNodeId: Int? by config.getOrElse { null }
-    val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
+    val notaryNodeId: Int? by config
+    val notaryNodeAddress: HostAndPort? by config
     val notaryClusterAddresses: List<HostAndPort> = config
             .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
             .map { HostAndPort.fromString(it) }

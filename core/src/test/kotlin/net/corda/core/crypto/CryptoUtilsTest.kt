@@ -45,22 +45,22 @@ class CryptoUtilsTest {
         val sphincsKeyPair = Crypto.generateKeyPair("SPHINCS-256_SHA512")
 
         // not null private keys
-        assertNotNull(rsaKeyPair.private);
-        assertNotNull(ecdsaKKeyPair.private);
-        assertNotNull(ecdsaRKeyPair.private);
-        assertNotNull(eddsaKeyPair.private);
-        assertNotNull(sphincsKeyPair.private);
+        assertNotNull(rsaKeyPair.private)
+        assertNotNull(ecdsaKKeyPair.private)
+        assertNotNull(ecdsaRKeyPair.private)
+        assertNotNull(eddsaKeyPair.private)
+        assertNotNull(sphincsKeyPair.private)
 
         // not null public keys
-        assertNotNull(rsaKeyPair.public);
-        assertNotNull(ecdsaKKeyPair.public);
-        assertNotNull(ecdsaRKeyPair.public);
-        assertNotNull(eddsaKeyPair.public);
-        assertNotNull(sphincsKeyPair.public);
+        assertNotNull(rsaKeyPair.public)
+        assertNotNull(ecdsaKKeyPair.public)
+        assertNotNull(ecdsaRKeyPair.public)
+        assertNotNull(eddsaKeyPair.public)
+        assertNotNull(sphincsKeyPair.public)
 
         // fail on unsupported algorithm
         try {
-            val wrongKeyPair = Crypto.generateKeyPair("WRONG_ALG")
+            Crypto.generateKeyPair("WRONG_ALG")
             fail()
         } catch (e: Exception) {
             // expected
@@ -117,15 +117,15 @@ class CryptoUtilsTest {
 
         // test on malformed signatures (even if they change for 1 bit)
         for (i in 0..signedData.size - 1) {
-            val b = signedData.get(i)
-            signedData.set(i,b.inc())
+            val b = signedData[i]
+            signedData[i] = b.inc()
             try {
                 keyPair.verify(signedData, testBytes)
                 fail()
             } catch (e: Exception) {
                 // expected
             }
-            signedData.set(i,b.dec())
+            signedData[i] = b.dec()
         }
     }
 
@@ -176,7 +176,7 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        signedData.set(0,signedData[0].inc())
+        signedData[0] = signedData[0].inc()
         try {
             keyPair.verify(signedData, testBytes)
             fail()
@@ -232,7 +232,7 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        signedData.set(0, signedData[0].inc())
+        signedData[0] = signedData[0].inc()
         try {
             keyPair.verify(signedData, testBytes)
             fail()
@@ -288,7 +288,7 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        signedData.set(0, signedData[0].inc())
+        signedData[0] = signedData[0].inc()
         try {
             keyPair.verify(signedData, testBytes)
             fail()
@@ -344,7 +344,7 @@ class CryptoUtilsTest {
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
-        signedData.set(0, signedData[0].inc())
+        signedData[0] = signedData[0].inc()
         try {
             keyPair.verify(signedData, testBytes)
             fail()
@@ -357,7 +357,7 @@ class CryptoUtilsTest {
     @Test
     fun `Check supported algorithms`() {
         val algList : List<String> = Crypto.listSupportedSignatureSchemes()
-        val expectedAlgSet = setOf<String>("RSA_SHA256","ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512","SPHINCS-256_SHA512")
+        val expectedAlgSet = setOf("RSA_SHA256","ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512","SPHINCS-256_SHA512")
         assertTrue { Sets.symmetricDifference(expectedAlgSet,algList.toSet()).isEmpty(); }
     }
 
@@ -601,12 +601,12 @@ class CryptoUtilsTest {
     @Test
     fun `Failure test between K1 and R1 keys`() {
         val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val (privK1, pubK1) = keyPairK1
+        val privK1= keyPairK1.private
         val encodedPrivK1 = privK1.encoded
         val decodedPrivK1 = Crypto.decodePrivateKey(encodedPrivK1)
 
         val keyPairR1 = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
-        val (privR1, pubR1) = keyPairR1
+        val privR1 = keyPairR1.private
         val encodedPrivR1 = privR1.encoded
         val decodedPrivR1 = Crypto.decodePrivateKey(encodedPrivR1)
 
@@ -616,7 +616,7 @@ class CryptoUtilsTest {
     @Test
     fun `Decoding Failure on randomdata as key`() {
         val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val (privK1, pubK1) = keyPairK1
+        val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 
         // Test on random encoded bytes.
@@ -626,7 +626,7 @@ class CryptoUtilsTest {
 
         // fail on fake key.
         try {
-            val decodedFake = Crypto.decodePrivateKey(fakeEncodedKey)
+            Crypto.decodePrivateKey(fakeEncodedKey)
             fail()
         } catch (e: Exception) {
             // expected
@@ -636,21 +636,20 @@ class CryptoUtilsTest {
     @Test
     fun `Decoding Failure on malformed keys`() {
         val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val (privK1, pubK1) = keyPairK1
+        val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 
         // fail on malformed key.
         for (i in 0..encodedPrivK1.size - 1) {
-            val b = encodedPrivK1.get(i)
-            encodedPrivK1.set(i,b.inc())
+            val b = encodedPrivK1[i]
+            encodedPrivK1[i] = b.inc()
             try {
-                val decodedFake = Crypto.decodePrivateKey(encodedPrivK1)
-                println("OK")
+                Crypto.decodePrivateKey(encodedPrivK1)
                 fail()
             } catch (e: Exception) {
                 // expected
             }
-            encodedPrivK1.set(i,b.dec())
+            encodedPrivK1[i] = b.dec()
         }
     }
 }

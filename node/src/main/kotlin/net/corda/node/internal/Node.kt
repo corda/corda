@@ -27,6 +27,7 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
+import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AffinityExecutor
 import org.slf4j.Logger
 import java.io.RandomAccessFile
@@ -141,9 +142,9 @@ class Node(override val configuration: FullNodeConfiguration,
 
     private fun makeLocalMessageBroker(): HostAndPort {
         with(configuration) {
-            val useHost = tryDetectIfNotPublicHost(artemisAddress.hostText)
-            val useAddress = useHost?.let { HostAndPort.fromParts(it, artemisAddress.port) } ?: artemisAddress
-            messageBroker = ArtemisMessagingServer(this, useAddress, services.networkMapCache, userService)
+            val useHost = tryDetectIfNotPublicHost(p2pAddress.hostText)
+            val useAddress = useHost?.let { HostAndPort.fromParts(it, p2pAddress.port) } ?: p2pAddress
+            messageBroker = ArtemisMessagingServer(this, useAddress, rpcAddress, services.networkMapCache, userService)
             return useAddress
         }
     }

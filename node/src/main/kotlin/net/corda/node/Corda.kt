@@ -2,6 +2,7 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -25,28 +26,16 @@ private var renderBasicInfoToConsole = true
 
 /** Used for useful info that we always want to show, even when not logging to the console */
 fun printBasicNodeInfo(description: String, info: String? = null) {
-    if (renderBasicInfoToConsole) {
-        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
-        println(msg)
-    } else {
-        val msg = if (info == null) description else "$description: $info"
-        LoggerFactory.getLogger("Main").info(msg)
-    }
+    val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+    val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+    LoggerFactory.getLogger(loggerName).info(msg)
 }
+
+val LOGS_DIRECTORY_NAME = "logs"
 
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
-
-    val nodeVersionInfo = if (Manifests.exists("Corda-Version")) {
-        NodeVersionInfo(
-                Version.parse(Manifests.read("Corda-Version")),
-                Manifests.read("Corda-Revision"),
-                Manifests.read("Corda-Vendor"))
-    } else {
-        // If the manifest properties aren't available then we're running from within an IDE
-        NodeVersionInfo(Version(0, 0, false), "~Git revision unavailable~", "Unknown vendor")
-    }
 
     val argsParser = ArgsParser()
 
@@ -57,6 +46,23 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    // Set up logging. These properties are referenced from the XML config file.
+    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase()
+    System.setProperty("defaultLogLevel", loggingLevel)
+    if (cmdlineOptions.logToConsole) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        renderBasicInfoToConsole = false
+    }
+
+    // Manifest properties are only available if running from the corda jar
+    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+    val nodeVersionInfo = NodeVersionInfo(
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Revision") ?: "Unknown",
+            manifestValue("Corda-Vendor") ?: "Unknown"
+    )
 
     if (cmdlineOptions.isVersion) {
         println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
@@ -70,22 +76,17 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    // Set up logging. These properties are referenced from the XML config file.
-    System.setProperty("defaultLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-    if (cmdlineOptions.logToConsole) {
-        System.setProperty("consoleLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-        renderBasicInfoToConsole = false
-    }
-
     drawBanner(nodeVersionInfo)
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
 
     val conf = try {
-        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
+        val conf = cmdlineOptions.loadConfig()
+        checkConfigVersion(conf)
+        FullNodeConfiguration(cmdlineOptions.baseDirectory, conf)
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
@@ -115,7 +116,7 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
-    log.info("Starting as node on ${conf.artemisAddress}")
+    log.info("Starting as node on ${conf.p2pAddress}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
@@ -126,7 +127,7 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node for \"${node.info.legalIdentity.name}\" started up and registered in $elapsed sec")
 
             if (renderBasicInfoToConsole)
                 ANSIProgressObserver(node.smm)
@@ -141,6 +142,16 @@ fun main(args: Array<String>) {
     }
 
     exitProcess(0)
+}
+
+private fun checkConfigVersion(conf: Config) {
+    // TODO: Remove this check in future milestone.
+    if (conf.hasPath("artemisAddress")) {
+        // artemisAddress has been renamed to p2pAddress in M10.
+        println("artemisAddress has been renamed to p2pAddress in M10, please upgrade your configuration file and start Corda node again.")
+        println("Corda will now exit...")
+        exitProcess(1)
+    }
 }
 
 private fun checkJavaVersion() {
@@ -175,7 +186,22 @@ private fun messageOfTheDay(): Pair<String, String> {
             "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
             "It's kind of like a block chain but\ncords sounded healthier than chains.",
-            "Computer science and finance together.\nYou should see our crazy Christmas parties!"
+            "Computer science and finance together.\nYou should see our crazy Christmas parties!",
+            "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!",
+            "A banker with nobody around may find\nthemselves .... a-loan! <applause>",
+            "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}",
+            "There was an earthquake in California,\na local bank went into de-fault.",
+            "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
+            "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
+            "Check your contracts carefully. The\nfine print is usually a clause for suspicion ${Emoji.santaClaus}",
+            "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
+            "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
+            "Old bankers never die, they just\n... pass the buck",
+            "My wife made me into millionaire.\nI was a multi-millionaire before we met.",
+            "I won $3M on the lottery so I donated\na quarter of it to charity. Now I have $2,999,999.75.",
+            "There are two rules for financial success:\n1) Don't tell everything you know.",
+            "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
+            "Computers are useless. They can only\ngive you answers.  -- Picasso"
     )
     if (Emoji.hasEmojiTerminal)
         messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
@@ -197,7 +223,7 @@ private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(6)}) -----------------------------------------------").
+        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(7)}) -----------------------------------------------").
         newline().
         newline().
         a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").

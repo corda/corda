@@ -30,7 +30,7 @@ object UpdateBusinessDayFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Broadcast::class, ::UpdateBusinessDayHandler)
+            services.registerFlowInitiator(Broadcast::class.java, ::UpdateBusinessDayHandler)
         }
     }
 

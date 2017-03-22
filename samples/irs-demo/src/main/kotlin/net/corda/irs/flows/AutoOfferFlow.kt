@@ -30,13 +30,8 @@ object AutoOfferFlow {
 
 
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
-
-        object DEALING : ProgressTracker.Step("Starting the deal flow") {
-            override fun childProgressTracker(): ProgressTracker = TwoPartyDealFlow.Secondary.tracker()
-        }
-
         init {
-            services.registerFlowInitiator(Instigator::class) { Acceptor(it) }
+            services.registerFlowInitiator(Instigator::class.java) { Acceptor(it) }
         }
     }
 

@@ -4,6 +4,15 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Milestone 10
+------------
+
+Important: There are configuration changes in M10 due to the split of the Artemis port into separate P2P and RPC
+ports. To upgrade, you *must*:
+
+ 1. In Gradle build configurations replace any references to ``artemisPort`` with ``p2pPort``.
+ 2. In node configurations replace ``artemisAddress`` with ``p2pAddress``.
+
 Milestone 9
 -----------
 

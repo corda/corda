@@ -5,6 +5,10 @@ import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 
+/**
+ * These internal messages define the flow session protocol.
+ */
+
 @CordaSerializable
 interface SessionMessage
 
@@ -40,4 +44,10 @@ fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): Untr
     }
 }
 
+/**
+ * Thrown when a flow session ends unexpectedly due to a type mismatch (the other side sent an object of a type
+ * that we were not expecting), or the other side had an internal error, or the other side terminated when we
+ * were waiting for a response.
+ */
+@CordaSerializable
 class FlowSessionException(message: String) : RuntimeException(message)

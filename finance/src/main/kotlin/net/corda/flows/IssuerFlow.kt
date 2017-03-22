@@ -89,7 +89,7 @@ object IssuerFlow {
                 return issueTx
             // now invoke Cash subflow to Move issued assetType to issue requester
             progressTracker.currentStep = TRANSFERRING
-            val moveCashFlow = CashPaymentFlow(amount.issuedBy(bankOfCordaParty.ref(issuerPartyRef)), issueTo)
+            val moveCashFlow = CashPaymentFlow(amount, issueTo)
             val moveTx = subFlow(moveCashFlow)
             // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
             return moveTx
@@ -97,7 +97,7 @@ object IssuerFlow {
 
         class Service(services: PluginServiceHub) {
             init {
-                services.registerFlowInitiator(IssuanceRequester::class, ::Issuer)
+                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer)
             }
         }
     }

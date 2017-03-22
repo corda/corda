@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import com.esotericsoftware.kryo.Kryo
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
@@ -11,7 +12,9 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
+import org.junit.After
 import org.junit.Assert
+import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -74,6 +77,16 @@ class AttachmentClassLoaderTests {
     }
 
     class ClassLoaderForTests : URLClassLoader(arrayOf(ISOLATED_CONTRACTS_JAR_PATH), FilteringClassLoader)
+
+    lateinit var kryo: Kryo
+    lateinit var kryo2: Kryo
+
+    @Before
+    fun setup() {
+        // Do not release these back to the pool, since we do some unorthodox modifications to them below.
+        kryo = p2PKryo().borrow()
+        kryo2 = p2PKryo().borrow()
+    }
 
     @Test
     fun `dynamically load AnotherDummyContract from isolated contracts jar`() {
@@ -205,7 +218,6 @@ class AttachmentClassLoaderTests {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val kryo = createKryo()
         kryo.classLoader = cl
         kryo.addToWhitelist(contract.javaClass)
 
@@ -224,7 +236,6 @@ class AttachmentClassLoaderTests {
 
         assertNotNull(data.contract)
 
-        val kryo2 = createKryo()
         kryo2.addToWhitelist(data.contract.javaClass)
         val bytes = data.serialize(kryo2)
 
@@ -236,14 +247,24 @@ class AttachmentClassLoaderTests {
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
 
-        val kryo = createKryo()
         kryo.classLoader = cl
         kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl))
 
         val state2 = bytes.deserialize(kryo)
         assertEquals(cl, state2.contract.javaClass.classLoader)
         assertNotNull(state2)
+
+        // We should be able to load same class from a different class loader and have them be distinct.
+        val cl2 = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! }, FilteringClassLoader)
+
+        kryo.classLoader = cl2
+        kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, cl2))
+
+        val state3 = bytes.deserialize(kryo)
+        assertEquals(cl2, state3.contract.javaClass.classLoader)
+        assertNotNull(state3)
     }
+
 
     @Test
     fun `test serialization of WireTransaction with statically loaded contract`() {
@@ -263,31 +284,30 @@ class AttachmentClassLoaderTests {
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
-        val kryo = createKryo()
         kryo.addToWhitelist(contract.javaClass)
         kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$State", true, child))
         kryo.addToWhitelist(Class.forName("net.corda.contracts.isolated.AnotherDummyContract\$Commands\$Create", true, child))
 
         // todo - think about better way to push attachmentStorage down to serializer
-        kryo.attachmentStorage = storage
+        val bytes = kryo.withAttachmentStorage(storage) {
 
-        val attachmentRef = importJar(storage)
+            val attachmentRef = importJar(storage)
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
+            tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
-        val wireTransaction = tx.toWireTransaction()
+            val wireTransaction = tx.toWireTransaction()
 
-        val bytes = wireTransaction.serialize(kryo)
-
-        val kryo2 = createKryo()
+            wireTransaction.serialize(kryo)
+        }
         // use empty attachmentStorage
-        kryo2.attachmentStorage = storage
+        kryo2.withAttachmentStorage(storage) {
 
-        val copiedWireTransaction = bytes.deserialize(kryo2)
+            val copiedWireTransaction = bytes.deserialize(kryo2)
 
-        assertEquals(1, copiedWireTransaction.outputs.size)
-        val contract2 = copiedWireTransaction.outputs[0].data.contract as DummyContractBackdoor
-        assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0].data))
+            assertEquals(1, copiedWireTransaction.outputs.size)
+            val contract2 = copiedWireTransaction.outputs[0].data.contract as DummyContractBackdoor
+            assertEquals(42, contract2.inspectState(copiedWireTransaction.outputs[0].data))
+        }
     }
 
     @Test
@@ -297,26 +317,24 @@ class AttachmentClassLoaderTests {
         val contract = contractClass.newInstance() as DummyContractBackdoor
         val tx = contract.generateInitial(MEGA_CORP.ref(0), 42, DUMMY_NOTARY)
         val storage = MockAttachmentStorage()
-        val kryo = createKryo()
 
         // todo - think about better way to push attachmentStorage down to serializer
-        kryo.attachmentStorage = storage
-
         val attachmentRef = importJar(storage)
+        val bytes = kryo.withAttachmentStorage(storage) {
 
-        tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
+            tx.addAttachment(storage.openAttachment(attachmentRef)!!.id)
 
-        val wireTransaction = tx.toWireTransaction()
+            val wireTransaction = tx.toWireTransaction()
 
-        val bytes = wireTransaction.serialize(kryo)
-
-        val kryo2 = createKryo()
-        // use empty attachmentStorage
-        kryo2.attachmentStorage = MockAttachmentStorage()
-
-        val e = assertFailsWith(MissingAttachmentsException::class) {
-            bytes.deserialize(kryo2)
+            wireTransaction.serialize(kryo)
         }
-        assertEquals(attachmentRef, e.ids.single())
+        // use empty attachmentStorage
+        kryo2.withAttachmentStorage(MockAttachmentStorage()) {
+
+            val e = assertFailsWith(MissingAttachmentsException::class) {
+                bytes.deserialize(kryo2)
+            }
+            assertEquals(attachmentRef, e.ids.single())
+        }
     }
 }

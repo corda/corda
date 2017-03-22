@@ -17,9 +17,9 @@ The demos can be run either from the command line, or from inside IntelliJ. Runn
 recommended if you just want to see the demos run, whereas using IntelliJ can be helpful if you want to debug or
 extend the demos. For more details about running via the command line or from within IntelliJ, see :doc:`CLI-vs-IDE`.
 
-.. note:: If you are running the demos from the command line in Unix, you may have to install xterm.
+If any of the demos don't work, please raise an issue on GitHub.
 
-.. note:: If any of the demos don't work, please raise an issue on GitHub.
+.. note:: If you are running the demos from the command line in Linux (but not macOS), you may have to install xterm.
 
 .. _trader-demo:
 
@@ -235,7 +235,7 @@ To run from IntelliJ:
 4. Run ``Bank Of Corda Demo: Run Web Cash Issue`` to request issuance of some cash on behalf of Big Corporation via HTTP
 
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
-          http://localhost:10005/api/bank/date
+          http://localhost:10007/api/bank/date
 
 .. note:: The Bank of Corda node explicitly advertises with a node service type as follows:
           ``advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))``
@@ -259,8 +259,8 @@ Launch the Explorer application to visualize the issuance and transfer of cash f
 
 Using the following login details:
 
-- For the Bank of Corda node: localhost / port 10004 / username bankUser / password test
-- For the Big Corporation node: localhost / port 10006 / username bigCorpUser / password test
+- For the Bank of Corda node: localhost / port 10006 / username bankUser / password test
+- For the Big Corporation node: localhost / port 10009 / username bigCorpUser / password test
 
 See https://docs.corda.net/node-explorer.html for further details on usage.
 

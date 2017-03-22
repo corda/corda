@@ -27,12 +27,9 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         try {
             val p = explorerController.process(
                     "--host=localhost",
-                    "--port=${config.artemisPort}",
+                    "--port=${config.rpcPort}",
                     "--username=${config.users[0].user}",
-                    "--password=${config.users[0].password}",
-                    "--certificatesDir=${config.ssl.certificatesDirectory}",
-                    "--keyStorePassword=${config.ssl.keyStorePassword}",
-                    "--trustStorePassword=${config.ssl.trustStorePassword}")
+                    "--password=${config.users[0].password}")
                     .directory(explorerDir)
                     .start()
             process = p

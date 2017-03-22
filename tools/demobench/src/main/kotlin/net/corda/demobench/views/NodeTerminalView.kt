@@ -4,6 +4,7 @@ import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import java.awt.Dimension
+import java.util.logging.Level
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
@@ -45,7 +46,7 @@ class NodeTerminalView : Fragment() {
 
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
-        p2pPort.value = config.artemisPort.toString()
+        p2pPort.value = config.p2pPort.toString()
         launchWebButton.text = "Launch\nWeb Server\n(Port ${config.webPort})"
 
         val swingTerminal = SwingNode()
@@ -136,7 +137,7 @@ class NodeTerminalView : Fragment() {
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
         } catch (e: Exception) {
-            log.warning("RPC failed: " + e)
+            log.log(Level.WARNING, "RPC failed: ${e.message}", e)
         }
     })
 

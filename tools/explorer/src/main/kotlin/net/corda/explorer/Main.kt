@@ -9,9 +9,9 @@ import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
+import net.corda.client.jfx.model.Models
+import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
-import net.corda.client.model.Models
-import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
 import net.corda.core.node.services.ServiceInfo
@@ -27,8 +27,6 @@ import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
 import net.corda.node.services.User
-import net.corda.node.services.config.SSLConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import org.apache.commons.lang.SystemUtils
@@ -67,12 +65,6 @@ class Main : App(MainView::class) {
 
         if ((hostname != null) && (port != null) && (username != null) && (password != null)) {
             try {
-                // Allow us optionally to override the SSL configuration too.
-                val sslConfig = getSSLConfig()
-                if (sslConfig != null) {
-                    loginView.sslConfig = sslConfig
-                }
-
                 loginView.login(hostname, port, username, password)
                 isLoggedIn = true
             } catch (e: Exception) {
@@ -92,22 +84,6 @@ class Main : App(MainView::class) {
             return s?.toInt()
         } catch (e: NumberFormatException) {
             return null
-        }
-    }
-
-    private fun getSSLConfig(): SSLConfiguration? {
-        val certificatesDir = parameters.named["certificatesDir"]
-        val keyStorePassword = parameters.named["keyStorePassword"]
-        val trustStorePassword = parameters.named["trustStorePassword"]
-
-        return if ((certificatesDir != null) && (keyStorePassword != null) && (trustStorePassword != null)) {
-            object: SSLConfiguration {
-                override val certificatesDirectory = Paths.get(certificatesDir)
-                override val keyStorePassword: String = keyStorePassword
-                override val trustStorePassword: String = trustStorePassword
-            }
-        } else {
-            null
         }
     }
 
@@ -153,7 +129,8 @@ class Main : App(MainView::class) {
 }
 
 /**
- *  This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing, they will be on localhost:20002, 20004, 20006, 20008, 20010 respectively.
+ * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
+ * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
  */
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
@@ -190,7 +167,7 @@ fun main(args: Array<String>) {
         val issuerNodeUSD = issuerUSD.get()
 
         arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
-            println("${it.nodeInfo.legalIdentity} started on ${ArtemisMessagingComponent.toHostAndPort(it.nodeInfo.address)}")
+            println("${it.nodeInfo.legalIdentity} started on ${it.configuration.rpcAddress}")
         }
 
         val parser = OptionParser("S")
@@ -211,7 +188,7 @@ fun main(args: Array<String>) {
             issuerClientGBP.start(manager.username, manager.password)
             val issuerRPCGBP = issuerClientGBP.proxy()
 
-            val issuerClientUSD = issuerNodeGBP.rpcClientToNode()  // TODO This should be issuerNodeUSD
+            val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
             issuerClientUSD.start(manager.username, manager.password)
             val issuerRPCUSD = issuerClientUSD.proxy()
 

@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
@@ -7,16 +8,27 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class KryoTests {
 
-    private val kryo = createKryo()
+    private lateinit var kryo: Kryo
+
+    @Before
+    fun setup() {
+        // We deliberately do not return this, since we do some unorthodox registering below and do not want to pollute the pool.
+        kryo = p2PKryo().borrow()
+    }
 
     @Test
     fun ok() {
@@ -110,6 +122,14 @@ class KryoTests {
         val serializedMetaData = meta.bytes()
         val meta2 = serializedMetaData.deserialize<MetaData>()
         assertEquals(meta2, meta)
+    }
+
+    @Test
+    fun `serialize - deserialize Logger`() {
+        val logger = LoggerFactory.getLogger("aName")
+        val logger2 = logger.serialize(storageKryo()).deserialize(storageKryo())
+        assertEquals(logger.name, logger2.name)
+        assertTrue(logger === logger2)
     }
 
     @CordaSerializable

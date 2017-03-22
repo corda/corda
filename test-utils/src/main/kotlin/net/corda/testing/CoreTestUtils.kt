@@ -6,6 +6,7 @@ package net.corda.testing
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.typesafe.config.Config
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -20,6 +21,7 @@ import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
@@ -27,6 +29,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import java.net.ServerSocket
 import java.net.URL
+import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
@@ -148,7 +151,7 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass, flowFactory)
+    services.registerFlowInitiator(markerClass.java, flowFactory)
     return future
 }
 
@@ -166,3 +169,14 @@ data class TestNodeConfiguration(
         override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
+
+@JvmOverloads
+fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {
+    override val certificatesDirectory = Files.createTempDirectory("certs")
+    override val keyStorePassword: String get() = "cordacadevpass"
+    override val trustStorePassword: String get() = "trustpass"
+
+    init {
+        configureDevKeyAndTrustStores(legalName)
+    }
+}

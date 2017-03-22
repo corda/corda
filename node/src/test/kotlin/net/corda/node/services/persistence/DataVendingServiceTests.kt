@@ -17,6 +17,7 @@ import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -48,14 +49,13 @@ class DataVendingServiceTests {
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
         databaseTransaction(vaultServiceNode.database) {
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
             // Check the transaction is in the receiving node
             val actual = vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().singleOrNull()
             val expected = tx.tx.outRef<Cash.State>(0)
-
             assertEquals(expected, actual)
         }
     }
@@ -79,17 +79,17 @@ class DataVendingServiceTests {
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
         databaseTransaction(vaultServiceNode.database) {
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
 
             // Check the transaction is not in the receiving node
-            assertEquals(0, vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>().size)
+            assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
         }
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class, ::NotifyTransactionHandler)
+        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class.java, ::NotifyTransactionHandler)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }

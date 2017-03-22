@@ -18,7 +18,7 @@ import net.corda.node.services.api.ServiceHubInternal
 abstract class NotaryService(services: ServiceHubInternal) : SingletonSerializeAsToken() {
 
     init {
-        services.registerFlowInitiator(NotaryFlow.Client::class) { createFlow(it) }
+        services.registerFlowInitiator(NotaryFlow.Client::class.java) { createFlow(it) }
     }
 
     /** Implement a factory that specifies the transaction commit flow for the notary service to use */

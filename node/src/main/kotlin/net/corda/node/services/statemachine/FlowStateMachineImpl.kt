@@ -55,18 +55,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
-    @Transient private var _logger: Logger? = null
     /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
-    override val logger: Logger get() {
-        return _logger ?: run {
-            val l = LoggerFactory.getLogger("net.corda.flow.$id")
-            _logger = l
-            return l
-        }
-    }
+    override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
@@ -104,7 +97,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             return
         }
 
-        // Only sessions which have a single send and nothing else will block here
+        // Only sessions which have done a single send and nothing else will block here
         openSessions.values
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }

@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-open class NetworkMapConfig(val legalName: String, val artemisPort: Int) {
+open class NetworkMapConfig(val legalName: String, val p2pPort: Int) {
 
     val key: String = legalName.toKey()
 

@@ -12,14 +12,12 @@ import javafx.scene.layout.GridPane
 import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
 import javafx.stage.Window
-import net.corda.client.fxutils.ChosenList
-import net.corda.client.fxutils.isNotNull
-import net.corda.client.fxutils.map
-import net.corda.client.fxutils.unique
-import net.corda.client.model.*
+import net.corda.client.jfx.model.*
+import net.corda.client.jfx.utils.ChosenList
+import net.corda.client.jfx.utils.isNotNull
+import net.corda.client.jfx.utils.map
+import net.corda.client.jfx.utils.unique
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
@@ -148,7 +146,7 @@ class NewTransaction : Fragment() {
                     CashTransaction.Issue -> {
                         CashFlowCommand.IssueCash(Amount(amount.value, currencyChoiceBox.value), issueRef, partyBChoiceBox.value.legalIdentity, notaries.first().notaryIdentity)
                     }
-                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, Issued(PartyAndReference(issuerChoiceBox.value, issueRef), currencyChoiceBox.value)), partyBChoiceBox.value.legalIdentity)
+                    CashTransaction.Pay -> CashFlowCommand.PayCash(Amount(amount.value, currencyChoiceBox.value), partyBChoiceBox.value.legalIdentity)
                     CashTransaction.Exit -> CashFlowCommand.ExitCash(Amount(amount.value, currencyChoiceBox.value), issueRef)
                     else -> null
                 }

@@ -1,38 +1,32 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
-import java.lang.String.join
 import java.io.File
-import java.nio.file.Path
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import net.corda.node.services.config.SSLConfiguration
 
 class NodeConfig(
         baseDir: Path,
         legalName: String,
-        artemisPort: Int,
+        p2pPort: Int,
+        val rpcPort: Int,
         val nearestCity: String,
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
-        val users: List<User> = listOf(user("guest")),
+        val users: List<User> = listOf(defaultUser),
         var networkMap: NetworkMapConfig? = null
-) : NetworkMapConfig(legalName, artemisPort), HasPlugins {
+) : NetworkMapConfig(legalName, p2pPort), HasPlugins {
 
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
+        val defaultUser = user("guest")
     }
 
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
-
-    val ssl: SSLConfiguration = object : SSLConfiguration {
-        override val certificatesDirectory: Path = nodeDir.resolve("certificates")
-        override val trustStorePassword: String = "trustpass"
-        override val keyStorePassword: String = "cordacadevpass"
-    }
 
     var state: NodeState = NodeState.STARTING
 
@@ -48,14 +42,15 @@ class NodeConfig(
      */
     fun toFileConfig(): Config = ConfigFactory.empty()
             .withValue("myLegalName", valueFor(legalName))
-            .withValue("artemisAddress", addressValueFor(artemisPort))
+            .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("nearestCity", valueFor(nearestCity))
-            .withValue("extraAdvertisedServiceIds", valueFor(join(",", extraServices)))
+            .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
             .withFallback(optional("networkMapService", networkMap, {
-                c, n -> c.withValue("address", addressValueFor(n.artemisPort))
+                c, n -> c.withValue("address", addressValueFor(n.p2pPort))
                     .withValue("legalName", valueFor(n.legalName))
             } ))
             .withValue("webAddress", addressValueFor(webPort))
+            .withValue("rpcAddress", addressValueFor(rpcPort))
             .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
             .withValue("h2port", valueFor(h2Port))
             .withValue("useTestClock", valueFor(true))
@@ -63,7 +58,7 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-        baseDir, legalName, artemisPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
+        baseDir, legalName, p2pPort, rpcPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {
@@ -74,7 +69,6 @@ class NodeConfig(
         }
     }
 
-    fun extendUserPermissions(permissions: Collection<String>) = users.forEach { it.extendPermissions(permissions) }
 }
 
 private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)

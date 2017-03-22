@@ -49,7 +49,7 @@ dependencies {
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver", configuration: 'runtimeArtifacts')
+    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     compile project(':node:webserver')
@@ -70,8 +70,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Notary"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating", "corda.interest_rates"]
-        artemisPort 10002
-        webPort 10003
+        p2pPort 10002
+        rpcPort 10003
+        webPort 10004
         cordapps = []
         useTestClock true
     }
@@ -79,8 +80,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Bank A"
         nearestCity "London"
         advertisedServices = []
-        artemisPort 10004
-        webPort 10005
+        p2pPort 10005
+        rpcPort 10006
+        webPort 10007
         cordapps = []
         useTestClock true
     }
@@ -88,8 +90,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         name "Bank B"
         nearestCity "New York"
         advertisedServices = []
-        artemisPort 10006
-        webPort 10007
+        p2pPort 10008
+        rpcPort 10009
+        webPort 10010
         cordapps = []
         useTestClock true
     }

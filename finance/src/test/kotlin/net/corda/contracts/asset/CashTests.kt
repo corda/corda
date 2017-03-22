@@ -78,7 +78,7 @@ class CashTests {
             services.fillWithSomeTestCash(howMuch = 80.SWISS_FRANCS, atLeastThisManyStates = 1, atMostThisManyStates = 1,
                     issuedBy = MINI_CORP.ref(1), issuerKey = MINI_CORP_KEY, ownedBy = OUR_PUBKEY_1)
 
-            vaultStatesUnconsumed = services.vaultService.unconsumedStates<Cash.State>()
+            vaultStatesUnconsumed = services.vaultService.unconsumedStates<Cash.State>().toList()
         }
     }
 

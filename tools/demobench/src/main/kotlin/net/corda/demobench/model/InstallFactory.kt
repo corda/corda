@@ -13,7 +13,8 @@ class InstallFactory : Controller() {
 
     @Throws(IOException::class)
     fun toInstallConfig(config: Config, baseDir: Path): InstallConfig {
-        val artemisPort = config.parsePort("artemisAddress")
+        val p2pPort = config.parsePort("p2pAddress")
+        val rpcPort = config.parsePort("rpcAddress")
         val webPort = config.parsePort("webAddress")
         val h2Port = config.getInt("h2port")
         val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
@@ -22,7 +23,8 @@ class InstallFactory : Controller() {
         val nodeConfig = NodeConfig(
             tempDir,
             config.getString("myLegalName"),
-            artemisPort,
+            p2pPort,
+            rpcPort,
             config.getString("nearestCity"),
             webPort,
             h2Port,
@@ -49,7 +51,7 @@ class InstallFactory : Controller() {
 
     private fun Config.parseExtraServices(path: String): List<String> {
         val services = serviceController.services.toSortedSet()
-        return this.getString(path).split(",")
+        return this.getStringList(path)
             .filter { !it.isNullOrEmpty() }
             .map { svc ->
                 require(svc in services, { "Unknown service '$svc'." } )

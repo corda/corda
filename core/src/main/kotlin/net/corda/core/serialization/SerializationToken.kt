@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import java.util.*
+import com.esotericsoftware.kryo.pool.KryoPool
 
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
@@ -36,8 +36,6 @@ interface SerializationToken {
 
 /**
  * A Kryo serializer for [SerializeAsToken] implementations.
- *
- * This is registered in [createKryo].
  */
 class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
     override fun write(kryo: Kryo, output: Output, obj: T) {
@@ -76,8 +74,8 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryo: Kryo = createKryo()) {
-    internal val tokenToTokenized = HashMap<SerializationToken, SerializeAsToken>()
+class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
+    internal val tokenToTokenized = mutableMapOf<SerializationToken, SerializeAsToken>()
     internal var readOnly = false
 
     init {
@@ -90,9 +88,11 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryo: Kryo = createKryo()) {
          * accidental registrations from occuring as these could not be deserialized in a deserialization-first
          * scenario if they are not part of this iniital context construction serialization.
          */
-        SerializeAsTokenSerializer.setContext(kryo, this)
-        toBeTokenized.serialize(kryo)
-        SerializeAsTokenSerializer.clearContext(kryo)
+        kryoPool.run { kryo ->
+            SerializeAsTokenSerializer.setContext(kryo, this)
+            toBeTokenized.serialize(kryo)
+            SerializeAsTokenSerializer.clearContext(kryo)
+        }
         readOnly = true
     }
 }

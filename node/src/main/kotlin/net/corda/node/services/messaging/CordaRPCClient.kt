@@ -1,14 +1,15 @@
 package net.corda.node.services.messaging
 
 import com.google.common.net.HostAndPort
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.minutes
 import net.corda.core.seconds
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.config.SSLConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
+import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
+import net.corda.nodeapi.ConnectionDirection
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientSession
@@ -24,10 +25,10 @@ import javax.annotation.concurrent.ThreadSafe
  * useful tasks. See the documentation for [proxy] or review the docsite to learn more about how this API works.
  *
  * @param host The hostname and messaging port of the node.
- * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will not be authenticated, nor will RPC traffic be encrypted.
+ * @param config If specified, the SSL configuration to use. If not specified, SSL will be disabled and the node will only be authenticated on non-SSL RPC port, the RPC traffic with not be encrypted when SSL is disabled.
  */
 @ThreadSafe
-class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration?, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
+class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration? = null, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
     private companion object {
         val log = loggerFor<CordaRPCClient>()
     }
@@ -52,7 +53,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
             check(!running)
             log.logElapsedTime("Startup") {
                 checkStorePasswords()
-                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(Outbound(), host.hostText, host.port)).apply {
+                val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport(ConnectionDirection.Outbound(), host, config, enableSSL = config != null)).apply {
                     // TODO: Put these in config file or make it user configurable?
                     threadPoolMaxSize = 1
                     confirmationWindowSize = 100000 // a guess

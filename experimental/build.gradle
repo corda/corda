@@ -3,8 +3,6 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'kotlin'
 
-sourceCompatibility = 1.5
-
 repositories {
     mavenLocal()
     mavenCentral()
@@ -27,6 +25,9 @@ compileTestKotlin {
 dependencies {
     compile project(':core')
     compile project(':finance')
+
+    // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.
+    compile "org.ow2.asm:asm:5.0.4"
 
     testCompile "junit:junit:$junit_version"
     testCompile project(':test-utils')

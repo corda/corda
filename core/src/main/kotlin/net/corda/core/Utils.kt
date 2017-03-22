@@ -357,7 +357,7 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
     }
 
     // Monad
-    fun <B : Any> bind(function: (A) -> ErrorOr<B>): ErrorOr<B> {
+    fun <B> bind(function: (A) -> ErrorOr<B>): ErrorOr<B> {
         return if (error == null) {
             function(value as A)
         } else {

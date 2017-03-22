@@ -1,7 +1,6 @@
 package net.corda.irs.testing
 
 import net.corda.core.contracts.*
-import net.corda.core.node.recordTransactions
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -77,8 +76,8 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     expression = Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
                             "(floatingLeg.notional.pennies * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))"),
 
-                    floatingLegPaymentSchedule = HashMap(),
-                    fixedLegPaymentSchedule = HashMap()
+                    floatingLegPaymentSchedule = mutableMapOf(),
+                    fixedLegPaymentSchedule = mutableMapOf()
             )
 
             val EUR = currency("EUR")
@@ -167,8 +166,8 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
                     expression = Expression("( fixedLeg.notional.pennies * (fixedLeg.fixedRate.ratioUnit.value)) -" +
                             "(floatingLeg.notional.pennies * (calculation.fixingSchedule.get(context.getDate('currentDate')).rate.ratioUnit.value))"),
 
-                    floatingLegPaymentSchedule = HashMap(),
-                    fixedLegPaymentSchedule = HashMap()
+                    floatingLegPaymentSchedule = mutableMapOf(),
+                    fixedLegPaymentSchedule = mutableMapOf()
             )
 
             val EUR = currency("EUR")
@@ -413,7 +412,7 @@ class IRSTests {
     @Test
     fun `ensure failure occurs when no events in fix schedule`() {
         val irs = singleIRS()
-        val emptySchedule = HashMap<LocalDate, FixedRatePaymentEvent>()
+        val emptySchedule = mutableMapOf<LocalDate, FixedRatePaymentEvent>()
         transaction {
             output() {
                 irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
@@ -427,7 +426,7 @@ class IRSTests {
     @Test
     fun `ensure failure occurs when no events in floating schedule`() {
         val irs = singleIRS()
-        val emptySchedule = HashMap<LocalDate, FloatingRatePaymentEvent>()
+        val emptySchedule = mutableMapOf<LocalDate, FloatingRatePaymentEvent>()
         transaction {
             output() {
                 irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))

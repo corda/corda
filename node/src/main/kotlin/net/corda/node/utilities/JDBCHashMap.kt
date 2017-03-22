@@ -3,7 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.serialization.threadLocalStorageKryo
+import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.jetbrains.exposed.sql.*
@@ -21,11 +21,12 @@ import kotlin.system.measureTimeMillis
 
 /**
  * The default maximum size of the LRU cache.
+ * Current computation is linear to max heap size, ensuring a minimum of 256 buckets.
  *
  * TODO: make this value configurable
  * TODO: tune this value, as it's currently mostly a guess
  */
-val DEFAULT_MAX_BUCKETS = 4096
+val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, (Runtime.getRuntime().maxMemory()/1000000 - 128) / 64))).toInt()
 
 /**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
@@ -65,7 +66,7 @@ fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>
     return blob
 }
 
-fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(threadLocalStorageKryo(), true), finalizables)
+fun serializeToBlob(value: Any, finalizables: MutableList<() -> Unit>): Blob = bytesToBlob(value.serialize(storageKryo(), true), finalizables)
 
 fun <T : Any> bytesFromBlob(blob: Blob): SerializedBytes<T> {
     try {

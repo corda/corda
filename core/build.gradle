@@ -50,9 +50,12 @@ dependencies {
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
-    // Log4J: logging framework (with SLF4J bindings)
-    compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
+    // Log4J: logging framework (ONLY explicitly referenced by net.corda.core.utilities.Logging.kt)
     compile "org.apache.logging.log4j:log4j-core:${log4j_version}"
+
+    // SLF4J: commons-logging bindings for a SLF4J back end
+    compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    compile "org.slf4j:slf4j-api:$slf4j_version"
 
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:${assertj_version}"
@@ -91,8 +94,14 @@ dependencies {
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
 
     // RS API: Response type and codes for ApiUtils.
-    compile "javax.ws.rs:javax.ws.rs-api:2.0"
+    compile "javax.ws.rs:javax.ws.rs-api:2.0.1"
 
     // Requery: SQL based query & persistence for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
+}
+
+configurations.compile {
+    // We want to use SLF4J's version of these binding: jcl-over-slf4j
+    // Remove any transitive dependency on Apache's version.
+    exclude group: 'commons-logging', module: 'commons-logging'
 }

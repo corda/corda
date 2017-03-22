@@ -15,7 +15,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
         val oneSecond = SECONDS.toMillis(1)
     }
 
-    private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.artemisPort), config.ssl)
+    private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.rpcPort))
     private val timer = Timer()
 
     init {

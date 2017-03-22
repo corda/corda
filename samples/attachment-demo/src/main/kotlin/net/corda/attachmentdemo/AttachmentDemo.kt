@@ -2,6 +2,7 @@ package net.corda.attachmentdemo
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -11,7 +12,6 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
-import net.corda.node.services.config.SSLConfiguration
 import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.testing.ALICE_KEY
 import java.nio.file.Path
@@ -28,7 +28,6 @@ fun main(args: Array<String>) {
     val parser = OptionParser()
 
     val roleArg = parser.accepts("role").withRequiredArg().ofType(Role::class.java).required()
-    val certsPath = parser.accepts("certificates").withRequiredArg()
     val options = try {
         parser.parse(*args)
     } catch (e: Exception) {
@@ -40,16 +39,16 @@ fun main(args: Array<String>) {
     val role = options.valueOf(roleArg)!!
     when (role) {
         Role.SENDER -> {
-            val host = HostAndPort.fromString("localhost:10004")
+            val host = HostAndPort.fromString("localhost:10006")
             println("Connecting to sender node ($host)")
-            CordaRPCClient(host, sslConfigFor("BankA", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host).use("demo", "demo") {
                 sender(this)
             }
         }
         Role.RECIPIENT -> {
-            val host = HostAndPort.fromString("localhost:10006")
+            val host = HostAndPort.fromString("localhost:10009")
             println("Connecting to the recipient node ($host)")
-            CordaRPCClient(host, sslConfigFor("BankB", options.valueOf(certsPath))).use("demo", "demo") {
+            CordaRPCClient(host).use("demo", "demo") {
                 recipient(this)
             }
         }
@@ -110,7 +109,6 @@ private fun printHelp(parser: OptionParser) {
     """.trimIndent())
     parser.printHelpOn(System.out)
 }
-
 
 // TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
 private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {

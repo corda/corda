@@ -13,12 +13,12 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.DriverBasedTest
 import net.corda.node.driver.NodeHandle
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
+import net.corda.testing.node.DriverBasedTest
 import net.corda.testing.replicate
 import org.junit.Test
 import rx.Observable
@@ -144,9 +144,7 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(
-                ::CashPaymentFlow,
-                amount.issuedBy(alice.nodeInfo.legalIdentity.ref(0)), alice.nodeInfo.legalIdentity)
+        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
         payHandle.returnValue.getOrThrow()
     }
 }

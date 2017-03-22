@@ -16,14 +16,15 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.expectedOnDefaultFileSystem
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Inbound
-import net.corda.node.services.messaging.ArtemisMessagingComponent.ConnectionDirection.Outbound
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
@@ -33,6 +34,7 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
+import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
@@ -81,7 +83,8 @@ import javax.security.cert.X509Certificate
  */
 @ThreadSafe
 class ArtemisMessagingServer(override val config: NodeConfiguration,
-                             val myHostPort: HostAndPort,
+                             val p2pHostPort: HostAndPort,
+                             val rpcHostPort: HostAndPort?,
                              val networkMapCache: NetworkMapCache,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
     companion object {
@@ -139,7 +142,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Node listening on address", myHostPort.toString())
+        printBasicNodeInfo("Listening on address", p2pHostPort.toString())
+        if (rpcHostPort != null) {
+            printBasicNodeInfo("RPC service listening on address", rpcHostPort.toString())
+        }
     }
 
     private fun createArtemisConfig(): Configuration = ConfigurationImpl().apply {
@@ -147,7 +153,14 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         bindingsDirectory = (artemisDir / "bindings").toString()
         journalDirectory = (artemisDir / "journal").toString()
         largeMessagesDirectory = (artemisDir / "large-messages").toString()
-        acceptorConfigurations = setOf(tcpTransport(Inbound, "0.0.0.0", myHostPort.port))
+        val connectionDirection = ConnectionDirection.Inbound(
+                acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
+        )
+        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pHostPort.port))
+        if (rpcHostPort != null) {
+            acceptors.add(createTcpTransport(connectionDirection, "0.0.0.0", rpcHostPort.port, enableSSL = false))
+        }
+        acceptorConfigurations = acceptors
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits
         // and our own definition of commit mean that the built in deduplication cannot remove all duplicates.
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
@@ -160,15 +173,15 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         // by having its password be an unknown securely random 128-bit value.
         clusterPassword = BigInteger(128, newSecureRandom()).toString(16)
         queueConfigurations = listOf(
-            queueConfig(NETWORK_MAP_QUEUE, durable = true),
-            queueConfig(P2P_QUEUE, durable = true),
-            // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
-            // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
-            // but these queues are not worth persisting.
-            queueConfig(RPC_REQUESTS_QUEUE, durable = false),
-            // The custom name for the queue is intentional - we may wish other things to subscribe to the
-            // NOTIFICATIONS_ADDRESS with different filters in future
-            queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
+                queueConfig(NETWORK_MAP_QUEUE, durable = true),
+                queueConfig(P2P_QUEUE, durable = true),
+                // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
+                // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
+                // but these queues are not worth persisting.
+                queueConfig(RPC_REQUESTS_QUEUE, durable = false),
+                // The custom name for the queue is intentional - we may wish other things to subscribe to the
+                // NOTIFICATIONS_ADDRESS with different filters in future
+                queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
         )
         configureAddressSecurity()
     }
@@ -183,8 +196,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     /**
-     * Authenticated clients connecting to us fall in one of three groups:
-     * 1. The node hosting us and any of its logically connected components. These are given full access to all valid queues.
+     * Authenticated clients connecting to us fall in one of the following groups:
+     * 1. The node itself. It is given full access to all valid queues.
      * 2. Peers on the same network as us. These are only given permission to send to our P2P inbound queue.
      * 3. RPC users. These are only given sufficient access to perform RPC with us.
      */
@@ -290,8 +303,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
         fun deployBridges(node: NodeInfo) {
             gatherAddresses(node)
-                .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
-                .forEach { deployBridge(it, node.legalIdentity.name) }
+                    .filter { queueExists(it.queueName) && !bridgeExists(it.bridgeName) }
+                    .forEach { deployBridge(it, node.legalIdentity.name) }
         }
 
         fun destroyBridges(node: NodeInfo) {
@@ -319,6 +332,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         deployBridge(address.queueName, address.hostAndPort, legalName)
     }
 
+    private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
+            ArtemisTcpTransport.tcpTransport(connectionDirection, HostAndPort.fromParts(host, port), config, enableSSL = enableSSL)
+
     /**
      * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
      * messages from other nodes. When we want to send a message to a node we send it to our internal address/queue for it,
@@ -326,7 +342,11 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * P2P address.
      */
     private fun deployBridge(queueName: String, target: HostAndPort, legalName: String) {
-        val tcpTransport = tcpTransport(Outbound(expectedCommonName = legalName), target.hostText, target.port)
+        val connectionDirection = ConnectionDirection.Outbound(
+                connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
+                expectedCommonName = legalName
+        )
+        val tcpTransport = createTcpTransport(connectionDirection, target.hostText, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
         // We intentionally overwrite any previous connector config in case the peer legal name changed
         activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)
@@ -397,10 +417,9 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       threadPool: Executor?,
                                       scheduledThreadPool: ScheduledExecutorService?,
                                       protocolManager: ClientProtocolManager?) :
-        NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager)
-{
+        NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expectedCommonName = configuration?.get(ArtemisMessagingComponent.VERIFY_PEER_COMMON_NAME) as? String
+    private val expectedCommonName = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as? String
 
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as NettyConnection?
@@ -480,15 +499,15 @@ class NodeLoginModule : LoginModule {
 
         val username = nameCallback.name ?: throw FailedLoginException("Username not provided")
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
+        val certificates = certificateCallback.certificates
 
         log.info("Processing login for $username")
 
-        val validatedUser = if (username == PEER_USER || username == NODE_USER) {
-            val certificates = certificateCallback.certificates ?: throw FailedLoginException("No TLS?")
-            authenticateNode(certificates, username)
-        } else {
-            // Otherwise assume they're an RPC user
-            authenticateRpcUser(password, username)
+        val validatedUser = when (determineUserRole(certificates, username)) {
+            PEER_ROLE -> authenticatePeer(certificates)
+            NODE_ROLE -> authenticateNode(certificates)
+            RPC_ROLE -> authenticateRpcUser(password, username)
+            else -> throw FailedLoginException("Peer does not belong on our network")
         }
         principals += UserPrincipal(validatedUser)
 
@@ -496,22 +515,22 @@ class NodeLoginModule : LoginModule {
         return loginSucceeded
     }
 
-    private fun authenticateNode(certificates: Array<X509Certificate>, username: String): String {
+    private fun authenticateNode(certificates: Array<X509Certificate>): String {
         val peerCertificate = certificates.first()
-        val role = if (username == NODE_USER) {
-            if (peerCertificate.publicKey != ourPublicKey) {
-                throw FailedLoginException("Only the node can login as $NODE_USER")
-            }
-            NODE_ROLE
-        } else {
-            val theirRootCAPublicKey = certificates.last().publicKey
-            if (theirRootCAPublicKey != ourRootCAPublicKey) {
-                throw FailedLoginException("Peer does not belong on our network. Their root CA: $theirRootCAPublicKey")
-            }
-            PEER_ROLE  // This enables the peer to send to our P2P address
+        if (peerCertificate.publicKey != ourPublicKey) {
+            throw FailedLoginException("Only the node can login as $NODE_USER")
         }
-        principals += RolePrincipal(role)
+        principals += RolePrincipal(NODE_ROLE)
         return peerCertificate.subjectDN.name
+    }
+
+    private fun authenticatePeer(certificates: Array<X509Certificate>): String {
+        val theirRootCAPublicKey = certificates.last().publicKey
+        if (theirRootCAPublicKey != ourRootCAPublicKey) {
+            throw FailedLoginException("Peer does not belong on our network. Their root CA: $theirRootCAPublicKey")
+        }
+        principals += RolePrincipal(PEER_ROLE)
+        return certificates.first().subjectDN.name
     }
 
     private fun authenticateRpcUser(password: String, username: String): String {
@@ -524,6 +543,18 @@ class NodeLoginModule : LoginModule {
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
         principals += RolePrincipal("$CLIENTS_PREFIX$username")  // This enables the RPC client to receive responses
         return username
+    }
+
+    private fun determineUserRole(certificates: Array<X509Certificate>?, username: String): String? {
+        return if (username == PEER_USER || username == NODE_USER) {
+            certificates ?: throw FailedLoginException("No TLS?")
+            if (username == PEER_USER) PEER_ROLE else NODE_ROLE
+        } else if (certificates == null) {
+            // Assume they're an RPC user if its from a non-ssl connection
+            RPC_ROLE
+        } else {
+            null
+        }
     }
 
     override fun commit(): Boolean {

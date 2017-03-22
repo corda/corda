@@ -4,13 +4,11 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.issuedBy
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.toFuture
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.driver
@@ -92,10 +90,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1 .. 10) {
-                bobProxy.startFlow(::CashPaymentFlow,
-                        i.DOLLARS.issuedBy(alice.nodeInfo.legalIdentity.ref(issueRef)),
-                        alice.nodeInfo.legalIdentity
-                ).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

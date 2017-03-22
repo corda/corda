@@ -27,7 +27,9 @@ fun commodity(code: String) = Commodity.getInstance(code)!!
 @JvmField val GBP = currency("GBP")
 @JvmField val EUR = currency("EUR")
 @JvmField val CHF = currency("CHF")
-@JvmField val FCOJ = commodity("FCOJ")
+@JvmField val JPY = currency("JPY")
+@JvmField val RUB = currency("RUB")
+@JvmField val FCOJ = commodity("FCOJ")   // Frozen concentrated orange juice, yum!
 
 fun DOLLARS(amount: Int): Amount<Currency> = Amount(amount.toLong() * 100, USD)
 fun DOLLARS(amount: Double): Amount<Currency> = Amount((amount * 100).toLong(), USD)

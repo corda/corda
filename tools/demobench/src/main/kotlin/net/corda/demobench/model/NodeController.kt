@@ -48,7 +48,8 @@ class NodeController : Controller() {
         val config = NodeConfig(
             baseDir,
             nodeData.legalName.value.trim(),
-            nodeData.artemisPort.value,
+            nodeData.p2pPort.value,
+            nodeData.rpcPort.value,
             nodeData.nearestCity.value.trim(),
             nodeData.webPort.value,
             nodeData.h2Port.value,
@@ -114,9 +115,6 @@ class NodeController : Controller() {
                 // Install any built-in plugins into the working directory.
                 pluginController.populate(config)
 
-                // Ensure that the users have every permission that they need.
-                config.extendUserPermissions(pluginController.permissionsFor(config))
-
                 // Write this node's configuration file into its working directory.
                 val confFile = nodeDir.resolve("node.conf")
                 confFile.writeText(config.toText())
@@ -181,7 +179,7 @@ class NodeController : Controller() {
     }
 
     private fun updatePort(config: NodeConfig) {
-        val nextPort = 1 + arrayOf(config.artemisPort, config.webPort, config.h2Port).max() as Int
+        val nextPort = 1 + arrayOf(config.p2pPort, config.rpcPort, config.webPort, config.h2Port).max() as Int
         port.getAndUpdate { Math.max(nextPort, it) }
     }
 

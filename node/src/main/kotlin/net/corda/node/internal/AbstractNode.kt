@@ -59,7 +59,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -126,10 +125,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic) }
         }
 
-        override fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
-            require(markerClass !in flowFactories) { "${markerClass.java.name} has already been used to register a flow" }
-            log.info("Registering flow ${markerClass.java.name}")
-            flowFactories[markerClass.java] = flowFactory
+        override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
+            require(markerClass !in flowFactories) { "${markerClass.name} has already been used to register a flow" }
+            log.info("Registering flow ${markerClass.name}")
+            flowFactories[markerClass] = flowFactory
         }
 
         override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
@@ -224,7 +223,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(CordaRPCOpsImpl(services, smm, database))
-            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class) { ContractUpgradeFlow.Acceptor(it) }
+            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()
@@ -382,15 +381,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
-        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
-            "Initial network map address must indicate a node that provides a network map service"
-        }
         services.networkMapCache.addNode(info)
         // In the unit test environment, we may run without any network map service sometimes.
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
-
         } else {
             registerWithNetworkMap()
         }
@@ -401,11 +396,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * updates) if one has been supplied.
      */
     protected open fun registerWithNetworkMap(): ListenableFuture<Unit> {
+        require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
+            "Initial network map address must indicate a node that provides a network map service"
+        }
         val address = networkMapAddress ?: info.address
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { response ->
-            check(response.success) { "The network map service rejected our registration request" }
-            // This Future will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
+            check(response.error == null) { "Unable to register with the network map service: ${response.error}" }
+            // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
             services.networkMapCache.addMapService(net, address, true, null)
         }
     }

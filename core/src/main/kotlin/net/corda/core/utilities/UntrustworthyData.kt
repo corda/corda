@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
 
 /**
@@ -18,6 +19,7 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
         @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
         get() = fromUntrustedWorld
 
+    @Suspendable
     @Throws(FlowException::class)
     fun <R> unwrap(validator: Validator<T, R>) = validator.validate(fromUntrustedWorld)
 
@@ -26,6 +28,7 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
     inline fun <R> validate(validator: (T) -> R) = validator(data)
 
     interface Validator<in T, out R> {
+        @Suspendable
         @Throws(FlowException::class)
         fun validate(data: T): R
     }

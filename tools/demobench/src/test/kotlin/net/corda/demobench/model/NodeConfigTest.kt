@@ -41,9 +41,15 @@ class NodeConfigTest {
     }
 
     @Test
-    fun `test artemis port`() {
-        val config = createConfig(artemisPort = 10001)
-        assertEquals(10001, config.artemisPort)
+    fun `test P2P port`() {
+        val config = createConfig(p2pPort = 10001)
+        assertEquals(10001, config.p2pPort)
+    }
+
+    @Test
+    fun `test rpc port`() {
+        val config = createConfig(rpcPort = 40002)
+        assertEquals(40002, config.rpcPort)
     }
 
     @Test
@@ -96,33 +102,26 @@ class NodeConfigTest {
     }
 
     @Test
-    fun `test SSL configuration`() {
-        val config = createConfig(legalName = "My Name")
-        val ssl = config.ssl
-        assertEquals(baseDir.resolve("myname").resolve("certificates"), ssl.certificatesDirectory)
-        assertEquals("cordacadevpass", ssl.keyStorePassword)
-        assertEquals("trustpass", ssl.trustStorePassword)
-    }
-
-    @Test
     fun `test config text`() {
         val config = createConfig(
             legalName = "My Name",
             nearestCity = "Stockholm",
-            artemisPort = 10001,
+            p2pPort = 10001,
+            rpcPort = 40002,
             webPort = 20001,
             h2Port = 30001,
             services = listOf("my.service"),
             users = listOf(user("jenny"))
         )
         assertEquals("{"
-                +     "\"artemisAddress\":\"localhost:10001\","
-                +     "\"extraAdvertisedServiceIds\":\"my.service\","
+                +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 +     "\"h2port\":30001,"
                 +     "\"myLegalName\":\"MyName\","
                 +     "\"nearestCity\":\"Stockholm\","
+                +     "\"p2pAddress\":\"localhost:10001\","
+                +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"StartFlow.net.corda.flows.CashFlow\"],\"user\":\"jenny\"}"
+                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
                 +     "],"
                 +     "\"useTestClock\":true,"
                 +     "\"webAddress\":\"localhost:20001\""
@@ -134,7 +133,8 @@ class NodeConfigTest {
         val config = createConfig(
             legalName = "My Name",
             nearestCity = "Stockholm",
-            artemisPort = 10001,
+            p2pPort = 10001,
+            rpcPort = 40002,
             webPort = 20001,
             h2Port = 30001,
             services = listOf("my.service"),
@@ -143,14 +143,15 @@ class NodeConfigTest {
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
         assertEquals("{"
-                +     "\"artemisAddress\":\"localhost:10001\","
-                +     "\"extraAdvertisedServiceIds\":\"my.service\","
+                +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 +     "\"h2port\":30001,"
                 +     "\"myLegalName\":\"MyName\","
                 +     "\"nearestCity\":\"Stockholm\","
                 +     "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"Notary\"},"
+                +     "\"p2pAddress\":\"localhost:10001\","
+                +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"StartFlow.net.corda.flows.CashFlow\"],\"user\":\"jenny\"}"
+                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
                 +     "],"
                 +     "\"useTestClock\":true,"
                 +     "\"webAddress\":\"localhost:20001\""
@@ -166,23 +167,13 @@ class NodeConfigTest {
         assertEquals(elsewhere.resolve("myname"), moved.nodeDir)
         assertEquals(elsewhere.resolve("myname-explorer"), moved.explorerDir)
         assertEquals(elsewhere.resolve("myname").resolve("plugins"), moved.pluginDir)
-        assertEquals(elsewhere.resolve("myname").resolve("certificates"), moved.ssl.certificatesDirectory)
-    }
-
-    @Test
-    fun `test adding user permissions`() {
-        val config = createConfig(users = listOf(user("brian"), user("stewie")))
-        config.extendUserPermissions(listOf("MyFlow.pluginFlow", "MyFlow.otherFlow"))
-
-        config.users.forEach {
-            assertEquals(listOf("StartFlow.net.corda.flows.CashFlow", "MyFlow.pluginFlow", "MyFlow.otherFlow"), it.permissions)
-        }
     }
 
     private fun createConfig(
             legalName: String = "Unknown",
             nearestCity: String = "Nowhere",
-            artemisPort: Int = -1,
+            p2pPort: Int = -1,
+            rpcPort: Int = -1,
             webPort: Int = -1,
             h2Port: Int = -1,
             services: List<String> = listOf("extra.service"),
@@ -191,7 +182,8 @@ class NodeConfigTest {
             baseDir,
             legalName = legalName,
             nearestCity = nearestCity,
-            artemisPort = artemisPort,
+            p2pPort = p2pPort,
+            rpcPort = rpcPort,
             webPort = webPort,
             h2Port = h2Port,
             extraServices = services,

@@ -6,11 +6,15 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializationCustomization
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
+import rx.exceptions.OnErrorNotImplementedException
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Period
 import java.util.*
 
+/**
+ * NOTE: We do not whitelist [HashMap] or [HashSet] since they are unstable under serialization.
+ */
 class DefaultWhitelist : CordaPluginRegistry() {
     override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
@@ -41,12 +45,12 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(java.time.Instant::class.java)
             addToWhitelist(java.time.LocalDate::class.java)
             addToWhitelist(java.util.Collections.singletonMap("A", "B").javaClass)
-            addToWhitelist(java.util.HashMap::class.java)
             addToWhitelist(java.util.LinkedHashMap::class.java)
             addToWhitelist(BigDecimal::class.java)
             addToWhitelist(LocalDate::class.java)
             addToWhitelist(Period::class.java)
             addToWhitelist(BitSet::class.java)
+            addToWhitelist(OnErrorNotImplementedException::class.java)
         }
         return true
     }
