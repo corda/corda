@@ -111,7 +111,11 @@ interface NetworkMapCache {
 
     /** Checks whether a given party is an advertised validating notary identity */
     fun isValidatingNotary(party: Party): Boolean {
-        return notaryNodes.any { it.notaryIdentity == party && it.advertisedServices.any { it.info.type.isValidatingNotary() }}
+        val notary = notaryNodes.firstOrNull { it.notaryIdentity == party }
+                ?: throw IllegalArgumentException("No notary found with identity $party. This is most likely caused " +
+                "by using the notary node's legal identity instead of its advertised notary identity. " +
+                "Your options are: ${notaryNodes.map { "\"${it.notaryIdentity.name}\"" }.joinToString()}.")
+        return notary.advertisedServices.any { it.info.type.isValidatingNotary() }
     }
 
     /**
