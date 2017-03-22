@@ -19,6 +19,7 @@ import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
+import net.corda.nodeapi.ArtemisMessagingComponent
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.SimpleString

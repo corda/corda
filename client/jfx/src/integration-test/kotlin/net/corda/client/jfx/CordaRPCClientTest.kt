@@ -1,5 +1,6 @@
 package net.corda.client.jfx
 
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
@@ -10,10 +11,9 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.Node
-import net.corda.node.services.User
-import net.corda.node.services.messaging.CordaRPCClient
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.nodeapi.User
 import net.corda.testing.node.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType

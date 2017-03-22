@@ -20,15 +20,14 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
-import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import org.slf4j.Logger
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory

@@ -72,7 +72,7 @@ interface NetworkMapService {
         // Base topic for messages acknowledging pushed updates
         val PUSH_ACK_TOPIC = "platform.network_map.push_ack"
 
-        val type = ServiceType.corda.getSubType("network_map")
+        val type = ServiceType.networkMap
     }
 
     data class FetchMapRequest(val subscribe: Boolean,

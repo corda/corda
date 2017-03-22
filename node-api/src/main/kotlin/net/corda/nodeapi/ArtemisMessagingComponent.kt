@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort

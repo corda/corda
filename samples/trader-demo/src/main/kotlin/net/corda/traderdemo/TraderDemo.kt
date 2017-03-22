@@ -2,14 +2,10 @@ package net.corda.traderdemo
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.div
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.messaging.CordaRPCClient
 import org.slf4j.Logger
-import java.nio.file.Path
-import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 /**
