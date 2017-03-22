@@ -53,7 +53,7 @@ To look at the Corda source and run some sample applications:
 
 * [Project website](https://corda.net)
 * [Documentation](https://docs.corda.net)
-* [Slack channel] (https://slack.corda.net/)
+* [Slack channel](https://slack.corda.net/)
 * [Forum](https://discourse.corda.net)
 
 ## Development State
