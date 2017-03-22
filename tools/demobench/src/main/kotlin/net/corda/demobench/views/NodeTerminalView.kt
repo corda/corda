@@ -156,15 +156,15 @@ class NodeTerminalView : Fragment() {
         // TODO - Force a repaint somehow? My naive attempts have not worked.
     }
 
-    class TerminalSettingsProvider : DefaultSettingsProvider() {
-        override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
-
-        override fun emulateX11CopyPaste() = true
-    }
-
     // TODO - This function is working around a misunderstanding of how RPC is supposed to work!
     private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
         pair.second.subscribe().unsubscribe()
         return pair.first
+    }
+
+    class TerminalSettingsProvider : DefaultSettingsProvider() {
+        override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
+
+        override fun emulateX11CopyPaste() = true
     }
 }
