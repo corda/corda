@@ -1,24 +1,13 @@
 DemoBench
 =========
 
-DemoBench is a standalone sales/educational tool that makes it easy to configure and launch local Corda nodes on your desktop.
+DemoBench is a standalone desktop application that makes it easy to configure and launch local Corda nodes. It is useful for training sessions, demos or just experimentation.
 
-Building the Installer
-----------------------
+Downloading
+-----------
 
-There are three scripts in the ``tools/demobench`` directory:
+Installers compatible with the latest Corda release can be downloaded from ...?
 
- #. ``package-demobench-exe.bat`` (Windows)
- #. ``package-demobench-dmg.sh`` (MacOS)
- #. ``package-demobench-rpm.sh`` (Fedora/Linux)
-
-Each script can only be run on its target platform, and each expects the platform's installation tools already to be available.
-
- #. Windows: `Inno Setup 5+ <http://www.jrsoftware.org/isinfo.php>`_
- #. MacOS: The packaging tools should be available automatically. The DMG contents will also be signed if the packager finds a valid ``Developer ID Application`` certificate on the keyring. You can create such a certificate by generating a Certificate Signing Request and then asking your local "Apple team agent" to upload it to the Apple Developer portal. (See `here <https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/MaintainingCertificates/MaintainingCertificates.html>`_.)
- #. Fedora/Linux: ``rpm-build`` packages.
-
-You will also need to define the environment variable ``JAVA_HOME`` to point to the same JDK that you use to run Gradle. The installer will be written to the ``tools/demobench/build/javapackage/bundles`` directory, and can be installed like any other application for your platform.
 
 Running DemoBench
 -----------------
@@ -35,11 +24,15 @@ Configuring a Node
   Press the ``Create Node`` button to launch the Corda node with your configuration.
 
 Running Nodes
-  DemoBench launches each new node in a terminal emulator attached to the pty, and then connects to it over RPC. The ``View Database``, ``Launch Explorer`` and ``Launch WebServer`` buttons will all be disabled until this RPC connection succeeds. Once connected, DemoBench will display simple statistics about the node such as its cash balance.
+  DemoBench launches each new node in a terminal emulator. The ``View Database``, ``Launch Explorer`` and ``Launch WebServer`` buttons will all be disabled until the node has finished booting. DemoBench will then display simple statistics about the node such as its cash balance.
 
 .. warning:: After switching tabs, it may currently be necessary to click on the new tab panel before its contents update correctly. This is a BUG and we're working on it.
 
 ..
+
+
+Exiting DemoBench
+  When you terminate DemoBench, it will automatically shut down any nodes and explorers that it has launched and then exit.
 
 Profiles
   You can save all of DemoBench's currently running nodes into a profile, which is a ``ZIP`` file with the following layout, e.g.:
@@ -61,4 +54,43 @@ Profiles
 ..
 
   When DemoBench reloads this profile it will close any nodes that it is currently running and then launch these new nodes instead.
+
+Building the Installers
+-----------------------
+
+There are three scripts in the ``tools/demobench`` directory:
+
+ #. ``package-demobench-exe.bat`` (Windows)
+ #. ``package-demobench-dmg.sh`` (MacOS)
+ #. ``package-demobench-rpm.sh`` (Fedora/Linux)
+
+Each script can only be run on its target platform, and each expects the platform's installation tools already to be available.
+
+ #. Windows: `Inno Setup 5+ <http://www.jrsoftware.org/isinfo.php>`_
+ #. MacOS: The packaging tools should be available automatically. The DMG contents will also be signed if the packager finds a valid ``Developer ID Application`` certificate on the keyring. You can create such a certificate by generating a Certificate Signing Request and then asking your local "Apple team agent" to upload it to the Apple Developer portal. (See `here <https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/MaintainingCertificates/MaintainingCertificates.html>`_.)
+ #. Fedora/Linux: ``rpm-build`` packages.
+
+You will also need to define the environment variable ``JAVA_HOME`` to point to the same JDK that you use to run Gradle. The installer will be written to the ``tools/demobench/build/javapackage/bundles`` directory, and can be installed like any other application for your platform.
+
+Developer Notes
+---------------
+
+Developers wishing to run DemoBench *without* building an installer each time can use the ``demobench-$version.zip`` file in the ``tools/demobench/build/distributions/`` directory.
+
+.. parsed-literal::
+
+    $ unzip demobench-$version.zip
+    $ cd demobench-$version
+    $ bin/demobench
+
+..
+
+
+Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell . In which case you can still run DemoBench as follows:
+
+.. parsed-literal::
+
+    > java -Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig -jar lib/demobench-$version.jar
+
+..
 
