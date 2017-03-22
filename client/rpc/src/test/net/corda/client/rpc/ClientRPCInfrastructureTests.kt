@@ -1,4 +1,4 @@
-package net.corda.cleint.rpc
+package net.corda.client.rpc
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
