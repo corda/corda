@@ -14,6 +14,7 @@ local.properties
 
 # General build files
 **/build/*
+# Exception - Allow built documentation to remain under version control
 !docs/build/*
 
 lib/dokka.jar
@@ -22,7 +23,6 @@ lib/dokka.jar
 
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
-
 *.iml
 
 ## Directory-based project format:
