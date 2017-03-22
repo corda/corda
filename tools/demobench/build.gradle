@@ -50,7 +50,9 @@ dependencies {
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
     compile (project(':client:rpc')) {
-        exclude module: 'kotlin-test'
+        exclude module: 'junit'
+    }
+    compile (project(':finance')) {
         exclude module: 'junit'
     }
 
