@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.flows
 
 import com.pholser.junit.quickcheck.From
 import com.pholser.junit.quickcheck.Property
