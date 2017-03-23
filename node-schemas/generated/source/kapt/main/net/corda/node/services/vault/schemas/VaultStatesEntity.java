@@ -82,6 +82,7 @@ public class VaultStatesEntity implements VaultSchema.VaultStates, Persistable {
     .setLazy(false)
     .setNullable(true)
     .setUnique(false)
+    .setDefinition("TEXT")
     .build());
 
     public static final AttributeDelegate<VaultStatesEntity, String> CONTRACT_STATE_CLASS_NAME = new AttributeDelegate(
