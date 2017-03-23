@@ -48,8 +48,8 @@ dependencies {
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
-    compile project(':client')
-    compile project(':node')
+    compile project(':client:jfx')
+    compile project(':client:rpc')
     compile project(':test-utils')
 
     // Javax is required for webapis

@@ -9,9 +9,9 @@ import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
+import net.corda.client.jfx.model.Models
+import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
-import net.corda.client.model.Models
-import net.corda.client.model.observableValue
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
 import net.corda.core.node.services.ServiceInfo
@@ -26,9 +26,9 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
@@ -128,7 +128,8 @@ class Main : App(MainView::class) {
 }
 
 /**
- *  This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing, they will be on localhost:20002, 20004, 20006, 20008, 20010 respectively.
+ * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
+ * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
  */
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)

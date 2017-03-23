@@ -69,6 +69,7 @@ dependencies {
         exclude group: 'javassist', module: 'javassist'
     }
     compile project(':node-api')
+    compile project(':client:rpc')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
@@ -78,7 +79,7 @@ dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -105,10 +106,6 @@ dependencies {
         exclude group: "asm"
     }
 
-    // For adding serialisation of file upload streams to RPC
-    // TODO: Remove this dependency and the code that requires it
-    compile "commons-fileupload:commons-fileupload:1.3.2"
-
     compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
 
     // Coda Hale's Metrics: for monitoring of key statistics
@@ -126,7 +123,7 @@ dependencies {
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile "com.nhaarman:mockito-kotlin:1.1.0"
     testCompile project(':test-utils')
-    testCompile project(':client')
+    testCompile project(':client:jfx')
     testCompile project(':core')
 
     // For H2 database support in persistence

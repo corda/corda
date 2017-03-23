@@ -10,6 +10,7 @@ import java.io.PrintStream
 import java.nio.file.Path
 import java.nio.file.Paths
 
+// NOTE: Do not use any logger in this class as args parsing is done before the logger is setup.
 class ArgsParser {
     private val optionParser = OptionParser()
     // The intent of allowing a command line configurable directory and config path is to allow deployment flexibility.

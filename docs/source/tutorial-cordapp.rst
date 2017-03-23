@@ -7,15 +7,11 @@
 The example CorDapp
 ===================
 
-.. note:: The example CorDapp was previously hosted in the `cordapp-template <https://github.com/corda/cordapp-template>`_ repository. It has now been 
-   moved into a new `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ repository. Going forward, the cordapp-template repo will contain an 
-   actual CorDapp template, which should be used as the basis for your CorDapps going forward.
-
 This guide covers how to get started with the example CorDapp. Please note there are several Corda repositories:
 
 * `corda <https://github.com/corda/corda>`_ which contains the core platform code and sample CorDapps.
-* `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ which contains an example CorDapp you can use to bootstrap your own CorDapps. It is the subject of this tutorial and should help you understand the basics of building a CorDapp.
-* `cordapp-template <https://github.com/corda/cordapp-template>`_ which contains a bare-bones template on which to build your own CorDapps.
+* `cordapp-tutorial <https://github.com/corda/cordapp-tutorial>`_ which contains an example CorDapp you can use to bootstrap your own CorDapps. It is the subject of this tutorial and should help you understand the basics.
+* `cordapp-template <https://github.com/corda/cordapp-template>`_ which contains a bare-bones template designed for starting new projects by copying.
 
 We recommend you read the non-technical white paper and technical white paper before you get started with Corda:
 
@@ -29,7 +25,7 @@ We recommend you read the non-technical white paper and technical white paper be
 Background
 ----------
 
-The Example CorDapp implements a basic scenario where one party wishes to send an IOU to another party. The scenario
+The example CorDapp implements a basic scenario where one party wishes to send an IOU to another party. The scenario
 defines four nodes:
 
 * **Controller**, which hosts the network map service and validating notary service
@@ -104,27 +100,6 @@ Using a SNAPSHOT release
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you wish to build a CorDapp against the most current version of Corda, follow these instructions.
-
-The Corda repository comprises the following folders:
-
-* **buildSrc** contains necessary gradle plugins to build Corda.
-* **client** contains the RPC client framework.
-* **config** contains logging configurations and the default node configuration file.
-* **core** containing the core Corda libraries such as crypto functions, types for Corda's building blocks: states,
-  contracts, transactions, attachments, etc. and some interfaces for nodes and protocols.
-* **docs** contains the Corda docsite in restructured text format as well as the built docs in html. The docs can be
-  accessed via ``/docs/index.html`` from the root of the repo.
-* **finance** defines a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible
-  assets, cash, obligation and commercial paper.
-* **gradle** contains the gradle wrapper which you'll use to execute gradle commands.
-* **gradle-plugins** contains some additional plugins which we use to deploy Corda nodes.
-* **lib** contains some dependencies.
-* **node** contains anything specifically required for creating, running and managing nodes (eg: node driver, servlets,
-  node services, messaging, persistence).
-* **samples** contains all our Corda demos and code samples.
-* **test-utils** contains some utilities for unit testing contracts ( the contracts testing DSL) and protocols (the
-  mock network) implementation.
-* **tools** contains the explorer which is a GUI front-end for Corda.
 
 Firstly navigate to the folder on your machine you wish to clone the Corda repository to. Then use the following command
 to clone the Corda repository:
@@ -323,9 +298,6 @@ start the build process and output progress to a console window in the IDE.
 Running the example CorDapp
 ---------------------------
 
-Running the example CorDapp from the command line
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 To run the sample CorDapp navigate to the ``kotlin-source/build/nodes`` folder and execute the ``runnodes`` shell script with:
 
 Unix: ``./runnodes`` or ``sh runnodes``
@@ -505,25 +477,25 @@ activity in the terminal windows for NodeA and NodeB (note: the green ticks are 
 
 .. sourcecode:: none
 
-✅  Generating transaction based on new IOU.
-✅  Verifying contract constraints.
-✅  Signing transaction with our private key.
-✅  Sending proposed transaction to recipient for review.
-✅  Done
+   ✅  Generating transaction based on new IOU.
+   ✅  Verifying contract constraints.
+   ✅  Signing transaction with our private key.
+   ✅  Sending proposed transaction to recipient for review.
+   ✅  Done
 
 *NodeB:*
 
 .. sourcecode:: none
 
-✅  Receiving proposed transaction from sender.
-✅  Verifying signatures and contract constraints.
-✅  Signing proposed transaction with our private key.
-✅  Obtaining notary signature and recording transaction.
-    ✅  Requesting signature by notary service
-        ✅  Requesting signature by Notary service
-        ✅  Validating response from Notary service
-    ✅  Broadcasting transaction to participants
-✅  Done
+   ✅  Receiving proposed transaction from sender.
+   ✅  Verifying signatures and contract constraints.
+   ✅  Signing proposed transaction with our private key.
+   ✅  Obtaining notary signature and recording transaction.
+       ✅  Requesting signature by notary service
+           ✅  Requesting signature by Notary service
+           ✅  Validating response from Notary service
+       ✅  Broadcasting transaction to participants
+   ✅  Done
 
 *NodeC:*
 
@@ -861,32 +833,25 @@ Running Nodes Across Machines
 The nodes can also be set up to communicate between separate machines on the 
 same subnet.
 
-After deploying the nodes, navigate to the build folder (`kotlin-source/build/
-nodes` or `java-source/build/nodes`) and move some of the individual node folders to
-separate machines on the same subnet (e.g. using a USB key). It is important 
-that no nodes - including the controller node - end up on more than one 
-machine. Each computer should also have a copy of `runnodes` and 
-`runnodes.bat`.
+After deploying the nodes, navigate to the build folder (``kotlin-source/build/nodes`` or ``java-source/build/nodes``)
+and move some of the individual node folders to separate machines on the same subnet (e.g. using a USB key).
+It is important that no nodes - including the controller node - end up on more than one machine. Each computer
+should also have a copy of ``runnodes`` and ``runnodes.bat``.
 
 For example, you may end up with the following layout:
 
-* Machine 1: `controller`, `nodea`, `runnodes`, `runnodes.bat`
-* Machine 2: `nodeb`, `nodec`, `runnodes`, `runnodes.bat`
+* Machine 1: ``controller``, ``nodea``, ``runnodes``, ``runnodes.bat``
+* Machine 2: ``nodeb``, ``nodec``, ``runnodes``, ``runnodes.bat``
 
-You must now edit the configuration file for each node, including the 
-controller. Open each node's config file (`[nodeName]/node.conf`), and make 
-the following changes:
+You must now edit the configuration file for each node, including the controller. Open each node's config file,
+and make the following changes:
 
-* Change the Artemis messaging address to the machine's IP address (e.g. 
-`p2pAddress="10.18.0.166:10006"`)
+* Change the Artemis messaging address to the machine's IP address (e.g. ``p2pAddress="10.18.0.166:10006"``)
 * Change the network map service details to the IP address of the machine where the
-controller node is running and to its legal name (e.g. `networkMapService.address="10.18.0.166:10002"` and
-`networkMapService.legalName=controller`) (please note that the controller will not have the `networkMapService` config)
+  controller node is running and to its legal name (e.g. ``networkMapService.address="10.18.0.166:10002"`` and
+  ``networkMapService.legalName=controller``) (please note that the controller will not have the ``networkMapService`` config)
 
-Each machine should now run its nodes using `runnodes` or `runnodes.bat` 
-files. Once they are up and running, the nodes should be able to create 
-IOUs among themselves in the same way as when they were running on 
-the same machine.
+Now run each node.
 
 Debugging your CorDapp
 ~~~~~~~~~~~~~~~~~~~~~~

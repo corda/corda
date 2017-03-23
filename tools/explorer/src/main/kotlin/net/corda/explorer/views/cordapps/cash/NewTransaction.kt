@@ -12,11 +12,11 @@ import javafx.scene.layout.GridPane
 import javafx.scene.text.Font
 import javafx.scene.text.FontWeight
 import javafx.stage.Window
-import net.corda.client.fxutils.ChosenList
-import net.corda.client.fxutils.isNotNull
-import net.corda.client.fxutils.map
-import net.corda.client.fxutils.unique
-import net.corda.client.model.*
+import net.corda.client.jfx.model.*
+import net.corda.client.jfx.utils.ChosenList
+import net.corda.client.jfx.utils.isNotNull
+import net.corda.client.jfx.utils.map
+import net.corda.client.jfx.utils.unique
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.AbstractParty

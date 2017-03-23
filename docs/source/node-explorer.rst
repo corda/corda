@@ -63,15 +63,15 @@ The Demo Nodes can be started in one of two modes:
 
 .. note:: 5 Corda nodes will be created on the following port on localhost by default.
 
-   * Notary -> 20001
-   * Alice -> 20003
-   * Bob -> 20005
-   * UK Bank Plc -> 20008       (*Issuer node*)
-   * USA Bank Corp -> 20009     (*Issuer node*)
+   * Notary -> 20003            (Does not accept logins)
+   * Alice -> 20006
+   * Bob -> 20009
+   * UK Bank Plc -> 20012       (*Issuer node*)
+   * USA Bank Corp -> 20015     (*Issuer node*)
 
 Explorer login credentials to the Issuer nodes are defaulted to ``manager`` and ``test``.
 Explorer login credentials to the Participants nodes are defaulted to ``user1`` and ``test``.
-Please note you are not allowed to connect to the notary.
+Please note you are not allowed to login to the notary.
 
 .. note:: Alternatively, you may start the demo nodes from within IntelliJ using either of the run configurations
           ``Explorer - demo nodes`` or ``Explorer - demo nodes (simulation)``

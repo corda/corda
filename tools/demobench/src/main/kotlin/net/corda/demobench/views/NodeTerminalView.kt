@@ -132,8 +132,8 @@ class NodeTerminalView : Fragment() {
             )
 
             Platform.runLater {
-                states.value = statesInVault.first.size.toString()
-                transactions.value = verifiedTx.first.size.toString()
+                states.value = fetchAndDrop(statesInVault).size.toString()
+                transactions.value = fetchAndDrop(verifiedTx).size.toString()
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
         } catch (e: Exception) {
@@ -156,10 +156,15 @@ class NodeTerminalView : Fragment() {
         // TODO - Force a repaint somehow? My naive attempts have not worked.
     }
 
+    // TODO - Will change when we modify RPC Observables handling.
+    private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
+        pair.second.subscribe().unsubscribe()
+        return pair.first
+    }
+
     class TerminalSettingsProvider : DefaultSettingsProvider() {
         override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
 
         override fun emulateX11CopyPaste() = true
     }
-
 }

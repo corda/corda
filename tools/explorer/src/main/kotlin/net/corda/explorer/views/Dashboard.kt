@@ -8,10 +8,10 @@ import javafx.scene.Parent
 import javafx.scene.control.TitledPane
 import javafx.scene.input.MouseButton
 import javafx.scene.layout.TilePane
-import net.corda.client.fxutils.concatenate
-import net.corda.client.fxutils.map
-import net.corda.client.model.observableList
-import net.corda.client.model.writableValue
+import net.corda.client.jfx.model.observableList
+import net.corda.client.jfx.model.writableValue
+import net.corda.client.jfx.utils.concatenate
+import net.corda.client.jfx.utils.map
 import net.corda.explorer.model.CordaView
 import net.corda.explorer.model.CordaViewModel
 

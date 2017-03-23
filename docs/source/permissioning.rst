@@ -2,15 +2,12 @@ Network permissioning
 =====================
 
 The keystore located in ``<workspace>/certificates/sslkeystore.jks`` is required to connect to the Corda network securely. 
-In development mode (when ``devMode = true``, see :doc:`corda-configuration-file` for more information) a pre-configured
+In development mode (when ``devMode = true``, see ":doc:`corda-configuration-file`" for more information) a pre-configured
 keystore will be used if the keystore does not exist. This is to ensure developers can get the nodes working as quickly
 as possible.
 
 However this is not secure for the real network. This documentation will explain the procedure of obtaining a signed
 certificate for TestNet.
-
-.. warning:: The TestNet has not been setup yet as of Milestone 8 release. You will not be able to connect to the
-    certificate signing server.
 
 Initial Registration
 --------------------
@@ -55,4 +52,3 @@ You can also specify the location of ``node.conf`` with ``--config-file`` flag i
 A ``certificates`` folder containing the keystore and trust store will be created in the base directory when the process is completed.
 
 .. warning:: The keystore is protected by the keystore password from the node configuration file. The password should kept safe to protect the private key and certificate.
-.. note:: Password encryption in node configuration will be supported in subsequent release. 

@@ -16,18 +16,19 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.nodeapi.ArtemisTcpTransport
-import net.corda.nodeapi.ConnectionDirection
-import net.corda.nodeapi.expectedOnDefaultFileSystem
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NODE_USER
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
+import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.expectedOnDefaultFileSystem
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
@@ -142,9 +143,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Node ${this.config.myLegalName} listening on address", p2pHostPort.toString())
+        printBasicNodeInfo("Listening on address", p2pHostPort.toString())
         if (rpcHostPort != null) {
-            printBasicNodeInfo("Node ${this.config.myLegalName} RPC service listening on address", rpcHostPort.toString())
+            printBasicNodeInfo("RPC service listening on address", rpcHostPort.toString())
         }
     }
 

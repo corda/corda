@@ -33,6 +33,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
@@ -40,7 +41,8 @@ dependencies {
 
     // Corda Core: Data structures and basic types needed to work with Corda.
     compile project(':core')
-    compile project(':client')
+    compile project(':client:jfx')
+    compile project(':client:mock')
     compile project(':node')
     compile project(':finance')
 
