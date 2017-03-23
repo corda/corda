@@ -1,8 +1,8 @@
 package net.corda.demobench.web
 
+import net.corda.core.utilities.loggerFor
 import java.io.IOException
 import java.util.concurrent.Executors
-import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
 
 class WebServer internal constructor(private val webServerController: WebServerController) : AutoCloseable {
