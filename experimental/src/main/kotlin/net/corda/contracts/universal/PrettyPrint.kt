@@ -1,8 +1,8 @@
 package net.corda.contracts.universal
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.time.Instant
 
 private class PrettyPrint(arr : Arrangement) {
@@ -41,7 +41,7 @@ private class PrettyPrint(arr : Arrangement) {
         return rv
     }
 
-    val partyMap = mutableMapOf<CompositeKey, String>()
+    val partyMap = mutableMapOf<PublicKey, String>()
     val usedPartyNames = mutableSetOf<String>()
 
     fun createPartyName(party : Party) : String

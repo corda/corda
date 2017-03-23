@@ -270,7 +270,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
         when {
             queueName.startsWith(PEERS_PREFIX) -> try {
-                val identity = CompositeKey.parseFromBase58(queueName.substring(PEERS_PREFIX.length))
+                val identity = parsePublicKeyBase58(queueName.substring(PEERS_PREFIX.length))
                 val nodeInfo = networkMapCache.getNodeByLegalIdentityKey(identity)
                 if (nodeInfo != null) {
                     deployBridgeToPeer(nodeInfo)
@@ -282,7 +282,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             }
 
             queueName.startsWith(SERVICES_PREFIX) -> try {
-                val identity = CompositeKey.parseFromBase58(queueName.substring(SERVICES_PREFIX.length))
+                val identity = parsePublicKeyBase58(queueName.substring(SERVICES_PREFIX.length))
                 val nodeInfos = networkMapCache.getNodesByAdvertisedServiceIdentityKey(identity)
                 // Create a bridge for each node advertising the service.
                 for (nodeInfo in nodeInfos) {

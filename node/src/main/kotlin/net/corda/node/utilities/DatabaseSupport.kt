@@ -3,7 +3,6 @@ package net.corda.node.utilities
 import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
@@ -260,7 +259,7 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null)
 }
 
 // Composite columns for use with below Exposed helpers.
-data class PartyColumns(val name: Column<String>, val owningKey: Column<CompositeKey>)
+data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 
@@ -268,10 +267,8 @@ data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>
  * [Table] column helpers for use with Exposed, as per [varchar] etc.
  */
 fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
-
-fun Table.compositeKey(name: String) = this.registerColumn<CompositeKey>(name, CompositeKeyColumnType)
 fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
-fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.compositeKey(keyColumnName))
+fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
 fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
@@ -282,21 +279,13 @@ fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteCo
 /**
  * [ColumnType] for marshalling to/from database on behalf of [PublicKey].
  */
+// TODO Rethink how we store CompositeKeys in db.
 object PublicKeyColumnType : ColumnType() {
-    override fun sqlType(): String = "VARCHAR(255)"
+    override fun sqlType(): String = "VARCHAR"
 
     override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
 
     override fun notNullValueToDB(value: Any): Any = if (value is PublicKey) value.toBase58String() else value
-}
-
-/**
- * [ColumnType] for marshalling to/from database on behalf of [CompositeKey].
- */
-object CompositeKeyColumnType : ColumnType() {
-    override fun sqlType(): String = "VARCHAR"
-    override fun valueFromDB(value: Any): Any = CompositeKey.parseFromBase58(value.toString())
-    override fun notNullValueToDB(value: Any): Any = if (value is CompositeKey) value.toBase58String() else value
 }
 
 /**

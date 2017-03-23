@@ -1,6 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
@@ -109,6 +110,8 @@ interface ServiceHub : ServicesForResolution {
      * used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
      * an IllegalArgumentException.
      * Typical use is during signing in flows and for unit test signing.
+     *
+     * TODO: same problem as with legalIdentityKey.
      */
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
 }

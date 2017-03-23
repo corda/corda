@@ -3,7 +3,6 @@ package net.corda.core.node.services
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
@@ -73,11 +72,11 @@ interface NetworkMapCache {
      */
 
     /** Look up the node info for a specific peer key. */
-    fun getNodeByLegalIdentityKey(compositeKey: PublicKey): NodeInfo?
+    fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo?
 
-    /** Look up all nodes advertising the service owned by [compositeKey] */
-    fun getNodesByAdvertisedServiceIdentityKey(compositeKey: CompositeKey): List<NodeInfo> {
-        return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
+    /** Look up all nodes advertising the service owned by [publicKey] */
+    fun getNodesByAdvertisedServiceIdentityKey(publicKey: PublicKey): List<NodeInfo> {
+        return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == publicKey } }
     }
 
     /** Returns information about the party, which may be a specific node or a service */

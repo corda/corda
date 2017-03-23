@@ -81,7 +81,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
 
 @ThreadSafe
 class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<CompositeKey, Party>
+    private val keyToParties: Map<PublicKey, Party>
         get() = synchronized(identities) { identities.associateBy { it.owningKey } }
     private val nameToParties: Map<String, Party>
         get() = synchronized(identities) { identities.associateBy { it.name } }
@@ -90,7 +90,7 @@ class MockIdentityService(val identities: List<Party>) : IdentityService, Single
     override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
     override fun partyFromAnonymous(party: AnonymousParty): Party? = keyToParties[party.owningKey]
     override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
-    override fun partyFromKey(key: CompositeKey): Party? = keyToParties[key]
+    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
 }
 

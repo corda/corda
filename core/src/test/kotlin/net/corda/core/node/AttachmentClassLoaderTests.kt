@@ -2,7 +2,6 @@ package net.corda.core.node
 
 import com.esotericsoftware.kryo.Kryo
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
@@ -19,6 +18,7 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.URLClassLoader
+import java.security.PublicKey
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -40,7 +40,7 @@ class AttachmentClassLoaderTests {
     class AttachmentDummyContract : Contract {
         data class State(val magicNumber: Int = 0) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
-            override val participants: List<CompositeKey>
+            override val participants: List<PublicKey>
                 get() = listOf()
         }
 

@@ -3,10 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -17,8 +14,8 @@ import java.util.*
 
 /**
  * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
- * a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
- * and the type most frequently passed around the network and stored. The identity of a transaction is the hash
+ * a public key (including composite keys) that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
+ * and the type most frequently passed around the network and stored. The identity of a transaction is the hash of Merkle root
  * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
  * map to the same key (and they could be different in important ways, like validity!). The signatures on a
  * SignedTransaction might be invalid or missing: the type does not imply validity.
@@ -69,7 +66,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
         val missing = getMissingSignatures()
         if (missing.isNotEmpty()) {
-            val allowed = setOf(*allowedToBeMissing)
+            val allowed = allowedToBeMissing.map { it.composite }.toSet()
             val needed = missing - allowed
             if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
@@ -93,9 +90,11 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         }
     }
 
-    private fun getMissingSignatures(): Set<CompositeKey> {
+    private fun getMissingSignatures(): Set<PublicKey> {
         val sigKeys = sigs.map { it.by }.toSet()
-        val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
+        // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
+        //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
+        val missing = tx.mustSign.filter { !it.composite.isFulfilledBy(sigKeys) }.map { it.composite }.toSet()
         return missing
     }
 

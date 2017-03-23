@@ -2,8 +2,8 @@
 
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import java.security.PublicKey
 import java.math.BigDecimal
 import java.util.*
 
@@ -69,7 +69,7 @@ inline fun <R> requireThat(body: Requirements.() -> R) = Requirements.body()
 // TODO: Provide a version of select that interops with Java
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: CompositeKey? = null,
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null,
                                                                                          party: Party? = null) =
         filter { it.value is T }.
                 filter { if (signer == null) true else signer in it.signers }.
@@ -79,7 +79,7 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
 // TODO: Provide a version of select that interops with Java
 
 /** Filters the command list by type, parties and public keys all at once. */
-inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<CompositeKey>?,
+inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.select(signers: Collection<PublicKey>?,
                                                                                          parties: Collection<Party>?) =
         filter { it.value is T }.
                 filter { if (signers == null) true else it.signers.containsAll(signers) }.

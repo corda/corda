@@ -5,7 +5,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
@@ -18,6 +17,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import java.io.InputStream
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -156,7 +156,7 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] corresponding to the given key, if found.
      */
-    fun partyFromKey(key: CompositeKey): Party?
+    fun partyFromKey(key: PublicKey): Party?
 
     /**
      * Returns the [Party] with the given name as it's [Party.name]

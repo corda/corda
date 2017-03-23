@@ -2,7 +2,6 @@ package net.corda.core.transactions
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -31,7 +30,7 @@ class WireTransaction(
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         override val commands: List<Command>,
         notary: Party?,
-        signers: List<CompositeKey>,
+        signers: List<PublicKey>,
         type: TransactionType,
         timestamp: Timestamp?
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTransaction {

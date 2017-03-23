@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.composite
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
@@ -93,7 +94,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.map { it.by }.toSet()
-        return !(notaryKey?.isFulfilledBy(signers) ?: false)
+        return !(notaryKey?.composite?.isFulfilledBy(signers) ?: false)
     }
 
     private fun lookupParties(ltxns: List<Pair<SignedTransaction, LedgerTransaction>>): List<Pair<SignedTransaction, Set<Party>>> {

@@ -18,6 +18,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -32,20 +33,20 @@ object JacksonSupport {
 
     interface PartyObjectMapper {
         fun partyFromName(partyName: String): Party?
-        fun partyFromKey(owningKey: CompositeKey): Party?
+        fun partyFromKey(owningKey: PublicKey): Party?
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
-        override fun partyFromKey(owningKey: CompositeKey): Party? = rpc.partyFromKey(owningKey)
+        override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
     }
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
-        override fun partyFromKey(owningKey: CompositeKey): Party? = identityService.partyFromKey(owningKey)
+        override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
     }
     class NoPartyObjectMapper(factory: JsonFactory): PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
-        override fun partyFromKey(owningKey: CompositeKey): Party? = throw UnsupportedOperationException()
+        override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
     }
 
     val cordaModule: Module by lazy {
@@ -126,7 +127,7 @@ object JacksonSupport {
             }
 
             // TODO this needs to use some industry identifier(s) instead of these keys
-            val key = CompositeKey.parseFromBase58(parser.text)
+            val key = parsePublicKeyBase58(parser.text)
             return AnonymousParty(key)
         }
     }
@@ -212,7 +213,7 @@ object JacksonSupport {
     object PublicKeyDeserializer : JsonDeserializer<EdDSAPublicKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): EdDSAPublicKey {
             return try {
-                parsePublicKeyBase58(parser.text)
+                parsePublicKeyBase58(parser.text) as EdDSAPublicKey
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid public key ${parser.text}: ${e.message}")
             }
@@ -228,7 +229,7 @@ object JacksonSupport {
     object CompositeKeyDeserializer : JsonDeserializer<CompositeKey>() {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): CompositeKey {
             return try {
-                CompositeKey.parseFromBase58(parser.text)
+                parsePublicKeyBase58(parser.text) as CompositeKey
             } catch (e: Exception) {
                 throw JsonParseException(parser, "Invalid composite key ${parser.text}: ${e.message}")
             }

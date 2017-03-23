@@ -4,7 +4,6 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -27,6 +26,7 @@ import net.corda.node.utilities.databaseTransaction
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -141,7 +141,7 @@ class CordaRPCOpsImpl(
     }
 
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
-    override fun partyFromKey(key: CompositeKey) = services.identityService.partyFromKey(key)
+    override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
 
     override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()

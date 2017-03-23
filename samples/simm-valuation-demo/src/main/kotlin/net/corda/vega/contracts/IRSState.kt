@@ -5,8 +5,8 @@ import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.keys
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
@@ -32,6 +32,6 @@ data class IRSState(val swap: SwapData,
         return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), parties.map { it.owningKey }))
     }
 
-    override val participants: List<CompositeKey>
+    override val participants: List<PublicKey>
         get() = parties.map { it.owningKey }
 }

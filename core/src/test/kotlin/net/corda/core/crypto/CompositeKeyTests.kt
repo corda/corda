@@ -10,9 +10,9 @@ class CompositeKeyTests {
     val bobKey = generateKeyPair()
     val charlieKey = generateKeyPair()
 
-    val alicePublicKey = CompositeKey.Leaf(aliceKey.public)
-    val bobPublicKey = CompositeKey.Leaf(bobKey.public)
-    val charliePublicKey = CompositeKey.Leaf(charlieKey.public)
+    val alicePublicKey = aliceKey.public.composite
+    val bobPublicKey = bobKey.public
+    val charliePublicKey = charlieKey.public.composite
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
@@ -54,7 +54,7 @@ class CompositeKeyTests {
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val encoded = aliceAndBobOrCharlie.toBase58String()
-        val decoded = CompositeKey.parseFromBase58(encoded)
+        val decoded = parsePublicKeyBase58(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
     }

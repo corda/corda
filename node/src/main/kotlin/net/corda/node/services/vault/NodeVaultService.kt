@@ -180,7 +180,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override fun <T: ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
         val stateAndRefs =
             session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                var query = select(VaultSchema.VaultStates::class)
+                val query = select(VaultSchema.VaultStates::class)
                                 .where(VaultSchema.VaultStates::stateStatus `in` statuses)
                 // TODO: temporary fix to continue supporting track() function (until becomes Typed)
                 if (!clazzes.map {it.name}.contains(ContractState::class.java.name))
@@ -442,8 +442,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     @Suspendable
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
-                               to: CompositeKey,
-                               onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<CompositeKey>> {
+                               to: PublicKey,
+                               onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<PublicKey>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -520,7 +520,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return Pair(tx, keysUsed)
     }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: CompositeKey)
+    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     /**
@@ -599,7 +599,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-        is OwnableState -> state.owner.containsAny(ourKeys)
+        is OwnableState -> state.owner.composite.containsAny(ourKeys)
     // It's potentially of interest to the vault
         is LinearState -> state.isRelevant(ourKeys)
         else -> false

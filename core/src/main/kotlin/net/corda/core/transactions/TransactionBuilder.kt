@@ -136,7 +136,7 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<CompositeKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
+            val missing: Set<PublicKey> = signers.filter { !it.composite.isFulfilledBy(gotKeys) }.toSet()
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }
@@ -179,8 +179,8 @@ open class TransactionBuilder(
         commands.add(arg)
     }
 
-    fun addCommand(data: CommandData, vararg keys: CompositeKey) = addCommand(Command(data, listOf(*keys)))
-    fun addCommand(data: CommandData, keys: List<CompositeKey>) = addCommand(Command(data, keys))
+    fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+    fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
