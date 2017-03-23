@@ -35,8 +35,8 @@ data class SignatureScheme(
      */
     init {
         if (algSpec != null)
-            keyPairGenerator.initialize(algSpec, safeRandom())
+            keyPairGenerator.initialize(algSpec, newSecureRandom())
         else
-            keyPairGenerator.initialize(keySize, safeRandom())
+            keyPairGenerator.initialize(keySize, newSecureRandom())
     }
 }

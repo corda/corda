@@ -86,7 +86,7 @@ fun KeyPair.verify(signatureData: ByteArray, clearData: ByteArray): Boolean = Cr
  */
 @Throws(NoSuchAlgorithmException::class)
 fun safeRandomBytes(numOfBytes: Int): ByteArray {
-    return safeRandom().generateSeed(numOfBytes)
+    return newSecureRandom().generateSeed(numOfBytes)
 }
 
 /**
@@ -108,7 +108,7 @@ fun safeRandomBytes(numOfBytes: Int): ByteArray {
  * which should never happen and suggests an unusual JVM or non-standard Java library.
  */
 @Throws(NoSuchAlgorithmException::class)
-fun safeRandom(): SecureRandom {
+fun newSecureRandom(): SecureRandom {
     if (System.getProperty("os.name") == "Linux") {
         return SecureRandom.getInstance("NativePRNGNonBlocking")
     } else {
