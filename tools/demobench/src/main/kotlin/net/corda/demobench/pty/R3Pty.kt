@@ -4,7 +4,7 @@ import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.*
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
-import net.corda.demobench.loggerFor
+import net.corda.core.utilities.loggerFor
 
 import java.awt.*
 import java.io.IOException

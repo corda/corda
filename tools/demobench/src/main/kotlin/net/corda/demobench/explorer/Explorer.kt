@@ -1,8 +1,8 @@
 package net.corda.demobench.explorer
 
+import net.corda.core.utilities.loggerFor
 import java.io.IOException
 import java.util.concurrent.Executors
-import net.corda.demobench.loggerFor
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.forceDirectory
 

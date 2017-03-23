@@ -65,7 +65,7 @@ class PartyAndReferenceGenerator : Generator<PartyAndReference>(PartyAndReferenc
 
 class SecureHashGenerator : Generator<SecureHash>(SecureHash::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): SecureHash {
-        return SecureHash.Companion.sha256(random.nextBytes(16))
+        return SecureHash.sha256(random.nextBytes(16))
     }
 }
 

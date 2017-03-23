@@ -27,6 +27,17 @@ configurations {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
         exclude group: 'io.netty', module: 'netty-handler'
+
+        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    testCompile {
+        // Excluding javassist:javassist because it clashes with Hibernate's
+        // transitive org.javassist:javassist dependency.
+        // TODO: Remove this exclusion once junit-quickcheck 0.8 is released.
+        exclude group: 'javassist', module: 'javassist'
     }
 
     integrationTestCompile.extendsFrom testCompile
@@ -58,16 +69,8 @@ sourceSets {
 
 dependencies {
 
-    // Excluding javassist:javassist (which is a transitive dependency of core)
-    // because it clashes with Hibernate's transitive org.javassist:javassist
-    // dependency.
-    // TODO: Remove both of these exclusions once junit-quickcheck 0.8 is released.
-    compile (project(':finance')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
-    compile (project(':node-schemas')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
+    compile project(':finance')
+    compile project(':node-schemas')
     compile project(':node-api')
     compile project(':client:rpc')
 
@@ -163,12 +166,6 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
-}
-
-configurations.compile {
-    // We want to use SLF4J's version of these binding: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
 }
 
 task integrationTest(type: Test) {

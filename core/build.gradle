@@ -63,8 +63,8 @@ dependencies {
     // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
     //       because it depends on org.javassist:javassist instead
     //       of javassist:javassist.
-    compile "com.pholser:junit-quickcheck-core:$quickcheck_version"
-    compile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 
     // Guava: Google utilities library.
     compile "com.google.guava:guava:$guava_version"

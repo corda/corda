@@ -5,7 +5,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.demobench.loggerFor
+import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
 
 class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {

@@ -59,21 +59,33 @@ private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): 
 
 private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf()): Process {
     val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
-    val nodeName = dir.toPath().fileName + " " + jarName
+    val nodeName = "${dir.toPath().fileName} $jarName"
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
-    val cmd = if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) {
-        """osascript -e "tell app "Terminal
+    val builder = if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) {
+        ProcessBuilder(
+                "osascript", "-e",
+                """tell app "Terminal
 activate
 tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
 delay 0.5
-do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in window 1"
-"""
+do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in window 1"""
+        )
     } else if (osName.indexOf("win") >= 0) {
-        """cmd /C "start $javaCmd""""
+        ProcessBuilder(
+                "cmd", "/C", "start $javaCmd"
+        )
     } else {
         // Assume Linux
-        """xterm -T "$nodeName" -e $javaCmd"""
+        val isTmux = System.getenv("TMUX")?.isNotEmpty() ?: false
+        if (isTmux) {
+            ProcessBuilder(
+                    "tmux", "new-window", "-n", nodeName, javaCmd
+            )
+        } else {
+            ProcessBuilder(
+                    "xterm", "-T", nodeName, "-e", javaCmd
+            )
+        }
     }
-
-    return Runtime.getRuntime().exec(cmd, null, dir)
+    return builder.directory(dir).start()
 }
