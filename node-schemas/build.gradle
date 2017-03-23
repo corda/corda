@@ -44,6 +44,7 @@ sourceSets {
 dependencies {
     compile project(':core')
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "junit:junit:$junit_version"
 
     // Requery: SQL based query & persistence for Kotlin
     kapt "io.requery:requery-processor:$requery_version"
