@@ -22,7 +22,7 @@ class NodeTabView : Fragment() {
     private companion object : Component() {
         const val textWidth = 200.0
         const val numberWidth = 100.0
-        const val maxNameLength = 10
+        const val maxNameLength = 15
 
         val integerFormat = DecimalFormat()
         val notNumber = "[^\\d]".toRegex()
@@ -115,6 +115,7 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
+        model.legalName.value = if (nodeController.hasNetworkMap()) "" else "Notary"
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
