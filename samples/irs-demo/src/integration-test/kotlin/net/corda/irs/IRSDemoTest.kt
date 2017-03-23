@@ -3,6 +3,7 @@ package net.corda.irs
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.crypto.toBase58String
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.irs.api.NodeInterestRates

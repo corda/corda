@@ -129,7 +129,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addAttachment(attachmentId)
     }
 
-    override fun _command(signers: List<CompositeKey>, commandData: CommandData) {
+    override fun _command(signers: List<PublicKey>, commandData: CommandData) {
         val command = Command(commandData, signers)
         transactionBuilder.addCommand(command)
     }

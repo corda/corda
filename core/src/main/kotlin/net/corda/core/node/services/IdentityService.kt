@@ -2,7 +2,6 @@ package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import java.security.PublicKey
 

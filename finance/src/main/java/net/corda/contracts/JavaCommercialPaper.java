@@ -15,6 +15,7 @@ import org.jetbrains.annotations.*;
 import java.time.*;
 import java.util.*;
 import java.util.stream.*;
+import java.security.PublicKey;
 
 import static kotlin.collections.CollectionsKt.*;
 import static net.corda.core.contracts.ContractsDSL.*;
@@ -31,14 +32,14 @@ public class JavaCommercialPaper implements Contract {
     @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
-        private CompositeKey owner;
+        private PublicKey owner;
         private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, CompositeKey owner, Amount<Issued<Currency>> faceValue,
+        public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
                      Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
@@ -50,13 +51,13 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
         }
 
-        public ICommercialPaperState withOwner(CompositeKey newOwner) {
+        public ICommercialPaperState withOwner(PublicKey newOwner) {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
         @NotNull
         @Override
-        public Pair<CommandData, OwnableState> withNewOwner(@NotNull CompositeKey newOwner) {
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
             return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
         }
 
@@ -73,7 +74,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         @NotNull
-        public CompositeKey getOwner() {
+        public PublicKey getOwner() {
             return owner;
         }
 
@@ -119,7 +120,7 @@ public class JavaCommercialPaper implements Contract {
 
         @NotNull
         @Override
-        public List<CompositeKey> getParticipants() {
+        public List<PublicKey> getParticipants() {
             return ImmutableList.of(this.owner);
         }
     }
@@ -316,7 +317,7 @@ public class JavaCommercialPaper implements Contract {
         tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
-    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, CompositeKey newOwner) {
+    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));

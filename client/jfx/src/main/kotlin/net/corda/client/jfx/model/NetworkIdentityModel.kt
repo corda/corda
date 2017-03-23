@@ -7,7 +7,7 @@ import net.corda.client.jfx.utils.firstOrDefault
 import net.corda.client.jfx.utils.firstOrNullObservable
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.keys
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import java.security.PublicKey
@@ -39,10 +39,6 @@ class NetworkIdentityModel {
     }
 
     // TODO: Use Identity Service in service hub instead?
-    fun lookup(compositeKey: CompositeKey): ObservableValue<NodeInfo?> = parties.firstOrDefault(notaries.firstOrNullObservable { it.notaryIdentity.owningKey == compositeKey }) {
-        it.legalIdentity.owningKey == compositeKey
-    }
-
     fun lookup(publicKey: PublicKey): ObservableValue<NodeInfo?> = parties.firstOrDefault(notaries.firstOrNullObservable { it.notaryIdentity.owningKey.keys.any { it == publicKey } }) {
         it.legalIdentity.owningKey.keys.any { it == publicKey }
     }

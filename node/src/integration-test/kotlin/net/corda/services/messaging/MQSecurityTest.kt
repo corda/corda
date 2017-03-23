@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClientImpl
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -90,7 +91,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `create queue for unknown peer`() {
-        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.composite.toBase58String()}"
+        val invalidPeerQueue = "$PEERS_PREFIX${generateKeyPair().public.toBase58String()}"
         assertAllQueueCreationAttacksFail(invalidPeerQueue)
     }
 

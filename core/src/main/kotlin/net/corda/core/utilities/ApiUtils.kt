@@ -1,8 +1,8 @@
 package net.corda.core.utilities
 
 import net.corda.core.ErrorOr
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.messaging.CordaRPCOps
 import javax.ws.rs.core.Response
 
@@ -18,7 +18,7 @@ class ApiUtils(val rpc: CordaRPCOps) {
      */
     fun withParty(partyKeyStr: String, notFound: (String) -> Response = defaultNotFound, found: (Party) -> Response): Response {
         val party = try {
-            val partyKey = CompositeKey.parseFromBase58(partyKeyStr)
+            val partyKey = parsePublicKeyBase58(partyKeyStr)
             ErrorOr(rpc.partyFromKey(partyKey))
         } catch (e: IllegalArgumentException) {
             ErrorOr.of(Exception("Invalid base58 key passed for party key $e"))

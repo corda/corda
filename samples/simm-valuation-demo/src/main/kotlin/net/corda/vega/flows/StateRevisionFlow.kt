@@ -1,13 +1,13 @@
 package net.corda.vega.flows
 
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.AbstractStateReplacementFlow
 import net.corda.flows.StateReplacementException
 import net.corda.vega.contracts.RevisionedState
+import java.security.PublicKey
 
 /**
  * Flow that generates an update on a mutable deal state and commits the resulting transaction reaching consensus
@@ -16,7 +16,7 @@ import net.corda.vega.contracts.RevisionedState
 object StateRevisionFlow {
     class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
                        updatedData: T) : AbstractStateReplacementFlow.Instigator<RevisionedState<T>, RevisionedState<T>, T>(curStateRef, updatedData) {
-        override fun assembleTx(): Pair<SignedTransaction, List<CompositeKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
             tx.setTime(serviceHub.clock.instant(), 30.seconds)

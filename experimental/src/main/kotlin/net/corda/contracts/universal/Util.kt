@@ -3,8 +3,8 @@ package net.corda.contracts.universal
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
 import net.corda.core.contracts.Frequency
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import java.security.PublicKey
 import java.time.Instant
 import java.time.LocalDate
 
@@ -23,20 +23,20 @@ private fun signingParties(perceivable: Perceivable<Boolean>) : ImmutableSet<Par
         else -> throw IllegalArgumentException("signingParties " + perceivable)
     }
 
-private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<CompositeKey> =
+private fun liablePartiesVisitor(arrangement: Arrangement): ImmutableSet<PublicKey> =
         when (arrangement) {
-            is Zero -> ImmutableSet.of<CompositeKey>()
+            is Zero -> ImmutableSet.of<PublicKey>()
             is Obligation -> ImmutableSet.of(arrangement.from.owningKey)
             is And ->
-                arrangement.arrangements.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.arrangements.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is Actions ->
-                arrangement.actions.fold(ImmutableSet.builder<CompositeKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
+                arrangement.actions.fold(ImmutableSet.builder<PublicKey>(), { builder, k -> builder.addAll(liablePartiesVisitor(k)) }).build()
             is RollOut -> liablePartiesVisitor(arrangement.template)
-            is Continuation -> ImmutableSet.of<CompositeKey>()
+            is Continuation -> ImmutableSet.of<PublicKey>()
             else -> throw IllegalArgumentException("liableParties " + arrangement)
         }
 
-private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> {
+private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKey> {
     val actors = signingParties(action.condition)
     return if (actors.size != 1)
         liablePartiesVisitor(action.arrangement)
@@ -45,7 +45,7 @@ private fun liablePartiesVisitor(action: Action): ImmutableSet<CompositeKey> {
 }
 
 /** Returns list of potentially liable parties for a given contract */
-fun liableParties(contract: Arrangement): Set<CompositeKey> = liablePartiesVisitor(contract)
+fun liableParties(contract: Arrangement): Set<PublicKey> = liablePartiesVisitor(contract)
 
 private fun involvedPartiesVisitor(action: Action): Set<Party> =
     Sets.union(involvedPartiesVisitor(action.arrangement), signingParties(action.condition)).immutableCopy()

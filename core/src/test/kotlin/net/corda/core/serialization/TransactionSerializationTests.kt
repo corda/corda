@@ -1,7 +1,6 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite
 import net.corda.core.seconds
@@ -11,6 +10,7 @@ import net.corda.testing.MINI_CORP
 import net.corda.testing.generateStateRef
 import org.junit.Before
 import org.junit.Test
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import kotlin.test.assertEquals
@@ -28,12 +28,12 @@ class TransactionSerializationTests {
         data class State(
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,
-                override val owner: CompositeKey) : OwnableState {
+                override val owner: PublicKey) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
-            override val participants: List<CompositeKey>
+            override val participants: List<PublicKey>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {

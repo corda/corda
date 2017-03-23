@@ -1,11 +1,11 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.DUMMY_NOTARY
 import org.junit.Test
+import java.security.PublicKey
 import kotlin.test.assertEquals
 
 
@@ -20,7 +20,7 @@ class VaultUpdateTests {
     }
 
     private class DummyState : ContractState {
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = emptyList()
         override val contract = VaultUpdateTests.DummyContract
     }

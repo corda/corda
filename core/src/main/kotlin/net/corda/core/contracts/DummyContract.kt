@@ -1,6 +1,5 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
@@ -56,8 +55,8 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
             }
         }
 
-        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: CompositeKey) = move(listOf(prior), newOwner)
-        fun move(priors: List<StateAndRef<DummyContract.SingleOwnerState>>, newOwner: CompositeKey): TransactionBuilder {
+        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: PublicKey) = move(listOf(prior), newOwner)
+        fun move(priors: List<StateAndRef<DummyContract.SingleOwnerState>>, newOwner: PublicKey): TransactionBuilder {
             require(priors.isNotEmpty())
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)

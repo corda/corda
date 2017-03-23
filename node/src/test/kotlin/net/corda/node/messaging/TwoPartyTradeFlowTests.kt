@@ -40,6 +40,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
@@ -357,7 +358,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.composite,
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
@@ -505,7 +506,7 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: CompositeKey,
+            owner: PublicKey,
             issuer: AnonymousParty,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
@@ -551,7 +552,7 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
-            owner: CompositeKey,
+            owner: PublicKey,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {

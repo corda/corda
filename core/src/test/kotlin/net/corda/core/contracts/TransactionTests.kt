@@ -119,7 +119,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
