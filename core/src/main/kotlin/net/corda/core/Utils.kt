@@ -421,8 +421,8 @@ fun codePointsString(vararg codePoints: Int): String {
 }
 
 /**
- * This function should be invoked on unused Observables to release the server resources.
- * TODO: Consider moving this to RPC related work.
+ * This function should be invoked on any unwanted Observables returned from RPC to release the server resources.
+ * TODO: Consider moving this to RPC related module.
  *
  * subscribe({}, {}) was used instead of simply calling subscribe()
  * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
