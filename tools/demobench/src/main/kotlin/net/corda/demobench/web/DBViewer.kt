@@ -1,9 +1,9 @@
 package net.corda.demobench.web
 
+import net.corda.core.utilities.loggerFor
 import java.sql.SQLException
 import java.util.concurrent.Executors
 import kotlin.reflect.jvm.jvmName
-import net.corda.demobench.loggerFor
 import org.h2.Driver
 import org.h2.server.web.LocalWebServer
 import org.h2.tools.Server
