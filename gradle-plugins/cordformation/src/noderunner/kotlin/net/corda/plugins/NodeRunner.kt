@@ -22,11 +22,13 @@ fun main(args: Array<String>) {
         if (isNode(it)) {
             println("Starting node in $it")
             startedProcesses.add(runJar(nodeJarName, it, javaArgs))
+            Thread.sleep(1000)
         }
 
         if (isWebserver(it)) {
             println("Starting webserver in $it")
             startedProcesses.add(runJar(webJarName, it, javaArgs))
+            Thread.sleep(1000)
         }
     }
 
@@ -64,11 +66,12 @@ private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<Strin
     val builder = if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) {
         ProcessBuilder(
                 "osascript", "-e",
-                """tell app "Terminal
-activate
-tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
-delay 0.5
-do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in window 1"""
+                """tell app "Terminal"
+    activate
+    tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
+    delay 0.5
+    do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in selected tab of the front window
+end tell"""
         )
     } else if (osName.indexOf("win") >= 0) {
         ProcessBuilder(
