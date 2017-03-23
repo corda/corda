@@ -5,8 +5,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.div
-import net.corda.node.services.config.getOrElse
-import net.corda.node.services.config.getValue
+import net.corda.nodeapi.config.getOrElse
+import net.corda.nodeapi.config.getValue
 import java.nio.file.Path
 import java.util.*
 
@@ -30,10 +30,10 @@ class DoormanParameters(vararg args: String) {
     private val config = argConfig.withFallback(ConfigFactory.parseFile(configFile.toFile(), ConfigParseOptions.defaults().setAllowMissing(true))).resolve()
     val keystorePath: Path by config.getOrElse { basedir / "certificates" / "caKeystore.jks" }
     val rootStorePath: Path by config.getOrElse { basedir / "certificates" / "rootCAKeystore.jks" }
-    val keystorePassword: String? by config.getOrElse { null }
-    val caPrivateKeyPassword: String? by config.getOrElse { null }
-    val rootKeystorePassword: String? by config.getOrElse { null }
-    val rootPrivateKeyPassword: String? by config.getOrElse { null }
+    val keystorePassword: String? by config
+    val caPrivateKeyPassword: String? by config
+    val rootKeystorePassword: String? by config
+    val rootPrivateKeyPassword: String? by config
     val host: String by config
     val port: Int by config
     val dataSourceProperties: Properties by config

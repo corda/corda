@@ -8,6 +8,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
+import org.codehaus.jackson.map.ObjectMapper
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.security.cert.Certificate
@@ -25,7 +26,7 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("")
-class DoormanWebService(val intermediateCACertAndKey: CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage) {
+class DoormanWebService(val intermediateCACertAndKey: CACertAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage, val serverStatus: DoormanServerStatus) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.
@@ -80,5 +81,12 @@ class DoormanWebService(val intermediateCACertAndKey: CACertAndKey, val rootCert
             is CertificateResponse.NotReady -> noContent()
             is CertificateResponse.Unauthorised -> status(UNAUTHORIZED).entity(response.message)
         }.build()
+    }
+
+    @GET
+    @Path("status")
+    @Produces(MediaType.APPLICATION_JSON)
+    fun status(): Response {
+        return ok(ObjectMapper().writeValueAsString(serverStatus)).build()
     }
 }

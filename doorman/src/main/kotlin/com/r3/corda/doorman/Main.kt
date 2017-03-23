@@ -36,6 +36,7 @@ import java.lang.Thread.sleep
 import java.net.InetSocketAddress
 import java.net.URI
 import java.security.cert.Certificate
+import java.time.Instant
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -44,8 +45,9 @@ import kotlin.system.exitProcess
  *  The server will require keystorePath, keystore password and key password via command line input.
  *  The Intermediate CA certificate,Intermediate CA private key and Root CA Certificate should use alias name specified in [X509Utilities]
  */
-
 class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, val rootCACert: Certificate, val storage: CertificationRequestStorage) : Closeable {
+    val serverStatus = DoormanServerStatus()
+
     companion object {
         val logger = loggerFor<DoormanServer>()
     }
@@ -72,6 +74,31 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
         logger.info("Starting Doorman Web Services...")
         server.start()
         logger.info("Doorman Web Services started on $hostAndPort")
+        serverStatus.serverStartTime = Instant.now()
+
+        // Thread approving request periodically.
+        thread(name = "Request Approval Thread") {
+            while (true) {
+                try {
+                    sleep(10.seconds.toMillis())
+                    // TODO: Handle rejected request?
+                    serverStatus.lastRequestCheckTime = Instant.now()
+                    for (id in storage.getApprovedRequestIds()) {
+                        storage.approveRequest(id) {
+                            val request = JcaPKCS10CertificationRequest(request)
+                            createServerCert(request.subject, request.publicKey, caCertAndKey,
+                                    if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
+                        }
+                        logger.info("Approved request $id")
+                        serverStatus.lastApprovalTime = Instant.now()
+                        serverStatus.approvedRequests++
+                    }
+                } catch (e: Exception) {
+                    // Log the error and carry on.
+                    logger.error("Error encountered when approving request.", e)
+                }
+            }
+        }
     }
 
     private fun buildServletContextHandler(): ServletContextHandler {
@@ -79,7 +106,7 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
             contextPath = "/"
             val resourceConfig = ResourceConfig().apply {
                 // Add your API provider classes (annotated for JAX-RS) here
-                register(DoormanWebService(caCertAndKey, rootCACert, storage))
+                register(DoormanWebService(caCertAndKey, rootCACert, storage, serverStatus))
             }
             val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply {
                 initOrder = 0  // Initialise at server start
@@ -88,6 +115,11 @@ class DoormanServer(webServerAddr: HostAndPort, val caCertAndKey: CACertAndKey, 
         }
     }
 }
+
+data class DoormanServerStatus(var serverStartTime: Instant? = null,
+                               var lastRequestCheckTime: Instant? = null,
+                               var lastApprovalTime: Instant? = null,
+                               var approvedRequests: Int = 0)
 
 /** Read password from console, do a readLine instead if console is null (e.g. when debugging in IDE). */
 private fun readPassword(fmt: String): String {
@@ -178,21 +210,6 @@ private fun DoormanParameters.startDoorman() {
         JiraCertificateRequestStorage(requestStorage, jiraClient, jiraConfig.projectCode, jiraConfig.doneTransitionCode)
     }
 
-    // Daemon thread approving request periodically.
-    thread(name = "Request Approval Daemon") {
-        while (true) {
-            sleep(10.seconds.toMillis())
-            // TODO: Handle rejected request?
-            for (id in storage.getApprovedRequestIds()) {
-                storage.approveRequest(id) {
-                    val request = JcaPKCS10CertificationRequest(request)
-                    createServerCert(request.subject, request.publicKey, caCertAndKey,
-                            if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
-                }
-                logger.info("Approved request $id")
-            }
-        }
-    }
     val doorman = DoormanServer(HostAndPort.fromParts(host, port), caCertAndKey, rootCACert, storage)
     doorman.start()
     Runtime.getRuntime().addShutdownHook(thread(start = false) { doorman.close() })
