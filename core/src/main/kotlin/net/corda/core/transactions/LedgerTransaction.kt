@@ -1,10 +1,10 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.CordaSerializable
+import java.security.PublicKey
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -29,7 +29,7 @@ class LedgerTransaction(
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
         notary: Party?,
-        signers: List<CompositeKey>,
+        signers: List<PublicKey>,
         timestamp: Timestamp?,
         type: TransactionType
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {

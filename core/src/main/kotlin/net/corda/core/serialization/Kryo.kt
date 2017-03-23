@@ -325,7 +325,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
             val notary = kryo.readClassAndObject(input) as Party?
-            val signers = kryo.readClassAndObject(input) as List<CompositeKey>
+            val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
 
@@ -362,6 +362,7 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
+// TODO Implement standardized serialization of CompositeKeys.
 @ThreadSafe
 object CompositeKeySerializer : Serializer<CompositeKey>() {
     override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
@@ -374,7 +375,7 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
     override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
         val childCount = input.readInt()
-        val children = (1..childCount).map { kryo.readClassAndObject(input) as CompositeKey }
+        val children = (1..childCount).map { kryo.readClassAndObject(input) as PublicKey }
         val weights = input.readInts(childCount)
 
         val builder = CompositeKey.Builder()

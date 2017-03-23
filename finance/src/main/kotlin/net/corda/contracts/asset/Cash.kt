@@ -17,6 +17,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CashSchemaV1
 import java.math.BigInteger
+import java.security.PublicKey
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,21 +85,21 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val amount: Amount<Issued<Currency>>,
 
             /** There must be a MoveCommand signed by this key to claim the amount. */
-            override val owner: CompositeKey
+            override val owner: PublicKey
     ) : FungibleAsset<Currency>, QueryableState {
-        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: CompositeKey)
+        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
         override val exitKeys = setOf(owner, amount.token.issuer.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
 
-        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: CompositeKey): FungibleAsset<Currency>
+        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
-        override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -145,13 +146,13 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: CompositeKey, notary: Party)
+    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: PublicKey, notary: Party)
             = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: CompositeKey, notary: Party) {
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: PublicKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
         val at = amount.token.issuer
@@ -159,7 +160,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         tx.addCommand(generateIssueCommand(), at.party.owningKey)
     }
 
-    override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: CompositeKey)
+    override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
@@ -177,7 +178,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
  * if there are none, or if any of the cash states cannot be added together (i.e. are
  * different currencies or issuers).
  */
-fun Iterable<ContractState>.sumCashBy(owner: CompositeKey): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCashBy(owner: PublicKey): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
 
 /**
  * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
@@ -193,12 +194,12 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
     return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
 }
 
-fun Cash.State.ownedBy(owner: CompositeKey) = copy(owner = owner)
+fun Cash.State.ownedBy(owner: PublicKey) = copy(owner = owner)
 fun Cash.State.issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party.toAnonymous()))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
-infix fun Cash.State.`owned by`(owner: CompositeKey) = ownedBy(owner)
+infix fun Cash.State.`owned by`(owner: PublicKey) = ownedBy(owner)
 infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)

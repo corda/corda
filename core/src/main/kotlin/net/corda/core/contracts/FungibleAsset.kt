@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.flows.FlowException
+import java.security.PublicKey
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
@@ -25,11 +25,11 @@ interface FungibleAsset<T> : OwnableState {
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
      * owner to sign, some (i.e. cash) also require the issuer.
      */
-    val exitKeys: Collection<CompositeKey>
+    val exitKeys: Collection<PublicKey>
     /** There must be a MoveCommand signed by this key to claim the amount */
-    override val owner: CompositeKey
+    override val owner: PublicKey
 
-    fun move(newAmount: Amount<Issued<T>>, newOwner: CompositeKey): FungibleAsset<T>
+    fun move(newAmount: Amount<Issued<T>>, newOwner: PublicKey): FungibleAsset<T>
 
     // Just for grouping
     interface Commands : CommandData {

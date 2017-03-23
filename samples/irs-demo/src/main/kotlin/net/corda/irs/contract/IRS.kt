@@ -3,9 +3,9 @@ package net.corda.irs.contract
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
@@ -674,11 +674,11 @@ class InterestRateSwap() : Contract {
 
         override val ref = common.tradeID
 
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
+            return fixedLeg.fixedRatePayer.owningKey.composite.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.composite.containsAny(ourKeys)
         }
 
         override val parties: List<AnonymousParty>

@@ -4,6 +4,8 @@ package net.corda.core.crypto
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -14,6 +16,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
 
+// TODO We need to specify if we want to support signatures for CompositeKeys. In that case bits should have specified format.
 /** A wrapper around a digital signature. */
 @CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
@@ -24,7 +27,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.composite.singleKey, bits)
 }
 
 @CordaSerializable
@@ -69,22 +72,37 @@ fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): Digi
 
 val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
 
-fun parsePublicKeyBase58(base58String: String) = EdDSAPublicKey(EdDSAPublicKeySpec(Base58.decode(base58String), ed25519Curve))
-fun PublicKey.toBase58String() = Base58.encode((this as EdDSAPublicKey).abyte)
+// TODO We use for both CompositeKeys and EdDSAPublicKey custom Kryo serializers and deserializers. We need to specify encoding.
+// TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
+//       structure, e.g. mapping a PublicKey to a condition with the specific feature (ED25519).
+fun parsePublicKeyBase58(base58String: String): PublicKey = Base58.decode(base58String).deserialize<PublicKey>()
+fun PublicKey.toBase58String(): String = Base58.encode(this.serialize().bytes)
 
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
+// TODO This case will need more careful thinking, as party owningKey can be a CompositeKey. One way of doing that is
+//  implementation of CompositeSignature.
+@Throws(IllegalStateException::class)
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     val sig = signWithECDSA(bytesToSign)
-    party.owningKey.verifyWithECDSA(bytesToSign, sig)
+    val sigKey = when (party.owningKey) { // Quick workaround when we have CompositeKey as Party owningKey.
+        is CompositeKey -> party.owningKey.singleKey
+        else -> party.owningKey
+    }
+    sigKey.verifyWithECDSA(bytesToSign, sig)
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 
 /** Utility to simplify the act of verifying a signature */
+@Throws(IllegalStateException::class)
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
+    val pubKey = when (this) {
+        is CompositeKey -> singleKey // TODO CompositeSignature verification.
+        else -> this
+    }
     val verifier = EdDSAEngine()
-    verifier.initVerify(this)
+    verifier.initVerify(pubKey)
     verifier.update(content)
     if (verifier.verify(signature.bytes) == false)
         throw SignatureException("Signature did not match")
@@ -97,8 +115,19 @@ fun PublicKey.toStringShort(): String {
     } ?: toString()
 }
 
-/** Creates a [CompositeKey] with a single leaf node containing the public key */
-val PublicKey.composite: PublicKey get() = CompositeKey(1, listOf(this), listOf(1))
+/**
+ * If got simple single PublicKey creates a [CompositeKey] with a single leaf node containing the public key.
+ *  Type checks if obtained PublicKey is a CompositeKey, in that case returns itself.
+ */
+val PublicKey.composite: CompositeKey get() {
+    if (this is CompositeKey) return this
+    else return CompositeKey(1, listOf(this), listOf(1))
+}
+
+val PublicKey.keys: Set<PublicKey> get() {
+    return if (this is CompositeKey) this.keys
+    else setOf(this)
+}
 
 /** Returns the set of all [PublicKey]s of the signatures */
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()

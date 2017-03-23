@@ -24,6 +24,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 import kotlin.test.*
 
@@ -456,7 +457,7 @@ class CashTests {
     // Spend tx generation
 
     val OUR_KEY: KeyPair by lazy { generateKeyPair() }
-    val OUR_PUBKEY_1: CompositeKey get() = OUR_KEY.public.composite
+    val OUR_PUBKEY_1: PublicKey get() = OUR_KEY.public
 
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
@@ -482,7 +483,7 @@ class CashTests {
         return tx.toWireTransaction()
     }
 
-    fun makeSpend(amount: Amount<Currency>, dest: CompositeKey): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
         val tx = TransactionType.General.Builder(DUMMY_NOTARY)
         databaseTransaction(database) {
             vault.generateSpend(tx, amount, dest)

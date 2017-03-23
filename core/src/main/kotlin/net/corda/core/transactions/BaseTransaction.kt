@@ -1,8 +1,8 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -20,14 +20,14 @@ abstract class BaseTransaction(
          */
         val notary: Party?,
         /**
-         * Composite keys that need to be fulfilled by signatures in order for the transaction to be valid.
+         * Public keys that need to be fulfilled by signatures in order for the transaction to be valid.
          * In a [SignedTransaction] this list is used to check whether there are any missing signatures. Note that
          * there is nothing that forces the list to be the _correct_ list of signers for this transaction until
          * the transaction is verified by using [LedgerTransaction.verify].
          *
          * It includes the notary key, if the notary field is set.
          */
-        val mustSign: List<CompositeKey>,
+        val mustSign: List<PublicKey>,
         /**
          * Pointer to a class that defines the behaviour of this transaction: either normal, or "notary changing".
          */

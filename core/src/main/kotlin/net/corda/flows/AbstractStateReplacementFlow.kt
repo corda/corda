@@ -4,10 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.recordTransactions
@@ -101,7 +98,7 @@ abstract class AbstractStateReplacementFlow {
             val proposal = Proposal(originalState.ref, modification, stx)
             val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
             return response.unwrap {
-                check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+                check(party.owningKey.composite.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verifyWithECDSA(stx.id)
                 it
             }

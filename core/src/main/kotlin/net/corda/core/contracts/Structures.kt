@@ -2,7 +2,6 @@ package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
@@ -237,7 +236,7 @@ interface LinearState : ContractState {
 
     /**
      * True if this should be tracked by our vault(s).
-     * */
+     */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
 
     /**

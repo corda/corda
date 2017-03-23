@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
@@ -27,6 +26,7 @@ import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import java.security.*
 
 class ContractUpgradeFlowTest {
     lateinit var mockNet: MockNetwork
@@ -175,15 +175,15 @@ class ContractUpgradeFlowTest {
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
         override val legacyContract = Cash::class.java
 
-        data class State(override val amount: Amount<Issued<Currency>>, val owners: List<CompositeKey>) : FungibleAsset<Currency> {
-            override val owner: CompositeKey = owners.first()
+        data class State(override val amount: Amount<Issued<Currency>>, val owners: List<PublicKey>) : FungibleAsset<Currency> {
+            override val owner: PublicKey = owners.first()
             override val exitKeys = (owners + amount.token.issuer.party.owningKey).toSet()
             override val contract = CashV2()
             override val participants = owners
 
-            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: CompositeKey) = copy(amount = amount.copy(newAmount.quantity, amount.token), owners = listOf(newOwner))
+            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey) = copy(amount = amount.copy(newAmount.quantity, amount.token), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
-            override fun withNewOwner(newOwner: CompositeKey) = Pair(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
         }
 
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))

@@ -10,9 +10,10 @@ import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConvention
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
 import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.toBase58String
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.time.LocalDate
 
 /**
@@ -39,8 +40,8 @@ data class FloatingLeg(val _notional: BigDecimal, override val notional: BigDeci
 @CordaSerializable
 data class SwapData(
         val id: Pair<String, String>,
-        val buyer: Pair<String, CompositeKey>,
-        val seller: Pair<String, CompositeKey>,
+        val buyer: Pair<String, PublicKey>,
+        val seller: Pair<String, PublicKey>,
         val description: String,
         val tradeDate: LocalDate,
         val convention: String,
@@ -61,7 +62,7 @@ data class SwapData(
         return getTrade(BuySell.SELL, Pair("party", seller.second))
     }
 
-    private fun getTrade(buySell: BuySell, party: Pair<String, CompositeKey>): SwapTrade {
+    private fun getTrade(buySell: BuySell, party: Pair<String, PublicKey>): SwapTrade {
         val tradeInfo = TradeInfo.builder()
                 .id(StandardId.of(id.first, id.second))
                 .addAttribute(TradeAttributeType.DESCRIPTION, description)

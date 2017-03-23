@@ -2,11 +2,11 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Type
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -153,7 +153,7 @@ operator fun Perceivable<BigDecimal>.div(n: Double) = PerceivableOperation(this,
 operator fun Perceivable<Int>.plus(n: Int) = PerceivableOperation(this, Operation.PLUS, const(n))
 operator fun Perceivable<Int>.minus(n: Int) = PerceivableOperation(this, Operation.MINUS, const(n))
 
-data class TerminalEvent(val reference: Party, val source: CompositeKey) : Perceivable<Boolean>
+data class TerminalEvent(val reference: Party, val source: PublicKey) : Perceivable<Boolean>
 
 // todo: holidays
 data class Interest(val amount: Perceivable<BigDecimal>, val dayCountConvention: String,

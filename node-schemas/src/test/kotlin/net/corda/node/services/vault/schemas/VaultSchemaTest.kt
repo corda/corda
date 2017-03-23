@@ -8,10 +8,9 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
@@ -28,6 +27,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.security.PublicKey
 import java.sql.Connection
 import java.sql.DriverManager
 import java.time.Instant
@@ -85,11 +85,11 @@ class VaultSchemaTest {
 
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
-        data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
+        data class VaultNoopState(override val owner: PublicKey) : OwnableState {
             override val contract = VaultNoopContract()
-            override val participants: List<CompositeKey>
+            override val participants: List<PublicKey>
                 get() = listOf(owner)
-            override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Create(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Create(), copy(owner = newOwner))
         }
         interface Commands : CommandData {
             class Create : TypeOnlyCommandData(), Commands
@@ -117,7 +117,7 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         transaction = LedgerTransaction(
                 inputs,
@@ -149,7 +149,7 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         return LedgerTransaction(
                 inputs,

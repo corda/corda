@@ -16,6 +16,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -50,7 +51,7 @@ object TwoPartyTradeFlow {
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: CompositeKey
+            val sellerOwnerKey: PublicKey
     )
 
     @CordaSerializable
@@ -197,7 +198,7 @@ object TwoPartyTradeFlow {
             }
         }
 
-        private fun signWithOurKeys(cashSigningPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
             for (publicKey in cashSigningPubKeys.keys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
@@ -207,7 +208,7 @@ object TwoPartyTradeFlow {
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<CompositeKey>> {
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states

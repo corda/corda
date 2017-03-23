@@ -2,8 +2,8 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.transactions.TransactionBuilder
+import java.security.PublicKey
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -40,7 +40,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      */
     @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     assetStates: List<StateAndRef<S>>): CompositeKey {
+                     assetStates: List<StateAndRef<S>>): PublicKey {
         return conserveClause.generateExit(
                 tx,
                 amountIssued,
@@ -60,5 +60,5 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * implementations to have fields in their state which we don't know about here, and we simply leave them untouched
      * when sending out "change" from spending/exiting.
      */
-    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: CompositeKey): TransactionState<S>
+    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: PublicKey): TransactionState<S>
 }

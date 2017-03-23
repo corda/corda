@@ -40,7 +40,7 @@ object VaultSchema {
         @get:Column(name = "notary_name")
         var notaryName: String
 
-        @get:Column(name = "notary_key")
+        @get:Column(name = "notary_key", length = 65535)
         var notaryKey: String
 
         /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */

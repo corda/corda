@@ -6,6 +6,8 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
+import net.corda.core.crypto.composite
+import net.corda.core.crypto.keys
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -151,25 +153,25 @@ class NodeMonitorModelTest : DriverBasedTest() {
         transactions.expectEvents {
             sequence(
                     // ISSUE
-                    expect { tx ->
-                        require(tx.tx.inputs.isEmpty())
-                        require(tx.tx.outputs.size == 1)
-                        val signaturePubKeys = tx.sigs.map { it.by }.toSet()
+                    expect { stx ->
+                        require(stx.tx.inputs.isEmpty())
+                        require(stx.tx.outputs.size == 1)
+                        val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Only Alice signed
                         val aliceKey = aliceNode.legalIdentity.owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
-                        require(aliceKey.isFulfilledBy(signaturePubKeys))
-                        issueTx = tx
+                        require(aliceKey.composite.isFulfilledBy(signaturePubKeys))
+                        issueTx = stx
                     },
                     // MOVE
-                    expect { tx ->
-                        require(tx.tx.inputs.size == 1)
-                        require(tx.tx.outputs.size == 1)
-                        val signaturePubKeys = tx.sigs.map { it.by }.toSet()
+                    expect { stx ->
+                        require(stx.tx.inputs.size == 1)
+                        require(stx.tx.outputs.size == 1)
+                        val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                        require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                        moveTx = tx
+                        require(aliceNode.legalIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.notaryIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
+                        moveTx = stx
                     }
             )
         }

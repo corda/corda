@@ -1,13 +1,13 @@
 package net.corda.flows
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.NotaryChangeFlow.Acceptor
 import net.corda.flows.NotaryChangeFlow.Instigator
+import java.security.PublicKey
 
 /**
  * A flow to be used for changing a state's Notary. This is required since all input states to a transaction
@@ -25,11 +25,11 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
             newNotary: Party,
             progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Instigator<T, T, Party>(originalState, newNotary, progressTracker) {
 
-        override fun assembleTx(): Pair<SignedTransaction, Iterable<CompositeKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, Iterable<PublicKey>> {
             val state = originalState.state
             val tx = TransactionType.NotaryChange.Builder(originalState.state.notary)
 
-            val participants: Iterable<CompositeKey>
+            val participants: Iterable<PublicKey>
 
             if (state.encumbrance == null) {
                 val modifiedState = TransactionState(state.data, modification)
@@ -54,14 +54,14 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
          *
          * @return union of all added states' participants
          */
-        private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<CompositeKey> {
+        private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<PublicKey> {
             val stateRef = originalState.ref
             val txId = stateRef.txhash
             val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId)
                     ?: throw StateReplacementException("Transaction $txId not found")
             val outputs = issuingTx.tx.outputs
 
-            val participants = mutableSetOf<CompositeKey>()
+            val participants = mutableSetOf<PublicKey>()
 
             var nextStateIndex = stateRef.index
             var newOutputPosition = tx.outputStates().size
