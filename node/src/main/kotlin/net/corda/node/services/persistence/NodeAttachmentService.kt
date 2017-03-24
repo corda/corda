@@ -21,7 +21,9 @@ import net.corda.node.services.persistence.schemas.Models
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.nio.file.*
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
@@ -115,9 +117,15 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {
         require(jar !is JarInputStream)
+
+        // Read the file into RAM, hashing it to find the ID as we go. The attachment must fit into memory.
+        // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
+        // To do this we must pipe stream into the database without knowing its hash, which we will learn only once
+        // the insert/upload is complete. We can then query to see if it's a duplicate and if so, erase, and if not
+        // set the hash field of the new attachment record.
         val hs = HashingInputStream(Hashing.sha256(), jar)
         val bytes = hs.readBytes()
-        checkIsAValidJAR(hs)
+        checkIsAValidJAR(ByteArrayInputStream(bytes))
         val id = SecureHash.SHA256(hs.hash().asBytes())
 
         val count = session.withTransaction {
@@ -145,7 +153,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
             val extractTo = storePath / "$id.jar"
             try {
                 extractTo.createDirectory()
-                extractZipFile(hs, extractTo)
+                extractZipFile(ByteArrayInputStream(bytes), extractTo)
             } catch(e: FileAlreadyExistsException) {
                 log.trace("Did not extract attachment jar to directory because it already exists")
             } catch(e: Exception) {
@@ -159,14 +167,21 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
 
     private fun checkIsAValidJAR(stream: InputStream) {
         // Just iterate over the entries with verification enabled: should be good enough to catch mistakes.
-        val jar = JarInputStream(stream)
+        // Note that JarInputStream won't throw any kind of error at all if the file stream is in fact not
+        // a ZIP! It'll just pretend it's an empty archive, which is kind of stupid but that's how it works.
+        // So we have to check to ensure we found at least one item.
+        val jar = JarInputStream(stream, true)
+        var count = 0
         while (true) {
             val cursor = jar.nextJarEntry ?: break
             val entryPath = Paths.get(cursor.name)
             // Security check to stop zips trying to escape their rightful place.
-            if (entryPath.isAbsolute || entryPath.normalize() != entryPath || '\\' in cursor.name)
-                throw IllegalArgumentException("Path is either absolute or non-normalised: $entryPath")
+            require(!entryPath.isAbsolute) { "Path $entryPath is absolute" }
+            require(entryPath.normalize() == entryPath) { "Path $entryPath is not normalised" }
+            require(!('\\' in cursor.name || cursor.name == "." || cursor.name == "..")) { "Bad character in $entryPath" }
+            count++
         }
+        require(count > 0) { "Stream is either empty or not a JAR/ZIP" }
     }
 
     // Implementations for AcceptsFileUpload

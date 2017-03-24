@@ -1,6 +1,6 @@
 {
   "fixedLeg": {
-    "fixedRatePayer": "fixedRatePayerKey",
+    "fixedRatePayer": "Bank A",
     "notional": "€25000000",
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",
@@ -22,7 +22,7 @@
     "interestPeriodAdjustment": "Adjusted"
   },
   "floatingLeg": {
-    "floatingRatePayer": "floatingRatePayerKey",
+    "floatingRatePayer": "Bank B",
     "notional": "€25000000",
     "paymentFrequency": "Quarterly",
     "effectiveDate": "2016-03-11",

@@ -27,6 +27,17 @@ configurations {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
         exclude group: 'io.netty', module: 'netty-handler'
+
+        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    testCompile {
+        // Excluding javassist:javassist because it clashes with Hibernate's
+        // transitive org.javassist:javassist dependency.
+        // TODO: Remove this exclusion once junit-quickcheck 0.8 is released.
+        exclude group: 'javassist', module: 'javassist'
     }
 
     integrationTestCompile.extendsFrom testCompile
@@ -57,18 +68,10 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-
-    // Excluding javassist:javassist (which is a transitive dependency of core)
-    // because it clashes with Hibernate's transitive org.javassist:javassist
-    // dependency.
-    // TODO: Remove both of these exclusions once junit-quickcheck 0.8 is released.
-    compile (project(':finance')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
-    compile (project(':node-schemas')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
+    compile project(':finance')
+    compile project(':node-schemas')
     compile project(':node-api')
+    compile project(':client:rpc')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
@@ -78,7 +81,7 @@ dependencies {
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     compile "com.google.guava:guava:$guava_version"
 
@@ -105,11 +108,8 @@ dependencies {
         exclude group: "asm"
     }
 
-    // For adding serialisation of file upload streams to RPC
-    // TODO: Remove this dependency and the code that requires it
-    compile "commons-fileupload:commons-fileupload:1.3.2"
-
-    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
+    // Jackson support: serialisation to/from JSON, YAML, etc
+    compile project(':client:jackson')
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -127,7 +127,6 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:1.1.0"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':core')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
@@ -154,6 +153,9 @@ dependencies {
     // Netty: All of it.
     compile "io.netty:netty-all:$netty_version"
 
+    // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
+    compile "org.crashub:crash.shell:$crash_version"
+
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 
@@ -166,12 +168,6 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
-}
-
-configurations.compile {
-    // We want to use SLF4J's version of these binding: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
 }
 
 task integrationTest(type: Test) {

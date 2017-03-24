@@ -4,14 +4,14 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
-Milestone 10
-------------
+UNRELEASED
+----------
 
-Important: There are configuration changes in M10 due to the split of the Artemis port into separate P2P and RPC
-ports. To upgrade, you *must*:
-
- 1. In Gradle build configurations replace any references to ``artemisPort`` with ``p2pPort``.
- 2. In node configurations replace ``artemisAddress`` with ``p2pAddress``.
+A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
+easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
+the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
+be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
+We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
 Milestone 9
 -----------

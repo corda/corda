@@ -2,10 +2,7 @@ package net.corda.irs.contract
 
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
@@ -311,8 +308,8 @@ class InterestRateSwap() : Contract {
     }
 
     @CordaSerializable
-    open class FixedLeg(
-            var fixedRatePayer: AnonymousParty,
+    open class FixedLeg<P: AbstractParty>(
+            var fixedRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -339,7 +336,7 @@ class InterestRateSwap() : Contract {
             if (other?.javaClass != javaClass) return false
             if (!super.equals(other)) return false
 
-            other as FixedLeg
+            other as FixedLeg<*>
 
             if (fixedRatePayer != other.fixedRatePayer) return false
             if (fixedRate != other.fixedRate) return false
@@ -351,7 +348,7 @@ class InterestRateSwap() : Contract {
         override fun hashCode() = super.hashCode() + 31 * Objects.hash(fixedRatePayer, fixedRate, rollConvention)
 
         // Can't autogenerate as not a data class :-(
-        fun copy(fixedRatePayer: AnonymousParty = this.fixedRatePayer,
+        fun copy(fixedRatePayer: P = this.fixedRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -369,12 +366,16 @@ class InterestRateSwap() : Contract {
                 fixedRatePayer, notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate,
                 terminationDateAdjustment, dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay,
                 paymentCalendar, interestPeriodAdjustment, fixedRate, rollConvention)
-
+        fun toAnonymous(): FixedLeg<AnonymousParty> {
+            return FixedLeg(fixedRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
+                    dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
+                    fixedRate, rollConvention)
+        }
     }
 
     @CordaSerializable
-    open class FloatingLeg(
-            var floatingRatePayer: AnonymousParty,
+    open class FloatingLeg<P: AbstractParty>(
+            var floatingRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
             effectiveDate: LocalDate,
@@ -410,7 +411,7 @@ class InterestRateSwap() : Contract {
             if (other?.javaClass != javaClass) return false
             if (!super.equals(other)) return false
 
-            other as FloatingLeg
+            other as FloatingLeg<*>
 
             if (floatingRatePayer != other.floatingRatePayer) return false
             if (rollConvention != other.rollConvention) return false
@@ -432,7 +433,7 @@ class InterestRateSwap() : Contract {
                 index, indexSource, indexTenor)
 
 
-        fun copy(floatingRatePayer: AnonymousParty = this.floatingRatePayer,
+        fun copy(floatingRatePayer: P = this.floatingRatePayer,
                  notional: Amount<Currency> = this.notional,
                  paymentFrequency: Frequency = this.paymentFrequency,
                  effectiveDate: LocalDate = this.effectiveDate,
@@ -461,6 +462,12 @@ class InterestRateSwap() : Contract {
                 paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment, rollConvention,
                 fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment,
                 fixingCalendar, index, indexSource, indexTenor)
+        fun toAnonymous(): FloatingLeg<AnonymousParty> {
+            return FloatingLeg(floatingRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
+                    dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
+                    rollConvention, fixingRollConvention, resetDayInMonth, fixingPeriodOffset, resetRule, fixingsPerPayment,
+                    fixingCalendar, index, indexSource, indexTenor)
+        }
     }
 
     override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
@@ -470,7 +477,7 @@ class InterestRateSwap() : Contract {
          * Common superclass for IRS contract clauses, which defines behaviour on match/no-match, and provides
          * helper functions for the clauses.
          */
-        abstract class AbstractIRSClause : Clause<State, Commands, UniqueIdentifier>() {
+        abstract class AbstractIRSClause : Clause<State<*>, Commands, UniqueIdentifier>() {
             // These functions may make more sense to use for basket types, but for now let's leave them here
             fun checkLegDates(legs: List<CommonLeg>) {
                 requireThat {
@@ -486,7 +493,7 @@ class InterestRateSwap() : Contract {
                     "The notional for all legs must be the same" by legs.all { it.notional == legs[0].notional }
                 }
                 for (leg: CommonLeg in legs) {
-                    if (leg is FixedLeg) {
+                    if (leg is FixedLeg<*>) {
                         requireThat {
                             // TODO: Confirm: would someone really enter a swap with a negative fixed rate?
                             "Fixed leg rate must be positive" by leg.fixedRate.isPositive()
@@ -512,9 +519,9 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        class Group : GroupClauseVerifier<State, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
+        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
             // Group by Trade ID for in / out states
-            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, UniqueIdentifier>> {
+            override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State<*>, UniqueIdentifier>> {
                 return tx.groupStates() { state -> state.linearId }
             }
         }
@@ -535,12 +542,12 @@ class InterestRateSwap() : Contract {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Agree::class.java)
 
             override fun verify(tx: TransactionForContract,
-                                inputs: List<State>,
-                                outputs: List<State>,
+                                inputs: List<State<*>>,
+                                outputs: List<State<*>>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
-                val irs = outputs.filterIsInstance<State>().single()
+                val irs = outputs.filterIsInstance<State<*>>().single()
                 requireThat {
                     "There are no in states for an agreement" by inputs.isEmpty()
                     "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
@@ -571,13 +578,13 @@ class InterestRateSwap() : Contract {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Refix::class.java)
 
             override fun verify(tx: TransactionForContract,
-                                inputs: List<State>,
-                                outputs: List<State>,
+                                inputs: List<State<*>>,
+                                outputs: List<State<*>>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Refix>()
-                val irs = outputs.filterIsInstance<State>().single()
-                val prevIrs = inputs.filterIsInstance<State>().single()
+                val irs = outputs.filterIsInstance<State<*>>().single()
+                val prevIrs = inputs.filterIsInstance<State<*>>().single()
                 val paymentDifferences = getFloatingLegPaymentsDifferences(prevIrs.calculation.floatingLegPaymentSchedule, irs.calculation.floatingLegPaymentSchedule)
 
                 // Having both of these tests are "redundant" as far as verify() goes, however, by performing both
@@ -616,8 +623,8 @@ class InterestRateSwap() : Contract {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Pay::class.java)
 
             override fun verify(tx: TransactionForContract,
-                                inputs: List<State>,
-                                outputs: List<State>,
+                                inputs: List<State<*>>,
+                                outputs: List<State<*>>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Pay>()
@@ -632,12 +639,12 @@ class InterestRateSwap() : Contract {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Mature::class.java)
 
             override fun verify(tx: TransactionForContract,
-                                inputs: List<State>,
-                                outputs: List<State>,
+                                inputs: List<State<*>>,
+                                outputs: List<State<*>>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Mature>()
-                val irs = inputs.filterIsInstance<State>().single()
+                val irs = inputs.filterIsInstance<State<*>>().single()
                 requireThat {
                     "No more fixings to be applied" by (irs.calculation.nextFixingDate() == null)
                     "The irs is fully consumed and there is no id matched output state" by outputs.isEmpty()
@@ -659,9 +666,9 @@ class InterestRateSwap() : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
-    data class State(
-            val fixedLeg: FixedLeg,
-            val floatingLeg: FloatingLeg,
+    data class State<P: AbstractParty>(
+            val fixedLeg: FixedLeg<P>,
+            val floatingLeg: FloatingLeg<P>,
             val calculation: Calculation,
             val common: Common,
             override val linearId: UniqueIdentifier = UniqueIdentifier(common.tradeID)
@@ -682,7 +689,7 @@ class InterestRateSwap() : Contract {
         }
 
         override val parties: List<AnonymousParty>
-            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
+            get() = listOf(fixedLeg.fixedRatePayer.toAnonymous(), floatingLeg.floatingRatePayer.toAnonymous())
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
@@ -692,10 +699,10 @@ class InterestRateSwap() : Contract {
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 
-        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg, fixedLeg, calculation, common, notary)
+        override fun generateAgreement(notary: Party): TransactionBuilder = InterestRateSwap().generateAgreement(floatingLeg.toAnonymous(), fixedLeg.toAnonymous(), calculation, common, notary)
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, oldState.state.notary), oldState.ref), fix)
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this.toAnonymous(), oldState.state.notary), oldState.ref), fix)
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -730,13 +737,20 @@ class InterestRateSwap() : Contract {
          */
         fun prettyPrint() = toString().replace(",", "\n")
 
+        fun toAnonymous(): State<AnonymousParty> {
+            return if (this.fixedLeg.fixedRatePayer is AnonymousParty) {
+                this as State<AnonymousParty>
+            } else {
+                State(fixedLeg.toAnonymous(), floatingLeg.toAnonymous(), calculation, common, linearId)
+            }
+        }
     }
 
     /**
      *  This generates the agreement state and also the schedules from the initial data.
      *  Note: The day count, interest rate calculation etc are not finished yet, but they are demonstrable.
      */
-    fun generateAgreement(floatingLeg: FloatingLeg, fixedLeg: FixedLeg, calculation: Calculation,
+    fun generateAgreement(floatingLeg: FloatingLeg<AnonymousParty>, fixedLeg: FixedLeg<AnonymousParty>, calculation: Calculation,
                           common: Common, notary: Party): TransactionBuilder {
 
         val fixedLegPaymentSchedule = LinkedHashMap<LocalDate, FixedRatePaymentEvent>()
@@ -800,7 +814,7 @@ class InterestRateSwap() : Contract {
         }
     }
 
-    fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State>, fixing: Fix) {
+    fun generateFix(tx: TransactionBuilder, irs: StateAndRef<State<AnonymousParty>>, fixing: Fix) {
         tx.addInputState(irs)
         val fixedRate = FixedRate(RatioUnit(fixing.value))
         tx.addOutputState(

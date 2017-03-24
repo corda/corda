@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import net.corda.core.flows.FlowLogic
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.User
 
 /**
  * Service for retrieving [User] objects representing RPC users who are authorised to use the RPC system. A [User]
@@ -22,10 +23,6 @@ class RPCUserServiceImpl(config: NodeConfiguration) : RPCUserService {
     override fun getUser(username: String): User? = _users[username]
 
     override val users: List<User> get() = _users.values.toList()
-}
-
-data class User(val username: String, val password: String, val permissions: Set<String>) {
-    override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 
 fun startFlowPermission(className: String) = "StartFlow.$className"

@@ -14,10 +14,10 @@ import net.corda.flows.CashIssueFlow
 import net.corda.flows.ContractUpgradeFlow
 import net.corda.flows.FinalityFlow
 import net.corda.node.internal.CordaRPCOpsImpl
-import net.corda.node.services.User
-import net.corda.node.services.messaging.CURRENT_RPC_USER
 import net.corda.node.services.startFlowPermission
 import net.corda.node.utilities.databaseTransaction
+import net.corda.nodeapi.CURRENT_RPC_USER
+import net.corda.nodeapi.User
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before

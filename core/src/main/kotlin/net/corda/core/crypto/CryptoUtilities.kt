@@ -14,14 +14,6 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
 
-fun newSecureRandom(): SecureRandom {
-    if (System.getProperty("os.name") == "Linux") {
-        return SecureRandom.getInstance("NativePRNGNonBlocking")
-    } else {
-        return SecureRandom.getInstanceStrong()
-    }
-}
-
 /** A wrapper around a digital signature. */
 @CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {

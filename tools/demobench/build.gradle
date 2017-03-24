@@ -2,7 +2,6 @@ buildscript {
     ext.tornadofx_version = '1.6.2'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
-    ext.guava_version = '14.0.1'
     ext.controlsfx_version = '8.40.12'
 
     ext.java_home = System.properties.'java.home'
@@ -49,9 +48,10 @@ dependencies {
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
-    // ONLY USING THE RPC CLIENT!?
-    compile (project(':node')) {
-        exclude module: 'kotlin-test'
+    compile (project(':client:rpc')) {
+        exclude module: 'junit'
+    }
+    compile (project(':finance')) {
         exclude module: 'junit'
     }
 
