@@ -6,8 +6,9 @@ DemoBench is a standalone desktop application that makes it easy to configure an
 Downloading
 -----------
 
-Installers compatible with the latest Corda release can be downloaded from ...?
+Installers compatible with the latest Corda release can be downloaded from the `R3 website`_.
 
+.. _R3 website: http://www.r3cev.com
 
 Running DemoBench
 -----------------
@@ -75,12 +76,12 @@ You will also need to define the environment variable ``JAVA_HOME`` to point to 
 Developer Notes
 ---------------
 
-Developers wishing to run DemoBench *without* building an installer each time can use the ``demobench-$version.zip`` file in the ``tools/demobench/build/distributions/`` directory.
+Developers wishing to run DemoBench *without* building a new installer each time can install it locally using Gradle:
 
 .. parsed-literal::
 
-    $ unzip demobench-$version.zip
-    $ cd demobench-$version
+    $ gradlew tools:demobench:installDist
+    $ cd tools/demobench/build/install/demobench
     $ bin/demobench
 
 ..
