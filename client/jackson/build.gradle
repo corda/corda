@@ -23,7 +23,7 @@ dependencies {
     // This adds support for java.time types.
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
-    testCompile project(':core').sourceSets.test.output
+    testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
 
     // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
