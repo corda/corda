@@ -4,7 +4,7 @@ package net.corda.demobench.model
 import net.corda.nodeapi.User
 import java.util.*
 
-fun User.toMap() = mapOf(
+fun User.toMap(): Map<String, Any> = mapOf(
     "user" to username,
     "password" to password,
     "permissions" to permissions
