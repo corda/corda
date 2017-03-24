@@ -1,6 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
+import net.corda.nodeapi.User
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,7 +16,7 @@ class NodeConfig(
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
-        val users: List<User> = listOf(defaultUser),
+        val users: Set<User> = setOf(defaultUser),
         var networkMap: NetworkMapConfig? = null
 ) : NetworkMapConfig(legalName, p2pPort), HasPlugins {
 

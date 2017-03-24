@@ -25,11 +25,12 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         }
 
         try {
+            val user = config.users.elementAt(0)
             val p = explorerController.process(
                     "--host=localhost",
                     "--port=${config.rpcPort}",
-                    "--username=${config.users[0].user}",
-                    "--password=${config.users[0].password}")
+                    "--username=${user.username}",
+                    "--password=${user.password}")
                     .directory(explorerDir)
                     .start()
             process = p

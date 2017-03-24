@@ -1,9 +1,11 @@
 package net.corda.demobench.model
 
+import net.corda.nodeapi.User
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*
 import org.junit.Test
+import java.util.*
 
 class NodeControllerTest {
 
@@ -177,7 +179,7 @@ class NodeControllerTest {
             webPort = webPort,
             h2Port = h2Port,
             extraServices = services,
-            users = users
+            users = LinkedHashSet<User>(users)
     )
 
 }

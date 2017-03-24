@@ -1,7 +1,9 @@
 package net.corda.demobench.model
 
+import net.corda.nodeapi.User
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import kotlin.test.*
 import org.junit.Test
 
@@ -73,7 +75,7 @@ class NodeConfigTest {
     @Test
     fun `test users`() {
         val config = createConfig(users = listOf(user("myuser")))
-        assertEquals(listOf(user("myuser")), config.users)
+        assertEquals(setOf(user("myuser")), config.users)
     }
 
     @Test
@@ -187,7 +189,7 @@ class NodeConfigTest {
             webPort = webPort,
             h2Port = h2Port,
             extraServices = services,
-            users = users
+            users = LinkedHashSet<User>(users)
     )
 
 }
