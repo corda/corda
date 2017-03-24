@@ -27,16 +27,21 @@ import java.security.PublicKey
 class CompositeKey(val threshold: Int,
                    val children: List<PublicKey>, // Can also be CompositeKey subtree.
                    val weights: List<Int>) : PublicKey {
+    companion object {
+        // TODO: Get the design standardised and from there define a recognised name
+        val ALGORITHM = "X-Corda-CompositeKey"
+        // TODO: We should be using a well defined format.
+        val FORMAT = "X-Corda-Kryo"
+    }
+
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
 
     /** Checks whether any of the given [keys] matches a leaf on the tree */
     fun containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
 
-    // TODO: Get the design standardised and from there define a recognised name
-    override fun getAlgorithm() = "X-Corda-CompositeKey"
+    override fun getAlgorithm() = ALGORITHM
     override fun getEncoded(): ByteArray = this.serialize().bytes
-    // TODO: We should be using a well defined format.
-    override fun getFormat() = "X-Corda-Kryo"
+    override fun getFormat() = FORMAT
 
     // TODO Can CompositeKey be fulfilled by other composite keys? With composite signature it makes some sense.
     fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
