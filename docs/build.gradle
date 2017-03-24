@@ -16,7 +16,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 }
 
 task apidocs(dependsOn: [':jar', 'dokka', 'dokkaJavadoc'])
-task buildDocs(dependsOn: ['apidocs', 'copyRobots'])
+task buildDocs(dependsOn: ['apidocs', 'copyRobots', 'makeDocs'])
 
 task copyRobots(type: Copy) {
     from "robots.txt"
@@ -24,13 +24,13 @@ task copyRobots(type: Copy) {
 }
 
 task installDocsiteRequirements(type: Exec) {
-    workingDir 'docs'
+    // TODO: Non-msys Windows script
     commandLine 'cmd', '/c', 'sh ./install-docsite-requirements.sh' // Windows
     commandLine './install-docsite-requirements.sh' // Linux
 }
 
 task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    workingDir 'docs'
-    commandLine 'cmd', '/c', 'make clean html' // Windows
-    commandLine 'make clean html' // Linux
+    // TODO: Non-msys Windows script
+    commandLine 'cmd', '/c', 'sh ./make-docsite.sh' // Windows
+    commandLine './make-docsite.sh' // Linux
 }

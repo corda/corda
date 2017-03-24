@@ -4,6 +4,7 @@
 
 set -xeo pipefail
 
+# Install the virtualenv
 if [ ! -d "virtualenv" ]
 then
     # Check if python2.7 is installed explicitly otherwise fall back to the default python
@@ -14,14 +15,16 @@ then
     fi
 fi
 
+# Activate the virtualenv
 if [ -d "virtualenv/bin" ]
 then
     # it's a Unix system
-    . virtualenv/bin/activate
+    source virtualenv/bin/activate
 else
-    . virtualenv/Scripts/activate
+    source virtualenv/Scripts/activate
 fi
 
+# Install PIP requirements
 if [ ! -d "virtualenv/lib/python2.7/site-packages/sphinx" ]
 then
     echo "Installing pip dependencies ... "
