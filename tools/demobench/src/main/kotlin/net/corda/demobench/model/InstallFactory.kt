@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import java.io.IOException
 import java.nio.file.*
-import java.util.*
 import tornadofx.Controller
 
 class InstallFactory : Controller() {
@@ -30,7 +29,7 @@ class InstallFactory : Controller() {
             webPort,
             h2Port,
             extraServices,
-            config.getObjectList("rpcUsers").map { toUser(it.unwrapped()) }.toLinkedHashSet()
+            config.getObjectList("rpcUsers").map { toUser(it.unwrapped()) }.toList()
         )
 
         if (config.hasPath("networkMapService")) {
@@ -61,8 +60,6 @@ class InstallFactory : Controller() {
     }
 
 }
-
-private fun <T> Iterable<T>.toLinkedHashSet() = toCollection(LinkedHashSet<T>())
 
 /**
  * Wraps the configuration information for a Node
