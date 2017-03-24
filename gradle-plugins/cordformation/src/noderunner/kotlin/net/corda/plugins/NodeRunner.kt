@@ -10,6 +10,15 @@ private val nodeJarName = "corda.jar"
 private val webJarName = "corda-webserver.jar"
 private val nodeConfName = "node.conf"
 
+private val os: OS by lazy {
+    val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
+    if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) OS.MACOS
+    else if (osName.indexOf("win") >= 0) OS.WINDOWS
+    else OS.LINUX
+}
+
+private enum class OS { MACOS, WINDOWS, LINUX }
+
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
@@ -22,11 +31,13 @@ fun main(args: Array<String>) {
         if (isNode(it)) {
             println("Starting node in $it")
             startedProcesses.add(runJar(nodeJarName, it, javaArgs))
+            if (os == OS.MACOS) Thread.sleep(1000)
         }
 
         if (isWebserver(it)) {
             println("Starting webserver in $it")
             startedProcesses.add(runJar(webJarName, it, javaArgs))
+            if (os == OS.MACOS) Thread.sleep(1000)
         }
     }
 
@@ -61,30 +72,31 @@ private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<Strin
     val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
     val nodeName = "${dir.toPath().fileName} $jarName"
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
-    val builder = if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) {
-        ProcessBuilder(
+    val builder = when (os) {
+        OS.MACOS -> ProcessBuilder(
                 "osascript", "-e",
-                """tell app "Terminal
-activate
-tell application \"System Events\" to tell process \"Terminal\" to keystroke \"t\" using command down
-delay 0.5
-do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in window 1"""
+                """tell app "Terminal"
+    activate
+    tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
+    delay 0.5
+    do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in selected tab of the front window
+end tell"""
         )
-    } else if (osName.indexOf("win") >= 0) {
-        ProcessBuilder(
-                "cmd", "/C", "start $javaCmd"
+        OS.WINDOWS -> ProcessBuilder(
+                "cmd"
+                , "/C", "start $javaCmd"
         )
-    } else {
-        // Assume Linux
-        val isTmux = System.getenv("TMUX")?.isNotEmpty() ?: false
-        if (isTmux) {
-            ProcessBuilder(
-                    "tmux", "new-window", "-n", nodeName, javaCmd
-            )
-        } else {
-            ProcessBuilder(
-                    "xterm", "-T", nodeName, "-e", javaCmd
-            )
+        OS.LINUX -> {
+            val isTmux = System.getenv("TMUX")?.isNotEmpty() ?: false
+            if (isTmux) {
+                ProcessBuilder(
+                        "tmux", "new-window", "-n", nodeName, javaCmd
+                )
+            } else {
+                ProcessBuilder(
+                        "xterm", "-T", nodeName, "-e", javaCmd
+                )
+            }
         }
     }
     return builder.directory(dir).start()
