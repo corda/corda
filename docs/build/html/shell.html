@@ -1,0 +1,419 @@
+<!-- If you edit this, then please make the same changes to layout_for_doc_website.html, as that is used for the web
+     doc site generation which we put analytics tracking on to identify any potential problem pages  -->
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Shell &mdash; R3 Corda latest documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Corda latest documentation" href="index.html"/>
+        <link rel="next" title="Object Serialization" href="serialization.html"/>
+        <link rel="prev" title="The example CorDapp" href="tutorial-cordapp.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Corda
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                latest
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+<br>
+API reference: <a href="api/kotlin/corda/index.html">Kotlin</a>/ <a href="api/javadoc/index.html">JavaDoc</a>
+<br>
+<a href="https://discourse.corda.net">Discourse Forums</a>
+<br>
+<a href="http://slack.corda.net">Slack</a>
+<br>
+
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up-fault-finding.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-demos.html">Running the demos</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CLI-vs-IDE.html">CLI vs IDE</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Key concepts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-ecosystem.html">Corda ecosystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-core-types.html">Core types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-financial-model.html">Financial model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-flow-framework.html">Flow framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-consensus-notaries.html">Consensus and notaries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-vault.html">Vault</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key-concepts-security-model.html">Security model</a></li>
+</ul>
+<p class="caption"><span class="caption-text">CorDapps</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="creating-a-cordapp.html">CorDapp basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-cordapp.html">The example CorDapp</a></li>
+</ul>
+<p class="caption"><span class="caption-text">The Corda node</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Shell</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#starting-flows-and-performing-remote-method-calls">Starting flows and performing remote method calls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-syntax">Data syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#attachments">Attachments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-the-shell">Extending the shell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Object Serialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clientrpc.html">Client RPC</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="persistence.html">Persistence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-administration.html">Node administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-configuration-file.html">Node configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corda-plugins.html">The Corda plugin framework</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-services.html">Brief introduction to the node services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="node-explorer.html">Node Explorer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="permissioning.html">Network permissioning</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-contract-clauses.html">Writing a contract using clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-test-dsl.html">Writing a contract test</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-upgrade.html">Upgrading Contracts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-integration-testing.html">Integration testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-clientrpc-api.html">Client RPC API tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-building-transactions.html">Building transactions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-state-machines.html">Writing flows</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flow-testing.html">Writing flow tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-a-notary.html">Running a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="using-a-notary.html">Using a notary service</a></li>
+<li class="toctree-l1"><a class="reference internal" href="oracles.html">Writing oracle services</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial-attachments.html">Using attachments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="event-scheduling.html">Event scheduling</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="network-simulator.html">Network Simulator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clauses.html">Clauses</a></li>
+<li class="toctree-l1"><a class="reference internal" href="merkle-trees.html">Transaction tear-offs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json.html">JSON</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Component library</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="contract-catalogue.html">Contract catalogue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contract-irs.html">Interest rate swaps</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="loadtesting.html">Load testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="setting-up-a-corda-network.html">What is a corda network?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="secure-coding-guidelines.html">Secure coding guidelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-process.html">Release process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release-notes.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-the-docs.html">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="further-notes-on-kotlin.html">Further notes on Kotlin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publishing-corda.html">Publishing Corda</a></li>
+<li class="toctree-l1"><a class="reference internal" href="azure-vm.html">Working with the Corda Demo on Azure Marketplace</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Glossary</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Corda</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Shell</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/shell.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="shell">
+<h1>Shell<a class="headerlink" href="#shell" title="Permalink to this headline">¶</a></h1>
+<p>The Corda shell is an embedded command line that allows an administrator to control and monitor the node.
+Some of its features include:</p>
+<ul class="simple">
+<li>Invoking any of the RPCs the node exposes to applications.</li>
+<li>Starting flows.</li>
+<li>View a dashboard of threads, heap usage, VM properties.</li>
+<li>Uploading and downloading zips from the attachment store.</li>
+<li>Issue SQL queries to the underlying database.</li>
+<li>View JMX metrics and monitoring exports.</li>
+<li>UNIX style pipes for both text and objects, an <code class="docutils literal"><span class="pre">egrep</span></code> command and a command for working with columnular data.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A future version of Corda will add SSH access to the node.</p>
+</div>
+<p>It is based on the popular <a class="reference external" href="http://www.crashub.org/">CRaSH</a> shell used in various other projects and supports many of the same features.</p>
+<p>The shell may be disabled by passing the <code class="docutils literal"><span class="pre">--no-local-shell</span></code> flag to the node.</p>
+<div class="section" id="getting-help">
+<h2>Getting help<a class="headerlink" href="#getting-help" title="Permalink to this headline">¶</a></h2>
+<p>You can run <code class="docutils literal"><span class="pre">help</span></code> to list the available commands.</p>
+<p>The shell has a <code class="docutils literal"><span class="pre">man</span></code> command that can be used to get interactive help on many commands. You can also use the
+<code class="docutils literal"><span class="pre">--help</span></code> or <code class="docutils literal"><span class="pre">-h</span></code> flags to a command to get info about what switches it supports.</p>
+<p>Commands may have subcommands, in the same style as <code class="docutils literal"><span class="pre">git</span></code>. In that case running the command by itself will
+list the supported subcommands.</p>
+</div>
+<div class="section" id="starting-flows-and-performing-remote-method-calls">
+<h2>Starting flows and performing remote method calls<a class="headerlink" href="#starting-flows-and-performing-remote-method-calls" title="Permalink to this headline">¶</a></h2>
+<p><strong>Flows</strong> are the way the ledger is changed. If you aren&#8217;t familiar with them, please review &#8220;<a class="reference internal" href="flow-state-machines.html"><span class="doc">Writing flows</span></a>&#8221;
+first. The <code class="docutils literal"><span class="pre">flow</span> <span class="pre">list</span></code> command can be used to list the flows understood by the node and <code class="docutils literal"><span class="pre">flow</span> <span class="pre">start</span></code> can be
+used to start them. The <code class="docutils literal"><span class="pre">flow</span> <span class="pre">start</span></code> command takes the class name of a flow, or <em>any unambiguous substring</em> and
+then the data to be passed to the flow constructor. The unambiguous substring feature is helpful for reducing
+the needed typing. If the match is ambiguous the possible matches will be printed out. If a flow has multiple
+constructors then the names and types of the arguments will be used to try and determine which to use automatically.
+If the match against available constructors is unclear, the reasons each available constructor failed to match
+will be printed out. In the case of an ambiguous match, the first applicable will be used.</p>
+<p><strong>RPCs</strong> (remote procedure calls) are commands that can be sent to the node to query it, control it and manage it.
+RPCs don&#8217;t typically do anything that changes the global ledger, but they may change node-specific data in the
+database. Each RPC is one method on the <code class="docutils literal"><span class="pre">CordaRPCOps</span></code> interface, and may return a stream of events that will
+be shown on screen until you press Ctrl-C. You perform an RPC by using <code class="docutils literal"><span class="pre">run</span></code> followed by the name.</p>
+<center><b><a href="api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html">Documentation of available RPCs</a></b><p></center><p>Whichever form of change is used, there is a need to provide <em>parameters</em> to either the RPC or the flow
+constructor. Because parameters can be any arbitrary Java object graph, we need a convenient syntax to express
+this sort of data. The shell uses a syntax called <a class="reference external" href="http://www.yaml.org/spec/1.2/spec.html">Yaml</a> to do this.</p>
+</div>
+<div class="section" id="data-syntax">
+<h2>Data syntax<a class="headerlink" href="#data-syntax" title="Permalink to this headline">¶</a></h2>
+<p>Yaml (yet another markup language) is a simple JSON-like way to describe object graphs. It has several features
+that make it helpful for our use case, like a lightweight syntax and support for &#8220;bare words&#8221; which mean you can
+often skip the quotes around strings. Here is an example of how this syntax is used:</p>
+<p><code class="docutils literal"><span class="pre">flow</span> <span class="pre">start</span> <span class="pre">CashIssue</span> <span class="pre">amount:</span> <span class="pre">$1000,</span> <span class="pre">issueRef:</span> <span class="pre">1234,</span> <span class="pre">recipient:</span> <span class="pre">Bank</span> <span class="pre">A,</span> <span class="pre">notary:</span> <span class="pre">Notary</span> <span class="pre">Service</span></code></p>
+<p>This invokes a constructor of a flow with the following prototype in the code:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CashIssueFlow</span><span class="p">(</span><span class="k">val</span> <span class="py">amount</span><span class="p">:</span> <span class="n">Amount</span><span class="p">&lt;</span><span class="n">Currency</span><span class="p">&gt;,</span>
+                    <span class="k">val</span> <span class="py">issueRef</span><span class="p">:</span> <span class="n">OpaqueBytes</span><span class="p">,</span>
+                    <span class="k">val</span> <span class="py">recipient</span><span class="p">:</span> <span class="n">Party</span><span class="p">,</span>
+                    <span class="k">val</span> <span class="py">notary</span><span class="p">:</span> <span class="n">Party</span><span class="p">)</span> <span class="p">:</span> <span class="n">AbstractCashFlow</span><span class="p">(</span><span class="n">progressTracker</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Here, everything after <code class="docutils literal"><span class="pre">CashIssue</span></code> is specifying the arguments to the constructor of a flow. In Yaml, an object
+is specified as a set of <code class="docutils literal"><span class="pre">key:</span> <span class="pre">value</span></code> pairs and in our form, we separate them by commas. There are a few things
+to note about this syntax:</p>
+<ul class="simple">
+<li>When a parameter is of type <code class="docutils literal"><span class="pre">Amount&lt;Currency&gt;</span></code> you can write it as either one of the dollar symbol ($),
+pound (£), euro (€) followed by the amount as a decimal, or as the value followed by the ISO currency code
+e.g. &#8220;100.12 CHF&#8221;</li>
+<li><code class="docutils literal"><span class="pre">OpaqueBytes</span></code> is filled with the contents of whatever is provided as a string.</li>
+<li><code class="docutils literal"><span class="pre">Party</span></code> objects are looked up by name.</li>
+<li>Strings do not need to be surrounded by quotes unless they contain a comma or embedded quotes. This makes it
+a lot more convenient to type such strings.</li>
+</ul>
+<p>Other types also have sensible mappings from strings. See <a class="reference external" href="api/kotlin/corda/net.corda.jackson/-jackson-support/index.html">the defined parsers</a> for more information.</p>
+<p>Nested objects can be created using curly braces, as in <code class="docutils literal"><span class="pre">{</span> <span class="pre">a:</span> <span class="pre">1,</span> <span class="pre">b:</span> <span class="pre">2}</span></code>. This is helpful when no particular
+parser is defined for the type you need, for instance, if an API requires a <code class="docutils literal"><span class="pre">Pair&lt;String,</span> <span class="pre">Int&gt;</span></code>
+which could be represented as <code class="docutils literal"><span class="pre">{</span> <span class="pre">first:</span> <span class="pre">foo,</span> <span class="pre">second:</span> <span class="pre">123</span> <span class="pre">}</span></code>.</p>
+<p>The same syntax is also used to specify the parameters for RPCs, accessed via the <code class="docutils literal"><span class="pre">run</span></code> command, like this:</p>
+<p><code class="docutils literal"><span class="pre">run</span> <span class="pre">getCashBalances</span></code></p>
+</div>
+<div class="section" id="attachments">
+<h2>Attachments<a class="headerlink" href="#attachments" title="Permalink to this headline">¶</a></h2>
+<p>The shell can be used to upload and download attachments from the node interactively. To learn more, see
+the tutorial &#8220;<a class="reference internal" href="tutorial-attachments.html"><span class="doc">Using attachments</span></a>&#8221;.</p>
+</div>
+<div class="section" id="extending-the-shell">
+<h2>Extending the shell<a class="headerlink" href="#extending-the-shell" title="Permalink to this headline">¶</a></h2>
+<p>The shell can be extended using commands written in either Java or <a class="reference external" href="http://groovy-lang.org/">Groovy</a> (Groovy is a scripting language that
+is Java compatible). Such commands have full access to the node internal APIs and thus can be used to achieve
+almost anything.</p>
+<p>A full tutorial on how to write such commands is out of scope for this documentation, to learn more please
+refer to the <a class="reference external" href="http://www.crashub.org/">CRaSH</a> documentation. New commands can be placed in the <code class="docutils literal"><span class="pre">shell-commands</span></code> subdirectory in the
+node directory. Edits to existing commands will be used automatically, but at this time commands added after the
+node has started won&#8217;t be automatically detected. Commands should be named in all lower case with either a
+<code class="docutils literal"><span class="pre">.java</span></code> or <code class="docutils literal"><span class="pre">.groovy</span></code> extension.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Commands written in Groovy ignore Java security checks, so have unrestricted access to node and JVM
+internals regardless of any sandboxing that may be in place. Don&#8217;t allow untrusted users to edit files in the
+shell-commands directory!</p>
+</div>
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
+<p>The shell will be enhanced over time. The currently known limitations include:</p>
+<ul class="simple">
+<li>You cannot use it to upload/download attachments.</li>
+<li>SSH access is currently not available.</li>
+<li>There is no command completion for flows or RPCs.</li>
+<li>Command history is not preserved across restarts.</li>
+<li>The <code class="docutils literal"><span class="pre">jdbc</span></code> command requires you to explicitly log into the database first.</li>
+<li>Commands placed in the <code class="docutils literal"><span class="pre">shell-commands</span></code> directory are only noticed after the node is restarted.</li>
+<li>The <code class="docutils literal"><span class="pre">jul</span></code> command advertises access to logs, but it doesn&#8217;t work with the logging framework we&#8217;re using.</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="serialization.html" class="btn btn-neutral float-right" title="Object Serialization" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial-cordapp.html" class="btn btn-neutral" title="The example CorDapp" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, R3 Limited.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'latest',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

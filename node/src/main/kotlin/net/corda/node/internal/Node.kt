@@ -4,6 +4,7 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.NodeVersionInfo
@@ -12,7 +13,6 @@ import net.corda.core.node.Version
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -228,6 +228,8 @@ class Node(override val configuration: FullNodeConfiguration,
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
+    val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
+
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
@@ -250,6 +252,8 @@ class Node(override val configuration: FullNodeConfiguration,
                     }.
                     build().
                     start()
+
+            (startupComplete as SettableFuture<Unit>).set(Unit)
         }
 
         shutdownThread = thread(start = false) {

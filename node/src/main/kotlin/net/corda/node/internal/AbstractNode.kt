@@ -13,6 +13,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
@@ -183,6 +184,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     @Volatile var started = false
         private set
 
+    /** The implementation of the [CordaRPCOps] interface used by this node. */
+    open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
+
     open fun start(): AbstractNode {
         require(!started) { "Node has already been started" }
 
@@ -222,7 +226,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 isPreviousCheckpointsPresent = true
                 false
             }
-            startMessagingService(CordaRPCOpsImpl(services, smm, database))
+            startMessagingService(rpcOps)
             services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())

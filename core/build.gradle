@@ -100,8 +100,21 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 }
 
-configurations.compile {
-    // We want to use SLF4J's version of these binding: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
+configurations {
+    compile {
+        // We want to use SLF4J's version of these binding: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
 }

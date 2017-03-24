@@ -68,7 +68,6 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-
     compile project(':finance')
     compile project(':node-schemas')
     compile project(':node-api')
@@ -109,7 +108,8 @@ dependencies {
         exclude group: "asm"
     }
 
-    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
+    // Jackson support: serialisation to/from JSON, YAML, etc
+    compile project(':client:jackson')
 
     // Coda Hale's Metrics: for monitoring of key statistics
     compile "io.dropwizard.metrics:metrics-core:3.1.2"
@@ -127,7 +127,6 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:1.1.0"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':core')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
@@ -153,6 +152,9 @@ dependencies {
 
     // Netty: All of it.
     compile "io.netty:netty-all:$netty_version"
+
+    // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
+    compile "org.crashub:crash.shell:$crash_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

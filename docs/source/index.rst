@@ -72,6 +72,7 @@ Documentation Contents:
    :maxdepth: 2
    :caption: The Corda node
 
+   shell
    serialization
    clientrpc
    messaging
