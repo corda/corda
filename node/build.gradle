@@ -68,16 +68,8 @@ sourceSets {
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
 dependencies {
-    // Excluding javassist:javassist (which is a transitive dependency of core)
-    // because it clashes with Hibernate's transitive org.javassist:javassist
-    // dependency.
-    // TODO: Remove both of these exclusions once junit-quickcheck 0.8 is released.
-    compile (project(':finance')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
-    compile (project(':node-schemas')) {
-        exclude group: 'javassist', module: 'javassist'
-    }
+    compile project(':finance')
+    compile project(':node-schemas')
     compile project(':node-api')
     compile project(':client:rpc')
 
@@ -116,10 +108,6 @@ dependencies {
         exclude group: "asm"
     }
 
-    // For adding serialisation of file upload streams to RPC
-    // TODO: Remove this dependency and the code that requires it
-    compile "commons-fileupload:commons-fileupload:1.3.2"
-
     // Jackson support: serialisation to/from JSON, YAML, etc
     compile project(':client:jackson')
 
@@ -139,7 +127,6 @@ dependencies {
     testCompile "com.nhaarman:mockito-kotlin:1.1.0"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':core')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
