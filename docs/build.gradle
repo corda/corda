@@ -1,0 +1,36 @@
+apply plugin: 'org.jetbrains.dokka'
+
+dokka {
+    moduleName = 'corda'
+    outputDirectory = 'docs/build/html/api/kotlin'
+    processConfigurations = ['compile']
+    sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
+}
+
+task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+    moduleName = 'corda'
+    outputFormat = "javadoc"
+    outputDirectory = 'docs/build/html/api/javadoc'
+    processConfigurations = ['compile']
+    sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
+}
+
+task apidocs(dependsOn: [':jar', 'dokka', 'dokkaJavadoc'])
+task buildDocs(dependsOn: ['apidocs', 'copyRobots'])
+
+task copyRobots(type: Copy) {
+    from "robots.txt"
+    into "build/html"
+}
+
+task installDocsiteRequirements(type: Exec) {
+    workingDir 'docs'
+    commandLine 'cmd', '/c', 'sh ./install-docsite-requirements.sh' // Windows
+    commandLine './install-docsite-requirements.sh' // Linux
+}
+
+task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+    workingDir 'docs'
+    commandLine 'cmd', '/c', 'make clean html' // Windows
+    commandLine 'make clean html' // Linux
+}

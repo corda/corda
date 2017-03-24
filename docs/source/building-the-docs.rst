@@ -38,7 +38,7 @@ documentation by running the following script:
 
 .. sourcecode:: shell
 
-    docs/generate-docsite.sh
+    ./gradlew buildDocs
 
 Alternatively you can build non-HTML formats from the ``docs`` folder. Change directory to the folder and then run the
 following to see a list of all available formats:
