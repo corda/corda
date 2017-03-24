@@ -8,10 +8,7 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.*
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
@@ -526,5 +523,22 @@ class VaultSchemaTest {
             while (rs.next()) count++
             assertEquals(3, count)
         }
+    }
+
+    @Test
+    fun insertWithBigCompositeKey() {
+        val keys = (1..314).map { generateKeyPair().public.composite }
+        val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
+        val vaultStEntity = VaultStatesEntity().apply {
+            txId = SecureHash.randomSHA256().toString()
+            index = 314
+            stateStatus = Vault.StateStatus.UNCONSUMED
+            contractStateClassName = VaultNoopContract.VaultNoopState::class.java.name
+            notaryName = "Huge distributed notary"
+            notaryKey = bigNotaryKey.toBase58String()
+            recordedTime = Instant.now()
+        }
+        data.insert(vaultStEntity)
+        assertEquals(1, data.select(VaultSchema.VaultStates::class).get().count())
     }
 }
