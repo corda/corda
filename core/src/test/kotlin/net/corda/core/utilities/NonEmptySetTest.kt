@@ -4,10 +4,7 @@ import com.google.common.collect.testing.SetTestSuiteBuilder
 import com.google.common.collect.testing.TestIntegerSetGenerator
 import com.google.common.collect.testing.features.CollectionFeature
 import com.google.common.collect.testing.features.CollectionSize
-import com.google.common.collect.testing.testers.CollectionAddAllTester
-import com.google.common.collect.testing.testers.CollectionClearTester
-import com.google.common.collect.testing.testers.CollectionRemoveAllTester
-import com.google.common.collect.testing.testers.CollectionRetainAllTester
+import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -45,6 +42,7 @@ class NonEmptySetTest {
                     .suppressing(CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceNonEmptySubject"))
                     .suppressing(CollectionClearTester::class.java.methods.toList())
                     .suppressing(CollectionRetainAllTester::class.java.methods.toList())
+                    .suppressing(CollectionRemoveIfTester::class.java.getMethod("testRemoveIf_allPresent"))
                     .createTestSuite()
         }
 

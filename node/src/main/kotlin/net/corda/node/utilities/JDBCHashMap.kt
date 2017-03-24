@@ -272,6 +272,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(va
     override fun containsKey(key: K): Boolean = (get(key) != null)
 
     // We haven't implemented setValue.  We could implement if necessary.
+    // Make sure to remove the relevant suppressed tests in JDBCHashMapTestSuite.createMapTestSuite if this is implemented.
     private class NotReallyMutableEntry<K, V>(key: K, value: V, val seqNo: Int) : AbstractMap.SimpleImmutableEntry<K, V>(key, value), MutableMap.MutableEntry<K, V> {
         override fun setValue(newValue: V): V {
             throw UnsupportedOperationException("Not really mutable.  Implement if really required.")

@@ -38,7 +38,7 @@ dependencies {
     compile "junit:junit:$junit_version"
 
     // Guava: Google test library (collections test suite)
-    compile "com.google.guava:guava-testlib:19.0"
+    compile "com.google.guava:guava-testlib:$guava_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
