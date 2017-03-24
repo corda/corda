@@ -1,11 +1,11 @@
 buildscript {
     // For sharing constants between builds
-    Properties props = new Properties()
-    file("publish.properties").withInputStream { props.load(it) }
+    Properties constants = new Properties()
+    file("constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
     ext.corda_version = "0.10-SNAPSHOT"
-    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+    ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
     //
@@ -22,7 +22,7 @@ buildscript {
     ext.slf4j_version = '1.7.24'
     ext.log4j_version = '2.7'
     ext.bouncycastle_version = '1.56'
-    ext.guava_version = '19.0'
+    ext.guava_version = constants.getProperty("guavaVersion")
     ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.5.Final'

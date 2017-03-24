@@ -4,11 +4,10 @@ apply plugin: 'com.jfrog.bintray'
 
 // Used for bootstrapping project
 buildscript {
-    // For sharing constants between builds
-    Properties props = new Properties()
-    file("../../publish.properties").withInputStream { props.load(it) }
+    Properties constants = new Properties()
+    file("../../constants.properties").withInputStream { constants.load(it) }
 
-    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+    ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     repositories {
         jcenter()
