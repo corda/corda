@@ -86,3 +86,9 @@ node/config/currentView
 PLAN
 NOTES
 TODO
+
+# SGX
+/sgx-jvm/jdk8u/
+/sgx-jvm/avian/
+/sgx-jvm/linux-sgx/
+/sgx-jvm/jvm-enclave/proguard.jar

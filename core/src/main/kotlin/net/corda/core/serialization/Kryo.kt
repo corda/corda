@@ -12,6 +12,7 @@ import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.SgxSupport
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
@@ -148,13 +149,16 @@ fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): Serialized
  * set via the constructor and the class is immutable.
  */
 class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
-    val props = klass.memberProperties.sortedBy { it.name }
-    val propsByName = props.associateBy { it.name }
-    val constructor = klass.primaryConstructor!!
+    val props by lazy { klass.memberProperties.sortedBy { it.name } }
+    val propsByName by lazy { props.associateBy { it.name } }
+    val constructor by lazy { klass.primaryConstructor!! }
 
     init {
-        // Verify that this class is immutable (all properties are final)
-        assert(props.none { it is KMutableProperty<*> })
+        // Verify that this class is immutable (all properties are final).
+        // We disable this check inside SGX as the reflection blows up.
+        if (!SgxSupport.isInsideEnclave) {
+            assert(props.none { it is KMutableProperty<*> })
+        }
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.
