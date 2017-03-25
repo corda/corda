@@ -1,7 +1,12 @@
 package net.corda.demobench.model
 
+import com.google.common.net.HostAndPort
+import net.corda.node.internal.NetworkMapInfo
+import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.nodeapi.User
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import kotlin.test.*
 import org.junit.Test
 
@@ -159,6 +164,33 @@ class NodeConfigTest {
     }
 
     @Test
+    fun `reading node configuration`() {
+        val config = createConfig(
+            legalName = "My Name",
+            nearestCity = "Stockholm",
+            p2pPort = 10001,
+            rpcPort = 40002,
+            webPort = 20001,
+            h2Port = 30001,
+            services = listOf("my.service"),
+            users = listOf(user("jenny"))
+        )
+        config.networkMap = NetworkMapConfig("Notary", 12345)
+
+        val fullConfig = FullNodeConfiguration(Paths.get("."), config.toFileConfig())
+
+        assertEquals("My Name", fullConfig.myLegalName)
+        assertEquals("Stockholm", fullConfig.nearestCity)
+        assertEquals(localPort(20001), fullConfig.webAddress)
+        assertEquals(localPort(40002), fullConfig.rpcAddress)
+        assertEquals(localPort(10001), fullConfig.p2pAddress)
+        assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
+        assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
+        assertEquals(NetworkMapInfo(localPort(12345), "Notary"), fullConfig.networkMapService)
+        assertTrue(fullConfig.useTestClock)
+    }
+
+    @Test
     fun `test moving`() {
         val config = createConfig(legalName = "My Name")
 
@@ -190,4 +222,5 @@ class NodeConfigTest {
             users = users
     )
 
+    private fun localPort(port: Int) = HostAndPort.fromParts("localhost", port)
 }

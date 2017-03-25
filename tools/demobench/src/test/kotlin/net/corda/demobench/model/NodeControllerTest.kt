@@ -1,5 +1,6 @@
 package net.corda.demobench.model
 
+import net.corda.nodeapi.User
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*

@@ -1,6 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
+import net.corda.nodeapi.User
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
