@@ -72,7 +72,7 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
 class CordaClassResolverTests {
     @Test
     fun `Annotation on enum works for specialised entries`() {
-        CordaClassResolver(EmptyWhitelist).getRegistration(Foo.Bar::class.java)
+        CordaClassResolver(EmptyWhitelist).getRegistration(Foo.Bar.javaClass)
     }
 
     @Test

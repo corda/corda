@@ -17,7 +17,12 @@ import java.util.function.Function
 /**
  * This is a less temporary, demo-oriented way of initiating processing of temporal events.
  */
-object UpdateBusinessDayFlow {
+
+/**
+ * Workaround for `"bound callable references" is only available since language version 1.1` when using kotlin 1.1.1 plugin.
+ * TODO: Change this back to `object` when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
+ */
+class UpdateBusinessDayFlow {
 
     // This is not really a HandshakeMessage but needs to be so that the send uses the default session ID. This will
     // resolve itself when the flow session stuff is done.

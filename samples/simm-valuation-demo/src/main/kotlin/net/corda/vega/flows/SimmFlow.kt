@@ -36,7 +36,12 @@ import java.time.LocalDate
  * will independently value the portfolio using a SIMM implementation and then come to consensus over those valuations.
  * It can also update an existing portfolio and revalue it.
  */
-object SimmFlow {
+
+/**
+ * Workaround for `"bound callable references" is only available since language version 1.1` when using kotlin 1.1.1 plugin.
+ * TODO: Change this back to `object` when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
+ */
+class SimmFlow {
     /**
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
@@ -54,7 +59,7 @@ object SimmFlow {
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
-    : FlowLogic<RevisionedState<PortfolioState.Update>>() {
+        : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
 
         lateinit var myIdentity: Party
