@@ -279,7 +279,9 @@ fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteCo
 /**
  * [ColumnType] for marshalling to/from database on behalf of [PublicKey].
  */
-// TODO Rethink how we store CompositeKeys in db.
+// TODO Rethink how we store CompositeKeys in db. Currently they are stored as Base58 strings and as we don't know the size
+//  of a CompositeKey they could be CLOB fields. Given the time to fetch these types and that they are unsuitable as table keys,
+//  having a shorter primary key (such as SHA256 hash or a UUID generated on demand) that references a common composite key table may make more sense.
 object PublicKeyColumnType : ColumnType() {
     override fun sqlType(): String = "VARCHAR"
 

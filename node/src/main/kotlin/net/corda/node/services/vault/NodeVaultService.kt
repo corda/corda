@@ -16,6 +16,8 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite
+import net.corda.core.crypto.toBase58String
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault

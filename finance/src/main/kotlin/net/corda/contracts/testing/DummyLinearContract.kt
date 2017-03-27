@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.FilterOn
 import net.corda.core.contracts.clauses.verifyClause
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite
 import java.security.PublicKey
@@ -23,7 +24,7 @@ class DummyLinearContract: Contract {
             val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState {
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.composite.containsAny(ourKeys) }
+            return participants.any { (it is CompositeKey && it.containsAny(ourKeys)) || it in ourKeys }
         }
     }
 }
