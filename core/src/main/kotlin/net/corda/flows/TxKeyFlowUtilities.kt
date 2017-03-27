@@ -17,7 +17,7 @@ object TxKeyFlowUtilities {
      */
     @Suspendable
     fun receiveKey(flow: FlowLogic<*>, otherSide: Party): Pair<CompositeKey, Certificate?> {
-        val untrustedKey = flow.receive<Response>(otherSide)
+        val untrustedKey = flow.receive<ProvidedTransactionKey>(otherSide)
         return untrustedKey.unwrap {
             // TODO: Verify the certificate connects the given key to the counterparty, once we have certificates
             Pair(it.key, it.certificate)
@@ -34,10 +34,10 @@ object TxKeyFlowUtilities {
         val key = flow.serviceHub.keyManagementService.freshKey().public.composite
         // TODO: Generate and sign certificate for the key, once we have signing support for composite keys
         //       (in this case the legal identity key)
-        flow.send(otherSide, Response(key, null))
+        flow.send(otherSide, ProvidedTransactionKey(key, null))
         return key
     }
 
     @CordaSerializable
-    data class Response(val key: CompositeKey, val certificate: Certificate?)
+    data class ProvidedTransactionKey(val key: CompositeKey, val certificate: Certificate?)
 }
