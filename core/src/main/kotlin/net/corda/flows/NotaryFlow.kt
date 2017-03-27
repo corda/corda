@@ -15,11 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
-/**
- * Workaround for `"bound callable references" is only available since language version 1.1` when using kotlin 1.1.1 plugin.
- * TODO: Change this back to `object` when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
- */
-class NotaryFlow {
+object NotaryFlow {
     /**
      * A flow to be used by a party for obtaining signature(s) from a [NotaryService] ascertaining the transaction
      * timestamp is correct and none of its inputs have been used in another completed transaction.

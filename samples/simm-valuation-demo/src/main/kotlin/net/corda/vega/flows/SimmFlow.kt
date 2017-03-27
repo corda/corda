@@ -37,11 +37,7 @@ import java.time.LocalDate
  * It can also update an existing portfolio and revalue it.
  */
 
-/**
- * Workaround for `"bound callable references" is only available since language version 1.1` when using kotlin 1.1.1 plugin.
- * TODO: Change this back to `object` when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
- */
-class SimmFlow {
+object SimmFlow {
     /**
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
      * portfolio update offer.
