@@ -269,7 +269,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             val flowHandle = if (existingSwap == null) {
-                // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
+                // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
                 @Suppress("UNSUPPORTED_FEATURE")
                 rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate)
             } else {

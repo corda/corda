@@ -76,7 +76,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * @return a list of encoded signer public keys - one for every transaction
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<String> {
-        // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
+        // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
         @Suppress("UNSUPPORTED_FEATURE")
         val signatureFutures = transactions.map { rpc.startFlow(NotaryFlow::Client, it).returnValue }
         return Futures.allAsList(signatureFutures).getOrThrow().map { it.map { it.by.toStringShort() }.joinToString() }
