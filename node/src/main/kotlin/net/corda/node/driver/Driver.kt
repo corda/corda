@@ -1,6 +1,7 @@
 @file:JvmName("Driver")
 package net.corda.node.driver
 
+import co.paralleluniverse.common.util.ProcessUtil
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
@@ -15,6 +16,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.ProcessUtilities
 import net.corda.core.utilities.loggerFor
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.config.ConfigHelper
@@ -552,78 +554,53 @@ class DriverDSL(
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
 
         private fun startNode(
-                executorService: ScheduledExecutorService,
+                executorService: ListeningScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
                 quasarJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>
         ): ListenableFuture<Process> {
-            // Write node.conf
-            writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
+            return executorService.submit<Process> {
+                // Write node.conf
+                writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
 
-            val className = "net.corda.node.Corda" // cannot directly get class for this, so just use string
-            val separator = System.getProperty("file.separator")
-            val classpath = System.getProperty("java.class.path")
-            val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
+                val systemProperties = mapOf(
+                        "name" to nodeConf.myLegalName,
+                        "visualvm.display.name" to "Corda"
+                ) + overriddenSystemProperties
+                val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                        "-javaagent:$quasarJarPath"
+                val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-            val debugPortArg = if (debugPort != null)
-                "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"
-            else
-                ""
-
-            val systemProperties = mapOf(
-                    "name" to nodeConf.myLegalName,
-                    "visualvm.display.name" to "Corda"
-            ) + overriddenSystemProperties
-
-            val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
-            val javaArgs = listOf(path) +
-                    systemProperties.map { "-D${it.key}=${it.value}" } +
-                    listOf(
-                            "-javaagent:$quasarJarPath",
-                            debugPortArg,
-                            "-Xmx200m",
-                            "-XX:+UseG1GC",
-                            "-cp", classpath, className,
-                            "--base-directory=${nodeConf.baseDirectory}",
-                            "--logging-level=$loggingLevel",
-                            "--no-local-shell"
-                    ).filter(String::isNotEmpty)
-            val process = ProcessBuilder(javaArgs)
-                    .redirectError((nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log").toFile())
-                    .inheritIO()
-                    .directory(nodeConf.baseDirectory.toFile())
-                    .start()
-            // TODO There is a race condition here. Even though the messaging address is bound it may be the case that
-            // the handlers for the advertised services are not yet registered. Needs rethinking.
-            return addressMustBeBound(executorService, nodeConf.p2pAddress).map { process }
+                ProcessUtilities.startJavaProcess(
+                        className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
+                        arguments = listOf(
+                                "--base-directory=${nodeConf.baseDirectory}",
+                                "--logging-level=$loggingLevel",
+                                "--no-local-shell"
+                        ),
+                        extraJvmArguments = extraJvmArguments,
+                        errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
+                        workingDirectory = nodeConf.baseDirectory
+                )
+            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.p2pAddress).map { process } }
         }
 
         private fun startWebserver(
-                executorService: ScheduledExecutorService,
+                executorService: ListeningScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
-                debugPort: Int?): ListenableFuture<Process> {
-            val className = "net.corda.webserver.WebServer" // cannot directly get class for this, so just use string
-            val separator = System.getProperty("file.separator")
-            val classpath = System.getProperty("java.class.path")
-            val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
-
-            val debugPortArg = if (debugPort != null)
-                listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
-            else
-                emptyList()
-
-            val javaArgs = listOf(path) +
-                    listOf("-Dname=node-${nodeConf.p2pAddress}-webserver") + debugPortArg +
-                    listOf(
-                            "-cp", classpath, className,
-                            "--base-directory", nodeConf.baseDirectory.toString())
-            val builder = ProcessBuilder(javaArgs)
-            builder.redirectError(Paths.get("error.$className.log").toFile())
-            builder.inheritIO()
-            builder.directory(nodeConf.baseDirectory.toFile())
-            val process = builder.start()
-            return addressMustBeBound(executorService, nodeConf.webAddress).map { process }
+                debugPort: Int?
+        ): ListenableFuture<Process> {
+            return executorService.submit<Process> {
+                val className = "net.corda.webserver.WebServer"
+                ProcessUtilities.startJavaProcess(
+                        className = className, // cannot directly get class for this, so just use string
+                        arguments = listOf("--base-directory", nodeConf.baseDirectory.toString()),
+                        jdwpPort = debugPort,
+                        extraJvmArguments = listOf("-Dname=node-${nodeConf.p2pAddress}-webserver"),
+                        errorLogPath = Paths.get("error.$className.log")
+                )
+            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.webAddress).map { process } }
         }
     }
 }

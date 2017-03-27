@@ -11,6 +11,7 @@ import net.corda.core.div
 import net.corda.core.map
 import net.corda.core.random63BitValue
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.ProcessUtilities
 import net.corda.core.utilities.loggerFor
 import net.corda.node.driver.*
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -240,35 +241,16 @@ data class VerifierDriverDSL(
     override fun startVerifier(address: HostAndPort): ListenableFuture<VerifierHandle> {
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
-        val verifierName = "verifier$id"
-        val baseDirectory = driverDSL.driverDirectory / verifierName
-        val config = createConfiguration(baseDirectory, address)
-        val configFilename = "verifier.conf"
-        writeConfig(baseDirectory, configFilename, config)
-        Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
-
-        val className = Verifier::class.java.name
-        val separator = System.getProperty("file.separator")
-        val classpath = System.getProperty("java.class.path")
-        val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
-        val debugPortArg = if (driverDSL.isDebug)
-            listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=${driverDSL.debugPortAllocation.nextPort()}")
-        else
-            emptyList()
-
-        val javaArgs =
-                listOf(path) + debugPortArg +
-                        listOf(
-                                "-Xmx200m",
-                                "-XX:+UseG1GC",
-                                "-cp", classpath,
-                                className,
-                                baseDirectory.toString()
-                        )
-        val builder = ProcessBuilder(javaArgs)
-        builder.inheritIO()
-
-        val processFuture = driverDSL.executorService.submit<Process> { builder.start() }
+        val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
+        val processFuture = driverDSL.executorService.submit<Process> {
+            val verifierName = "verifier$id"
+            val baseDirectory = driverDSL.driverDirectory / verifierName
+            val config = createConfiguration(baseDirectory, address)
+            val configFilename = "verifier.conf"
+            writeConfig(baseDirectory, configFilename, config)
+            Verifier.loadConfiguration(baseDirectory, baseDirectory / configFilename).configureDevKeyAndTrustStores(verifierName)
+            ProcessUtilities.startJavaProcess<Verifier>(listOf(baseDirectory.toString()), jdwpPort = jdwpPort)
+        }
         driverDSL.shutdownManager.registerProcessShutdown(processFuture)
         return processFuture.map(::VerifierHandle)
     }
