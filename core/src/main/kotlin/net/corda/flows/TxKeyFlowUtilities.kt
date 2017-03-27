@@ -1,13 +1,11 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.unwrap
+import java.security.PublicKey
 import java.security.cert.Certificate
 
 object TxKeyFlowUtilities {
@@ -16,7 +14,7 @@ object TxKeyFlowUtilities {
      * process.
      */
     @Suspendable
-    fun receiveKey(flow: FlowLogic<*>, otherSide: Party): Pair<CompositeKey, Certificate?> {
+    fun receiveKey(flow: FlowLogic<*>, otherSide: Party): Pair<PublicKey, Certificate?> {
         val untrustedKey = flow.receive<ProvidedTransactionKey>(otherSide)
         return untrustedKey.unwrap {
             // TODO: Verify the certificate connects the given key to the counterparty, once we have certificates
@@ -30,8 +28,8 @@ object TxKeyFlowUtilities {
      * a transaction with the counterparty, in order to avoid a DoS risk.
      */
     @Suspendable
-    fun provideKey(flow: FlowLogic<*>, otherSide: Party): CompositeKey {
-        val key = flow.serviceHub.keyManagementService.freshKey().public.composite
+    fun provideKey(flow: FlowLogic<*>, otherSide: Party): PublicKey {
+        val key = flow.serviceHub.keyManagementService.freshKey().public
         // TODO: Generate and sign certificate for the key, once we have signing support for composite keys
         //       (in this case the legal identity key)
         flow.send(otherSide, ProvidedTransactionKey(key, null))
@@ -39,5 +37,5 @@ object TxKeyFlowUtilities {
     }
 
     @CordaSerializable
-    data class ProvidedTransactionKey(val key: CompositeKey, val certificate: Certificate?)
+    data class ProvidedTransactionKey(val key: PublicKey, val certificate: Certificate?)
 }

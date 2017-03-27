@@ -1,11 +1,11 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TxKeyFlowUtilities
+import java.security.PublicKey
 import java.security.cert.Certificate
 
 /**
@@ -19,7 +19,7 @@ object TxKeyFlow {
     }
 
     class Requester(val otherSide: Party,
-                    override val progressTracker: ProgressTracker): FlowLogic<Pair<CompositeKey, Certificate?>>() {
+                    override val progressTracker: ProgressTracker): FlowLogic<Pair<PublicKey, Certificate?>>() {
         constructor(otherSide: Party) : this(otherSide, tracker())
 
         companion object {
@@ -29,7 +29,7 @@ object TxKeyFlow {
         }
 
         @Suspendable
-        override fun call(): Pair<CompositeKey, Certificate?> {
+        override fun call(): Pair<PublicKey, Certificate?> {
             progressTracker.currentStep = AWAITING_KEY
             return TxKeyFlowUtilities.receiveKey(this, otherSide)
         }
@@ -40,7 +40,7 @@ object TxKeyFlow {
      * counterparty and as the result from the flow.
      */
     class Provider(val otherSide: Party,
-                   override val progressTracker: ProgressTracker): FlowLogic<CompositeKey>() {
+                   override val progressTracker: ProgressTracker): FlowLogic<PublicKey>() {
         constructor(otherSide: Party) : this(otherSide, tracker())
 
         companion object {
@@ -50,7 +50,7 @@ object TxKeyFlow {
         }
 
         @Suspendable
-        override fun call(): CompositeKey {
+        override fun call(): PublicKey {
             progressTracker.currentStep == SENDING_KEY
             return TxKeyFlowUtilities.provideKey(this, otherSide)
         }
