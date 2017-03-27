@@ -36,7 +36,6 @@ import java.time.LocalDate
  * will independently value the portfolio using a SIMM implementation and then come to consensus over those valuations.
  * It can also update an existing portfolio and revalue it.
  */
-
 object SimmFlow {
     /**
      * Represents a new portfolio offer unless the stateRef field is non-null, at which point it represents a
@@ -55,7 +54,7 @@ object SimmFlow {
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
-        : FlowLogic<RevisionedState<PortfolioState.Update>>() {
+    : FlowLogic<RevisionedState<PortfolioState.Update>>() {
         constructor(otherParty: Party, valuationDate: LocalDate) : this(otherParty, valuationDate, null)
 
         lateinit var myIdentity: Party

@@ -17,7 +17,6 @@ import java.util.function.Function
 /**
  * This is a less temporary, demo-oriented way of initiating processing of temporal events.
  */
-
 object UpdateBusinessDayFlow {
 
     // This is not really a HandshakeMessage but needs to be so that the send uses the default session ID. This will
