@@ -429,4 +429,10 @@ fun codePointsString(vararg codePoints: Int): String {
  * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
  * empty inputs are used to subscribe({}, {}).
  */
-fun <T> Observable<T>.notUsed() = this.subscribe({}, {}).unsubscribe()
+fun <T> Observable<T>.notUsed() {
+    try {
+        this.subscribe({}, {}).unsubscribe()
+    } catch (e: Exception) {
+        // Swallow any other exceptions as well.
+    }
+}

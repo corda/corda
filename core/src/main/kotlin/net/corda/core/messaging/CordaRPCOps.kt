@@ -220,14 +220,22 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  * @param returnValue A [ListenableFuture] of the flow's return value.
  */
 @CordaSerializable
-data class FlowHandle<A>(
+data class FlowHandle<A> (
         val id: StateMachineRunId,
         val progress: Observable<String>,
-        val returnValue: ListenableFuture<A>) {
+        val returnValue: ListenableFuture<A>) : AutoCloseable {
 
-    /* Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources. */
+    /** Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources. */
     fun discard() {
         returnValue.cancel(false)
         progress.notUsed()
+    }
+
+    /**
+     * GC will try to release server resources, but note this will not work if one subscribes on progress [Observable],
+     * but then forgets to unsubscribe.
+     */
+    override fun close() {
+        discard()
     }
 }
