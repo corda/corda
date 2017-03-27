@@ -82,18 +82,4 @@ class AffinityExecutorTests {
         latch.countDown()
         executor.flush()
     }
-
-    @Test fun `exceptions are reported to the specified handler`() {
-        val exception = AtomicReference<Throwable?>()
-        // Run in a separate thread to avoid messing with any default exception handlers in the unit test thread.
-        thread {
-            Thread.currentThread().setUncaughtExceptionHandler { thread, throwable -> exception.set(throwable) }
-            _executor = AffinityExecutor.ServiceAffinityExecutor("test3", 1)
-            executor.execute {
-                throw Exception("foo")
-            }
-            executor.flush()
-        }.join()
-        assertEquals("foo", exception.get()?.message)
-    }
 }

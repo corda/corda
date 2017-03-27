@@ -56,6 +56,7 @@ class Node(override val configuration: FullNodeConfiguration,
     override val log: Logger get() = logger
     override val version: Version get() = nodeVersionInfo.version
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
+    override fun makeTransactionVerifierService() = (net as NodeMessagingClient).verifierService
 
     // DISCUSSION
     //
@@ -136,7 +137,8 @@ class Node(override val configuration: FullNodeConfiguration,
                 myIdentityOrNullIfNetworkMapService,
                 serverThread,
                 database,
-                networkMapRegistrationFuture)
+                networkMapRegistrationFuture,
+                services.monitoringService)
     }
 
     private fun makeLocalMessageBroker(): HostAndPort {

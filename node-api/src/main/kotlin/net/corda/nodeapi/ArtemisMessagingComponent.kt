@@ -2,7 +2,6 @@ package net.corda.nodeapi
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
@@ -10,6 +9,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.nodeapi.config.SSLConfiguration
 import java.security.KeyStore
 
 /**

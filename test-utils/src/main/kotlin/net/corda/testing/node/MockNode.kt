@@ -22,6 +22,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -197,6 +198,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun findMyLocation(): PhysicalLocation? = null
 
         override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
+
+        override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
         override fun start(): MockNode {
             super.start()

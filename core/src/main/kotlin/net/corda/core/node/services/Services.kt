@@ -7,6 +7,7 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
@@ -365,4 +366,15 @@ interface SchedulerService {
 
     /** Unschedule all activity for a TX output, probably because it was consumed. */
     fun unscheduleStateActivity(ref: StateRef)
+}
+
+/**
+ * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
+ */
+interface TransactionVerifierService {
+    /**
+     * @param transaction The transaction to be verified.
+     * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
+     */
+    fun verify(transaction: LedgerTransaction): ListenableFuture<*>
 }

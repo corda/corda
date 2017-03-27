@@ -1,10 +1,10 @@
 package net.corda.testing.messaging
 
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*
 

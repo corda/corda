@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.crypto.toStringShort
 import net.corda.core.div
 import net.corda.core.getOrThrow
@@ -12,6 +11,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.NotaryFlow
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import java.nio.file.Path
 import java.nio.file.Paths

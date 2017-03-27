@@ -43,6 +43,7 @@ interface ServiceHub : ServicesForResolution {
     override val storageService: StorageService
     val networkMapCache: NetworkMapCache
     val schedulerService: SchedulerService
+    val transactionVerifierService: TransactionVerifierService
     val clock: Clock
     val myInfo: NodeInfo
 

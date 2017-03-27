@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.ThreadBox
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.CordaRPCOps
@@ -12,6 +11,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCException
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.rpcLog
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient

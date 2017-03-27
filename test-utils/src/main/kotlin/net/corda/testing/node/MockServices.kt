@@ -18,6 +18,7 @@ import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransacti
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.MOCK_VERSION
@@ -68,6 +69,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite), MOCK_VERSION)
+    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     fun makeVaultService(dataSourceProps: Properties): VaultService {
         val vaultService = NodeVaultService(this, dataSourceProps)
