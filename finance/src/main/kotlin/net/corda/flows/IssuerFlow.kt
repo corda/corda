@@ -70,8 +70,6 @@ object IssuerFlow {
             return txn
         }
 
-        // TODO: resolve race conditions caused by the 2 separate Cashflow commands (Issue and Pay) not reusing the same
-        //       state references (thus causing Notarisation double spend exceptions).
         @Suspendable
         private fun issueCashTo(amount: Amount<Currency>,
                                 issueTo: Party,

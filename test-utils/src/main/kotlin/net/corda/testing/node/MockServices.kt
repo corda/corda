@@ -15,6 +15,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
+import net.corda.node.services.schema.HibernateObserver
+import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.MOCK_VERSION
@@ -65,6 +68,13 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public.composite), MOCK_VERSION)
+
+    fun makeVaultService(dataSourceProps: Properties): VaultService {
+        val vaultService = NodeVaultService(this, dataSourceProps)
+        // Vault cash spending requires access to contract_cash_states and their updates
+        HibernateObserver(vaultService, NodeSchemaService())
+        return vaultService
+    }
 }
 
 @ThreadSafe
@@ -170,7 +180,7 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
 fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().toString()): Properties {
     val props = Properties()
     props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;DB_CLOSE_ON_EXIT=FALSE")
+    props.setProperty("dataSource.url", "jdbc:h2:mem:${nodeName}_persistence;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE")
     props.setProperty("dataSource.user", "sa")
     props.setProperty("dataSource.password", "")
     return props

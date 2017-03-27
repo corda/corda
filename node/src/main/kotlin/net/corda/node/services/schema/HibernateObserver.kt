@@ -4,12 +4,13 @@ import kotlinx.support.jdk7.use
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.schemas.QueryableState
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.api.SchemaService
 import org.hibernate.SessionFactory
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
@@ -25,17 +26,19 @@ import java.util.concurrent.ConcurrentHashMap
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver(services: ServiceHubInternal) {
+class HibernateObserver(vaultService: VaultService, val schemaService: SchemaService) {
     companion object {
         val logger = loggerFor<HibernateObserver>()
     }
 
-    val schemaService = services.schemaService
     // TODO: make this a guava cache or similar to limit ability for this to grow forever.
     val sessionFactories = ConcurrentHashMap<MappedSchema, SessionFactory>()
 
     init {
-        services.vaultService.rawUpdates.subscribe { persist(it.produced) }
+        schemaService.schemaOptions.map { it.key }.forEach {
+            makeSessionFactoryForSchema(it)
+        }
+        vaultService.rawUpdates.subscribe { persist(it.produced) }
     }
 
     private fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {
