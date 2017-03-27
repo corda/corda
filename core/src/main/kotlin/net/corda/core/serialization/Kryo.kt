@@ -367,7 +367,7 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
-// TODO Implement standardized serialization of CompositeKeys.
+// TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
 @ThreadSafe
 object CompositeKeySerializer : Serializer<CompositeKey>() {
     override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
