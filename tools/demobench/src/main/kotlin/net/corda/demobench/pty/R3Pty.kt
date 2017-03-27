@@ -47,6 +47,9 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
         val environment = HashMap<String, String>(envs)
         if (!UIUtil.isWindows) {
             environment["TERM"] = "xterm"
+
+            // This environment variable is specific to MacOSX.
+            environment.remove("TERM_PROGRAM")
         }
 
         val connector = createTtyConnector(args, environment, workingDir)
