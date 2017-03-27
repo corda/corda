@@ -72,7 +72,9 @@ class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
 class CordaClassResolverTests {
     @Test
     fun `Annotation on enum works for specialised entries`() {
-        CordaClassResolver(EmptyWhitelist).getRegistration(Foo.Bar.javaClass)
+        // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixed the bug.
+        @Suppress("UNSUPPORTED_FEATURE")
+        CordaClassResolver(EmptyWhitelist).getRegistration(Foo.Bar::class.java)
     }
 
     @Test
