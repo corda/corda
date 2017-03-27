@@ -222,7 +222,7 @@ class InMemoryMessagingNetwork(
             override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
                 val nextIndex = previousPicks.compute(service) { _key, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
-                }
+                }!!
                 return pickFrom[nextIndex]
             }
         }
