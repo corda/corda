@@ -97,6 +97,8 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
         val priorDemoDate = fetchDemoDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
+            // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
+            @Suppress("UNSUPPORTED_FEATURE")
             rpc.startFlow(UpdateBusinessDayFlow::Broadcast, newDemoDate).returnValue.getOrThrow()
             return Response.ok().build()
         }
