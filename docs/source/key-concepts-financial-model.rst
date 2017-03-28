@@ -11,7 +11,8 @@ The `Amount <api/net.corda.core.contracts/-amount/index.html>`_ class is used to
 fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
 the *token*. For instance it can be the standard JDK type ``Currency``, or an ``Issued`` instance, or this can be
 a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
-for whatever the obligation is to be settled in).
+for whatever the obligation is to be settled in). Custom token types should implement ``TokenizableAssetInfo`` to allow the
+``Amount`` conversion helpers ``fromDecimal`` and ``toDecimal`` to calculate the correct ``displayTokenSize``.
 
 .. note:: Fungible is used here to mean that instances of an asset is interchangeable for any other identical instance,
           and that they can be split/merged. For example a £5 note can reasonably be exchanged for any other £5 note, and
@@ -30,17 +31,26 @@ Here are some examples:
       // A quantity of a product governed by specific obligation terms
       Amount<Obligation.Terms<P>>
 
-``Amount`` represents quantities as integers. For currencies the quantity represents pennies, cents or whatever
-else the smallest integer amount for that currency is. You cannot use ``Amount`` to represent negative quantities
-or fractional quantities: if you wish to do this then you must use a different type e.g. ``BigDecimal``. ``Amount``
-defines methods to do addition and subtraction and these methods verify that the tokens on both sides of the operator
-are equal (these are operator overloads in Kotlin and can be used as regular methods from Java). There are also
-methods to do multiplication and division by integer amounts.
+``Amount`` represents quantities as integers. You cannot use ``Amount`` to represent negative quantities,
+or fractional quantities: if you wish to do this then you must use a different type, typically ``BigDecimal``.
+For currencies the quantity represents pennies, cents, or whatever else is the smallest integer amount for that currency,
+but for other assets it might mean anything e.g. 1000 tonnes of coal, or kilowatt-hours. The precise conversion ratio
+to displayable amounts is via the ``displayTokenSize`` property, which is the ``BigDecimal`` numeric representation of
+a single token as it would be written. ``Amount`` also defines methods to do overflow/underflow checked addition and subtraction
+(these are operator overloads in Kotlin and can be used as regular methods from Java). More complex calculations should typically
+be done in ``BigDecimal`` and converted back to ensure due consideration of rounding and to ensure token conservation.
 
 ``Issued`` refers to a product (which can be cash, a cash-like thing, assets, or generally anything else that's
 quantifiable with integer quantities) and an associated ``PartyAndReference`` that describes the issuer of that contract.
 An issued product typically follows a lifecycle which includes issuance, movement and exiting from the ledger (for example,
 see the ``Cash`` contract and its associated *state* and *commands*)
+
+To represent movements of ``Amount`` tokens use the ``AmountTransfer`` type, which records the quantity and perspective
+of a transfer. Positive values will indicate a movement of tokens from a ``source`` e.g. a ``Party``, or ``CompositeKey``
+to a ``destination``. Negative values can be used to indicate a retrograde motion of tokens from ``destination``
+to ``source``. ``AmountTransfer`` supports addition (as a Kotlin operator, or Java method) to provide netting
+and aggregation of flows. The ``apply`` method can be used to process a list of attributed ``Amount`` objects in a
+``List<SourceAndAmount>`` to carry out the actual transfer.
 
 Financial states
 ----------------

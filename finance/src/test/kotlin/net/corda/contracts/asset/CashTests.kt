@@ -205,7 +205,7 @@ class CashTests {
         // Can't use an issue command to lower the amount.
         transaction {
             input { inState }
-            output { inState.copy(amount = inState.amount / 2) }
+            output { inState.copy(amount = inState.amount.splitEvenly(2).first()) }
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output values sum to more than the inputs"
         }
@@ -232,7 +232,7 @@ class CashTests {
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             tweak {
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount.splitEvenly(2).first()) }
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             this.verifies()
@@ -265,20 +265,22 @@ class CashTests {
             command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             tweak {
                 input { inState }
-                for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
+                val splits4 = inState.amount.splitEvenly(4)
+                for (i in 0..3) output { inState.copy(amount = splits4[i]) }
                 this.verifies()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
-                for (i in 1..4) input { inState.copy(amount = inState.amount / 4) }
-                output { inState.copy(amount = inState.amount / 2) }
-                output { inState.copy(amount = inState.amount / 2) }
+                val splits2 = inState.amount.splitEvenly(2)
+                val splits4 = inState.amount.splitEvenly(4)
+                for (i in 0..3) input { inState.copy(amount = splits4[i]) }
+                for (i in 0..1) output { inState.copy(amount = splits2[i]) }
                 this.verifies()
             }
             // Merging 2 inputs into 1 works.
             tweak {
-                input { inState.copy(amount = inState.amount / 2) }
-                input { inState.copy(amount = inState.amount / 2) }
+                val splits2 = inState.amount.splitEvenly(2)
+                for (i in 0..1) input { inState.copy(amount = splits2[i]) }
                 output { inState }
                 this.verifies()
             }
@@ -310,9 +312,9 @@ class CashTests {
         }
         // Can't change deposit reference when splitting.
         transaction {
+            val splits2 = inState.amount.splitEvenly(2)
             input { inState }
-            output { outState.copy(amount = inState.amount / 2).editDepositRef(0) }
-            output { outState.copy(amount = inState.amount / 2).editDepositRef(1) }
+            for (i in 0..1) output { outState.copy(amount = splits2[i]).editDepositRef(i.toByte()) }
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
@@ -513,7 +515,7 @@ class CashTests {
         val wtx = makeExit(50.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(1, wtx.outputs.size)
-        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount / 2), wtx.outputs[0].data)
+        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.splitEvenly(2).first()), wtx.outputs[0].data)
     }
 
     /**

@@ -183,7 +183,7 @@ class ObligationTests {
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             tweak {
-                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit(inState.amount / 2) }
+                command(MEGA_CORP_PUBKEY) { Obligation.Commands.Exit(inState.amount.splitEvenly(2).first()) }
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             this.verifies()
@@ -368,7 +368,7 @@ class ObligationTests {
             transaction("Issuance") {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
-                output("change") { (oneMillionDollars / 2).OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
+                output("change") { (oneMillionDollars.splitEvenly(2).first()).OBLIGATION between Pair(ALICE, BOB_PUBKEY) }
                 command(BOB_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
                 timestamp(TEST_TX_TIME)
                 this `fails with` "amounts owed on input and output must match"
