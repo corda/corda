@@ -29,25 +29,26 @@ class IntegrationTestingTutorial {
     fun `alice bob cash exchange example`() {
         // START 1
         driver {
-            val testUser = User("testUser", "testPassword", permissions = setOf(
-                    startFlowPermission<CashIssueFlow>(),
+            val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
+                    startFlowPermission<CashIssueFlow>()
+            ))
+            val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
             ))
             val (alice, bob, notary) = Futures.allAsList(
-                    startNode("Alice", rpcUsers = listOf(testUser)),
-                    startNode("Bob", rpcUsers = listOf(testUser)),
+                    startNode("Alice", rpcUsers = listOf(aliceUser)),
+                    startNode("Bob", rpcUsers = listOf(bobUser)),
                     startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             ).getOrThrow()
             // END 1
 
             // START 2
             val aliceClient = alice.rpcClientToNode()
-
-            aliceClient.start("testUser", "testPassword")
+            aliceClient.start("aliceUser", "testPassword1")
             val aliceProxy = aliceClient.proxy()
-            val bobClient = bob.rpcClientToNode()
 
-            bobClient.start("testUser", "testPassword")
+            val bobClient = bob.rpcClientToNode()
+            bobClient.start("bobUser", "testPassword2")
             val bobProxy = bobClient.proxy()
             // END 2
 
