@@ -13,15 +13,6 @@ ext {
     advertisedNotary = "$notaryType|$notaryName"
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     main {
         resources {
