@@ -1,8 +1,22 @@
 apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'kotlin'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/exposed'
+    }
+}
+
+dependencies {
+    compile rootProject
+}
 
 dokka {
     moduleName = 'corda'
-    outputDirectory = 'docs/build/html/api/kotlin'
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/kotlin")
     processConfigurations = ['compile']
     sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
 }
@@ -10,13 +24,19 @@ dokka {
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     moduleName = 'corda'
     outputFormat = "javadoc"
-    outputDirectory = 'docs/build/html/api/javadoc'
+    outputDirectory = file("${rootProject.rootDir}/docs/build/html/api/javadoc")
     processConfigurations = ['compile']
     sourceDirs = files('../core/src/main/kotlin', '../client/jfx/src/main/kotlin', '../client/mock/src/main/kotlin', '../client/rpc/src/main/kotlin', '../node/src/main/kotlin', '../finance/src/main/kotlin', '../client/jackson/src/main/kotlin')
 }
 
-task apidocs(dependsOn: [':jar', 'dokka', 'dokkaJavadoc'])
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
+task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
+
+task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+    // TODO: Non-msys Windows script
+    commandLine 'cmd', '/c', 'sh make-docsite.sh' // Windows
+    commandLine 'sh', './make-docsite.sh' // Linux
+}
 
 task installDocsiteRequirements(type: Exec) {
     // TODO: Non-msys Windows script
@@ -24,8 +44,4 @@ task installDocsiteRequirements(type: Exec) {
     commandLine 'sh', './install-docsite-requirements.sh' // Linux
 }
 
-task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'sh make-docsite.sh' // Windows
-    commandLine 'sh', './make-docsite.sh' // Linux
-}
+apidocs.shouldRunAfter makeDocs

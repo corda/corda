@@ -11,4 +11,4 @@ else
     source virtualenv/Scripts/activate
 fi
 
-make clean html
+make html
