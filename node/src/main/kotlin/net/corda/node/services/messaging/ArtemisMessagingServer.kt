@@ -16,7 +16,6 @@ import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.trace
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
@@ -577,7 +576,7 @@ class NodeLoginModule : LoginModule {
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
         val certificates = certificateCallback.certificates
 
-        log.trace { "Processing login for $username" }
+        log.debug { "Processing login for $username" }
 
         try {
             val validatedUser = when (determineUserRole(certificates, username)) {
