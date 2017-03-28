@@ -134,6 +134,7 @@ object NotaryFlow {
                 }
                 if (conflicts.isNotEmpty()) {
                     // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    logger.warn("Notary conflicts for $txId: $conflicts")
                     throw notaryException(txId, e)
                 }
             }
