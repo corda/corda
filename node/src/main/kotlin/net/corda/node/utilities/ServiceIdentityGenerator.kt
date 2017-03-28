@@ -22,13 +22,13 @@ object ServiceIdentityGenerator {
      * @param dirs List of node directories to place the generated identity and key pairs in.
      * @param serviceId The service id of the distributed service.
      * @param serviceName The legal name of the distributed service.
-     * @param threshold The threshold for the generated group [CompositeKey.Node].
+     * @param threshold The threshold for the generated group [CompositeKey].
      */
     fun generateToDisk(dirs: List<Path>, serviceId: String, serviceName: String, threshold: Int = 1) {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
 
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
-        val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public.composite }).build(threshold)
+        val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
         val notaryParty = Party(serviceName, notaryKey).serialize()
 
         keyPairs.zip(dirs) { keyPair, dir ->
