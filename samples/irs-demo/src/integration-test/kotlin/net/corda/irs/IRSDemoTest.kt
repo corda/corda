@@ -74,14 +74,14 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun runTrade(nodeAddr: HostAndPort, fixedRatePayer: Party, floatingRatePayer: Party) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"))
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
         assert(postJson(url, tradeFile))
     }
 
     private fun runUploadRates(host: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"))
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$host/upload/interest-rates")
         assert(uploadFile(url, fileContents))
     }

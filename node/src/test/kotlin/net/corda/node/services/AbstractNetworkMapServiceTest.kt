@@ -49,6 +49,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
             alice = second
         }
         network.runNetwork()
+        lastSerial = System.currentTimeMillis()
     }
 
     @After
@@ -197,10 +198,18 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         return response.getOrThrow().node
     }
 
+    private var lastSerial = Long.MIN_VALUE
+
     private fun MockNode.registration(addOrRemove: AddOrRemove,
-                                      serial: Long = System.currentTimeMillis()): ListenableFuture<RegistrationResponse> {
+                                      serial: Long? = null): ListenableFuture<RegistrationResponse> {
+        val distinctSerial = if (serial == null) {
+            ++lastSerial
+        } else {
+            lastSerial = serial
+            serial
+        }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
-        val nodeRegistration = NodeRegistration(info, serial, addOrRemove, expires)
+        val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
         val request = RegistrationRequest(nodeRegistration.toWire(services.legalIdentityKey.private), info.address)
         val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.info.address)
         network.runNetwork()
@@ -235,6 +244,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private fun addNewNodeToNetworkMap(legalName: String): MockNode {
         val node = network.createNode(networkMapAddress = mapServiceNode.info.address, legalName = legalName)
         network.runNetwork()
+        lastSerial = System.currentTimeMillis()
         return node
     }
 
