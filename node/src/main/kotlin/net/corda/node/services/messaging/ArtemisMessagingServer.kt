@@ -89,6 +89,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
     companion object {
         private val log = loggerFor<ArtemisMessagingServer>()
+        /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
+        @JvmStatic val MAX_FILE_SIZE = 10485760
     }
 
     private class InnerState {
@@ -166,6 +168,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         idCacheSize = 2000 // Artemis Default duplicate cache size i.e. a guess
         isPersistIDCache = true
         isPopulateValidatedUser = true
+        journalBufferSize_NIO = MAX_FILE_SIZE // Artemis default is 490KiB - required to address IllegalArgumentException (when Artemis uses Java NIO): Record is too large to store.
+        journalBufferSize_AIO = MAX_FILE_SIZE // Required to address IllegalArgumentException (when Artemis uses Linux Async IO): Record is too large to store.
+        journalFileSize = MAX_FILE_SIZE // The size of each journal file in bytes. Artemis default is 10MiB.
         managementNotificationAddress = SimpleString(NOTIFICATIONS_ADDRESS)
         // Artemis allows multiple servers to be grouped together into a cluster for load balancing purposes. The cluster
         // user is used for connecting the nodes together. It has super-user privileges and so it's imperative that its
