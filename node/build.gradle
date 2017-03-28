@@ -78,7 +78,11 @@ dependencies {
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
+    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
+    // TODO: Make this not a snapshot when 19 is released.
+    compile "org.apache.qpid:proton-j:0.19.0-SNAPSHOT"
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
