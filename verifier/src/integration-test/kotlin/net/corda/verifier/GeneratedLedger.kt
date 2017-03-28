@@ -7,6 +7,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -23,7 +24,7 @@ data class GeneratedLedger(
 ) {
     val hashTransactionMap: Map<SecureHash, WireTransaction> by lazy { transactions.associateBy(WireTransaction::id) }
     val attachmentMap: Map<SecureHash, Attachment> by lazy { attachments.associateBy(Attachment::id) }
-    val identityMap: Map<CompositeKey, Party> by lazy { identities.associateBy(Party::owningKey) }
+    val identityMap: Map<PublicKey, Party> by lazy { identities.associateBy(Party::owningKey) }
 
     companion object {
         val empty = GeneratedLedger(emptyList(), emptyMap(), emptySet(), emptySet())
@@ -183,7 +184,7 @@ data class GeneratedLedger(
 
 data class GeneratedState(
         val nonce: Long,
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
 ) : ContractState {
     override val contract = DummyContract()
 }

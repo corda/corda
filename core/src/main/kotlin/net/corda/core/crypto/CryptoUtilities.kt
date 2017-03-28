@@ -95,7 +95,7 @@ fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignatur
 }
 
 /** Utility to simplify the act of verifying a signature */
-@Throws(IllegalStateException::class)
+@Throws(SignatureException::class, IllegalStateException::class)
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     val pubKey = when (this) {
         is CompositeKey -> singleKey // TODO CompositeSignature verification.
