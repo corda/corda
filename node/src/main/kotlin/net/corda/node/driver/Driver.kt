@@ -64,6 +64,7 @@ interface DriverDSLExposedInterface {
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
+     * @param verifierType The type of contract verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
@@ -79,6 +80,7 @@ interface DriverDSLExposedInterface {
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     * @param verifierType The type of contract verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
