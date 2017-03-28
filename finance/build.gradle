@@ -8,18 +8,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Corda finance modules'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile project(':core')
 

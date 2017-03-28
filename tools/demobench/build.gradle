@@ -29,15 +29,8 @@ repositories {
     flatDir {
         dirs 'libs'
     }
-
-    mavenLocal()
-    mavenCentral()
-    jcenter()
     maven {
         url 'http://www.sparetimelabs.com/maven2'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
 

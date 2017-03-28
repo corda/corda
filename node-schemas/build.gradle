@@ -9,18 +9,6 @@ buildscript {
     ext.generatedSourcesDir = "${projectDir}/generated/source/kapt/main"
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 // Kapt plugin is hardcoded in output directory and sourcesets. Use a separate sourceset to keep the generated
 // files in git and outside of the build directory (to avoid cleaning issues)
 sourceSets {
