@@ -86,7 +86,7 @@ class WireTransaction(
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(
-            resolveIdentity: (CompositeKey) -> Party?,
+            resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?
     ): LedgerTransaction {
