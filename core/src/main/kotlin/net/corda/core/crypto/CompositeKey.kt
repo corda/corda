@@ -70,9 +70,7 @@ class CompositeKey(val threshold: Int,
     // Auto-generated. TODO: remove once data class inheritance is enabled
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other?.javaClass != javaClass) return false
-
-        other as CompositeKey
+        if (other !is CompositeKey) return false
 
         if (threshold != other.threshold) return false
         if (weights != other.weights) return false
@@ -127,6 +125,6 @@ class CompositeKey(val threshold: Int,
         get() = keys.singleOrNull() ?: throw IllegalStateException("The key is composed of more than one PublicKey primitive")
 }
 
-/** Returns the set of all [PublicKey]s contained in the PublicKey that may be also a [CompositeKey] */
+/** Returns the set of all [PublicKey]s contained within the PublicKey. These may be also [CompositeKey]s */
 val Iterable<PublicKey>.keys: Set<PublicKey>
     get() = flatMap { it.keys }.toSet()
