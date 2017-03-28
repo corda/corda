@@ -7,7 +7,7 @@ import java.security.PublicKey
 /**
  * The [Party] class represents an entity on the network, which is typically identified by a legal [name] and public key
  * that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
- * keys, the "public key" of a party is represented by a composite construct – a [CompositeKey], which combines multiple
+ * keys, the "public key" of a party can be represented by a composite construct – a [CompositeKey], which combines multiple
  * cryptographic public key primitives into a tree structure.
  *
  * For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
