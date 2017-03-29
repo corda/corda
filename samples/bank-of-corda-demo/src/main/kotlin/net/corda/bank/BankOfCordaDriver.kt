@@ -10,9 +10,9 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import kotlin.system.exitProcess
 
 /**

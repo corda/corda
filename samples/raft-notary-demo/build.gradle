@@ -13,15 +13,6 @@ ext {
     advertisedNotary = "$notaryType|$notaryName"
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     main {
         resources {
@@ -48,8 +39,8 @@ dependencies {
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
-    compile project(':client')
-    compile project(':node')
+    compile project(':client:jfx')
+    compile project(':client:rpc')
     compile project(':test-utils')
 
     // Javax is required for webapis

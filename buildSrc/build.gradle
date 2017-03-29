@@ -1,3 +1,10 @@
+buildscript {
+    Properties constants = new Properties()
+    file("../constants.properties").withInputStream { constants.load(it) }
+
+    ext.guava_version = constants.getProperty("guavaVersion")
+}
+
 apply plugin: 'maven'
 
 repositories {
@@ -5,6 +12,5 @@ repositories {
 }
 
 dependencies {
-    // Cannot use ext.guava_version here :(
-    compile "com.google.guava:guava:20.0"
+    compile "com.google.guava:guava:$guava_version"
 }

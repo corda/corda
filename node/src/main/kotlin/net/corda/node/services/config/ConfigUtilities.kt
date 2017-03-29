@@ -7,15 +7,13 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import com.typesafe.config.ConfigRenderOptions
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.copyTo
 import net.corda.core.createDirectories
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.utilities.loggerFor
-import java.net.URL
-import java.nio.file.Files
+import net.corda.nodeapi.config.SSLConfiguration
 import java.nio.file.Path
 
 object ConfigHelper {

@@ -27,8 +27,10 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
@@ -45,6 +47,24 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
         fun currentStateMachine(): FlowStateMachineImpl<*>? = Strand.currentStrand() as? FlowStateMachineImpl<*>
+
+        /**
+         * Provide a mechanism to sleep within a Strand without locking any transactional state
+         */
+        // TODO: inlined due to an intermittent Quasar error (to be fully investigated)
+        @Suppress("NOTHING_TO_INLINE")
+        @Suspendable
+        inline fun sleep(millis: Long) {
+            if (currentStateMachine() != null) {
+                val db = StrandLocalTransactionManager.database
+                TransactionManager.current().commit()
+                TransactionManager.current().close()
+                Strand.sleep(millis)
+                StrandLocalTransactionManager.database = db
+                TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+            }
+            else Strand.sleep(millis)
+        }
     }
 
     // These fields shouldn't be serialised, so they are marked @Transient.
@@ -55,18 +75,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
-    @Transient private var _logger: Logger? = null
     /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
      * is not necessary.
      */
-    override val logger: Logger get() {
-        return _logger ?: run {
-            val l = LoggerFactory.getLogger("net.corda.flow.$id")
-            _logger = l
-            return l
-        }
-    }
+    override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
@@ -90,21 +103,25 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun run() {
         createTransaction()
         logger.debug { "Calling flow: $logic" }
+        val startTime = System.nanoTime()
         val result = try {
             logic.call()
         } catch (e: FlowException) {
+            recordDuration(startTime, success = false)
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
             processException(e, propagated)
-            logger.debug(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
+            logger.error(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
             return
         } catch (t: Throwable) {
+            recordDuration(startTime, success = false)
             logger.warn("Terminated by unexpected exception", t)
             processException(t, false)
             return
         }
 
-        // Only sessions which have a single send and nothing else will block here
+        recordDuration(startTime)
+        // Only sessions which have done a single send and nothing else will block here
         openSessions.values
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }
@@ -277,7 +294,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     @Suspendable
-
     private fun <M : ExistingSessionMessage> waitForMessage(receiveRequest: ReceiveRequest<M>): ReceivedSessionMessage<M> {
         return receiveRequest.suspendAndExpectReceive().confirmReceiveType(receiveRequest)
     }
@@ -380,5 +396,18 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } catch (t: Throwable) {
             logger.error("Error during resume", t)
         }
+    }
+
+    /**
+     * Records the duration of this flow – from call() to completion or failure.
+     * Note that the duration will include the time the flow spent being parked, and not just the total
+     * execution time.
+     */
+    private fun recordDuration(startTime: Long, success: Boolean = true) {
+        val timerName = "FlowDuration.${if (success) "Success" else "Failure"}.${logic.javaClass.name}"
+        val timer = serviceHub.monitoringService.metrics.timer(timerName)
+        // Start time gets serialized along with the fiber when it suspends
+        val duration = System.nanoTime() - startTime
+        timer.update(duration, TimeUnit.NANOSECONDS)
     }
 }

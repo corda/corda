@@ -3,11 +3,11 @@ package net.corda.explorer.views
 import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.*
-import net.corda.client.model.NodeMonitorModel
-import net.corda.client.model.objectProperty
+import net.corda.client.jfx.model.NodeMonitorModel
+import net.corda.client.jfx.model.objectProperty
 import net.corda.explorer.model.SettingsModel
 import org.controlsfx.dialog.ExceptionDialog
-import tornadofx.View
+import tornadofx.*
 import kotlin.system.exitProcess
 
 class LoginView : View() {
@@ -27,6 +27,10 @@ class LoginView : View() {
     private val port by objectProperty(SettingsModel::portProperty)
     private val fullscreen by objectProperty(SettingsModel::fullscreenProperty)
 
+    fun login(host: String?, port: Int, username: String, password: String) {
+        getModel<NodeMonitorModel>().register(HostAndPort.fromParts(host, port), username, password)
+    }
+
     fun login() {
         val status = Dialog<LoginStatus>().apply {
             dialogPane = root
@@ -35,7 +39,7 @@ class LoginView : View() {
                     ButtonBar.ButtonData.OK_DONE -> try {
                         root.isDisable = true
                         // TODO : Run this async to avoid UI lockup.
-                        getModel<NodeMonitorModel>().register(HostAndPort.fromParts(hostTextField.text, portProperty.value), usernameTextField.text, passwordTextField.text)
+                        login(hostTextField.text, portProperty.value, usernameTextField.text, passwordTextField.text)
                         if (!rememberMe.value) {
                             username.value = ""
                             host.value = ""

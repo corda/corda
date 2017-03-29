@@ -10,18 +10,6 @@ buildscript {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     test {
         resources {
@@ -33,7 +21,7 @@ sourceSets {
 dependencies {
 
     testCompile "junit:junit:$junit_version"
-    testCompile "commons-fileupload:commons-fileupload:1.3.2"
+    testCompile "commons-fileupload:commons-fileupload:$fileupload_version"
 
     // Guava: Google test library (collections test suite)
     testCompile "com.google.guava:guava-testlib:$guava_version"
@@ -45,7 +33,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
-    compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Thread safety annotations
     compile "com.google.code.findbugs:jsr305:3.0.1"
@@ -63,8 +51,8 @@ dependencies {
     // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
     //       because it depends on org.javassist:javassist instead
     //       of javassist:javassist.
-    compile "com.pholser:junit-quickcheck-core:$quickcheck_version"
-    compile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 
     // Guava: Google utilities library.
     compile "com.google.guava:guava:$guava_version"
@@ -100,8 +88,21 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 }
 
-configurations.compile {
-    // We want to use SLF4J's version of these binding: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
+configurations {
+    compile {
+        // We want to use SLF4J's version of these binding: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
 }

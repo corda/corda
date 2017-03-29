@@ -1,8 +1,8 @@
 @file:JvmName("Corda")
 package net.corda.node
 
-import com.typesafe.config.Config
 import com.jcabi.manifests.Manifests
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -11,7 +11,6 @@ import net.corda.core.node.Version
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.utilities.ANSIProgressObserver
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import org.fusesource.jansi.Ansi
@@ -19,6 +18,7 @@ import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
+import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -31,18 +31,11 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
     LoggerFactory.getLogger(loggerName).info(msg)
 }
 
+val LOGS_DIRECTORY_NAME = "logs"
+
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     checkJavaVersion()
-
-    // Manifest properties are only available if running from the corda jar
-    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
-
-    val nodeVersionInfo = NodeVersionInfo(
-            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
-            manifestValue("Corda-Revision") ?: "Unknown",
-            manifestValue("Corda-Vendor") ?: "Unknown"
-    )
 
     val argsParser = ArgsParser()
 
@@ -53,6 +46,23 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    // Set up logging. These properties are referenced from the XML config file.
+    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase()
+    System.setProperty("defaultLogLevel", loggingLevel)
+    if (cmdlineOptions.logToConsole) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        renderBasicInfoToConsole = false
+    }
+
+    // Manifest properties are only available if running from the corda jar
+    fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
+
+    val nodeVersionInfo = NodeVersionInfo(
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Revision") ?: "Unknown",
+            manifestValue("Corda-Vendor") ?: "Unknown"
+    )
 
     if (cmdlineOptions.isVersion) {
         println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
@@ -66,16 +76,10 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    // Set up logging. These properties are referenced from the XML config file.
-    System.setProperty("defaultLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-    if (cmdlineOptions.logToConsole) {
-        System.setProperty("consoleLogLevel", cmdlineOptions.loggingLevel.name.toLowerCase())
-        renderBasicInfoToConsole = false
-    }
-
     drawBanner(nodeVersionInfo)
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs").toString())
+    val dir: Path = cmdlineOptions.baseDirectory
+    System.setProperty("log-path", (dir / "logs").toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
@@ -124,10 +128,13 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node ${node.info.legalIdentity.name} started up and registered in $elapsed sec")
+            printBasicNodeInfo("Node for \"${node.info.legalIdentity.name}\" started up and registered in $elapsed sec")
 
-            if (renderBasicInfoToConsole)
-                ANSIProgressObserver(node.smm)
+            // Don't start the shell if there's no console attached.
+            val runShell = !cmdlineOptions.noLocalShell && System.console() != null
+            node.startupComplete then {
+                InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
+            }
         } failure {
             log.error("Error during network map registration", it)
             exitProcess(1)
@@ -169,7 +176,7 @@ private fun printPluginsAndServices(node: Node) {
     }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
-            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") }
+            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.")}
             .map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())
@@ -183,7 +190,22 @@ private fun messageOfTheDay(): Pair<String, String> {
             "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
             "It's kind of like a block chain but\ncords sounded healthier than chains.",
-            "Computer science and finance together.\nYou should see our crazy Christmas parties!"
+            "Computer science and finance together.\nYou should see our crazy Christmas parties!",
+            "I met my bank manager yesterday and asked\nto check my balance ... he pushed me over!",
+            "A banker with nobody around may find\nthemselves .... a-loan! <applause>",
+            "Whenever I go near my bank I get\nwithdrawal symptoms ${Emoji.coolGuy}",
+            "There was an earthquake in California,\na local bank went into de-fault.",
+            "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
+            "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
+            "Check your contracts carefully. The\nfine print is usually a clause for suspicion ${Emoji.santaClaus}",
+            "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
+            "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
+            "Old bankers never die, they just\n... pass the buck",
+            "My wife made me into millionaire.\nI was a multi-millionaire before we met.",
+            "I won $3M on the lottery so I donated\na quarter of it to charity. Now I have $2,999,999.75.",
+            "There are two rules for financial success:\n1) Don't tell everything you know.",
+            "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
+            "Computers are useless. They can only\ngive you answers.  -- Picasso"
     )
     if (Emoji.hasEmojiTerminal)
         messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"

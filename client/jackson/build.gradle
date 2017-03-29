@@ -2,18 +2,10 @@ apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'net.corda.plugins.publish-utils'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile project(':core')
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}"
@@ -22,5 +14,12 @@ dependencies {
     // This adds support for java.time types.
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
 
+    testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
+
+    // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
+    //       because it depends on org.javassist:javassist instead
+    //       of javassist:javassist.
+    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 }

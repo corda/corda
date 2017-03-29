@@ -1,10 +1,13 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.toFuture
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
@@ -49,7 +52,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>) {
+    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>, val flowId: UUID? = null) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
 
@@ -197,19 +200,57 @@ interface VaultService {
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @Throws(InsufficientBalanceException::class)
+    @Suspendable
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
                       to: CompositeKey,
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
 
+    // DOCSTART VaultStatesQuery
     /**
      * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
+     * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
-    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): Iterable<StateAndRef<T>>
+    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
+    // DOCEND VaultStatesQuery
+
+    /**
+     * Soft locking is used to prevent multiple transactions trying to use the same output simultaneously.
+     * Violation of a soft lock would result in a double spend being created and rejected by the notary.
+     */
+
+    // DOCSTART SoftLockAPI
+
+    /**
+     * Reserve a set of [StateRef] for a given [UUID] unique identifier.
+     * Typically, the unique identifier will refer to a Flow lockId associated with a [Transaction] in an in-flight flow.
+     * In the case of coin selection, soft locks are automatically taken upon gathering relevant unconsumed input refs.
+     *
+     * @throws [StatesNotAvailableException] when not possible to softLock all of requested [StateRef]
+     */
+    @Throws(StatesNotAvailableException::class)
+    fun softLockReserve(lockId: UUID, stateRefs: Set<StateRef>)
+
+    /**
+     * Release all or an explicitly specified set of [StateRef] for a given [UUID] unique identifier.
+     * A vault soft lock manager is automatically notified of a Flows that are terminated, such that any soft locked states
+     * may be released.
+     * In the case of coin selection, softLock are automatically released once previously gathered unconsumed input refs
+     * are consumed as part of cash spending.
+     */
+    fun softLockRelease(lockId: UUID, stateRefs: Set<StateRef>? = null)
+
+    /**
+     * Retrieve softLockStates for a given [UUID] or return all softLockStates in vault for a given
+     * [ContractState] type
+     */
+    fun <T : ContractState> softLockedStates(lockId: UUID? = null): List<StateAndRef<T>>
+
+    // DOCEND SoftLockAPI
 }
 
-inline fun <reified T: ContractState> VaultService.unconsumedStates(): Iterable<StateAndRef<T>> =
-        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
+inline fun <reified T: ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
+        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
 
 inline fun <reified T: ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
@@ -221,6 +262,10 @@ inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
 
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
+}
+
+class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
+    override fun toString() = "Soft locking error: $message"
 }
 
 /**
@@ -321,4 +366,15 @@ interface SchedulerService {
 
     /** Unschedule all activity for a TX output, probably because it was consumed. */
     fun unscheduleStateActivity(ref: StateRef)
+}
+
+/**
+ * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
+ */
+interface TransactionVerifierService {
+    /**
+     * @param transaction The transaction to be verified.
+     * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
+     */
+    fun verify(transaction: LedgerTransaction): ListenableFuture<*>
 }

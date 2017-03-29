@@ -22,6 +22,8 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.testing.node.MockIdentityService
@@ -82,6 +84,11 @@ val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
 val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
+
+val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
+val BIG_CORP_PUBKEY: CompositeKey get() = BIG_CORP_KEY.public.composite
+val BIG_CORP: Party get() = Party("BigCorporation", BIG_CORP_PUBKEY)
+val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
@@ -166,7 +173,9 @@ data class TestNodeConfiguration(
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
         override val devMode: Boolean = true,
-        override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
+        override val certificateSigningService: URL = URL("http://localhost"),
+        override val certificateChainCheckPolicies: Map<String, CertificateChainCheckPolicy> = emptyMap(),
+        override val verifierType: VerifierType = VerifierType.InMemory) : NodeConfiguration
 
 fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
 

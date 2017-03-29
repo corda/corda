@@ -58,7 +58,7 @@ class CashTests {
         databaseTransaction(database) {
             services = object : MockServices() {
                 override val keyManagementService: MockKeyManagementService = MockKeyManagementService(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = makeVaultService(dataSourceProps)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -580,7 +580,7 @@ class CashTests {
         databaseTransaction(database) {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.toAnonymous()))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }

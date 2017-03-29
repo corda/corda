@@ -8,23 +8,18 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Corda finance modules'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile project(':core')
 
     testCompile project(':test-utils')
+    testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
+
+    // TODO: Upgrade to junit-quickcheck 0.8, once it is released,
+    //       because it depends on org.javassist:javassist instead
+    //       of javassist:javassist.
+    testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
+    testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 }
 
 sourceSets {
@@ -33,4 +28,11 @@ sourceSets {
             srcDir "../config/test"
         }
     }
+}
+
+configurations.testCompile {
+    // Excluding javassist:javassist because it clashes with Hibernate's
+    // transitive org.javassist:javassist dependency.
+    // TODO: Remove this exclusion once junit-quickcheck 0.8 is released.
+    exclude group: 'javassist', module: 'javassist'
 }

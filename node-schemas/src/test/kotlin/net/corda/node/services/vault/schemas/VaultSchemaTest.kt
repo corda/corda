@@ -2,16 +2,16 @@ package net.corda.node.services.vault.schemas
 
 import io.requery.Persistable
 import io.requery.TransactionIsolation
+import io.requery.kotlin.`in`
 import io.requery.kotlin.eq
 import io.requery.kotlin.invoke
+import io.requery.kotlin.isNull
+import io.requery.query.RowExpression
 import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.*
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
@@ -28,8 +28,6 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import java.sql.Connection
-import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -49,9 +47,6 @@ class VaultSchemaTest {
 
     var transaction : LedgerTransaction? = null
 
-    var jdbcInstance : Connection? = null
-    val jdbcConn : Connection get() = jdbcInstance!!
-
     @Before
     fun setup() {
         val dataSource = JdbcDataSource()
@@ -62,8 +57,6 @@ class VaultSchemaTest {
         val tables = SchemaModifier(configuration)
         val mode = TableCreationMode.DROP_CREATE
         tables.createTables(mode)
-
-        jdbcInstance = DriverManager.getConnection(dataSource.getURL())
 
         // create dummy test data
         setupDummyData()
@@ -494,6 +487,9 @@ class VaultSchemaTest {
         Assert.assertEquals(3, states.size)
     }
 
+    /**
+     *  Requery composite key tests (using RowExpression introduced in 1.2.1)
+     */
     @Test
     fun testQueryWithCompositeKey() {
         // txn entity with 4 input states (SingleOwnerState x 3, MultiOwnerState x 1)
@@ -501,30 +497,150 @@ class VaultSchemaTest {
         dummyStatesInsert(txn)
 
         data.invoke {
-            // Requery does not support SQL-92 select by composite key:
-            // Raised Issue:
-            // https://github.com/requery/requery/issues/434
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = txn.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
 
-            // Test Requery raw query for single key field
-            val refs = txn.inputs.map { it.ref }
-            val objArgsTxHash = refs.map { it.txhash.toString() }
-            val objArgsIndex = refs.map { it.index }
-
-            val queryByTxHashString = "SELECT * FROM VAULT_STATES WHERE transaction_id IN ?"
-            val resultRawQueryTxHash = raw(VaultStatesEntity::class, queryByTxHashString, *objArgsTxHash.toTypedArray())
-            assertEquals(8, resultRawQueryTxHash.count())
-
-            val queryByIndexString = "SELECT * FROM VAULT_STATES WHERE output_index IN ?"
-            val resultRawQueryIndex = raw(VaultStatesEntity::class, queryByIndexString, *objArgsIndex.toTypedArray())
-            assertEquals(18, resultRawQueryIndex.count())
-
-            // Use JDBC native query for composite key
-            val stateRefs = refs.fold("") { stateRefs, it -> stateRefs + "('${it.txhash}','${it.index}')," }.dropLast(1)
-            val statement = jdbcConn.createStatement()
-            val rs = statement.executeQuery("SELECT transaction_id, output_index, contract_state FROM VAULT_STATES WHERE ((transaction_id, output_index) IN ($stateRefs)) AND (state_status = 0)")
-            var count = 0
-            while (rs.next()) count++
-            assertEquals(3, count)
+            val result = select(VaultStatesEntity::class) where (expression.`in`(stateRefs))
+            assertEquals(3, result.get().count())
         }
+    }
+
+    @Test
+    fun testUpdateWithCompositeKey() {
+        // txn entity with 4 input states (SingleOwnerState x 3, MultiOwnerState x 1)
+        val txn = createTxnWithTwoStateTypes()
+        dummyStatesInsert(txn)
+
+        data.invoke {
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = txn.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
+
+            val update = update(VaultStatesEntity::class)
+                    .set(VaultStatesEntity.LOCK_ID, "")
+                    .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
+                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and (expression.`in`(stateRefs)).get()
+            assertEquals(3, update.value())
+        }
+    }
+
+    /**
+     *  Soft locking tests
+     */
+    @Test
+    fun testSingleSoftLockUpdate() {
+
+        // insert unconsumed state
+        val stateEntity = createStateEntity(transaction!!.inputs[0])
+        data.invoke {
+            upsert(stateEntity)
+        }
+
+        // reserve soft lock on state
+        stateEntity.apply {
+            this.lockId = "LOCK#1"
+            this.lockUpdateTime = Instant.now()
+            data.invoke {
+                upsert(stateEntity)
+            }
+        }
+
+        // select unlocked states
+        data.invoke {
+            val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId eq stateEntity.txId)
+                                                                .and (VaultSchema.VaultStates::lockId.isNull())
+            assertEquals(0, result.get().count())
+        }
+
+        // release soft lock on state
+        data.invoke {
+            val update = update(VaultStatesEntity::class)
+                    .set(VaultStatesEntity.LOCK_ID, null)
+                    .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
+                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and (VaultStatesEntity.LOCK_ID eq "LOCK#1").get()
+            assertEquals(1, update.value())
+        }
+
+        // select unlocked states
+        data.invoke {
+            val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId eq stateEntity.txId)
+                    .and (VaultSchema.VaultStates::lockId.isNull())
+            assertEquals(1, result.get().count())
+        }
+    }
+
+    @Test
+    fun testMultipleSoftLocksUpdate() {
+
+        // insert unconsumed state
+        data.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+            transaction!!.inputs.forEach {
+                val stateEntity = createStateEntity(it)
+                insert(stateEntity)
+            }
+            val result = select(VaultSchema.VaultStates::class)
+            Assert.assertSame(3, result().toList().size)
+        }
+
+        // reserve soft locks on states
+        transaction!!.inputs.forEach {
+            val stateEntity = createStateEntity(it)
+            stateEntity.apply {
+                this.lockId = "LOCK#1"
+                this.lockUpdateTime = Instant.now()
+                data.invoke {
+                    upsert(stateEntity)
+                }
+            }
+        }
+
+        // select unlocked states
+        val txnIds = transaction!!.inputs.map { it.ref.txhash.toString() }.toSet()
+        data.invoke {
+            val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
+                    .and (VaultSchema.VaultStates::lockId eq "")
+            assertEquals(0, result.get().count())
+        }
+
+        // release soft lock on states
+        data.invoke {
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = transaction!!.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
+
+            val update = update(VaultStatesEntity::class)
+                    .set(VaultStatesEntity.LOCK_ID, "")
+                    .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
+                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and (expression.`in`(stateRefs)).get()
+            assertEquals(3, update.value())
+        }
+
+        // select unlocked states
+        data.invoke {
+            val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
+                    .and (VaultSchema.VaultStates::lockId eq "")
+            assertEquals(3, result.get().count())
+        }
+    }
+
+    @Test
+    fun insertWithBigCompositeKey() {
+        val keys = (1..314).map { generateKeyPair().public.composite }
+        val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
+        val vaultStEntity = VaultStatesEntity().apply {
+            txId = SecureHash.randomSHA256().toString()
+            index = 314
+            stateStatus = Vault.StateStatus.UNCONSUMED
+            contractStateClassName = VaultNoopContract.VaultNoopState::class.java.name
+            notaryName = "Huge distributed notary"
+            notaryKey = bigNotaryKey.toBase58String()
+            recordedTime = Instant.now()
+        }
+        data.insert(vaultStEntity)
+        assertEquals(1, data.select(VaultSchema.VaultStates::class).get().count())
     }
 }

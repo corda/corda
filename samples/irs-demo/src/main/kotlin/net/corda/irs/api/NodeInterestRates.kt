@@ -112,8 +112,8 @@ object NodeInterestRates {
         override val dataTypePrefix = "interest-rates"
         override val acceptableFileExtensions = listOf(".rates", ".txt")
 
-        override fun upload(data: InputStream): String {
-            val fixes = parseFile(data.bufferedReader().readText())
+        override fun upload(file: InputStream): String {
+            val fixes = parseFile(file.bufferedReader().readText())
             oracle.knownFixes = fixes
             val msg = "Interest rates oracle accepted ${fixes.size} new interest rate fixes"
             println(msg)

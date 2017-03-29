@@ -6,6 +6,8 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
@@ -15,10 +17,15 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class InMemoryIdentityService() : SingletonSerializeAsToken(), IdentityService {
+    companion object {
+        private val log = loggerFor<InMemoryIdentityService>()
+    }
+
     private val keyToParties = ConcurrentHashMap<CompositeKey, Party>()
     private val nameToParties = ConcurrentHashMap<String, Party>()
 
     override fun registerIdentity(party: Party) {
+        log.trace { "Registering identity ${party}" }
         keyToParties[party.owningKey] = party
         nameToParties[party.name] = party
     }

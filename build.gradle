@@ -1,16 +1,16 @@
 buildscript {
     // For sharing constants between builds
-    Properties props = new Properties()
-    file("publish.properties").withInputStream { props.load(it) }
+    Properties constants = new Properties()
+    file("constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
     ext.corda_version = "0.10-SNAPSHOT"
-    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+    ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
     //
     // TODO: Sort this alphabetically.
-    ext.kotlin_version = '1.0.6'
+    ext.kotlin_version = '1.1.1'
     ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.5.3'
@@ -19,22 +19,24 @@ buildscript {
     ext.jersey_version = '2.25'
     ext.jolokia_version = '2.0.0-M3'
     ext.assertj_version = '3.6.1'
-    ext.slf4j_version = '1.7.22'
+    ext.slf4j_version = '1.7.24'
     ext.log4j_version = '2.7'
     ext.bouncycastle_version = '1.56'
-    ext.guava_version = '19.0'
+    ext.guava_version = constants.getProperty("guavaVersion")
     ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
     ext.netty_version = '4.1.5.Final'
     ext.typesafe_config_version = '1.3.1'
+    ext.fileupload_version = '1.3.2'
     ext.junit_version = '4.12'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
-    ext.requery_version = '1.1.1'
+    ext.requery_version = '1.2.1'
     ext.dokka_version = '0.9.13'
+    ext.crash_version = '1.3.2'
 
     repositories {
         mavenLocal()
@@ -96,6 +98,13 @@ allprojects {
     version "$corda_version"
 
     repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        // TODO: remove this once we eliminate Exposed
+        maven {
+            url 'https://dl.bintray.com/kotlin/exposed'
+        }
         maven { url 'https://jitpack.io' }
     }
 }
@@ -125,7 +134,9 @@ dependencies {
     runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
-    runtime project(':client')
+    runtime project(':client:jfx')
+    runtime project(':client:mock')
+    runtime project(':client:rpc')
     runtime project(':core')
     runtime project(':finance')
     runtime project(':node:webserver')
@@ -197,7 +208,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['client', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-schemas', 'test-utils', 'jackson', 'webserver']
+    publications = ['jfx', 'mock', 'rpc', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -216,7 +227,7 @@ dokka {
     moduleName = 'corda'
     outputDirectory = 'docs/build/html/api/kotlin'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'client/rpc/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
@@ -224,7 +235,7 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
     outputFormat = "javadoc"
     outputDirectory = 'docs/build/html/api/javadoc'
     processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
+    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'client/rpc/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
 }
 
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])

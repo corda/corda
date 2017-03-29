@@ -9,13 +9,17 @@ import javafx.scene.image.Image
 import javafx.stage.Stage
 import jfxtras.resources.JFXtrasFontRoboto
 import joptsimple.OptionParser
+import net.corda.client.jfx.model.Models
+import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
-import net.corda.client.model.Models
-import net.corda.client.model.observableValue
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.loggerFor
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
@@ -26,15 +30,18 @@ import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
-import net.corda.node.services.User
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.nodeapi.User
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
 import tornadofx.addStageIcon
 import tornadofx.find
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ExecutionException
+import kotlin.concurrent.thread
 
 /**
  * Main class for Explorer, you will need Tornado FX to run the explorer.
@@ -42,6 +49,10 @@ import java.util.*
 class Main : App(MainView::class) {
     private val loginView by inject<LoginView>()
     private val fullscreen by observableValue(SettingsModel::fullscreenProperty)
+
+    companion object {
+        val log = loggerFor<Main>()
+    }
 
     override fun start(stage: Stage) {
         // Login to Corda node
@@ -55,9 +66,35 @@ class Main : App(MainView::class) {
             }.showAndWait().get()
             if (button != ButtonType.OK) it.consume()
         }
-        stage.hide()
-        loginView.login()
-        stage.show()
+
+        val hostname = parameters.named["host"]
+        val port = asInteger(parameters.named["port"])
+        val username = parameters.named["username"]
+        val password = parameters.named["password"]
+        var isLoggedIn = false
+
+        if ((hostname != null) && (port != null) && (username != null) && (password != null)) {
+            try {
+                loginView.login(hostname, port, username, password)
+                isLoggedIn = true
+            } catch (e: Exception) {
+                ExceptionDialog(e).apply { initOwner(stage.scene.window) }.showAndWait()
+            }
+        }
+
+        if (!isLoggedIn) {
+            stage.hide()
+            loginView.login()
+            stage.show()
+        }
+    }
+
+    private fun asInteger(s: String?): Int? {
+        try {
+            return s?.toInt()
+        } catch (e: NumberFormatException) {
+            return null
+        }
     }
 
     init {
@@ -102,7 +139,8 @@ class Main : App(MainView::class) {
 }
 
 /**
- *  This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing, they will be on localhost:20002, 20004, 20006, 20008, 20010 respectively.
+ * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
+ * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
  */
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
@@ -180,31 +218,93 @@ fun main(args: Array<String>) {
                     currencies = listOf(USD)
             )
 
-            for (i in 0..1000) {
+            val maxIterations = 100000
+            val flowHandles = mapOf(
+                    "GBPIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
+                    "USDIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
+                    "Alice" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
+                    "Bob" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
+                    "GBPExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
+                    "USDExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1)
+            )
+
+            flowHandles.forEach {
+                thread {
+                    for (i in 0..maxIterations) {
+                        val item = it.value.take()
+                        val out = "[$i] ${it.key} ${item.id} :"
+                        try {
+                            val result = item.returnValue.get()
+                            Main.log.info("$out ${result.id} ${(result.tx.outputs.first().data as Cash.State).amount}")
+                        } catch(e: ExecutionException) {
+                            Main.log.info("$out ${e.cause!!.message}")
+                        }
+                    }
+                }
+            }
+
+            for (i in 0..maxIterations) {
                 Thread.sleep(500)
-                // Parties pay requests
-                listOf(aliceRPC, bobRPC).forEach {
-                    eventGenerator.clientCommandGenerator.map { command ->
-                        command.startFlow(it).discard()
+
+                // Issuer requests
+                if ((i % 5) == 0) {
+                    issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
+                        println("[$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
+                        val cmd = command.startFlow(issuerRPCGBP)
+                        flowHandles["GBPIssuer"]?.add(cmd)
+                        cmd.progress.notUsed()
+                        Unit
+                    }.generate(SplittableRandom())
+                    issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
+                        println("[$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
+                        val cmd = command.startFlow(issuerRPCUSD)
+                        flowHandles["USDIssuer"]?.add(cmd)
+                        cmd.progress.notUsed()
+                        Unit
                     }.generate(SplittableRandom())
                 }
 
                 // Exit requests
-                issuerGBPEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    command.startFlow(issuerRPCGBP).discard()
-                }.generate(SplittableRandom())
-                issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
-                    command.startFlow(issuerRPCUSD).discard()
+                if ((i % 10) == 0) {
+                    issuerGBPEventGenerator.bankOfCordaExitGenerator.map { command ->
+                        println("[$i] EXITING ${command.amount} with ref ${command.issueRef}")
+                        val cmd = command.startFlow(issuerRPCGBP)
+                        flowHandles["GBPExit"]?.add(cmd)
+                        cmd.progress.notUsed()
+                        Unit
+                    }.generate(SplittableRandom())
+                    issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
+                        println("[$i] EXITING ${command.amount} with ref ${command.issueRef}")
+                        val cmd = command.startFlow(issuerRPCUSD)
+                        flowHandles["USDExit"]?.add(cmd)
+                        cmd.progress.notUsed()
+                        Unit
+                    }.generate(SplittableRandom())
+                }
+
+                // Party pay requests
+
+                // Alice
+                eventGenerator.clientCommandGenerator.map { command ->
+                    println("[$i] SENDING ${command.amount} from ${aliceRPC.nodeIdentity().legalIdentity} to ${command.recipient}")
+                    val cmd = command.startFlow(aliceRPC)
+                    flowHandles["Alice"]?.add(cmd)
+                    cmd.progress.notUsed()
+                    Unit
                 }.generate(SplittableRandom())
 
-                // Issuer requests
-                issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    command.startFlow(issuerRPCGBP).discard()
-                }.generate(SplittableRandom())
-                issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
-                    command.startFlow(issuerRPCUSD).discard()
+                // Bob
+                eventGenerator.clientCommandGenerator.map { command ->
+                    println("[$i] SENDING ${command.amount} from ${bobRPC.nodeIdentity().legalIdentity} to ${command.recipient}")
+                    val cmd = command.startFlow(bobRPC)
+                    flowHandles["Bob"]?.add(cmd)
+                    cmd.progress.notUsed()
+                    Unit
                 }.generate(SplittableRandom())
             }
+
+            println("Simulation completed")
+
             aliceClient.close()
             bobClient.close()
             issuerClientGBP.close()

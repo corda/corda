@@ -7,18 +7,6 @@ apply plugin: 'us.kirchmeier.capsule'
 
 description 'Corda standalone node'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 configurations {
     runtimeArtifacts.extendsFrom runtime
 }
@@ -51,7 +39,7 @@ dependencies {
 task buildCordaJAR(type: FatCapsule) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_version}.jar"
-    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', 'config/dev/log4j2.xml')
+    applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', '../build/classes/main/CordaCaplet$1.class', 'config/dev/log4j2.xml')
     from 'NOTICE' // Copy CDDL notice
 
     capsuleManifest {

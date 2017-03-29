@@ -12,6 +12,9 @@ class StringToMethodCallParserTest {
         fun twoStrings(a: String, b: String) = a + b
         fun simpleObject(hash: SecureHash.SHA256) = hash.toString()!!
         fun complexObject(pair: Pair<Int, String>) = pair
+
+        fun overload(a: String) = a
+        fun overload(a: String, b: String) = a + b
     }
 
     val randomHash = "361170110f61086f77ff2c5b7ab36513705da1a3ebabf14dbe5cc9c982c45401"
@@ -20,7 +23,9 @@ class StringToMethodCallParserTest {
             "string note: A test of barewords" to "A test of barewords",
             "twoStrings a: Some words, b: ' and some words, like, Kirk, would, speak'" to "Some words and some words, like, Kirk, would, speak",
             "simpleObject hash: $randomHash" to randomHash.toUpperCase(),
-            "complexObject pair: { first: 12, second: Word up brother }" to Pair(12, "Word up brother")
+            "complexObject pair: { first: 12, second: Word up brother }" to Pair(12, "Word up brother"),
+            "overload a: A" to "A",
+            "overload a: A, b: B" to "AB"
     )
 
     @Test

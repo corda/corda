@@ -4,18 +4,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Testing utilities for Corda'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
@@ -27,6 +15,7 @@ dependencies {
     compile project(':core')
     compile project(':node')
     compile project(':node:webserver')
+    compile project(':verifier')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
@@ -38,7 +27,7 @@ dependencies {
     compile "junit:junit:$junit_version"
 
     // Guava: Google test library (collections test suite)
-    compile "com.google.guava:guava-testlib:19.0"
+    compile "com.google.guava:guava-testlib:$guava_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

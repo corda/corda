@@ -1,5 +1,6 @@
 package net.corda.node.services.messaging
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -14,6 +15,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
+import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -226,7 +228,8 @@ class ArtemisMessagingTests {
                     identity.public.composite,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
-                    networkMapRegistrationFuture).apply {
+                    networkMapRegistrationFuture,
+                    MonitoringService(MetricRegistry())).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

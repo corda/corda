@@ -111,7 +111,7 @@ interface CordaRPCOps : RPCOps {
      * Checks whether an attachment with the given hash is stored on the node.
      */
     fun attachmentExists(id: SecureHash): Boolean
-
+    
     /**
      * Download an attachment JAR by ID
      */

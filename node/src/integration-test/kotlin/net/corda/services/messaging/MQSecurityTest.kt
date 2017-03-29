@@ -2,7 +2,7 @@ package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.client.rpc.CordaRPCClientImpl
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
@@ -13,16 +13,16 @@ import net.corda.core.random63BitValue
 import net.corda.core.seconds
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
-import net.corda.node.services.User
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.P2P_QUEUE
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_QUEUE_REMOVALS_QUEUE
-import net.corda.node.services.messaging.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
-import net.corda.node.services.messaging.CordaRPCClientImpl
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_QUEUE_REMOVALS_QUEUE
+import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
+import net.corda.nodeapi.User
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.configureTestSSL
 import net.corda.testing.messaging.SimpleMQClient
 import net.corda.testing.node.NodeBasedTest
@@ -82,7 +82,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     @Test
-    fun `create queue for peer which has not been communciated with`() {
+    fun `create queue for peer which has not been communicated with`() {
         val bob = startNode("Bob").getOrThrow()
         assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.legalIdentity.owningKey.toBase58String()}")
     }

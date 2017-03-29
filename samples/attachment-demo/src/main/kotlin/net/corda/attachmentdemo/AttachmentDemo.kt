@@ -2,7 +2,7 @@ package net.corda.attachmentdemo
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -12,7 +12,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
-import net.corda.node.services.messaging.CordaRPCClient
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.ALICE_KEY
 import java.nio.file.Path
 import java.nio.file.Paths

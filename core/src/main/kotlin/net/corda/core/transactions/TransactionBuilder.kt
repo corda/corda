@@ -1,7 +1,9 @@
 package net.corda.core.transactions
 
+import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.time.Duration
@@ -27,6 +29,7 @@ import java.util.*
 open class TransactionBuilder(
         protected val type: TransactionType = TransactionType.General(),
         var notary: Party? = null,
+        var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),

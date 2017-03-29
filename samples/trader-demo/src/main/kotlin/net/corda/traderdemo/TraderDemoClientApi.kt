@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Futures
 import net.corda.contracts.testing.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.Issued
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -24,14 +25,14 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val logger = loggerFor<TraderDemoClientApi>()
     }
 
-    fun runBuyer(amount: Amount<Currency> = 30000.0.DOLLARS) {
+    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS) {
         val bankOfCordaParty = rpc.partyFromName(BOC.name)
                 ?: throw Exception("Unable to locate ${BOC.name} in Network Map Service")
         val me = rpc.nodeIdentity()
-        // TODO: revert back to multiple issue request amounts (3,10) when soft locking implemented
-        val amounts = calculateRandomlySizedAmounts(amount, 1, 1, Random())
-        val resultFutures = amounts.map {
-            rpc.startFlow(::IssuanceRequester, amount, me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty).returnValue
+        val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
+        // issuer random amounts of currency totaling 30000.DOLLARS in parallel
+        val resultFutures = amounts.map { pennies ->
+            rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty).returnValue
         }
 
         Futures.allAsList(resultFutures).getOrThrow()

@@ -13,6 +13,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
@@ -44,6 +45,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
@@ -116,6 +118,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val clock: Clock = platformClock
         override val myInfo: NodeInfo get() = info
         override val schemaService: SchemaService get() = schemas
+        override val transactionVerifierService: TransactionVerifierService get() = txVerifierService
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
@@ -152,6 +155,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     var inNodeNotaryService: NotaryService? = null
+    lateinit var txVerifierService: TransactionVerifierService
     lateinit var identity: IdentityService
     lateinit var net: MessagingServiceInternal
     lateinit var netMapCache: NetworkMapCache
@@ -182,6 +186,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** Set to true once [start] has been successfully called. */
     @Volatile var started = false
         private set
+
+    /** The implementation of the [CordaRPCOps] interface used by this node. */
+    open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
 
     open fun start(): AbstractNode {
         require(!started) { "Node has already been started" }
@@ -222,7 +229,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 isPreviousCheckpointsPresent = true
                 false
             }
-            startMessagingService(CordaRPCOpsImpl(services, smm, database))
+            startMessagingService(rpcOps)
             services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
@@ -247,6 +254,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         net = makeMessagingService()
         schemas = makeSchemaService()
         vault = makeVaultService(configuration.dataSourceProperties)
+        txVerifierService = makeTransactionVerifierService()
 
         info = makeInfo()
         identity = makeIdentityService()
@@ -274,9 +282,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun makeVaultObservers() {
+        VaultSoftLockManager(vault, smm)
         CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(services)
+        HibernateObserver(vault, schemas)
     }
 
     private fun makeInfo(): NodeInfo {
@@ -471,6 +480,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
     protected open fun makeSchemaService(): SchemaService = NodeSchemaService()
+
+    protected abstract fun makeTransactionVerifierService() : TransactionVerifierService
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
