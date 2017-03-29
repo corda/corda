@@ -9,7 +9,6 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets.UTF_8
 
 class ZeroFilterTest {
-
     private lateinit var output: ByteArrayOutputStream
     private lateinit var filter: OutputStream
 
@@ -56,5 +55,4 @@ class ZeroFilterTest {
         assertEquals(6, output.size())
         assertEquals("World!", output.toString("UTF-8"))
     }
-
 }
