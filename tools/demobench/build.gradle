@@ -82,18 +82,7 @@ jar {
     }
 }
 
-task testJar(type: Jar, dependsOn: 'compileTestJava') {
-    from(sourceSets.test.output.classesDir) {
-        include '**/getinput/**'
-    }
-    manifest {
-        attributes('Main-Class': 'net.corda.demobench.getinput.GetInput')
-    }
-    archiveName 'getinput.jar'
-}
-
 test {
-    dependsOn testJar
     systemProperty 'java.util.logging.config.class', 'net.corda.demobench.config.LoggingConfig'
     systemProperty 'org.jboss.logging.provider', 'slf4j'
 }
