@@ -3,6 +3,7 @@ package net.corda.core.crypto
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import java.security.InvalidKeyException
 import java.security.PublicKey
 
 /**
@@ -119,10 +120,11 @@ class CompositeKey(val threshold: Int,
     /**
      * Returns the enclosed [PublicKey] for a [CompositeKey] with a single leaf node
      *
-     * @throws IllegalArgumentException if the [CompositeKey] contains more than one node
+     * @throws InvalidKeyException if the [CompositeKey] contains more than one node
      */
     val singleKey: PublicKey
-        get() = keys.singleOrNull() ?: throw IllegalStateException("The key is composed of more than one PublicKey primitive")
+        @Throws(InvalidKeyException::class)
+        get() = keys.singleOrNull() ?: throw InvalidKeyException("The key is composed of more than one PublicKey primitive")
 }
 
 /** Returns the set of all [PublicKey]s contained within the PublicKey. These may be also [CompositeKey]s */
