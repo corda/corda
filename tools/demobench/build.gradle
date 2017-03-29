@@ -23,7 +23,10 @@ apply plugin: 'application'
 evaluationDependsOn(':tools:explorer:capsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
-applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig', '-Dorg.jboss.logging.provider=slf4j']
+applicationDefaultJvmArgs = [
+    '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+    '-Dorg.jboss.logging.provider=slf4j'
+]
 
 repositories {
     flatDir {
@@ -66,6 +69,7 @@ dependencies {
 
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
 }
 
 jar {
