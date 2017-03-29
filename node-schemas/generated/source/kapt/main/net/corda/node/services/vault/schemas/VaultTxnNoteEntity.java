@@ -133,6 +133,7 @@ public class VaultTxnNoteEntity implements VaultSchema.VaultTxnNote, Persistable
     .setImmutable(false)
     .setReadOnly(false)
     .setStateless(false)
+    .setView(false)
     .setFactory(new Supplier<VaultTxnNoteEntity>() {
         @Override
         public VaultTxnNoteEntity get() {

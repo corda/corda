@@ -103,6 +103,7 @@ public class VaultCashBalancesEntity implements VaultSchema.VaultCashBalances, P
     .setImmutable(false)
     .setReadOnly(false)
     .setStateless(false)
+    .setView(false)
     .setFactory(new Supplier<VaultCashBalancesEntity>() {
         @Override
         public VaultCashBalancesEntity get() {
