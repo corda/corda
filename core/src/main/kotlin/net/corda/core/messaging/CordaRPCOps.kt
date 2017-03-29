@@ -14,7 +14,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.notUsed
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
@@ -237,5 +236,22 @@ data class FlowHandle<A> (
      */
     override fun close() {
         discard()
+    }
+}
+
+/**
+ * This function should be invoked on any unwanted Observables returned from RPC to release the server resources.
+ * TODO: Delete this function when this file is moved to RPC module, as Observable<T>.notUsed() exists there already.
+ *
+ * subscribe({}, {}) was used instead of simply calling subscribe()
+ * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
+ * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
+ * empty inputs are used to subscribe({}, {}).
+ */
+fun <T> Observable<T>.notUsed() {
+    try {
+        this.subscribe({}, {}).unsubscribe()
+    } catch (e: Exception) {
+        // Swallow any other exceptions as well.
     }
 }
