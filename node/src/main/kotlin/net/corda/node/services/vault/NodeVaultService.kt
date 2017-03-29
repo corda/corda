@@ -61,16 +61,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val log = loggerFor<NodeVaultService>()
 
         // Define composite primary key used in Requery Expression
-        val stateRefCompositeColumn = primaryCompositeKeyExpression()
-
-        /**
-         * Helper method to define composite key used in Requery Expression
-         */
-        private fun primaryCompositeKeyExpression(): RowExpression {
-            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
-            val expression = RowExpression.of(primaryCompositeKey)
-            return expression
-        }
+        val stateRefCompositeColumn : RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
     }
 
     val configuration = RequeryConfiguration(dataSourceProperties)
