@@ -52,23 +52,23 @@ fun hang(hangIntervalRange: LongRange) = Disruption("Hang randomly") { node, ran
     node.doWhileSigStopped { Thread.sleep(hangIntervalMs) }
 }
 
-val restart = Disruption("Restart randomly") { node, random ->
-    node.connection.runShellCommandGetOutput("sudo systemctl restart ${node.configuration.remoteSystemdServiceName}").getResultOrThrow()
+val restart = Disruption("Restart randomly") { (configuration, connection), _ ->
+    connection.runShellCommandGetOutput("sudo systemctl restart ${configuration.remoteSystemdServiceName}").getResultOrThrow()
 }
 
-val kill = Disruption("Kill randomly") { node, random ->
+val kill = Disruption("Kill randomly") { node, _ ->
     val pid = node.getNodePid()
     node.connection.runShellCommandGetOutput("sudo kill $pid")
 }
 
-val deleteDb = Disruption("Delete persistence database without restart") { node, random ->
-    node.connection.runShellCommandGetOutput("sudo rm ${node.configuration.remoteNodeDirectory}/persistence.mv.db").getResultOrThrow()
+val deleteDb = Disruption("Delete persistence database without restart") { (configuration, connection), _ ->
+    connection.runShellCommandGetOutput("sudo rm ${configuration.remoteNodeDirectory}/persistence.mv.db").getResultOrThrow()
 }
 
 // DOCS START 2
-fun strainCpu(parallelism: Int, durationSeconds: Int) = Disruption("Put strain on cpu") { node, random ->
+fun strainCpu(parallelism: Int, durationSeconds: Int) = Disruption("Put strain on cpu") { (_, connection), _ ->
     val shell = "for c in {1..$parallelism} ; do openssl enc -aes-128-cbc -in /dev/urandom -pass pass: -e > /dev/null & done && JOBS=\$(jobs -p) && (sleep $durationSeconds && kill \$JOBS) & wait"
-    node.connection.runShellCommandGetOutput(shell).getResultOrThrow()
+    connection.runShellCommandGetOutput(shell).getResultOrThrow()
 }
 // DOCS END 2
 

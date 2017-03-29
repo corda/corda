@@ -3,7 +3,6 @@ package net.corda.node.services
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
-import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -89,7 +88,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 expect(match = { it.second is StateMachineUpdate.Added }) {
                     val (notary, update) = it
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _key, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }
@@ -128,7 +127,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 expect(match = { it.second is StateMachineUpdate.Added }) {
                     val (notary, update) = it
                     update as StateMachineUpdate.Added
-                    notarisationsPerNotary.compute(notary.legalIdentity) { _key, number -> number?.plus(1) ?: 1 }
+                    notarisationsPerNotary.compute(notary.legalIdentity) { _, number -> number?.plus(1) ?: 1 }
                 }
             }
         }

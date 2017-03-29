@@ -17,7 +17,7 @@ class DummyContractV2Tests {
         val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
         val v1Ref = StateRef(SecureHash.randomSHA256(), 0)
         val v1StateAndRef = StateAndRef(v1State, v1Ref)
-        val (tx, signers) = DummyContractV2().generateUpgradeFromV1(v1StateAndRef)
+        val (tx, _) = DummyContractV2().generateUpgradeFromV1(v1StateAndRef)
 
         assertEquals(v1Ref, tx.inputs.single())
 

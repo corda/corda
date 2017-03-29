@@ -16,7 +16,7 @@ class AssociatedListTest {
     @Before
     fun setup() {
         sourceList = FXCollections.observableArrayList(0)
-        associatedList = AssociatedList(sourceList, { it % 3 }) { mod3, number -> number }
+        associatedList = AssociatedList(sourceList, { it % 3 }) { _, number -> number }
         replayedMap = ReplayedMap(associatedList)
     }
 

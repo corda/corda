@@ -107,7 +107,7 @@ class P2PMessagingTest : NodeBasedTest() {
     }
 
     private fun Node.respondWith(message: Any) {
-        net.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, reg ->
+        net.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = net.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
             net.send(response, request.replyTo)

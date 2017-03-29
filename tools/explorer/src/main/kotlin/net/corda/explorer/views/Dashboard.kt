@@ -29,7 +29,7 @@ class Dashboard : CordaView() {
     init {
         Bindings.bindContent(tilePane.children, widgetPanes)
         // Dynamically change column count and width according to the window size.
-        tilePane.widthProperty().addListener { e ->
+        tilePane.widthProperty().addListener { _ ->
             val prefWidth = 350
             val columns: Int = ((tilePane.width - 10) / prefWidth).toInt()
             tilePane.children.forEach { (it as? TitledPane)?.prefWidth = (tilePane.width - 10) / columns }

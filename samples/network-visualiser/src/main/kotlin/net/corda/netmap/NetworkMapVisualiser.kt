@@ -157,7 +157,7 @@ class NetworkMapVisualiser : Application() {
 
         reloadStylesheet(stage)
 
-        stage.focusedProperty().addListener { value, old, new ->
+        stage.focusedProperty().addListener { _, _, new ->
             if (new) {
                 reloadStylesheet(stage)
             }
@@ -209,7 +209,7 @@ class NetworkMapVisualiser : Application() {
             viewModel.runningPausedState = newRunningPausedState
         }
         view.styleChoice.selectionModel.selectedItemProperty()
-                .addListener { ov, value, newValue -> viewModel.displayStyle = newValue }
+                .addListener { _, _, newValue -> viewModel.displayStyle = newValue }
         viewModel.simulation.dateChanges.observeOn(uiThread).subscribe { view.dateLabel.text = it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) }
     }
 
@@ -239,7 +239,7 @@ class NetworkMapVisualiser : Application() {
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
                     val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
-                    println("Added: ${tracker}, ${widget}")
+                    println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget
                     view.sidebar.children += widget.vbox
                 } else {
@@ -256,7 +256,7 @@ class NetworkMapVisualiser : Application() {
                     val pane = viewModel.trackerBoxes[tracker]!!.vbox
                     // Slide the other tracker widgets up and over this one.
                     val slideProp = SimpleDoubleProperty(0.0)
-                    slideProp.addListener { obv -> pane.padding = Insets(0.0, 0.0, slideProp.value, 0.0) }
+                    slideProp.addListener { _ -> pane.padding = Insets(0.0, 0.0, slideProp.value, 0.0) }
                     val timeline = Timeline(
                             KeyFrame(Duration(250.0),
                                     KeyValue(pane.opacityProperty(), 0.0),

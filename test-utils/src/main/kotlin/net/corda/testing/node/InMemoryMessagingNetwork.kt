@@ -66,7 +66,7 @@ class InMemoryMessagingNetwork(
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
     @Suppress("unused") // Used by the visualiser tool.
-    /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
 
@@ -82,7 +82,7 @@ class InMemoryMessagingNetwork(
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
 
     @Suppress("unused") // Used by the visualiser tool.
-    /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
 
@@ -217,10 +217,11 @@ class InMemoryMessagingNetwork(
                 return pickFrom[random.nextInt(pickFrom.size)]
             }
         }
+
         class RoundRobin : ServicePeerAllocationStrategy() {
             val previousPicks = HashMap<ServiceHandle, Int>()
             override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
-                val nextIndex = previousPicks.compute(service) { _key, previous ->
+                val nextIndex = previousPicks.compute(service) { _, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
                 }!!
                 return pickFrom[nextIndex]

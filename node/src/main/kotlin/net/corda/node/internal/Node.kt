@@ -243,7 +243,7 @@ class Node(override val configuration: FullNodeConfiguration,
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).
                     inDomain("net.corda").
-                    createsObjectNamesWith { type, domain, name ->
+                    createsObjectNamesWith { _, domain, name ->
                         // Make the JMX hierarchy a bit better organised.
                         val category = name.substringBefore('.')
                         val subName = name.substringAfter('.', "")

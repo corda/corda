@@ -17,8 +17,8 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
-import net.corda.client.jfx.utils.*
 import net.corda.client.jfx.model.*
+import net.corda.client.jfx.utils.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
@@ -220,7 +220,7 @@ class CashViewer : CordaView("Cash") {
             root.isExpanded = true
             isShowRoot = false
             // TODO use smart resize
-            setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
+            setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, _ ->
                 Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / columns.size).toInt()
             }
         }
@@ -229,7 +229,7 @@ class CashViewer : CordaView("Cash") {
         cashViewerTableIssuerCurrency.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                // TODO: Anonymous should probably be italicised or similar
+            // TODO: Anonymous should probably be italicised or similar
                 is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull() ?: "Anonymous")
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
@@ -308,7 +308,7 @@ class CashViewer : CordaView("Cash") {
             }
             linechart(null, xAxis, yAxis) {
                 series("USD") {
-                    sumAmount.addListener { observableValue, old, new ->
+                    sumAmount.addListener { _, _, _ ->
                         val lastTimeStamp = data.last().value?.xValue
                         if (lastTimeStamp == null || System.currentTimeMillis() - lastTimeStamp.toLong() > 1.seconds.toMillis()) {
                             data(System.currentTimeMillis(), sumAmount.value.quantity)

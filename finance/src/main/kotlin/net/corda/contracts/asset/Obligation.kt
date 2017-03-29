@@ -531,7 +531,7 @@ class Obligation<P> : Contract {
 
         // Produce a new set of states
         val groups = statesAndRefs.groupBy { it.state.data.amount.token }
-        for ((aggregateState, stateAndRefs) in groups) {
+        for ((_, stateAndRefs) in groups) {
             val partiesUsed = ArrayList<CompositeKey>()
             stateAndRefs.forEach { stateAndRef ->
                 val outState = stateAndRef.state.data.copy(lifecycle = lifecycle)

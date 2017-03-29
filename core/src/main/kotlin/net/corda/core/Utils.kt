@@ -75,7 +75,7 @@ fun <T> future(block: () -> T): ListenableFuture<T> = CompletableToListenable(Co
 
 private class CompletableToListenable<T>(private val base: CompletableFuture<T>) : Future<T> by base, ListenableFuture<T> {
     override fun addListener(listener: Runnable, executor: Executor) {
-        base.whenCompleteAsync(BiConsumer { result, exception -> listener.run() }, executor)
+        base.whenCompleteAsync(BiConsumer { _, _ -> listener.run() }, executor)
     }
 }
 
@@ -104,6 +104,7 @@ infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, Function { (mapper as (F?) -> T)(it) })
+
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {

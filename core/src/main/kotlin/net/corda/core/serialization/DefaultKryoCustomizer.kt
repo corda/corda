@@ -66,7 +66,7 @@ object DefaultKryoCustomizer {
             register(CompositeKey.Leaf::class.java, CompositeKeyLeafSerializer)
 
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
-            register(Array<StackTraceElement>::class, read = { kryo, input -> emptyArray() }, write = { kryo, output, obj -> })
+            register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
 
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
