@@ -256,7 +256,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        (net as NodeMessagingClient).run()
+        (net as NodeMessagingClient).run(messageBroker!!.serverControl)
     }
 
     // TODO: Do we really need setup?

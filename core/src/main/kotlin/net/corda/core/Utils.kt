@@ -404,6 +404,8 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
             ErrorOr.of(error)
         }
     }
+
+    fun mapError(function: (Throwable) -> Throwable) = ErrorOr(value, error?.let(function))
 }
 
 /**

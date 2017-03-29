@@ -21,11 +21,11 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.transaction
-import net.corda.nodeapi.CURRENT_RPC_USER
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
@@ -121,8 +121,9 @@ class CordaRPCOpsImpl(
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
+        val rpcContext = getRpcContext()
+        rpcContext.requirePermission(startFlowPermission(logicType))
+        val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
         val stateMachine = services.invokeFlowAsync(logicType, currentUser, *args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
@@ -133,8 +134,9 @@ class CordaRPCOpsImpl(
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
+        val rpcContext = getRpcContext()
+        rpcContext.requirePermission(startFlowPermission(logicType))
+        val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
         val stateMachine = services.invokeFlowAsync(logicType, currentUser, *args)
         return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
     }

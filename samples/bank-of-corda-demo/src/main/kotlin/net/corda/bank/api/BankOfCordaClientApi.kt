@@ -32,18 +32,19 @@ class BankOfCordaClientApi(val hostAndPort: HostAndPort) {
     fun requestRPCIssue(params: IssueRequestParams): SignedTransaction {
         val client = CordaRPCClient(hostAndPort)
         // TODO: privileged security controls required
-        client.start("bankUser", "test")
-        val proxy = client.proxy()
+        client.start("bankUser", "test").use { connection ->
+            val proxy = connection.proxy
 
-        // Resolve parties via RPC
-        val issueToParty = proxy.partyFromX500Name(params.issueToPartyName)
-                ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-        val issuerBankParty = proxy.partyFromX500Name(params.issuerBankName)
-                ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
+            // Resolve parties via RPC
+            val issueToParty = proxy.partyFromX500Name(params.issueToPartyName)
+                    ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
+            val issuerBankParty = proxy.partyFromX500Name(params.issuerBankName)
+                    ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
 
-        val amount = Amount(params.amount, currency(params.currency))
-        val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
+            val amount = Amount(params.amount, currency(params.currency))
+            val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
 
-        return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.getOrThrow()
+            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.getOrThrow()
+        }
     }
 }

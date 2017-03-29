@@ -57,7 +57,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
                 },
                 userService)
         thread(name = config.myLegalName.commonName) {
-            net.run()
+            net.run(broker.serverControl)
         }
     }
 

@@ -66,8 +66,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
     fun getFixingDateObservable(config: FullNodeConfiguration): BlockingObservable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!)
-        client.start("user", "password")
-        val proxy = client.proxy()
+        val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultAndUpdates().second
 
         val fixingDates = vaultUpdates.map { update ->
