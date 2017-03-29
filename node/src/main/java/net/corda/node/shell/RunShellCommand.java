@@ -1,24 +1,16 @@
-package net.corda.node;
+package net.corda.node.shell;
 
 import net.corda.core.messaging.*;
 import net.corda.jackson.*;
 import org.crsh.cli.*;
 import org.crsh.command.*;
-import org.crsh.text.*;
 
-import java.lang.reflect.*;
 import java.util.*;
-import java.util.concurrent.*;
 
-import static net.corda.node.InteractiveShell.*;
+// Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
+// is the closest you can get in Kotlin to raw types.
 
-// This file is actually compiled at runtime with a bundled Java compiler by CRaSH. That's pretty weak: being able
-// to do this is a neat party trick and means people can write new commands in Java then just drop them into
-// their node directory, but it makes the first usage of the command slower for no good reason. There is a PR
-// in the upstream CRaSH project that adds an ExternalResolver which might be useful. Then we could convert this
-// file to Kotlin too.
-
-public class run extends InteractiveShellCommand {
+public class RunShellCommand extends InteractiveShellCommand {
     @Command
     @Man(
         "Runs a method from the CordaRPCOps interface, which is the same interface exposed to RPC clients.\n\n" +

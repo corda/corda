@@ -1,4 +1,4 @@
-package net.corda.node
+package net.corda.node.shell
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
@@ -17,6 +17,7 @@ import net.corda.core.utilities.Emoji
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
+import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -26,8 +27,14 @@ import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
 import org.crsh.console.jline.TerminalFactory
 import org.crsh.console.jline.console.ConsoleReader
+import org.crsh.lang.impl.java.JavaLanguage
+import org.crsh.plugin.CRaSHPlugin
+import org.crsh.plugin.PluginContext
+import org.crsh.plugin.PluginLifeCycle
+import org.crsh.plugin.ServiceLoaderDiscovery
+import org.crsh.shell.Shell
 import org.crsh.shell.ShellFactory
-import org.crsh.standalone.Bootstrap
+import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
 import org.crsh.util.InterruptHandler
@@ -53,7 +60,6 @@ import kotlin.concurrent.thread
 
 // TODO: Add command history.
 // TODO: Command completion.
-// TODO: Find a way to inject this directly into CRaSH as a command, without needing JIT source compilation.
 // TODO: Do something sensible with commands that return a future.
 // TODO: Configure default renderers, send objects down the pipeline, add commands to do json/xml/yaml outputs.
 // TODO: Add a command to view last N lines/tail/control log4j2 loggers.
@@ -75,25 +81,6 @@ object InteractiveShell {
         var runSSH = runSSHServer
 
         Logger.getLogger("").level = Level.OFF   // TODO: Is this really needed?
-
-        val classpathDriver = ClassPathMountFactory(Thread.currentThread().contextClassLoader)
-        val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
-
-        val extraCommandsPath = (dir / "shell-commands").toAbsolutePath().createDirectories()
-        val commandsFS = FS.Builder()
-                .register("file", fileDriver)
-                .mount("file:" + extraCommandsPath)
-                .register("classpath", classpathDriver)
-                .mount("classpath:/net/corda/node/shell/")
-                .mount("classpath:/crash/commands/")
-                .build()
-        // TODO: Re-point to our own conf path.
-        val confFS = FS.Builder()
-                .register("classpath", classpathDriver)
-                .mount("classpath:/crash")
-                .build()
-
-        val bootstrap = Bootstrap(Thread.currentThread().contextClassLoader, confFS, commandsFS)
 
         val config = Properties()
         if (runSSH) {
@@ -117,16 +104,9 @@ object InteractiveShell {
             config["crash.auth.simple.password"] = "admin"
         }
 
-        bootstrap.config = config
-        bootstrap.setAttributes(mapOf(
-                "node" to node,
-                "services" to node.services,
-                "ops" to node.rpcOps,
-                "mapper" to yamlInputMapper
-        ))
-        bootstrap.bootstrap()
-
-        // TODO: Automatically set up the JDBC sub-command with a connection to the database.
+        ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("flow", "Start a (work)flow on the node. This is how you can change the ledger.", FlowShellCommand::class.java)
+        val shell = ShellLifecycle(dir).start(config)
 
         if (runSSH) {
             // printBasicNodeInfo("SSH server listening on address", node.configuration.sshdAddress.toString())
@@ -135,7 +115,7 @@ object InteractiveShell {
         // Possibly bring up a local shell in the launching terminal window, unless it's disabled.
         if (!runLocalShell)
             return
-        val shell = bootstrap.context.getPlugin(ShellFactory::class.java).create(null)
+        // TODO: Automatically set up the JDBC sub-command with a connection to the database.
         val terminal = TerminalFactory.create()
         val consoleReader = ConsoleReader("Corda", FileInputStream(FileDescriptor.`in`), System.out, terminal)
         val jlineProcessor = JLineProcessor(terminal.isAnsiSupported, shell, consoleReader, System.out)
@@ -152,6 +132,47 @@ object InteractiveShell {
             jlineProcessor.closed()
             terminal.restore()
             node.stop()
+        }
+    }
+
+    class ShellLifecycle(val dir: Path) : PluginLifeCycle() {
+        fun start(config: Properties): Shell {
+            val classLoader = this.javaClass.classLoader
+            val classpathDriver = ClassPathMountFactory(classLoader)
+            val fileDriver = FileMountFactory(Utils.getCurrentDirectory())
+
+            val extraCommandsPath = (dir / "shell-commands").toAbsolutePath().createDirectories()
+            val commandsFS = FS.Builder()
+                    .register("file", fileDriver)
+                    .mount("file:" + extraCommandsPath)
+                    .register("classpath", classpathDriver)
+                    .mount("classpath:/net/corda/node/shell/")
+                    .mount("classpath:/crash/commands/")
+                    .build()
+            val confFS = FS.Builder()
+                    .register("classpath", classpathDriver)
+                    .mount("classpath:/crash")
+                    .build()
+
+            val discovery = object : ServiceLoaderDiscovery(classLoader) {
+                override fun getPlugins(): Iterable<CRaSHPlugin<*>> {
+                    // Don't use the Java language plugin (we may not have tools.jar available at runtime), this
+                    // will cause any commands using JIT Java compilation to be suppressed. In CRaSH upstream that
+                    // is only the 'jmx' command.
+                    return super.getPlugins().filterNot { it is JavaLanguage }
+                }
+            }
+            val attributes = mapOf(
+                    "node" to node,
+                    "services" to node.services,
+                    "ops" to node.rpcOps,
+                    "mapper" to yamlInputMapper
+            )
+            val context = PluginContext(discovery, attributes, commandsFS, confFS, classLoader)
+            context.refresh()
+            this.config = config
+            start(context)
+            return context.getPlugin(ShellFactory::class.java).create(null)
         }
     }
 

@@ -11,6 +11,7 @@ import net.corda.core.node.Version
 import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import org.fusesource.jansi.Ansi
@@ -133,7 +134,11 @@ fun main(args: Array<String>) {
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
             node.startupComplete then {
-                InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
+                try {
+                    InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
+                } catch(e: Throwable) {
+                    log.error("Shell failed to start", e)
+                }
             }
         } failure {
             log.error("Error during network map registration", it)

@@ -1,4 +1,4 @@
-package net.corda.node
+package net.corda.node.shell
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.messaging.CordaRPCOps
