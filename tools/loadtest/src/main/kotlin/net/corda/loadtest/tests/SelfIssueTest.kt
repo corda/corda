@@ -7,12 +7,8 @@ import net.corda.client.mock.replicatePoisson
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.startFlow
-import net.corda.core.toFuture
-import net.corda.flows.CashException
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeHandle
@@ -39,7 +35,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         // DOCS END 1
         "Self issuing cash randomly",
 
-        generate = { state, parallelism ->
+        generate = { _, parallelism ->
             val generateIssue = Generator.pickOne(simpleNodes).bind { node: NodeHandle ->
                 generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity)).map {
                     SelfIssueCommand(it, node)
@@ -73,13 +69,13 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         gatherRemoteState = { previousState ->
             val selfIssueVaults = HashMap<AbstractParty, Long>()
-            simpleNodes.forEach { node ->
-                val vault = node.connection.proxy.vaultAndUpdates().first
+            simpleNodes.forEach { (_, connection, info) ->
+                val vault = connection.proxy.vaultAndUpdates().first
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {
                         val issuer = state.amount.token.issuer.party
-                        if (issuer == node.info.legalIdentity as AbstractParty) {
+                        if (issuer == info.legalIdentity as AbstractParty) {
                             selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                         }
                     }
@@ -91,7 +87,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
                 if (!diff.isUntouched) {
 
                     var diffString = ""
-                    diff.visit { node, visit ->
+                    diff.visit { node, _ ->
                         if (node.isChanged && node.children.all { !it.isChanged }) {
                             diffString += "${node.propertyPath}: simulated[${node.canonicalGet(previousState.vaultsSelfIssued)}], actual[${node.canonicalGet(selfIssueVaults)}]\n"
                         }

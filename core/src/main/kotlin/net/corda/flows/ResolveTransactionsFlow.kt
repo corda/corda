@@ -6,7 +6,6 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
-import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -43,9 +42,9 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Construct txhash -> dependent-txs map
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { stx ->
-                stx.tx.inputs.forEach { input ->
+                stx.tx.inputs.forEach { (txhash) ->
                     // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(stx)
+                    forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
                 }
             }
 

@@ -2,7 +2,6 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
-import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
@@ -200,7 +199,7 @@ class NodeSchedulerService(private val database: Database,
             var scheduledLogic: FlowLogic<*>? = null
             scheduler.mutex.locked {
                 // need to remove us from those scheduled, but only if we are still next
-                scheduledStates.compute(scheduledState.ref) { ref, value ->
+                scheduledStates.compute(scheduledState.ref) { _, value ->
                     if (value === scheduledState) {
                         if (scheduledActivity == null) {
                             logger.info("Scheduled state $scheduledState has rescheduled to never.")

@@ -36,9 +36,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
-import tornadofx.App
-import tornadofx.addStageIcon
-import tornadofx.find
+import tornadofx.*
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutionException
@@ -100,7 +98,7 @@ class Main : App(MainView::class) {
 
     init {
         // Shows any uncaught exception in exception dialog.
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
             throwable.printStackTrace()
             // Show exceptions in exception dialog. Ensure this runs in application thread.
             runInFxApplicationThread {
@@ -157,19 +155,19 @@ fun main(args: Array<String>) {
         )
         // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
         val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
-                                    customOverrides = mapOf("nearestCity" to "Zurich"))
+                customOverrides = mapOf("nearestCity" to "Zurich"))
         val alice = startNode("Alice", rpcUsers = arrayListOf(user),
-                                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
-                                    customOverrides = mapOf("nearestCity" to "Milan"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
+                customOverrides = mapOf("nearestCity" to "Milan"))
         val bob = startNode("Bob", rpcUsers = arrayListOf(user),
-                                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
-                                    customOverrides = mapOf("nearestCity" to "Madrid"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
+                customOverrides = mapOf("nearestCity" to "Madrid"))
         val issuerGBP = startNode("UK Bank Plc", rpcUsers = arrayListOf(manager),
-                                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
-                                    customOverrides = mapOf("nearestCity" to "London"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
+                customOverrides = mapOf("nearestCity" to "London"))
         val issuerUSD = startNode("USA Bank Corp", rpcUsers = arrayListOf(manager),
-                                    advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
-                                    customOverrides = mapOf("nearestCity" to "New York"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
+                customOverrides = mapOf("nearestCity" to "New York"))
 
         val notaryNode = notary.get()
         val aliceNode = alice.get()
@@ -221,12 +219,12 @@ fun main(args: Array<String>) {
 
             val maxIterations = 100000
             val flowHandles = mapOf(
-                    "GBPIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
-                    "USDIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
-                    "Alice" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
-                    "Bob" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
-                    "GBPExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1),
-                    "USDExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations+1)
+                    "GBPIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1),
+                    "USDIssuer" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1),
+                    "Alice" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1),
+                    "Bob" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1),
+                    "GBPExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1),
+                    "USDExit" to ArrayBlockingQueue<FlowHandle<SignedTransaction>>(maxIterations + 1)
             )
 
             flowHandles.forEach {

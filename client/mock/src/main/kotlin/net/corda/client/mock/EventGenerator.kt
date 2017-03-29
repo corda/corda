@@ -81,7 +81,7 @@ class EventGenerator(
             }
 
     val exitCashGenerator =
-            amountToIssueGenerator.combine(partyGenerator, issueRefGenerator) { amount, to, issueRef ->
+            amountToIssueGenerator.combine(partyGenerator, issueRefGenerator) { amount, _, issueRef ->
                 CashFlowCommand.ExitCash(
                         amount,
                         issueRef

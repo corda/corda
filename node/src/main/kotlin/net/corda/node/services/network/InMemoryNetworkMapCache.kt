@@ -81,7 +81,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            net.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+            net.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
                     val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID,
@@ -99,9 +99,9 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress)
-        val future = net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { resp ->
+        val future = net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
-            resp.nodes?.forEach { processRegistration(it) }
+            nodes?.forEach { processRegistration(it) }
             Unit
         }
         _registrationFuture.setFuture(future)

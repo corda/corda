@@ -14,7 +14,10 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.testing.*
+import net.corda.testing.BOC
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.initiateSingleShotFlow
+import net.corda.testing.ledger
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.Test
@@ -86,7 +89,7 @@ class IssuerFlowTest {
                 runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(pennies, amount.token), issueToPartyAndRef)
             }
             handles.forEach {
-                require (it.issueRequestResult.get() is SignedTransaction)
+                require(it.issueRequestResult.get() is SignedTransaction)
             }
 
             bankOfCordaNode.stop()
@@ -95,10 +98,10 @@ class IssuerFlowTest {
     }
 
     private fun runIssuerAndIssueRequester(issuerNode: MockNode, issueToNode: MockNode,
-                                           amount: Amount<Currency>, issueToPartyAndRef: PartyAndReference) : RunResult {
+                                           amount: Amount<Currency>, issueToPartyAndRef: PartyAndReference): RunResult {
         val resolvedIssuerParty = issuerNode.services.identityService.partyFromAnonymous(issueToPartyAndRef) ?: throw IllegalStateException()
-        val issuerFuture = issuerNode.initiateSingleShotFlow(IssuerFlow.IssuanceRequester::class) {
-            otherParty -> IssuerFlow.Issuer(resolvedIssuerParty)
+        val issuerFuture = issuerNode.initiateSingleShotFlow(IssuerFlow.IssuanceRequester::class) { _ ->
+            IssuerFlow.Issuer(resolvedIssuerParty)
         }.map { it.stateMachine }
 
         val issueRequest = IssuanceRequester(amount, resolvedIssuerParty, issueToPartyAndRef.reference, issuerNode.info.legalIdentity)

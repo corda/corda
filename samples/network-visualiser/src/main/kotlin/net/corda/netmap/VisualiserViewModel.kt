@@ -62,14 +62,14 @@ class VisualiserViewModel {
     fun repositionNodes() {
         for ((index, bank) in simulation.banks.withIndex()) {
             nodesToWidgets[bank]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, index -> nodeMapCoords(node) }
-                Style.CIRCLE -> { node, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
+                Style.MAP -> { node, _ -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
             })
         }
         for ((index, serviceProvider) in (simulation.serviceProviders + simulation.regulators).withIndex()) {
             nodesToWidgets[serviceProvider]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, index -> nodeMapCoords(node) }
-                Style.CIRCLE -> { node, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
+                Style.MAP -> { node, _ -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
             })
         }
     }
@@ -170,8 +170,8 @@ class VisualiserViewModel {
 
         val widget = NodeWidget(forNode, innerDot, outerDot, longPulseOuterDot, pulseAnim, longPulseAnim, nameLabel, statusLabel)
         when (displayStyle) {
-            Style.CIRCLE -> widget.position(index, { node, index -> nodeCircleCoords(nodeType, index) })
-            Style.MAP -> widget.position(index, { node, index -> nodeMapCoords(node) })
+            Style.CIRCLE -> widget.position(index, { _, index -> nodeCircleCoords(nodeType, index) })
+            Style.MAP -> widget.position(index, { node, _ -> nodeMapCoords(node) })
         }
         return widget
     }

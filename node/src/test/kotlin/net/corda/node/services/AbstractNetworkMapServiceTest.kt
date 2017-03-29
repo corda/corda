@@ -219,7 +219,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private fun MockNode.subscribe(): List<Update> {
         val request = SubscribeRequest(true, info.address)
         val updates = BlockingArrayQueue<Update>()
-        services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+        services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             updates += message.data.deserialize<Update>()
         }
         val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.info.address)
@@ -260,6 +260,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         class Added(node: NodeInfo) : Changed(node) {
             constructor(node: MockNode) : this(node.info)
         }
+
         class Removed(node: NodeInfo) : Changed(node) {
             constructor(node: MockNode) : this(node.info)
         }
