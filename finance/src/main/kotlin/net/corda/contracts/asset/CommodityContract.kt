@@ -106,7 +106,7 @@ class CommodityContract : OnLedgerAsset<Commodity, CommodityContract.Commands, C
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Commodity>>, newOwner: CompositeKey): FungibleAsset<Commodity>
-                = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
+                = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "Commodity($amount at ${amount.token.issuer} owned by $owner)"
 
