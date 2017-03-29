@@ -35,6 +35,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.test.assertEquals
 
 /**
  * Runs a series of MQ-related attacks against a node. Subclasses need to call [startAttacker] to connect
@@ -201,10 +202,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertSendAttackFails(address: String) {
         val message = attacker.createMessage()
+        assertEquals(true, attacker.producer.isBlockOnNonDurableSend())
         assertAttackFails(address, "SEND") {
             attacker.producer.send(address, message)
         }
-        // TODO Make sure no actual message is received
+        assertEquals(0, message.getDeliveryCount())
+        assertEquals(0, message.getBodySize())
     }
 
     fun assertConsumeAttackFails(queue: String) {
