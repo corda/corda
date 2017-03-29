@@ -12,6 +12,7 @@ import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
