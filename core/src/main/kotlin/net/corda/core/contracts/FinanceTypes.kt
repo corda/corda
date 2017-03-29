@@ -36,7 +36,7 @@ import java.util.*
  * @param T the type of the token, for example [Currency].
  */
 @CordaSerializable
-data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
+data class Amount<T: Any>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     companion object {
         /**
          * Build a currency amount from a decimal representation. For example, with an input of "12.34" GBP,
@@ -165,9 +165,9 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
  */
 fun Amount<Currency>.toDecimal() : BigDecimal = BigDecimal(quantity).movePointLeft(token.defaultFractionDigits)
 
-fun <T> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
-fun <T> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
-fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
+fun <T: Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+fun <T: Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
+fun <T: Any> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

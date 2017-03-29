@@ -83,14 +83,14 @@ class TransactionStateGenerator<T : ContractState>(val stateGenerator: Generator
 }
 
 @Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
-class IssuedGenerator<T>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
+class IssuedGenerator<T: Any>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Issued<T> {
         return Issued(PartyAndReferenceGenerator().generate(random, status), productGenerator.generate(random, status))
     }
 }
 
 @Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
-class AmountGenerator<T>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
+class AmountGenerator<T: Any>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Amount<T> {
         return Amount(random.nextLong(0, 1000000), tokenGenerator.generate(random, status))
     }

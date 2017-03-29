@@ -173,7 +173,7 @@ interface IssuanceDefinition
  * @param P the type of product underlying the definition, for example [Currency].
  */
 @CordaSerializable
-data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
+data class Issued<out P: Any>(val issuer: PartyAndReference, val product: P) {
     override fun toString() = "$product issued by $issuer"
 }
 
@@ -182,7 +182,7 @@ data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
  * cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
  * other mechanism and the additional type safety is not wanted.
  */
-fun <T> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
+fun <T: Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
 /**
  * A contract state that can have a single owner.
