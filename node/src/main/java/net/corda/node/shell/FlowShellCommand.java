@@ -1,4 +1,4 @@
-package net.corda.node;
+package net.corda.node.shell;
 
 // See the comments at the top of run.java
 
@@ -8,7 +8,7 @@ import org.crsh.text.*;
 
 import java.util.*;
 
-import static net.corda.node.InteractiveShell.*;
+import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
     "Allows you to list and start flows. This is the primary way in which you command the node to change the ledger.\n\n" +
@@ -17,7 +17,7 @@ import static net.corda.node.InteractiveShell.*;
     "flow constructors (the right one is picked automatically) are then specified using the same syntax as for the run command."
 )
 @Usage("Start a (work)flow on the node. This is how you can change the ledger.")
-public class flow extends InteractiveShellCommand {
+public class FlowShellCommand extends InteractiveShellCommand {
     // Note that the class name is deliberately lower case, because we want the command the user types to be
     // lower case. CRaSH should ideally lowercase the command names for us, but it doesn't.
 
