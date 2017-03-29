@@ -29,7 +29,7 @@ val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
  *
  * @param P the product the obligation is for payment of.
  */
-class Obligation<P> : Contract {
+class Obligation<P: Any> : Contract {
 
     /**
      * TODO:
@@ -47,7 +47,7 @@ class Obligation<P> : Contract {
         /**
          * Parent clause for clauses that operate on grouped states (those which are fungible).
          */
-        class Group<P> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
+        class Group<P: Any> : GroupClauseVerifier<State<P>, Commands, Issued<Terms<P>>>(
                 AllOf(
                         NoZeroSizedOutputs<State<P>, Commands, Terms<P>>(),
                         FirstOf(
@@ -70,19 +70,19 @@ class Obligation<P> : Contract {
         /**
          * Generic issuance clause
          */
-        class Issue<P> : AbstractIssue<State<P>, Commands, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
+        class Issue<P: Any> : AbstractIssue<State<P>, Commands, Terms<P>>({ -> sumObligations() }, { token: Issued<Terms<P>> -> sumObligationsOrZero(token) }) {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Issue::class.java)
         }
 
         /**
          * Generic move/exit clause for fungible assets
          */
-        class ConserveAmount<P> : AbstractConserveAmount<State<P>, Commands, Terms<P>>()
+        class ConserveAmount<P: Any> : AbstractConserveAmount<State<P>, Commands, Terms<P>>()
 
         /**
          * Clause for supporting netting of obligations.
          */
-        class Net<C : CommandData, P> : NetClause<C, P>() {
+        class Net<C : CommandData, P: Any> : NetClause<C, P>() {
             val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
             override fun toString(): String = "Net obligations"
 
@@ -95,7 +95,7 @@ class Obligation<P> : Contract {
         /**
          * Obligation-specific clause for changing the lifecycle of one or more states.
          */
-        class SetLifecycle<P> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
+        class SetLifecycle<P: Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.SetLifecycle::class.java)
 
             override fun verify(tx: TransactionForContract,
@@ -115,7 +115,7 @@ class Obligation<P> : Contract {
          * Obligation-specific clause for settling an outstanding obligation by witnessing
          * change of ownership of other states to fulfil
          */
-        class Settle<P> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
+        class Settle<P: Any> : Clause<State<P>, Commands, Issued<Terms<P>>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Settle::class.java)
             override fun verify(tx: TransactionForContract,
                                 inputs: List<State<P>>,
@@ -204,7 +204,7 @@ class Obligation<P> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P> : Clause<S, C, T>() {
+        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P: Any> : Clause<S, C, T>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<S>,
                                 outputs: List<S>,
@@ -245,7 +245,7 @@ class Obligation<P> : Contract {
      * @param P the product the obligation is for payment of.
      */
     @CordaSerializable
-    data class Terms<P>(
+    data class Terms<P: Any>(
             /** The hash of the asset contract we're willing to accept in payment for this debt. */
             val acceptableContracts: NonEmptySet<SecureHash>,
             /** The parties whose assets we are willing to accept in payment for this debt. */
@@ -266,7 +266,7 @@ class Obligation<P> : Contract {
      *
      * @param P the product the obligation is for payment of.
      */
-    data class State<P>(
+    data class State<P: Any>(
             var lifecycle: Lifecycle = Lifecycle.NORMAL,
             /** Where the debt originates from (obligor) */
             val obligor: AnonymousParty,
@@ -354,7 +354,7 @@ class Obligation<P> : Contract {
          * state object to the beneficiary. If this reduces the balance to zero, the state object is destroyed.
          * @see [MoveCommand].
          */
-        data class Settle<P>(val amount: Amount<Issued<Terms<P>>>) : Commands
+        data class Settle<P: Any>(val amount: Amount<Issued<Terms<P>>>) : Commands
 
         /**
          * A command stating that the beneficiary is moving the contract into the defaulted state as it has not been settled
@@ -372,7 +372,7 @@ class Obligation<P> : Contract {
          * A command stating that the debt is being released by the beneficiary. Normally would indicate
          * either settlement outside of the ledger, or that the obligor is unable to pay.
          */
-        data class Exit<P>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
+        data class Exit<P: Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
     override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
@@ -629,7 +629,7 @@ class Obligation<P> : Contract {
  *
  * @return a map of obligor/beneficiary pairs to the balance due.
  */
-fun <P> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligation.State<P>>): Map<Pair<CompositeKey, CompositeKey>, Amount<Obligation.Terms<P>>> {
+fun <P: Any> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligation.State<P>>): Map<Pair<CompositeKey, CompositeKey>, Amount<Obligation.Terms<P>>> {
     val balances = HashMap<Pair<CompositeKey, CompositeKey>, Amount<Obligation.Terms<P>>>()
 
     states.forEach { state ->
@@ -644,7 +644,7 @@ fun <P> extractAmountsDue(product: Obligation.Terms<P>, states: Iterable<Obligat
 /**
  * Net off the amounts due between parties.
  */
-fun <P> netAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>): Map<Pair<CompositeKey, CompositeKey>, Amount<P>> {
+fun <P: Any> netAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>): Map<Pair<CompositeKey, CompositeKey>, Amount<P>> {
     val nettedBalances = HashMap<Pair<CompositeKey, CompositeKey>, Amount<P>>()
 
     balances.forEach { balance ->
@@ -669,7 +669,7 @@ fun <P> netAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>
  * @param balances payments due, indexed by obligor and beneficiary. Zero balances are stripped from the map before being
  * returned.
  */
-fun <P> sumAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>): Map<CompositeKey, Long> {
+fun <P: Any> sumAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>): Map<CompositeKey, Long> {
     val sum = HashMap<CompositeKey, Long>()
 
     // Fill the map with zeroes initially
@@ -699,25 +699,25 @@ fun <P> sumAmountsDue(balances: Map<Pair<CompositeKey, CompositeKey>, Amount<P>>
 }
 
 /** Sums the obligation states in the list, throwing an exception if there are none. All state objects in the list are presumed to be nettable. */
-fun <P> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>>
+fun <P: Any> Iterable<ContractState>.sumObligations(): Amount<Issued<Obligation.Terms<P>>>
         = filterIsInstance<Obligation.State<P>>().map { it.amount }.sumOrThrow()
 
 /** Sums the obligation states in the list, returning null if there are none. */
-fun <P> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>?
+fun <P: Any> Iterable<ContractState>.sumObligationsOrNull(): Amount<Issued<Obligation.Terms<P>>>?
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrNull()
 
 /** Sums the obligation states in the list, returning zero of the given product if there are none. */
-fun <P> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>>
+fun <P: Any> Iterable<ContractState>.sumObligationsOrZero(issuanceDef: Issued<Obligation.Terms<P>>): Amount<Issued<Obligation.Terms<P>>>
         = filterIsInstance<Obligation.State<P>>().filter { it.lifecycle == Obligation.Lifecycle.NORMAL }.map { it.amount }.sumOrZero(issuanceDef)
 
-infix fun <T> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
-infix fun <T> Obligation.State<T>.between(parties: Pair<AbstractParty, CompositeKey>) = copy(obligor = parties.first.toAnonymous(), beneficiary = parties.second)
-infix fun <T> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(beneficiary = owner)
-infix fun <T> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party.toAnonymous())
+infix fun <T: Any> Obligation.State<T>.at(dueBefore: Instant) = copy(template = template.copy(dueBefore = dueBefore))
+infix fun <T: Any> Obligation.State<T>.between(parties: Pair<AbstractParty, CompositeKey>) = copy(obligor = parties.first.toAnonymous(), beneficiary = parties.second)
+infix fun <T: Any> Obligation.State<T>.`owned by`(owner: CompositeKey) = copy(beneficiary = owner)
+infix fun <T: Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy(obligor = party.toAnonymous())
 // For Java users:
-@Suppress("unused") fun <T> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
+@Suppress("unused") fun <T: Any> Obligation.State<T>.ownedBy(owner: CompositeKey) = copy(beneficiary = owner)
 
-@Suppress("unused") fun <T> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
+@Suppress("unused") fun <T: Any> Obligation.State<T>.issuedBy(party: AnonymousParty) = copy(obligor = party)
 
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
