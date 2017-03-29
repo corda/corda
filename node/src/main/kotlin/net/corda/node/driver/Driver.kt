@@ -232,7 +232,7 @@ fun getTimestampAsDirectoryName(): String {
 fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            Socket(hostAndPort.host, hostAndPort.port).close()
             Unit
         } catch (_exception: SocketException) {
             null
@@ -243,7 +243,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
 fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            Socket(hostAndPort.host, hostAndPort.port).close()
             null
         } catch (_exception: SocketException) {
             Unit

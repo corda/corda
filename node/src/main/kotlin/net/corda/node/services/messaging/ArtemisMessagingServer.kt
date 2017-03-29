@@ -355,7 +355,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
                 expectedCommonName = legalName
         )
-        val tcpTransport = createTcpTransport(connectionDirection, target.hostText, target.port)
+        val tcpTransport = createTcpTransport(connectionDirection, target.host, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
         // We intentionally overwrite any previous connector config in case the peer legal name changed
         activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)

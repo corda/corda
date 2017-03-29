@@ -13,7 +13,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction

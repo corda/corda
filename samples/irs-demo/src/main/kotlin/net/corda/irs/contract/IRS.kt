@@ -470,7 +470,7 @@ class InterestRateSwap() : Contract {
         }
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Clauses {
         /**
@@ -519,7 +519,7 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
+        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyOf(Agree(), Fix(), Pay(), Mature())) {
             // Group by Trade ID for in / out states
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State<*>, UniqueIdentifier>> {
                 return tx.groupStates() { state -> state.linearId }

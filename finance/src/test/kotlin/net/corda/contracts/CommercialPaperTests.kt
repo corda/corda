@@ -7,7 +7,6 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite
 import net.corda.core.days
-import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
@@ -17,9 +16,6 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.*

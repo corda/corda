@@ -27,7 +27,11 @@ import java.security.spec.InvalidKeySpecException
 import java.time.Instant
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.reflect.*
+import kotlin.reflect.KClass
+import kotlin.reflect.KMutableProperty
+import kotlin.reflect.KParameter
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaType
 
 /**
@@ -64,6 +68,7 @@ import kotlin.reflect.jvm.javaType
 
 // A convenient instance of Kryo pre-configured with some useful things. Used as a default by various functions.
 fun p2PKryo(): KryoPool = kryoPool
+
 // Same again, but this has whitelisting turned off for internal storage use only.
 fun storageKryo(): KryoPool = internalKryoPool
 
@@ -392,7 +397,7 @@ object CompositeKeyNodeSerializer : Serializer<CompositeKey.Node>() {
         val weights = input.readInts(childCount)
 
         val builder = CompositeKey.Builder()
-        weights.zip(children).forEach { builder.addKey(it.second, it.first)  }
+        weights.zip(children).forEach { builder.addKey(it.second, it.first) }
         return builder.build(threshold)
     }
 }

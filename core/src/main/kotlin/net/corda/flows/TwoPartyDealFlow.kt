@@ -7,7 +7,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable

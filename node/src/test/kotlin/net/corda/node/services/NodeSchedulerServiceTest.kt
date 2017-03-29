@@ -8,7 +8,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.recordTransactions
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.DUMMY_NOTARY

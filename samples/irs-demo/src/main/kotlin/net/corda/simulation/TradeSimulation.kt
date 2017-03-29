@@ -11,7 +11,6 @@ import net.corda.core.contracts.`issued by`
 import net.corda.core.days
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowStateMachine
-import net.corda.core.node.recordTransactions
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.TwoPartyTradeFlow.Buyer

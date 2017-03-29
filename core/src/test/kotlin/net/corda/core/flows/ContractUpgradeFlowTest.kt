@@ -143,16 +143,16 @@ class ContractUpgradeFlowTest {
         val result = resultFuture.get()
         // Check results.
         listOf(a, b).forEach {
-            val stx = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
-            requireNotNull(stx)
+            val signedTX = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
+            requireNotNull(signedTX)
 
             // Verify inputs.
-            val input = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(stx!!.tx.inputs.single().txhash) }
+            val input = databaseTransaction(a.database) { a.services.storageService.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
             requireNotNull(input)
             assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
 
             // Verify outputs.
-            assertTrue(stx!!.tx.outputs.single().data is DummyContractV2.State)
+            assertTrue(signedTX!!.tx.outputs.single().data is DummyContractV2.State)
         }
     }
 

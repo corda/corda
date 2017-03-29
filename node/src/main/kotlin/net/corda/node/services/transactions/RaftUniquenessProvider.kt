@@ -60,7 +60,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
     init {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
-        val address = Address(myAddress.hostText, myAddress.port)
+        val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
         val serializer = Serializer()
@@ -74,7 +74,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
 
         val serverFuture = if (clusterAddresses.isNotEmpty()) {
             log.info("Joining an existing Copycat cluster at $clusterAddresses")
-            val cluster = clusterAddresses.map { Address(it.hostText, it.port) }
+            val cluster = clusterAddresses.map { Address(it.host, it.port) }
             server.join(cluster)
         } else {
             log.info("Bootstrapping a Copycat cluster at $address")
