@@ -576,7 +576,7 @@ class NodeLoginModule : LoginModule {
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
         val certificates = certificateCallback.certificates
 
-        log.info("Processing login for $username")
+        log.debug { "Processing login for $username" }
 
         try {
             val validatedUser = when (determineUserRole(certificates, username)) {
