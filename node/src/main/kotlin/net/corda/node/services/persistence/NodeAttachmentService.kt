@@ -65,6 +65,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
      * inside it, we haven't read the whole file, so we can't check the hash. But when copying it over the network
      * this will provide an additional safety check against user error.
      */
+    @CordaSerializable
     private class HashCheckingStream(val expected: SecureHash.SHA256,
                                      val expectedSize: Int,
                                      input: InputStream,
