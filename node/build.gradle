@@ -154,7 +154,7 @@ dependencies {
     compile "io.netty:netty-all:$netty_version"
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile "org.crashub:crash.shell:$crash_version"
+    compile "com.github.corda:crash:A2"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
