@@ -120,7 +120,7 @@ private fun <T : Any> makeStrandFriendlySettableFuture(future: Future<T>): Setta
         settable
     } else if (future is CompletableFuture) {
         val settable = SettableFuture<Boolean>()
-        future.whenComplete(BiConsumer { value, throwable -> settable.set(true) })
+        future.whenComplete(BiConsumer { _, _ -> settable.set(true) })
         settable
     } else {
         throw IllegalArgumentException("Cannot make future $future Fiber friendly.")

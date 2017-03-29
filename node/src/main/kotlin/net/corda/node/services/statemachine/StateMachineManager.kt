@@ -232,7 +232,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             started = true
             stateMachines.keys.forEach { resumeRestoredFiber(it) }
         }
-        serviceHub.networkService.addMessageHandler(sessionTopic) { message, reg ->
+        serviceHub.networkService.addMessageHandler(sessionTopic) { message, _ ->
             executor.checkOnThread()
             onSessionMessage(message)
         }

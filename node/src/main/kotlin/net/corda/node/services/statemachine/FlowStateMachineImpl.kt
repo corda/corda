@@ -62,8 +62,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Strand.sleep(millis)
                 StrandLocalTransactionManager.database = db
                 TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
-            }
-            else Strand.sleep(millis)
+            } else Strand.sleep(millis)
         }
     }
 
@@ -358,7 +357,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             waitingForResponse = ioRequest
 
         var exceptionDuringSuspend: Throwable? = null
-        parkAndSerialize { f, s ->
+        parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
             // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             try {

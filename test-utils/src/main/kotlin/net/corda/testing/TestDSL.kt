@@ -3,7 +3,6 @@ package net.corda.testing
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -75,7 +74,7 @@ fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
  * the triggered diagnostic.
  */
 sealed class EnforceVerifyOrFail {
-    internal object Token: EnforceVerifyOrFail()
+    internal object Token : EnforceVerifyOrFail()
 }
 
 class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
@@ -154,7 +153,7 @@ data class TestTransactionDSLInterpreter private constructor(
     ) = dsl(TransactionDSL(copy()))
 }
 
-data class TestLedgerDSLInterpreter private constructor (
+data class TestLedgerDSLInterpreter private constructor(
         val services: ServiceHub,
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = LinkedHashMap(),
@@ -233,7 +232,7 @@ data class TestLedgerDSLInterpreter private constructor (
     }
 
     fun outputToLabel(state: ContractState): String? =
-        labelToOutputStateAndRefs.filter { it.value.state.data == state }.keys.firstOrNull()
+            labelToOutputStateAndRefs.filter { it.value.state.data == state }.keys.firstOrNull()
 
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
@@ -283,7 +282,7 @@ data class TestLedgerDSLInterpreter private constructor (
         try {
             val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature)) })
-            for ((key, value) in transactionWithLocations) {
+            for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()

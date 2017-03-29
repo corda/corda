@@ -75,7 +75,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
 
         fun createAll(): List<SimulatedNode> {
-            return bankLocations.mapIndexed { i, location ->
+            return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
                 network.createNode(networkMap.info.address, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
             }
@@ -258,7 +258,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     private fun linkConsensus(nodes: Collection<SimulatedNode>, flow: FlowLogic<*>) {
-        flow.progressTracker?.changes?.subscribe { change: ProgressTracker.Change ->
+        flow.progressTracker?.changes?.subscribe { _: ProgressTracker.Change ->
             // Runs on node thread.
             if (flow.progressTracker!!.currentStep == ProgressTracker.DONE) {
                 _doneSteps.onNext(nodes)

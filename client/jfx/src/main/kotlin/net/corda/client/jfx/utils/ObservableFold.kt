@@ -67,7 +67,7 @@ fun <A> Observable<A>.recordInSequence(): ObservableList<A> {
  * @param toKey Function retrieving the key to associate with.
  * @param merge The function to be called if there is an existing element at the key.
  */
-fun <A, K> Observable<A>.recordAsAssociation(toKey: (A) -> K, merge: (K, oldValue: A, newValue: A) -> A = { _key, _oldValue, newValue -> newValue }): ObservableMap<K, A> {
+fun <A, K> Observable<A>.recordAsAssociation(toKey: (A) -> K, merge: (K, oldValue: A, newValue: A) -> A = { _, _, newValue -> newValue }): ObservableMap<K, A> {
     return fold(FXCollections.observableHashMap<K, A>()) { map, item ->
         val key = toKey(item)
         map[key] = map[key]?.let { merge(key, it, item) } ?: item
