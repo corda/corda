@@ -1,6 +1,9 @@
 buildscript {
-    // TODO: Unify with the one in the main project
-    ext.kotlin_version = '1.1.1'
+    // For sharing constants between builds
+    Properties constants = new Properties()
+    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
+
+    ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     repositories {
         mavenCentral()
