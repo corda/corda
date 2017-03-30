@@ -34,6 +34,7 @@ dependencies {
     compile project(':core')
     compile project(':client:rpc')
     compile project(':client:jackson')
+    testCompile project(':node')
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
