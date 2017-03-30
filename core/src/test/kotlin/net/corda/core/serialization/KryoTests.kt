@@ -4,15 +4,15 @@ import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
+import net.corda.node.services.persistence.NodeAttachmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
-import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.Security
 import java.time.Instant
@@ -130,6 +130,16 @@ class KryoTests {
         val logger2 = logger.serialize(storageKryo()).deserialize(storageKryo())
         assertEquals(logger.name, logger2.name)
         assertTrue(logger === logger2)
+    }
+
+    @Test
+    fun `HashCheckingStream (de)serialize`() {
+        val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
+        val readRubbishStream : InputStream = NodeAttachmentService.HashCheckingStream(SecureHash.sha256(rubbish), rubbish.size, ByteArrayInputStream(rubbish)).serialize(kryo).deserialize(kryo)
+        for (i in 0 .. 12344) {
+            assertEquals(rubbish[i], readRubbishStream.read().toByte())
+        }
+        assertEquals(-1, readRubbishStream.read())
     }
 
     @CordaSerializable
