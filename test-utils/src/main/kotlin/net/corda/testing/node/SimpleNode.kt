@@ -3,7 +3,6 @@ package net.corda.testing.node
 import com.codahale.metrics.MetricRegistry
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.testing.MOCK_NODE_VERSION_INFO
@@ -41,7 +40,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
                 config,
                 MOCK_NODE_VERSION_INFO,
                 address,
-                identity.public.composite,
+                identity.public,
                 executor,
                 database,
                 networkMapRegistrationFuture,

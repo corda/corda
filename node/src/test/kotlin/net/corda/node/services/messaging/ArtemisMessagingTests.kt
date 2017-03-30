@@ -225,7 +225,7 @@ class ArtemisMessagingTests {
                     config,
                     MOCK_NODE_VERSION_INFO,
                     server,
-                    identity.public.composite,
+                    identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
                     networkMapRegistrationFuture,
