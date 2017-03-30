@@ -33,9 +33,8 @@ sourceSets {
 dependencies {
     compile project(":node-api")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
 

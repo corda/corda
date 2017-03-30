@@ -8,7 +8,7 @@ apply plugin: 'us.kirchmeier.capsule'
 dependencies {
     compile project(':samples:irs-demo')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies

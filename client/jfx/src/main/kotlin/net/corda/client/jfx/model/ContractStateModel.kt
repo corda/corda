@@ -2,7 +2,6 @@ package net.corda.client.jfx.model
 
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
-import kotlinx.support.jdk8.collections.removeIf
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.contracts.asset.Cash

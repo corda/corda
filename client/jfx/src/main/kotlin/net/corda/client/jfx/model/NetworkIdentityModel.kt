@@ -3,7 +3,6 @@ package net.corda.client.jfx.model
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
-import kotlinx.support.jdk8.collections.removeIf
 import net.corda.client.jfx.utils.firstOrDefault
 import net.corda.client.jfx.utils.firstOrNullObservable
 import net.corda.client.jfx.utils.fold

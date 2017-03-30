@@ -13,7 +13,6 @@ import java.util.logging.Level
 import java.util.stream.StreamSupport
 import javafx.stage.FileChooser
 import javafx.stage.FileChooser.ExtensionFilter
-import kotlinx.support.jdk8.collections.spliterator
 import net.corda.demobench.model.*
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.plugin.inPluginsDir

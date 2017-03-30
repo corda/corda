@@ -4,7 +4,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 dependencies {
     compile project(':core')
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Jackson and its plugins: parsing to/from JSON and other textual formats.
