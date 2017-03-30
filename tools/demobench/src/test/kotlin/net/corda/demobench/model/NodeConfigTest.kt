@@ -1,12 +1,13 @@
 package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import kotlin.test.*
 import org.junit.Test
 
@@ -177,7 +178,11 @@ class NodeConfigTest {
         )
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
-        val fullConfig = FullNodeConfiguration(Paths.get("."), config.toFileConfig())
+        val nodeConfig = config.toFileConfig()
+                .withValue("basedir", ConfigValueFactory.fromAnyRef("/basedir/"))
+                .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .resolve()
+        val fullConfig = FullNodeConfiguration(Paths.get("."), nodeConfig)
 
         assertEquals("My Name", fullConfig.myLegalName)
         assertEquals("Stockholm", fullConfig.nearestCity)
@@ -187,6 +192,7 @@ class NodeConfigTest {
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
         assertEquals(NetworkMapInfo(localPort(12345), "Notary"), fullConfig.networkMapService)
+        assertTrue((fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001"))
         assertTrue(fullConfig.useTestClock)
     }
 
