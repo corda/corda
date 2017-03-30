@@ -71,7 +71,6 @@ private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): 
 private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf()): Process {
     val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
     val nodeName = "${dir.toPath().fileName} $jarName"
-    val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
     val builder = when (os) {
         OS.MACOS -> ProcessBuilder(
                 "osascript", "-e",
