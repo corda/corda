@@ -20,6 +20,13 @@ private val os: OS by lazy {
 
 private enum class OS { MACOS, WINDOWS, LINUX }
 
+data class IncrementalPortAllocator(var basePort: Int = 5005) {
+    fun next(): Int = basePort++
+}
+
+private val startedProcesses = mutableListOf<Process>()
+val debugPortAlloc: IncrementalPortAllocator = IncrementalPortAllocator()
+
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == HEADLESS_FLAG)))
@@ -30,15 +37,11 @@ fun main(args: Array<String>) {
 
     workingDir.list().map { File(workingDir, it) }.forEach {
         if (isNode(it)) {
-            println("Starting node in $it")
-            startedProcesses.add(runJar(nodeJarName, it, javaArgs))
-            if (os == OS.MACOS) Thread.sleep(1000)
+            startJarProcess(headless, it, nodeJarName, javaArgs)
         }
 
         if (isWebserver(it)) {
-            println("Starting webserver in $it")
-            startedProcesses.add(runJar(webJarName, it, javaArgs))
-            if (os == OS.MACOS) Thread.sleep(1000)
+            startJarProcess(headless, it, webJarName, javaArgs)
         }
     }
 
@@ -46,31 +49,47 @@ fun main(args: Array<String>) {
     println("Finished starting nodes")
 }
 
+private fun startJarProcess(headless: Boolean, dir: File, jarName: String, javaArgs: List<String>) {
+    val runJar = getJarRunner(headless)
+    val debugPort = debugPortAlloc.next()
+    println("Starting $jarName in $dir on debug port $debugPort")
+    startedProcesses.add(runJar(jarName, dir, javaArgs, debugPort))
+    if (os == OS.MACOS) Thread.sleep(1000)
+}
+
 private fun isNode(maybeNodeDir: File) = maybeNodeDir.isDirectory
         && File(maybeNodeDir, nodeJarName).exists()
-        && File(maybeNodeDir, webJarName).exists()
         && File(maybeNodeDir, nodeConfName).exists()
 
-private fun isWebserver(maybeWebserverDir: File) = isNode(maybeWebserverDir) && hasWebserverPort(maybeWebserverDir)
+private fun isWebserver(maybeWebserverDir: File) = maybeWebserverDir.isDirectory
+        && File(maybeWebserverDir, webJarName).exists()
+        && File(maybeWebserverDir, nodeConfName).exists()
+        && hasWebserverPort(maybeWebserverDir)
 
 // TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
 private fun hasWebserverPort(nodeConfDir: File) = Files.readAllLines(File(nodeConfDir, nodeConfName).toPath()).joinToString { it }.contains("webAddress")
 
-private fun getJarRunner(headless: Boolean): (String, File, List<String>) -> Process = if (headless) ::execJar else ::execJarInTerminalWindow
+private fun getDebugPortArg(debugPort: Int?) = if (debugPort == null) {
+    listOf("""-Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"""")
+} else {
+    emptyList()
+}
 
-private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): Process {
+private fun getJarRunner(headless: Boolean): (String, File, List<String>, Int?) -> Process = if (headless) ::execJar else ::execJarInTerminalWindow
+
+private fun execJar(jarName: String, dir: File, args: List<String> = listOf(), debugPort: Int?): Process {
     val nodeName = dir.toPath().fileName
     val separator = System.getProperty("file.separator")
     val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
-    val builder = ProcessBuilder(listOf(path, "-Dname=$nodeName", "-jar", jarName) + args)
+    val builder = ProcessBuilder(listOf(path, "-Dname=$nodeName") + getDebugPortArg(debugPort) + listOf("-jar", jarName) + args)
     builder.redirectError(Paths.get("error.${dir.toPath().fileName}.log").toFile())
     builder.inheritIO()
     builder.directory(dir)
     return builder.start()
 }
 
-private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf()): Process {
-    val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
+private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf(), debugPort: Int?): Process {
+    val javaCmd = "java " + getDebugPortArg(debugPort).joinToString(" ") { it } + "-jar $jarName " + args.joinToString(" ") { it }
     val nodeName = "${dir.toPath().fileName} $jarName"
     val builder = when (os) {
         OS.MACOS -> ProcessBuilder(
