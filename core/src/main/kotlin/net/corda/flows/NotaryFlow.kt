@@ -160,7 +160,8 @@ object NotaryFlow {
 data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: Timestamp?)
 
 class NotaryException(val error: NotaryError) : FlowException() {
-    override fun toString() = "${super.toString()}: Error response from Notary - $error"
+    override fun toString() = "${super.toString()}: $message"
+    override val message: String = "Error response from Notary - $error"
 }
 
 @CordaSerializable
