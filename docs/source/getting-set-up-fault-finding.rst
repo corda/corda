@@ -60,6 +60,11 @@ If IDEA refuses to open a project because an SDK has not been selected, you may 
 
 If you are having trouble selecting the correct JDK, the JetBrains website provides the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
 
+IDEA fails to compile in VaultSchemaTest.kt
+*******************************************
+
+Run ``gradlew kaptKotlin`` to generate the sources IntelliJ is missing.
+
 Kotlin plugin
 *************
 
