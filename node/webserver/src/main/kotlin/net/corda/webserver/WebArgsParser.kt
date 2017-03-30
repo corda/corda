@@ -32,10 +32,6 @@ class ArgsParser {
             .withValuesConvertedBy(object : EnumConverter<Level>(Level::class.java) {})
             .defaultsTo(Level.INFO)
     private val logToConsoleArg = optionParser.accepts("log-to-console", "If set, prints logging to the console as well as to a file.")
-    private val sshdServerArg = optionParser.accepts("sshd", "Enables SSHD server for node administration.")
-    private val noLocalShellArg = optionParser.accepts("no-local-shell", "Do not start the embedded shell locally.")
-    private val isRegistrationArg = optionParser.accepts("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.")
-    private val isVersionArg = optionParser.accepts("version", "Print the version and exit")
     private val helpArg = optionParser.accepts("help").forHelp()
 
     fun parse(vararg args: String): CmdLineOptions {
@@ -48,11 +44,7 @@ class ArgsParser {
         val help = optionSet.has(helpArg)
         val loggingLevel = optionSet.valueOf(loggerLevel)
         val logToConsole = optionSet.has(logToConsoleArg)
-        val isRegistration = optionSet.has(isRegistrationArg)
-        val isVersion = optionSet.has(isVersionArg)
-        val noLocalShell = optionSet.has(noLocalShellArg)
-        val sshdServer = optionSet.has(sshdServerArg)
-        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole, isRegistration, isVersion, noLocalShell, sshdServer)
+        return CmdLineOptions(baseDirectory, configFile, help, loggingLevel, logToConsole)
     }
 
     fun printHelp(sink: PrintStream) = optionParser.printHelpOn(sink)
@@ -62,11 +54,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val configFile: Path,
                           val help: Boolean,
                           val loggingLevel: Level,
-                          val logToConsole: Boolean,
-                          val isRegistration: Boolean,
-                          val isVersion: Boolean,
-                          val noLocalShell: Boolean,
-                          val sshdServer: Boolean) {
+                          val logToConsole: Boolean) {
 
     private val log = loggerFor<CmdLineOptions>()
 
