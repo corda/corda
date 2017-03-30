@@ -52,7 +52,7 @@ Profiles
 
 ..
 
-  When DemoBench reloads this profile it will close any nodes that it is currently running and then launch these new nodes instead.
+  When DemoBench reloads this profile it will close any nodes that it is currently running and then launch these new nodes instead. Note that the ``node.conf`` files within each profile are JSON/HOCON format, and so can be extracted and edited as required.
 
 Building the Installers
 -----------------------
