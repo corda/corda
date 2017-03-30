@@ -3,14 +3,13 @@ Running the demos
 
 The Corda repository contains a number of demo programs demonstrating the functionality developed so far:
 
-1. The Trader Demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash
+1. The Trader Demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash and demonstrates uploading commercial paper attachments to nodes.
 2. The IRS Demo, which shows two nodes establishing an interest rate swap and performing fixings with a
    rates oracle
-3. The Attachment Demo, which demonstrates uploading attachments to nodes
-4. The SIMM Valuation Demo, which shows two nodes agreeing on a portfolio and valuing the initial margin
+3. The SIMM Valuation Demo, which shows two nodes agreeing on a portfolio and valuing the initial margin
    using the Standard Initial Margin Model
-5. The Distributed Notary Demo, which shows a single node getting multiple transactions notarised by a distributed (Raft-based) notary
-6. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
+4. The Distributed Notary Demo, which shows a single node getting multiple transactions notarised by a distributed (Raft-based) notary
+5. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
 
 The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
@@ -108,37 +107,6 @@ http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
-
-Attachment demo
----------------
-
-This demo brings up three nodes, and sends a transaction containing an attachment from one to the other.
-
-To run from the command line in Unix:
-
-1. Run ``./gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples/attachment-demo/build/nodes``
-2. Run ``./samples/attachment-demo/build/nodes/runnodes`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``./gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
-4. Run ``./gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
-   see the output of the demo
-
-To run from the command line in Windows:
-
-1. Run ``gradlew samples:attachment-demo:deployNodes`` to create a set of configs and installs under ``samples\attachment-demo\build\nodes``
-2. Run ``samples\attachment-demo\build\nodes\runnodes`` to open up three new terminal tabs/windows with the three nodes
-3. Run ``gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
-4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
-   see the output of the demo
-
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Attachment Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run ``Attachment Demo: Run Recipient``, which will wait for a trade to start
-4. Run ``Attachment Demo: Run Sender`` to send the attachment
-5. In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past. Within a few seconds, the
-   message "File received - we're happy!" should be printed.
 
 Raft Notary demo
 ----------------

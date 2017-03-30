@@ -42,7 +42,7 @@ Frequently Used Gradle Tasks
 
 Note that the list of tasks can be ran for any gradle project can be displayed by running the task ``tasks``. Also, note that
 gradle is hierarchical and therefore tasks in child directories can be run using a colon separator. For example, if you want to run
-the sample attachment demo run configuration ``runSender``, you would use the command ``gradle samples:attachment-demo:runSender``
+the sample trader demo run configuration ``runBuyer``, you would use the command ``gradle samples:trader-demo:runBuyer``
 
 The most frequent gradle tasks you will probably be running are ``build`` and ``install``. The ``build`` command also executes the
 unit tests as well. If you want to build without this level of verification, then use the ``assemble`` command - but we do
