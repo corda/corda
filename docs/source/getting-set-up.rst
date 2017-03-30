@@ -85,6 +85,10 @@ out the latest release tag instead by running ``git checkout release-M9.2``.
 Opening Corda/CorDapps in IDEA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. warning:: If you choose to use IntelliJ you must run the ``gradlew kaptKotlin`` task before attempting to compile via IntelliJ.
+
+.. note:: If you change branch , gradle clean or see a compile error in ``VaultSchemaTest.kt`` you must also then re-run `gradlew kaptKotlin`
+
 When opening a Corda project for the first time from the IDEA splash screen, please click "Open" rather than "Import Project", 
 and then import the Gradle project by clicking "Import Gradle project" in the popup bubble on the lower right-hand side of the screen. 
 If you instead pick "Import Project" on the splash screen, a bug in IDEA will cause Corda's pre-packaged run configurations to be erased. 
