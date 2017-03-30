@@ -73,7 +73,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
-        webPort 10003
         cordapps = []
     }
     node {
