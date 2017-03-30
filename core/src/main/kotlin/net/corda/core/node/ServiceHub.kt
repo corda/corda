@@ -112,11 +112,3 @@ interface ServiceHub : ServicesForResolution {
      */
     val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
 }
-
-/**
- * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
- * sends them to the vault for further processing.
- *
- * @param txs The transactions to record.
- */
-fun ServiceHub.recordTransactions(vararg txs: SignedTransaction) = recordTransactions(txs.toList())

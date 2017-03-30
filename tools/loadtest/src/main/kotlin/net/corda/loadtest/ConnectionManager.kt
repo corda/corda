@@ -78,7 +78,7 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
         log.info("Connected to $nodeHost!")
 
         log.info("Creating tunnel from $nodeHost:$remoteMessagingPort to $localTunnelAddress...")
-        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.hostText, remoteMessagingPort)
+        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.host, remoteMessagingPort)
         log.info("Tunnel created!")
 
         val connection = NodeConnection(nodeHost, session, localTunnelAddress, rpcUsername, rpcPassword)

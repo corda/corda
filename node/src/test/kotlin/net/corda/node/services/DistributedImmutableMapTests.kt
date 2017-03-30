@@ -90,7 +90,7 @@ class DistributedImmutableMapTests {
 
     private fun createReplica(myAddress: HostAndPort, clusterAddress: HostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
-        val address = Address(myAddress.hostText, myAddress.port)
+        val address = Address(myAddress.host, myAddress.port)
 
         val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(database, "commited_states_${myAddress.port}") }
 
@@ -100,7 +100,7 @@ class DistributedImmutableMapTests {
                 .build()
 
         val serverInitFuture = if (clusterAddress != null) {
-            val cluster = Address(clusterAddress.hostText, clusterAddress.port)
+            val cluster = Address(clusterAddress.host, clusterAddress.port)
             server.join(cluster)
         } else {
             server.bootstrap()
