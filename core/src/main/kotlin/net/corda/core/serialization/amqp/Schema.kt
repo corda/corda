@@ -131,7 +131,7 @@ interface TypeNotation : DescribedType {
     //fun encode(): Any?
 }
 
-data class CompositeType(override val name: String, override val label: String?, override val provides: Array<String>?, override val descriptor: Descriptor, val fields: Array<Field>?) : TypeNotation {
+data class CompositeType(override val name: String, override val label: String?, override val provides: Array<String>?, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0005L or DESCRIPTOR_MSW)
     }
@@ -145,7 +145,7 @@ data class CompositeType(override val name: String, override val label: String?,
 
         override fun newInstance(described: Any?): CompositeType {
             val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return CompositeType(list[0] as String, list[1] as? String, list[2] as? Array<String>, list[3] as Descriptor, list[4] as? Array<Field>)
+            return CompositeType(list[0] as String, list[1] as? String, list[2] as? Array<String>, list[3] as Descriptor, list[4] as List<Field>)
         }
     }
 
@@ -227,28 +227,5 @@ data class Choice(val name: Symbol, val value: String) : DescribedType {
 
     override fun toString(): String {
         return "<choice name=\"$name\" value=\"$value\"/>"
-    }
-}
-
-data class ObjectRef(val ref: Int) : DescribedType {
-    companion object {
-        val DESCRIPTOR = UnsignedLong(0x0008L or DESCRIPTOR_MSW)
-    }
-
-    override fun getDescriptor(): Any = DESCRIPTOR
-
-    override fun getDescribed(): Any = listOf(ref)
-
-    class Constructor : DescribedTypeConstructor<ObjectRef> {
-        override fun getTypeClass(): Class<*> = ObjectRef::class.java
-
-        override fun newInstance(described: Any?): ObjectRef {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return ObjectRef(list[0] as Int)
-        }
-    }
-
-    override fun toString(): String {
-        return "<ref value=\"$ref\"/>"
     }
 }

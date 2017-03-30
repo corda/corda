@@ -4,6 +4,7 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
+import java.nio.ByteBuffer
 import java.util.*
 
 class SerializationOutput {
@@ -22,7 +23,6 @@ class SerializationOutput {
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             val data = Data.Factory.create()
-            data.putBinary(AmqpHeaderV1_0.bytes)
             // TODO: Write envelope
             data.putDescribed()
             data.enter()
@@ -37,8 +37,11 @@ class SerializationOutput {
             data.putObject(Schema(schemaHistory.toList()))
             data.exit() // Exit envelope body
             data.exit() // Exit described
-            val binary = data.encode()
-            return SerializedBytes(binary.array)
+            val bytes = ByteArray(data.encodedSize().toInt() + 8)
+            val buf = ByteBuffer.wrap(bytes)
+            buf.put(AmqpHeaderV1_0.bytes)
+            data.encode(buf)
+            return SerializedBytes(bytes)
         } finally {
             objectHistory.clear()
             serializerHistory.clear()

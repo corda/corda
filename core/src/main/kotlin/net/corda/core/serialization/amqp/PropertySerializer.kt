@@ -6,16 +6,14 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
-import java.lang.reflect.Type
 import java.util.*
-import kotlin.reflect.jvm.kotlinFunction
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaMethod
 
 
-abstract class PropertySerializer {
+abstract class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any, data: Data, output: SerializationOutput)
-    abstract val name: String
 
-    protected abstract val readMethod: Method
     protected val clazz = (readMethod.genericReturnType as? Class<*> ?: (readMethod.genericReturnType as? ParameterizedType)?.rawType as? Class<*>) ?: throw NotSerializableException("Property does return class: ${readMethod.genericReturnType}")
 
     val type: String = generateType()
@@ -47,13 +45,18 @@ abstract class PropertySerializer {
     }
 
     private fun generateMandatory(): Boolean {
-        return clazz.isPrimitive || !(readMethod.kotlinFunction?.returnType?.isMarkedNullable ?: true)
+        // TODO: support @NotNull
+        return clazz.isPrimitive || !readMethod.returnsKotlinNullable()
+    }
+
+    private fun Method.returnsKotlinNullable(): Boolean {
+        return (declaringClass.kotlin.memberProperties.firstOrNull { it.getter.javaMethod == this })?.returnType?.isMarkedNullable ?: true
     }
 
     companion object {
         fun make(name: String, readMethod: Method): PropertySerializer {
             val type = readMethod.genericReturnType
-            if (type in primitiveTypeNames) {
+            if (type is Class<*> && Primitives.wrap(type) in primitiveTypeNames) {
                 // This is a little inefficient for performance since it does a runtime check of type.  We could do build time check with lots of subclasses here.
                 return PrimitivePropertySerializer(name, readMethod)
             } else {
@@ -61,7 +64,7 @@ abstract class PropertySerializer {
             }
         }
 
-        private val primitiveTypeNames: Map<Type, String> = mapOf(Boolean::class.java to "boolean",
+        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",
                 Short::class.java to "short",
@@ -86,14 +89,14 @@ abstract class PropertySerializer {
 
 }
 
-class ObjectPropertySerializer(override val name: String, override val readMethod: Method) : PropertySerializer() {
+class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
     override fun writeProperty(obj: Any, data: Data, output: SerializationOutput) {
         output.writeObjectOrNull(readMethod.invoke(obj), data, readMethod.genericReturnType)
     }
 
 }
 
-class PrimitivePropertySerializer(override val name: String, override val readMethod: Method) : PropertySerializer() {
+class PrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
     override fun writeProperty(obj: Any, data: Data, output: SerializationOutput) {
         data.putObject(readMethod.invoke(obj))
     }

@@ -31,7 +31,7 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
         data.putDescribed()
         data.enter()
         // Write descriptor
-        data.putObject(typeNotation.descriptor)
+        data.putObject(typeNotation.descriptor.code ?: typeNotation.descriptor.name)
         // Write list
         data.putList()
         data.enter()
@@ -42,12 +42,8 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
         data.exit() // exit described
     }
 
-    private fun generateFields(): Array<Field>? {
-        if (propertySerializers.isEmpty()) {
-            return null
-        } else {
-            return propertySerializers.map { Field(it.name, it.type, it.requires, it.default, null, it.mandatory, false) }.toTypedArray()
-        }
+    private fun generateFields(): List<Field> {
+        return propertySerializers.map { Field(it.name, it.type, it.requires, it.default, null, it.mandatory, false) }
     }
 
     private fun generateProvides(): Array<String>? {
@@ -105,7 +101,7 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
         for (paramName in constructorParamNames) {
             indexes += paramNameToIndex[paramName] ?: throw NotSerializableException("Could not find property matching constructor parameter $paramName for $clazz")
         }
-        if (indexes.size == propertySerializers.size) throw NotSerializableException("Number of properties not equal to number of primary constructor parameter for $clazz")
+        if (indexes.size != propertySerializers.size) throw NotSerializableException("Number of properties not equal to number of primary constructor parameter for $clazz")
         return indexes
     }
 
