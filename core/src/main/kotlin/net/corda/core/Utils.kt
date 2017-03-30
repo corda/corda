@@ -7,7 +7,6 @@ import com.google.common.base.Function
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
-import kotlinx.support.jdk7.use
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger

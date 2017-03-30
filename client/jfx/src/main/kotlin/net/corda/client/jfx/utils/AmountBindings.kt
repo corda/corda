@@ -3,7 +3,6 @@ package net.corda.client.jfx.utils
 import javafx.beans.binding.Bindings
 import javafx.beans.value.ObservableValue
 import javafx.collections.ObservableList
-import kotlinx.support.jdk8.collections.stream
 import net.corda.client.jfx.model.ExchangeRate
 import net.corda.core.contracts.Amount
 import org.fxmisc.easybind.EasyBind

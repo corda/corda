@@ -1,7 +1,6 @@
 package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import kotlinx.support.jdk7.use
 import net.corda.core.crypto.Party
 import net.corda.core.div
 import net.corda.core.getOrThrow

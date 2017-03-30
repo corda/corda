@@ -30,9 +30,8 @@ dependencies {
     testCompile project(":node")
     testCompile project(":test-utils")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Thread safety annotations

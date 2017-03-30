@@ -1,6 +1,6 @@
 buildscript {
     // TODO: Unify with the one in the main project
-    ext.kotlin_version = '1.0.5-2'
+    ext.kotlin_version = '1.1.1'
 
     repositories {
         mavenCentral()
@@ -39,7 +39,7 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
 
-    noderunner "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     // TypeSafe Config: for simple and human friendly config files.
     // TODO: Add a common versions file between Corda and gradle plugins to de-duplicate this version number
