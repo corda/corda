@@ -1,15 +1,6 @@
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'kotlin'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile rootProject
 }
