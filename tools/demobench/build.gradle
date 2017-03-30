@@ -107,7 +107,7 @@ distributions {
                 rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
             }
-            from(project(':client:webserver:webcapsule').tasks.buildWebserverJar) {
+            from(project(':webserver:webcapsule').tasks.buildWebserverJar) {
                 rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
             }

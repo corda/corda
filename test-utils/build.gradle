@@ -14,7 +14,7 @@ dependencies {
     compile project(':finance')
     compile project(':core')
     compile project(':node')
-    compile project(':client:webserver')
+    compile project(':webserver')
     compile project(':verifier')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"

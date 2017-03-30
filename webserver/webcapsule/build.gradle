@@ -33,7 +33,7 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':client:webserver')
+    compile project(':webserver')
 }
 
 task buildWebserverJar(type: FatCapsule) {
