@@ -14,10 +14,6 @@ configurations {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
         exclude group: 'io.netty', module: 'netty-handler'
-
-        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-        // Remove any transitive dependency on Apache's version.
-        exclude group: 'commons-logging', module: 'commons-logging'
     }
 
     testCompile {
