@@ -43,6 +43,10 @@ dependencies {
     compile "org.jolokia:jolokia-agent-war:$jolokia_version"
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
 
+    // Log4J: logging framework (with SLF4J bindings)
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.apache.logging.log4j:log4j-core:$log4j_version"
+
     // JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 

@@ -21,6 +21,7 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
+import org.slf4j.LoggerFactory
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 
@@ -31,10 +32,11 @@ class NodeWebServer(val config: WebServerConfig) {
     }
 
     val address = config.webAddress
+    private var renderBasicInfoToConsole = true
     private lateinit var server: Server
 
     fun start() {
-        println("Starting as webserver: ${config.webAddress}")
+        logAndMaybePrint("Starting as webserver: ${config.webAddress}")
         server = initWebServer(retryConnectLocalRpc())
     }
 
@@ -173,5 +175,12 @@ class NodeWebServer(val config: WebServerConfig) {
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
     val pluginRegistries: List<CordaPluginRegistry> by lazy {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    }
+
+    /** Used for useful info that we always want to show, even when not logging to the console */
+    fun logAndMaybePrint(description: String, info: String? = null) {
+        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+        val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+        LoggerFactory.getLogger(loggerName).info(msg)
     }
 }

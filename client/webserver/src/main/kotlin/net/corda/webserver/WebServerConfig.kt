@@ -16,19 +16,8 @@ class WebServerConfig(val baseDirectory: Path, val config: Config) : SSLConfigur
     override val certificatesDirectory: Path get() = baseDirectory / "certificates"
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
-    val myLegalName: String by config
     val exportJMXto: String get() = "http"
-    val rpcUsers: List<User> = config
-            .getListOrElse<Config>("rpcUsers") { emptyList() }
-            .map {
-                val username = it.getString("user")
-                require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
-                val password = it.getString("password")
-                val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
-                User(username, password, permissions)
-            }
     val useHTTPS: Boolean by config
-    val p2pAddress: HostAndPort by config
-    val rpcAddress: HostAndPort? by config
+    val p2pAddress: HostAndPort by config // TODO: Use RPC port instead of P2P port (RPC requires authentication, P2P does not)
     val webAddress: HostAndPort by config
 }
