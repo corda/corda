@@ -6,9 +6,7 @@ DemoBench is a standalone desktop application that makes it easy to configure an
 Downloading
 -----------
 
-Installers compatible with the latest Corda release can be downloaded from the `R3 website`_.
-
-.. _R3 website: http://www.r3cev.com
+Installers compatible with the latest Corda release will soon be downloadable from the R3 website.
 
 Running DemoBench
 -----------------
