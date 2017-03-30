@@ -106,6 +106,12 @@ allprojects {
         }
         maven { url 'https://jitpack.io' }
     }
+
+    configurations.compile {
+        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
 }
 
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
