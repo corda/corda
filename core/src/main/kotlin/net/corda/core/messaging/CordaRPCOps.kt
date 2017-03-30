@@ -224,18 +224,13 @@ data class FlowHandle<A> (
         val progress: Observable<String>,
         val returnValue: ListenableFuture<A>) : AutoCloseable {
 
-    /** Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources. */
-    fun discard() {
-        returnValue.cancel(false)
-        progress.notUsed()
-    }
-
     /**
-     * GC will try to release server resources, but note this will not work if one subscribes on progress [Observable],
-     * but then forgets to unsubscribe.
+     * Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources.
+     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
      */
     override fun close() {
-        discard()
+        returnValue.cancel(false)
+        progress.notUsed()
     }
 }
 
@@ -252,6 +247,6 @@ fun <T> Observable<T>.notUsed() {
     try {
         this.subscribe({}, {}).unsubscribe()
     } catch (e: Exception) {
-        // Swallow any other exceptions as well.
+        // Swallow any other exceptions as well; we won't handle exceptions from unused Observables.
     }
 }
