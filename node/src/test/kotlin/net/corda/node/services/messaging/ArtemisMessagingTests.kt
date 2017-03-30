@@ -88,6 +88,8 @@ class ArtemisMessagingTests {
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
+        messagingClient = null
+        messagingServer = null
         dataSource.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }

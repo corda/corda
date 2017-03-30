@@ -50,6 +50,7 @@ import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
+import java.security.KeyStoreException
 import java.security.Principal
 import java.util.*
 import java.util.concurrent.Executor
@@ -113,6 +114,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * The server will make sure the bridge exists on network map changes, see method [updateBridgesOnNetworkChange]
      * We assume network map will be updated accordingly when the client node register with the network map server.
      */
+    @Throws(IOException::class, KeyStoreException::class)
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
@@ -130,6 +132,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         running = false
     }
 
+    // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
+    // Artemis IO errors
+    @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
         val config = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
@@ -225,6 +230,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 deleteNonDurableQueue, manage, browse)
     }
 
+    @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val ourCertificate = X509Utilities
                 .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
