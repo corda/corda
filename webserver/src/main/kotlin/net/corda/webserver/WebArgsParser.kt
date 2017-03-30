@@ -56,8 +56,6 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val loggingLevel: Level,
                           val logToConsole: Boolean) {
 
-    private val log = loggerFor<CmdLineOptions>()
-
     fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
         return loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
     }
@@ -77,6 +75,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()
+        val log = loggerFor<CmdLineOptions>()
         log.info("Config:\n${finalConfig.root().render(ConfigRenderOptions.defaults())}")
         return finalConfig
     }

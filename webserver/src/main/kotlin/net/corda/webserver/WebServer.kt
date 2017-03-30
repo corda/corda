@@ -34,7 +34,7 @@ fun main(args: Array<String>) {
         System.setProperty("consoleLogLevel", "info")
     }
 
-    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "web/logs").toString())
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / "logs/web").toString())
     val log = LoggerFactory.getLogger("Main")
     println("Logs can be found in ${System.getProperty("log-path")}")
 

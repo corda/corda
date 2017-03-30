@@ -22,12 +22,12 @@ targetCompatibility = 1.6
 sourceSets {
     test {
         resources {
-            srcDir "../../../config/test"
+            srcDir "$rootDir/config/test"
         }
     }
     main {
         resources {
-            srcDir "../../../config/dev"
+            srcDir "$rootDir/config/dev"
         }
     }
 }
