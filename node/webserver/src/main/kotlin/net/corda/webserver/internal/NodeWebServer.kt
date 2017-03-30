@@ -4,9 +4,8 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.loggerFor
-import net.corda.node.printBasicNodeInfo
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.webserver.WebServerConfig
 import net.corda.webserver.servlets.AttachmentDownloadServlet
 import net.corda.webserver.servlets.DataUploadServlet
 import net.corda.webserver.servlets.ObjectMapperConfig
@@ -25,7 +24,7 @@ import org.glassfish.jersey.servlet.ServletContainer
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 
-class NodeWebServer(val config: FullNodeConfiguration) {
+class NodeWebServer(val config: WebServerConfig) {
     private companion object {
         val log = loggerFor<NodeWebServer>()
         val retryDelay = 1000L // Milliseconds
@@ -35,7 +34,7 @@ class NodeWebServer(val config: FullNodeConfiguration) {
     private lateinit var server: Server
 
     fun start() {
-        printBasicNodeInfo("Starting as webserver: ${config.webAddress}")
+        println("Starting as webserver: ${config.webAddress}")
         server = initWebServer(retryConnectLocalRpc())
     }
 

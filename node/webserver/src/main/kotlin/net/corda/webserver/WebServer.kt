@@ -5,8 +5,6 @@ package net.corda.webserver
 import com.typesafe.config.ConfigException
 import net.corda.core.div
 import net.corda.core.rootCause
-import net.corda.node.ArgsParser
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.webserver.internal.NodeWebServer
 import org.slf4j.LoggerFactory
 import java.lang.management.ManagementFactory
@@ -41,13 +39,13 @@ fun main(args: Array<String>) {
     println("Logs can be found in ${System.getProperty("log-path")}")
 
     val conf = try {
-        FullNodeConfiguration(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
+        WebServerConfig(cmdlineOptions.baseDirectory, cmdlineOptions.loadConfig())
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
 
-    log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
+    log.info("Main class: ${WebServerConfig::class.java.protectionDomain.codeSource.location.toURI().path}")
     val info = ManagementFactory.getRuntimeMXBean()
     log.info("CommandLine Args: ${info.inputArguments.joinToString(" ")}")
     log.info("Application Args: ${args.joinToString(" ")}")
