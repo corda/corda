@@ -145,6 +145,9 @@ class Main : App(MainView::class) {
 /**
  * This main method will starts 5 nodes (Notary, Alice, Bob, UK Bank and USA Bank) locally for UI testing,
  * they will be on localhost ports 20003, 20006, 20009, 20012 and 20015 respectively.
+ *
+ * The simulation start with pre-allocating chunks of cash to each of the party in 2 currencies (USD, GBP), then it enter a loop to generate random events.
+ * On each iteration, the issuers will execute a Cash Issue or Cash Exit flow (at a 9:1 ratio) and a random party will execute a move of cash to another random party.
  */
 fun main(args: Array<String>) {
     val portAllocation = PortAllocation.Incremental(20000)
