@@ -86,12 +86,6 @@ Documentation Contents:
 
 .. toctree::
    :maxdepth: 2
-   :caption: DemoBench
-
-   demobench
-
-.. toctree::
-   :maxdepth: 2
    :caption: Tutorials
 
    tutorial-contract
@@ -130,6 +124,7 @@ Documentation Contents:
    :caption: Appendix
 
    loadtesting
+   demobench
    setting-up-a-corda-network
    secure-coding-guidelines
    release-process
