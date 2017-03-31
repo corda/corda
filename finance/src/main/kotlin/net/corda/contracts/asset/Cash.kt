@@ -154,6 +154,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: CompositeKey, notary: Party) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().map { it.data }.sumCashOrNull() == null)
+        require(amount.quantity > 0)
         val at = amount.token.issuer
         tx.addOutputState(TransactionState(State(amount, owner), notary))
         tx.addCommand(generateIssueCommand(), at.party.owningKey)

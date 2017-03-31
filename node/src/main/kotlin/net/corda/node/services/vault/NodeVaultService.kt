@@ -528,9 +528,11 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
      * @param amount the amount to gather states up to.
      * @throws InsufficientBalanceException if there isn't enough value in the states to cover the requested amount.
      */
+    // TODO: Merge this with the function in [AbstractConserveAmount]
     @Throws(InsufficientBalanceException::class)
     private fun gatherCoins(acceptableCoins: Collection<StateAndRef<Cash.State>>,
                             amount: Amount<Currency>): Pair<ArrayList<StateAndRef<Cash.State>>, Amount<Currency>> {
+        require(amount.quantity > 0) { "Cannot gather zero coins" }
         val gathered = arrayListOf<StateAndRef<Cash.State>>()
         var gatheredAmount = Amount(0, amount.token)
         for (c in acceptableCoins) {

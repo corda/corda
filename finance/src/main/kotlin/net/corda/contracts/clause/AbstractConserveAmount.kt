@@ -29,6 +29,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
     @Throws(InsufficientBalanceException::class)
     private fun gatherCoins(acceptableCoins: Collection<StateAndRef<S>>,
                             amount: Amount<T>): Pair<ArrayList<StateAndRef<S>>, Amount<T>> {
+        require(amount.quantity > 0) { "Cannot gather zero coins" }
         val gathered = arrayListOf<StateAndRef<S>>()
         var gatheredAmount = Amount(0, amount.token)
         for (c in acceptableCoins) {
