@@ -4,7 +4,7 @@ import java.awt.GraphicsEnvironment
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.Locale
+import java.util.*
 
 private val nodeJarName = "corda.jar"
 private val webJarName = "corda-webserver.jar"
@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
     val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
-    val javaArgs = listOf<String>() // TODO: Add args passthrough
+    val javaArgs = args.filter { it != "--headless" }
     println("Starting nodes in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
