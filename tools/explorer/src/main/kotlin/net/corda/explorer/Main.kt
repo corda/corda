@@ -12,6 +12,7 @@ import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
@@ -250,14 +251,14 @@ fun main(args: Array<String>) {
                         println("[$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
                         val cmd = command.startFlow(issuerRPCGBP)
                         flowHandles["GBPIssuer"]?.add(cmd)
-                        cmd.progress.subscribe({}, {})?.unsubscribe()
+                        cmd.progress.notUsed()
                         Unit
                     }.generate(SplittableRandom())
                     issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
                         println("[$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
                         val cmd = command.startFlow(issuerRPCUSD)
                         flowHandles["USDIssuer"]?.add(cmd)
-                        cmd.progress.subscribe({}, {})?.unsubscribe()
+                        cmd.progress.notUsed()
                         Unit
                     }.generate(SplittableRandom())
                 }
@@ -268,14 +269,14 @@ fun main(args: Array<String>) {
                         println("[$i] EXITING ${command.amount} with ref ${command.issueRef}")
                         val cmd = command.startFlow(issuerRPCGBP)
                         flowHandles["GBPExit"]?.add(cmd)
-                        cmd.progress.subscribe({}, {})?.unsubscribe()
+                        cmd.progress.notUsed()
                         Unit
                     }.generate(SplittableRandom())
                     issuerUSDEventGenerator.bankOfCordaExitGenerator.map { command ->
                         println("[$i] EXITING ${command.amount} with ref ${command.issueRef}")
                         val cmd = command.startFlow(issuerRPCUSD)
                         flowHandles["USDExit"]?.add(cmd)
-                        cmd.progress.subscribe({}, {})?.unsubscribe()
+                        cmd.progress.notUsed()
                         Unit
                     }.generate(SplittableRandom())
                 }
@@ -287,7 +288,7 @@ fun main(args: Array<String>) {
                     println("[$i] SENDING ${command.amount} from ${aliceRPC.nodeIdentity().legalIdentity} to ${command.recipient}")
                     val cmd = command.startFlow(aliceRPC)
                     flowHandles["Alice"]?.add(cmd)
-                    cmd.progress.subscribe({}, {})?.unsubscribe()
+                    cmd.progress.notUsed()
                     Unit
                 }.generate(SplittableRandom())
 
@@ -296,7 +297,7 @@ fun main(args: Array<String>) {
                     println("[$i] SENDING ${command.amount} from ${bobRPC.nodeIdentity().legalIdentity} to ${command.recipient}")
                     val cmd = command.startFlow(bobRPC)
                     flowHandles["Bob"]?.add(cmd)
-                    cmd.progress.subscribe({}, {})?.unsubscribe()
+                    cmd.progress.notUsed()
                     Unit
                 }.generate(SplittableRandom())
             }
