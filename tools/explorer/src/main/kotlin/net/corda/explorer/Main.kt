@@ -13,9 +13,9 @@ import joptsimple.OptionParser
 import net.corda.client.jfx.model.Models
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
-import net.corda.client.rpc.notUsed
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
@@ -26,7 +26,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
-import net.corda.core.then
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.explorer.model.CordaViewModel
