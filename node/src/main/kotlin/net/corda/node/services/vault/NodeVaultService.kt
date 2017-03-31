@@ -326,7 +326,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     val spendLock: ReentrantLock = ReentrantLock()
 
     @Suspendable
-    internal fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID): List<StateAndRef<T>> {
+    override fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>?, notary: Party?, lockId: UUID): List<StateAndRef<T>> {
 
         val issuerKeysStr = onlyFromIssuerParties?.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }?.dropLast(1)
         var stateAndRefs = mutableListOf<StateAndRef<T>>()

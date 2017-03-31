@@ -247,6 +247,13 @@ interface VaultService {
     fun <T : ContractState> softLockedStates(lockId: UUID? = null): List<StateAndRef<T>>
 
     // DOCEND SoftLockAPI
+
+    /**
+     * TODO: this function should be private to the vault, but currently Cash Exit functionality
+     * is implemented in a separate module (finance) and requires access to it.
+     */
+    @Suspendable
+    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID): List<StateAndRef<T>>
 }
 
 inline fun <reified T: ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
