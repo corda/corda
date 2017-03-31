@@ -202,7 +202,7 @@ is a three node example;
             p2pPort 10002
             rpcPort 10003
             webPort 10004
-            h2port 11002
+            h2Port 11002
             cordapps []
         }
         node {
@@ -212,7 +212,7 @@ is a three node example;
             p2pPort 10005
             rpcPort 10006
             webPort 10007
-            h2port 11005
+            h2Port 11005
             cordapps []
         }
         node {
@@ -222,7 +222,7 @@ is a three node example;
             p2pPort 10008
             rpcPort 10009
             webPort 10010
-            h2port 11008
+            h2Port 11008
             cordapps []
         }
     }

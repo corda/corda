@@ -78,8 +78,8 @@ class Node {
     /**
      * Sets the H2 port for this node
      */
-    void h2port(Integer h2port) {
-        config = config.withValue("h2port", ConfigValueFactory.fromAnyRef(h2port))
+    void h2Port(Integer h2Port) {
+        config = config.withValue("h2port", ConfigValueFactory.fromAnyRef(h2Port))
     }
 
     void useTestClock(Boolean useTestClock) {
