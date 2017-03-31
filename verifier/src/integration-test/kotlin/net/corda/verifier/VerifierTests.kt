@@ -76,7 +76,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val verifier1 = startVerifier(alice)
             val verifier2 = startVerifier(alice)
-            val verifier3 = startVerifier(alice)
+            startVerifier(alice)
             alice.waitUntilNumberOfVerifiers(3)
             val remainingTransactionsCount = AtomicInteger(numberOfTransactions)
             val futures = transactions.map { transaction ->

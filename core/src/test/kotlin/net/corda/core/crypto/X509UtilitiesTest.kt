@@ -59,7 +59,7 @@ class X509UtilitiesTest {
         serverCert.checkValidity(Date()) // throws on verification problems
         serverCert.verify(caCertAndKey.keyPair.public) // throws on verification problems
         assertFalse { serverCert.keyUsage[5] } // Bit 5 == keyCertSign according to ASN.1 spec (see full comment on KeyUsage property)
-        assertTrue { serverCert.basicConstraints === -1 } // This returns the signing path length should be -1 for non-CA certificate
+        assertTrue { serverCert.basicConstraints == -1 } // This returns the signing path length should be -1 for non-CA certificate
         assertEquals(2, serverCert.subjectAlternativeNames.size)
         var foundAliasDnsName = false
         for (entry in serverCert.subjectAlternativeNames) {
@@ -224,7 +224,7 @@ class X509UtilitiesTest {
         var done = false
         var serverError = false
 
-        val serverThread = thread() {
+        val serverThread = thread {
             try {
                 val sslServerSocket = serverSocket.accept()
                 assert(sslServerSocket.isConnected)

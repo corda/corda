@@ -1,7 +1,6 @@
 @file:JvmName("Driver")
 package net.corda.node.driver
 
-import co.paralleluniverse.common.util.ProcessUtil
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
@@ -59,7 +58,7 @@ private val log: Logger = loggerFor<DriverDSL>()
  */
 interface DriverDSLExposedInterface {
     /**
-     * Starts a [Node] in a separate process.
+     * Starts a [net.corda.node.internal.Node] in a separate process.
      *
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
@@ -170,7 +169,6 @@ fun <A> driver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        sshdPortAllocation: PortAllocation = PortAllocation.Incremental(20000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
@@ -179,7 +177,6 @@ fun <A> driver(
 ) = genericDriver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
-                sshdPortAllocation = sshdPortAllocation,
                 debugPortAllocation = debugPortAllocation,
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
@@ -336,7 +333,6 @@ class ShutdownManager(private val executorService: ExecutorService) {
 
 class DriverDSL(
         val portAllocation: PortAllocation,
-        val sshdPortAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
@@ -526,7 +522,6 @@ class DriverDSL(
     override fun startNetworkMapService() {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val sshdAddress = sshdPortAllocation.nextHostAndPort().toString()
         val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,

@@ -2,8 +2,6 @@ package net.corda.docs
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -111,7 +109,6 @@ fun generateTransactions(proxy: CordaRPCOps) {
     val issueRef = OpaqueBytes.of(0)
     val notary = proxy.networkMapUpdates().first.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
     val me = proxy.nodeIdentity().legalIdentity
-    val meAndRef = PartyAndReference(me, issueRef)
     while (true) {
         Thread.sleep(1000)
         val random = SplittableRandom()

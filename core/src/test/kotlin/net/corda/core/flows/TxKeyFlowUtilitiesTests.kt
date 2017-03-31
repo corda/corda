@@ -6,7 +6,6 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.MOCK_IDENTITY_SERVICE
-import net.corda.testing.ledger
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
@@ -30,7 +29,6 @@ class TxKeyFlowUtilitiesTests {
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
         val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
-        val aliceKey: Party = aliceNode.services.myInfo.legalIdentity
         val bobKey: Party = bobNode.services.myInfo.legalIdentity
 
         // Run the flows
