@@ -17,18 +17,20 @@ class SerializationOutputTests {
         val bytes = ser.serialize(obj)
 
         val decoder = DecoderImpl().apply {
-            this.register(Envelope.DESCRIPTOR, Envelope.Constructor())
-            this.register(Schema.DESCRIPTOR, Schema.Constructor())
-            this.register(Descriptor.DESCRIPTOR, Descriptor.Constructor())
-            this.register(Field.DESCRIPTOR, Field.Constructor())
-            this.register(CompositeType.DESCRIPTOR, CompositeType.Constructor())
-            this.register(Choice.DESCRIPTOR, Choice.Constructor())
-            this.register(RestrictedType.DESCRIPTOR, RestrictedType.Constructor())
+            this.register(Envelope.DESCRIPTOR, Envelope.Constructor)
+            this.register(Schema.DESCRIPTOR, Schema.Constructor)
+            this.register(Descriptor.DESCRIPTOR, Descriptor.Constructor)
+            this.register(Field.DESCRIPTOR, Field.Constructor)
+            this.register(CompositeType.DESCRIPTOR, CompositeType.Constructor)
+            this.register(Choice.DESCRIPTOR, Choice.Constructor)
+            this.register(RestrictedType.DESCRIPTOR, RestrictedType.Constructor)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
         val result = decoder.readObject()
         println(result)
 
+        val des = DeserializationInput()
+        des.deserialize(bytes)
     }
 }

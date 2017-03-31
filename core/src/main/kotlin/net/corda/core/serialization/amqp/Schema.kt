@@ -1,22 +1,37 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.serialization.OpaqueBytes
 import org.apache.qpid.proton.amqp.DescribedType
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.amqp.UnsignedLong
+import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
+import java.io.NotSerializableException
 
 val DESCRIPTOR_MSW: Long = 0xc0da0000
 
+// "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
+val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
+
+// TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we don't recognise a type descriptor.
 data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0001L or DESCRIPTOR_MSW)
+
+        fun get(data: Data): Envelope {
+            val describedType = data.`object` as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            val list = describedType.described as List<*>
+            return Constructor.newInstance(listOf(list[0], Schema.get(list[1]!!)))
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(obj, schema)
 
-    class Constructor : DescribedTypeConstructor<Envelope> {
+    object Constructor : DescribedTypeConstructor<Envelope> {
         override fun getTypeClass(): Class<*> = Envelope::class.java
 
         override fun newInstance(described: Any?): Envelope {
@@ -29,13 +44,22 @@ data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
 data class Schema(val types: List<TypeNotation>) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0002L or DESCRIPTOR_MSW)
+
+        fun get(obj: Any): Schema {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            val list = describedType.described as List<*>
+            return Constructor.newInstance(listOf((list[0] as List<*>).map { TypeNotation.get(it!!) }))
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(types)
 
-    class Constructor : DescribedTypeConstructor<Schema> {
+    object Constructor : DescribedTypeConstructor<Schema> {
         override fun getTypeClass(): Class<*> = Schema::class.java
 
         override fun newInstance(described: Any?): Schema {
@@ -57,13 +81,21 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
 data class Descriptor(val name: String?, val code: UnsignedLong?) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0003L or DESCRIPTOR_MSW)
+
+        fun get(obj: Any): Descriptor {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            return Constructor.newInstance(describedType.described)
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, code)
 
-    class Constructor : DescribedTypeConstructor<Descriptor> {
+    object Constructor : DescribedTypeConstructor<Descriptor> {
         override fun getTypeClass(): Class<*> = Descriptor::class.java
 
         override fun newInstance(described: Any?): Descriptor {
@@ -89,13 +121,21 @@ data class Descriptor(val name: String?, val code: UnsignedLong?) : DescribedTyp
 data class Field(val name: String, val type: String, val requires: Array<String>?, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0004L or DESCRIPTOR_MSW)
+
+        fun get(obj: Any): Field {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            return Constructor.newInstance(describedType.described)
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, type, requires, default, label, mandatory, multiple)
 
-    class Constructor : DescribedTypeConstructor<Field> {
+    object Constructor : DescribedTypeConstructor<Field> {
         override fun getTypeClass(): Class<*> = Field::class.java
 
         override fun newInstance(described: Any?): Field {
@@ -123,24 +163,43 @@ data class Field(val name: String, val type: String, val requires: Array<String>
 }
 
 interface TypeNotation : DescribedType {
+    companion object {
+        fun get(obj: Any): TypeNotation {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor == CompositeType.DESCRIPTOR) {
+                return CompositeType.get(describedType)
+            } else if (describedType.descriptor == RestrictedType.DESCRIPTOR) {
+                return RestrictedType.get(describedType)
+            } else {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+        }
+    }
+
     val name: String
     val label: String?
     val provides: Array<String>?
     val descriptor: Descriptor
-
-    //fun encode(): Any?
 }
 
 data class CompositeType(override val name: String, override val label: String?, override val provides: Array<String>?, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0005L or DESCRIPTOR_MSW)
+
+        fun get(describedType: DescribedType): CompositeType {
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            val list = describedType.described as List<*>
+            return Constructor.newInstance(listOf(list[0], list[1], list[2], Descriptor.get(list[3]!!), (list[4] as List<*>).map { Field.get(it!!) }))
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, descriptor, fields)
 
-    class Constructor : DescribedTypeConstructor<CompositeType> {
+    object Constructor : DescribedTypeConstructor<CompositeType> {
         override fun getTypeClass(): Class<*> = CompositeType::class.java
 
         override fun newInstance(described: Any?): CompositeType {
@@ -174,13 +233,21 @@ data class CompositeType(override val name: String, override val label: String?,
 data class RestrictedType(override val name: String, override val label: String?, override val provides: Array<String>?, val source: String, override val descriptor: Descriptor, val choices: Array<Choice>?) : TypeNotation {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0006L or DESCRIPTOR_MSW)
+
+        fun get(describedType: DescribedType): RestrictedType {
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            val list = describedType.described as List<*>
+            return Constructor.newInstance(listOf(list[0], list[1], list[2], list[3], Descriptor.get(list[4]!!), (list[5] as List<*>).map { Choice.get(it!!) }))
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, label, provides, source, descriptor, choices)
 
-    class Constructor : DescribedTypeConstructor<RestrictedType> {
+    object Constructor : DescribedTypeConstructor<RestrictedType> {
         override fun getTypeClass(): Class<*> = RestrictedType::class.java
 
         override fun newInstance(described: Any?): RestrictedType {
@@ -207,21 +274,29 @@ data class RestrictedType(override val name: String, override val label: String?
     }
 }
 
-data class Choice(val name: Symbol, val value: String) : DescribedType {
+data class Choice(val name: String, val value: String) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0007L or DESCRIPTOR_MSW)
+
+        fun get(obj: Any): Choice {
+            val describedType = obj as DescribedType
+            if (describedType.descriptor != DESCRIPTOR) {
+                throw NotSerializableException("Unexpected descriptor ${describedType.descriptor}.")
+            }
+            return Constructor.newInstance(describedType.described)
+        }
     }
 
     override fun getDescriptor(): Any = DESCRIPTOR
 
     override fun getDescribed(): Any = listOf(name, value)
 
-    class Constructor : DescribedTypeConstructor<Choice> {
+    object Constructor : DescribedTypeConstructor<Choice> {
         override fun getTypeClass(): Class<*> = Choice::class.java
 
         override fun newInstance(described: Any?): Choice {
             val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return Choice(list[0] as Symbol, list[1] as String)
+            return Choice(list[0] as String, list[1] as String)
         }
     }
 

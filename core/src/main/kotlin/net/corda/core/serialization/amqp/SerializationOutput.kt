@@ -1,6 +1,5 @@
 package net.corda.core.serialization.amqp
 
-import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -8,11 +7,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 class SerializationOutput {
-    companion object {
-        // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
-        private val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
-    }
-
+    // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<Serializer> = mutableSetOf()
     private val schemaHistory: MutableSet<TypeNotation> = mutableSetOf()
