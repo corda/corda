@@ -1,7 +1,6 @@
 package net.corda.explorer
 
 import com.apple.eawt.Application
-import com.ibm.icu.impl.IllegalIcuArgumentException
 import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory
 import javafx.embed.swing.SwingFXUtils
 import javafx.scene.control.Alert
@@ -45,6 +44,7 @@ import net.corda.nodeapi.User
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
+import java.time.Instant
 import java.util.*
 
 /**
@@ -222,8 +222,7 @@ fun main(args: Array<String>) {
                     currencies = listOf(GBP, USD)
             )
 
-            val maxIterations = 100000
-
+            val maxIterations = 100_000
             // Log to logger when flow finish.
             fun FlowHandle<SignedTransaction>.log(seq: Int, name: String) {
                 val out = "[$seq] $name $id :"
@@ -239,7 +238,7 @@ fun main(args: Array<String>) {
             eventGenerator.parties.forEach {
                 for (ref in 0..1) {
                     for ((currency, issuer) in issuers) {
-                        CashFlowCommand.IssueCash(Amount(1000000000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity).startFlow(issuer)
+                        CashFlowCommand.IssueCash(Amount(1_000_000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity).startFlow(issuer)
                                 .progress.notUsed()
                     }
                 }
@@ -251,20 +250,20 @@ fun main(args: Array<String>) {
                 eventGenerator.issuerGenerator.map { command ->
                     when (command) {
                         is CashFlowCommand.IssueCash -> issuers[command.amount.token]?.let {
-                            println("[$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
+                            println("${Instant.now()} [$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
                             command.startFlow(it).log(i, "${command.amount.token}Issuer")
                         }
                         is CashFlowCommand.ExitCash -> issuers[command.amount.token]?.let {
-                            println("[$i] EXITING ${command.amount} with ref ${command.issueRef}")
+                            println("${Instant.now()} [$i] EXITING ${command.amount} with ref ${command.issueRef}")
                             command.startFlow(it).log(i, "${command.amount.token}Exit")
                         }
-                        else -> throw IllegalIcuArgumentException("Unsupported command: $command")
+                        else -> throw IllegalArgumentException("Unsupported command: $command")
                     }
                 }.generate(SplittableRandom())
 
                 // Party pay requests.
                 eventGenerator.moveCashGenerator.combine(Generator.pickOne(parties)) { command, (party, rpc) ->
-                    println("[$i] SENDING ${command.amount} from $party to ${command.recipient}")
+                    println("${Instant.now()} [$i] SENDING ${command.amount} from $party to ${command.recipient}")
                     command.startFlow(rpc).log(i, party.name)
                 }.generate(SplittableRandom())
 
