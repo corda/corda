@@ -12,6 +12,6 @@ import java.util.*
 object AmountFormatter {
     // TODO replace this once we settled on how we do formatting
     val boring = object : Formatter<Amount<Currency>> {
-        override fun format(value: Amount<Currency>) = "${value.quantity} ${value.token}"
+        override fun format(value: Amount<Currency>) = value.toString()
     }
 }
