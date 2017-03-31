@@ -9,6 +9,7 @@ import java.util.*
 private val nodeJarName = "corda.jar"
 private val webJarName = "corda-webserver.jar"
 private val nodeConfName = "node.conf"
+private val HEADLESS_FLAG = "--headless"
 
 private val os: OS by lazy {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
@@ -21,10 +22,10 @@ private enum class OS { MACOS, WINDOWS, LINUX }
 
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
-    val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
+    val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == HEADLESS_FLAG)))
     val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
-    val javaArgs = args.filter { it != "--headless" }
+    val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
