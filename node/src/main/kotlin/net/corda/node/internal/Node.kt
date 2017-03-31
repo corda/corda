@@ -25,6 +25,7 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
@@ -194,7 +195,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
-            RaftValidatingNotaryService.type -> with(configuration) {
+            RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
                 RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
             }
             else -> PersistentUniquenessProvider()
