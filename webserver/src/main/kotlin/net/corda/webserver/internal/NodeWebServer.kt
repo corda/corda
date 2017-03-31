@@ -4,9 +4,8 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.loggerFor
-import net.corda.node.printBasicNodeInfo
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.webserver.WebServerConfig
 import net.corda.webserver.servlets.AttachmentDownloadServlet
 import net.corda.webserver.servlets.DataUploadServlet
 import net.corda.webserver.servlets.ObjectMapperConfig
@@ -22,20 +21,22 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
+import org.slf4j.LoggerFactory
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 
-class NodeWebServer(val config: FullNodeConfiguration) {
+class NodeWebServer(val config: WebServerConfig) {
     private companion object {
         val log = loggerFor<NodeWebServer>()
         val retryDelay = 1000L // Milliseconds
     }
 
     val address = config.webAddress
+    private var renderBasicInfoToConsole = true
     private lateinit var server: Server
 
     fun start() {
-        printBasicNodeInfo("Starting as webserver: ${config.webAddress}")
+        logAndMaybePrint("Starting as webserver: ${config.webAddress}")
         server = initWebServer(retryConnectLocalRpc())
     }
 
@@ -174,5 +175,12 @@ class NodeWebServer(val config: FullNodeConfiguration) {
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
     val pluginRegistries: List<CordaPluginRegistry> by lazy {
         ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    }
+
+    /** Used for useful info that we always want to show, even when not logging to the console */
+    fun logAndMaybePrint(description: String, info: String? = null) {
+        val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+        val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+        LoggerFactory.getLogger(loggerName).info(msg)
     }
 }
