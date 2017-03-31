@@ -4,13 +4,11 @@ import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.composite
 import net.corda.core.days
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -38,7 +36,7 @@ interface ICommercialPaperTestTemplate {
     fun getMoveCommand(): CommandData
 }
 
-class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
+class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
             MEGA_CORP.ref(123),
             MEGA_CORP_PUBKEY,
@@ -51,7 +49,7 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
 }
 
-class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
+class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,
@@ -195,11 +193,6 @@ class CommercialPaperTestsGeneric {
             timestamp(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
-    }
-
-    fun cashOutputsToVault(vararg outputs: TransactionState<Cash.State>): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), null, emptyList(), null, TransactionType.General())
-        return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
     }
 
     /**

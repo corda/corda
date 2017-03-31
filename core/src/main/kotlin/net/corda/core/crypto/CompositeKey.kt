@@ -47,18 +47,10 @@ sealed class CompositeKey {
     }
 
     /** The leaf node of the tree – a wrapper around a [PublicKey] primitive */
-    class Leaf(val publicKey: PublicKey) : CompositeKey() {
+    data class Leaf(val publicKey: PublicKey) : CompositeKey() {
         override fun isFulfilledBy(keys: Iterable<PublicKey>) = publicKey in keys
 
-        override val keys: Set<PublicKey>
-            get() = setOf(publicKey)
-
-        // TODO: remove once data class inheritance is enabled
-        override fun equals(other: Any?): Boolean {
-            return this === other || other is Leaf && other.publicKey == this.publicKey
-        }
-
-        override fun hashCode() = publicKey.hashCode()
+        override val keys: Set<PublicKey> get() = setOf(publicKey)
 
         override fun toString() = publicKey.toStringShort()
     }
@@ -70,10 +62,7 @@ sealed class CompositeKey {
      * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
      * signatures required) to satisfy the sub-tree rooted at this node.
      */
-    class Node(val threshold: Int,
-               val children: List<CompositeKey>,
-               val weights: List<Int>) : CompositeKey() {
-
+    data class Node(val threshold: Int, val children: List<CompositeKey>, val weights: List<Int>) : CompositeKey() {
         override fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
             val totalWeight = children.mapIndexed { i, childNode ->
                 if (childNode.isFulfilledBy(keys)) weights[i] else 0
@@ -82,35 +71,13 @@ sealed class CompositeKey {
             return totalWeight >= threshold
         }
 
-        override val keys: Set<PublicKey>
-            get() = children.flatMap { it.keys }.toSet()
-
-        // Auto-generated. TODO: remove once data class inheritance is enabled
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other?.javaClass != javaClass) return false
-
-            other as Node
-
-            if (threshold != other.threshold) return false
-            if (weights != other.weights) return false
-            if (children != other.children) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = threshold
-            result = 31 * result + weights.hashCode()
-            result = 31 * result + children.hashCode()
-            return result
-        }
+        override val keys: Set<PublicKey> get() = children.flatMap { it.keys }.toSet()
 
         override fun toString() = "(${children.joinToString()})"
     }
 
     /** A helper class for building a [CompositeKey.Node]. */
-    class Builder() {
+    class Builder {
         private val children: MutableList<CompositeKey> = mutableListOf()
         private val weights: MutableList<Int> = mutableListOf()
 

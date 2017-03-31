@@ -164,7 +164,7 @@ class RequeryConfigurationTest {
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
                 signers = emptyList(),
-                type = TransactionType.General(),
+                type = TransactionType.General,
                 timestamp = null
         )
         return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))

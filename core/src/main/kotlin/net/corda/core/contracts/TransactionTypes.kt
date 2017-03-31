@@ -9,9 +9,6 @@ import net.corda.core.transactions.TransactionBuilder
 /** Defines transaction build & validation logic for a specific transaction type */
 @CordaSerializable
 sealed class TransactionType {
-    override fun equals(other: Any?) = other?.javaClass == javaClass
-    override fun hashCode() = javaClass.name.hashCode()
-
     /**
      * Check that the transaction is valid based on:
      * - General platform rules
@@ -63,9 +60,9 @@ sealed class TransactionType {
     abstract fun verifyTransaction(tx: LedgerTransaction)
 
     /** A general transaction type where transaction validity is determined by custom contract code */
-    class General : TransactionType() {
+    object General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
-        class Builder(notary: Party?) : TransactionBuilder(General(), notary) {}
+        class Builder(notary: Party?) : TransactionBuilder(General, notary)
 
         override fun verifyTransaction(tx: LedgerTransaction) {
             verifyNoNotaryChange(tx)
@@ -141,12 +138,12 @@ sealed class TransactionType {
      * A special transaction type for reassigning a notary for a state. Validation does not involve running
      * any contract code, it just checks that the states are unmodified apart from the notary field.
      */
-    class NotaryChange : TransactionType() {
+    object NotaryChange : TransactionType() {
         /**
          * A transaction builder that automatically sets the transaction type to [NotaryChange]
          * and adds the list of participants to the signers set for every input state.
          */
-        class Builder(notary: Party) : TransactionBuilder(NotaryChange(), notary) {
+        class Builder(notary: Party) : TransactionBuilder(NotaryChange, notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
                 signers.addAll(stateAndRef.state.data.participants)
                 super.addInputState(stateAndRef)

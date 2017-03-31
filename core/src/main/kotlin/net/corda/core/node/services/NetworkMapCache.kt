@@ -21,10 +21,12 @@ import rx.Observable
 interface NetworkMapCache {
 
     @CordaSerializable
-    sealed class MapChange(val node: NodeInfo) {
-        class Added(node: NodeInfo) : MapChange(node)
-        class Removed(node: NodeInfo) : MapChange(node)
-        class Modified(node: NodeInfo, val previousNode: NodeInfo) : MapChange(node)
+    sealed class MapChange {
+        abstract val node: NodeInfo
+
+        data class Added(override val node: NodeInfo) : MapChange()
+        data class Removed(override val node: NodeInfo) : MapChange()
+        data class Modified(override val node: NodeInfo, val previousNode: NodeInfo) : MapChange()
     }
 
     /** A list of all nodes the cache is aware of */

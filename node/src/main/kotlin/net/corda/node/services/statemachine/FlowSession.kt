@@ -32,13 +32,11 @@ sealed class FlowSessionState {
     abstract val sendToParty: Party
 
     /** [otherParty] may be a specific peer or a service party */
-    class Initiating(val otherParty: Party) : FlowSessionState() {
+    data class Initiating(val otherParty: Party) : FlowSessionState() {
         override val sendToParty: Party get() = otherParty
-        override fun toString(): String = "${javaClass.simpleName}($otherParty)"
     }
 
-    class Initiated(val peerParty: Party, val peerSessionId: Long) : FlowSessionState() {
+    data class Initiated(val peerParty: Party, val peerSessionId: Long) : FlowSessionState() {
         override val sendToParty: Party get() = peerParty
-        override fun toString(): String = "${javaClass.simpleName}($peerParty, $peerSessionId)"
     }
 }

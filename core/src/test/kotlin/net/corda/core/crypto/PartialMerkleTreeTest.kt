@@ -226,7 +226,7 @@ class PartialMerkleTreeTest {
                 commands = testTx.commands,
                 notary = notary,
                 signers = listOf(MEGA_CORP_PUBKEY, DUMMY_PUBKEY_1),
-                type = TransactionType.General(),
+                type = TransactionType.General,
                 timestamp = timestamp
         )
     }

@@ -51,15 +51,15 @@ object BFTSMaRt {
     /** Sent from [Server] to [Client]. */
     @CordaSerializable
     sealed class ReplicaResponse {
-        class Error(val error: NotaryError) : ReplicaResponse()
-        class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
+        data class Error(val error: NotaryError) : ReplicaResponse()
+        data class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
     }
 
     /** An aggregate response from all replica ([Server]) replies sent from [Client] back to the calling application. */
     @CordaSerializable
     sealed class ClusterResponse {
-        class Error(val error: NotaryError) : ClusterResponse()
-        class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
+        data class Error(val error: NotaryError) : ClusterResponse()
+        data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
     }
 
     class Client(val id: Int) : SingletonSerializeAsToken() {
@@ -193,7 +193,7 @@ object BFTSMaRt {
 
         protected fun validateTimestamp(t: Timestamp?) {
             if (t != null && !timestampChecker.isValid(t))
-                throw NotaryException(NotaryError.TimestampInvalid())
+                throw NotaryException(NotaryError.TimestampInvalid)
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {

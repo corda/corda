@@ -31,7 +31,7 @@ class TransactionTests {
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
                 signers = listOf(DUMMY_KEY_1.public.composite, DUMMY_KEY_2.public.composite),
-                type = TransactionType.General(),
+                type = TransactionType.General,
                 timestamp = null
         )
         val bytes: SerializedBytes<WireTransaction> = wtx.serialized
@@ -76,7 +76,7 @@ class TransactionTests {
                 null,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         transaction.type.verify(transaction)
@@ -103,7 +103,7 @@ class TransactionTests {
                 DUMMY_NOTARY,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         assertFailsWith<TransactionVerificationException.DuplicateInputStates> { transaction.type.verify(transaction) }
@@ -130,7 +130,7 @@ class TransactionTests {
                 notary,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { transaction.type.verify(transaction) }

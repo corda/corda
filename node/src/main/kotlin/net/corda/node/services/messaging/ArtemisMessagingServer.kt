@@ -513,7 +513,7 @@ sealed class CertificateChainCheckPolicy {
         }
     }
 
-    class MustContainOneOf(val trustedAliases: Set<String>) : CertificateChainCheckPolicy() {
+    data class MustContainOneOf(val trustedAliases: Set<String>) : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
             val trustedPublicKeys = trustedAliases.map { trustStore.getCertificate(it).publicKey }.toSet()
             return object : Check {

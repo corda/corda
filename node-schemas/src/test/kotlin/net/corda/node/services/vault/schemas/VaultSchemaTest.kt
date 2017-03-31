@@ -121,7 +121,7 @@ class VaultSchemaTest {
                 notary,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
     }
 
@@ -153,7 +153,7 @@ class VaultSchemaTest {
                 notary,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
     }
 
