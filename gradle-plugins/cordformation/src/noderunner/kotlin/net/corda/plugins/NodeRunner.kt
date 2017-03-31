@@ -69,7 +69,7 @@ private fun isWebserver(maybeWebserverDir: File) = maybeWebserverDir.isDirectory
 // TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
 private fun hasWebserverPort(nodeConfDir: File) = Files.readAllLines(File(nodeConfDir, nodeConfName).toPath()).joinToString { it }.contains("webAddress")
 
-private fun getDebugPortArg(debugPort: Int?) = if (debugPort == null) {
+private fun getDebugPortArg(debugPort: Int?) = if (debugPort != null) {
     listOf("""-Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"""")
 } else {
     emptyList()
@@ -89,8 +89,8 @@ private fun execJar(jarName: String, dir: File, args: List<String> = listOf(), d
 }
 
 private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf(), debugPort: Int?): Process {
-    val javaCmd = "java " + getDebugPortArg(debugPort).joinToString(" ") { it } + "-jar $jarName " + args.joinToString(" ") { it }
-    val nodeName = "${dir.toPath().fileName} $jarName"
+    val nodeName = "${dir.toPath().fileName}-$jarName"
+    val javaCmd = (listOf("java", "-Dname=$nodeName") + getDebugPortArg(debugPort) + listOf("-jar", jarName) + args).joinToString(" ") { it }
     val builder = when (os) {
         OS.MACOS -> ProcessBuilder(
                 "osascript", "-e",
