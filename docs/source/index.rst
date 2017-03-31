@@ -124,6 +124,7 @@ Documentation Contents:
    :caption: Appendix
 
    loadtesting
+   demobench
    setting-up-a-corda-network
    secure-coding-guidelines
    release-process
