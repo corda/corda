@@ -219,8 +219,34 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  * @param returnValue A [ListenableFuture] of the flow's return value.
  */
 @CordaSerializable
-data class FlowHandle<A>(
+data class FlowHandle<A> (
         val id: StateMachineRunId,
         val progress: Observable<String>,
-        val returnValue: ListenableFuture<A>
-)
+        val returnValue: ListenableFuture<A>) : AutoCloseable {
+
+    /**
+     * Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources.
+     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
+     */
+    override fun close() {
+        returnValue.cancel(false)
+        progress.notUsed()
+    }
+}
+
+/**
+ * This function should be invoked on any unwanted Observables returned from RPC to release the server resources.
+ * TODO: Delete this function when this file is moved to RPC module, as Observable<T>.notUsed() exists there already.
+ *
+ * subscribe({}, {}) was used instead of simply calling subscribe()
+ * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
+ * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
+ * empty inputs are used to subscribe({}, {}).
+ */
+fun <T> Observable<T>.notUsed() {
+    try {
+        this.subscribe({}, {}).unsubscribe()
+    } catch (e: Exception) {
+        // Swallow any other exceptions as well; we won't handle exceptions from unused Observables.
+    }
+}

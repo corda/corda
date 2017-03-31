@@ -51,12 +51,6 @@ dependencies {
     integrationTestCompile "org.apache.activemq:artemis-server:${artemis_version}"
 }
 
-configurations.compile {
-    // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
-}
-
 task standaloneJar(type: Jar) {
     // Create a fat jar by packing all deps into the output
     from {
