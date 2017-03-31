@@ -1,5 +1,6 @@
 package net.corda.core.serialization.amqp
 
+import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.beans.Introspector
 import java.beans.PropertyDescriptor
@@ -12,9 +13,10 @@ import kotlin.reflect.jvm.javaConstructor
 
 
 class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory) : Serializer() {
+    override val type: Type get() = clazz
     private val propertySerializers = generatePropertySerializers(clazz)
     private val typeName = clazz.name
-    private val typeDescriptor = clazz.name // TODO need a better algo
+    override val typeDescriptor = clazz.name // TODO need a better algo
     private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
@@ -40,6 +42,16 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
         }
         data.exit() // exit list
         data.exit() // exit described
+    }
+
+    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+        if (obj is UnsignedInteger) {
+            // TODO: Object refs
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        } else if (obj is List<*>) {
+            if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
+            return construct(obj)
+        } else throw NotSerializableException("Body of described type is unexpected $obj")
     }
 
     private fun generateFields(): List<Field> {

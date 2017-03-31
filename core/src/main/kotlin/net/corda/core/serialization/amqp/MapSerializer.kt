@@ -5,8 +5,9 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
+    override val type: Type get() = declaredType
     private val typeName = declaredType.toString()
-    private val typeDescriptor = declaredType.toString()
+    override val typeDescriptor = declaredType.toString()
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyArray(), "map", Descriptor(typeDescriptor, null), emptyArray())
 
@@ -31,5 +32,10 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
         }
         data.exit() // exit map
         data.exit() // exit described
+    }
+
+    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+        // Can we verify the entries in the map?
+        return (obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }
     }
 }

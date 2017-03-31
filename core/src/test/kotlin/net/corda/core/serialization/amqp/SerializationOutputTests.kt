@@ -31,6 +31,7 @@ class SerializationOutputTests {
         println(result)
 
         val des = DeserializationInput()
-        des.deserialize(bytes)
+        val desObj = des.deserialize(bytes)
+        println(desObj)
     }
 }

@@ -9,7 +9,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 class SerializerFactory {
-    private val serializers = ConcurrentHashMap<Type, Serializer>()
+    private val serializersByType = ConcurrentHashMap<Type, Serializer>()
+    private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()
 
     @Throws(NotSerializableException::class)
     fun get(actualType: Class<*>?, declaredType: Type): Serializer {
@@ -37,6 +38,44 @@ class SerializerFactory {
         }
     }
 
+    @Throws(NotSerializableException::class)
+    fun get(typeDescriptor: Any, envelope: Envelope): Serializer {
+        return serializersByDescriptor[typeDescriptor] ?: {
+            processSchema(envelope.schema)
+            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
+        }()
+    }
+
+    private fun processSchema(schema: Schema) {
+        for (typeNotation in schema.types) {
+            processSchemaEntry(typeNotation)
+        }
+    }
+
+    private fun processSchemaEntry(typeNotation: TypeNotation) {
+        // TODO: use sealed types for TypeNotation?
+        // TODO: for now we know the type is directly convertible, and we don't do any comparison etc etc
+        if (typeNotation is CompositeType) {
+            // java.lang.Class (whether a class or interface)
+            processCompositeType(typeNotation)
+        } else if (typeNotation is RestrictedType) {
+            // List / Map, possibly with generics
+            processRestrictedType(typeNotation)
+        } else {
+            throw NotSerializableException("Unexpected type $typeNotation")
+        }
+    }
+
+    private fun processRestrictedType(typeNotation: RestrictedType) {
+        val type = DeserializedParameterizedType(typeNotation.name)
+        get(null, type)
+    }
+
+    private fun processCompositeType(typeNotation: CompositeType) {
+        val clazz = Class.forName(typeNotation.name)
+        get(clazz, clazz)
+    }
+
     private fun checkParameterisedTypesConcrete(actualTypeArguments: Array<out Type>) {
         for (type in actualTypeArguments) {
             // Needs to be another parameterised type or a class
@@ -50,9 +89,12 @@ class SerializerFactory {
         }
     }
 
-    class UnderConstructionSerializer(val type: Type) : Serializer() {
+    inner class UnderConstructionSerializer(override val type: Type) : Serializer() {
         private val constructing = AtomicBoolean(false)
         private val constructed: SettableFuture<Serializer> = SettableFuture.create()
+
+        override val typeDescriptor: String
+            get() = constructed.get().typeDescriptor
 
         override fun writeClassInfo(output: SerializationOutput) {
             constructed.get().writeClassInfo(output)
@@ -62,12 +104,18 @@ class SerializerFactory {
             constructed.get().writeObject(obj, data, type, output)
         }
 
-        fun replaceWith(serializers: MutableMap<Type, Serializer>, makeSerializer: () -> Serializer): Serializer {
+        override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput) {
+            constructed.get().readObject(obj, envelope, input)
+        }
+
+        fun replaceWith(makeSerializer: () -> Serializer): Serializer {
             if (constructing.compareAndSet(false, true)) {
                 val serializer = makeSerializer()
-                serializers[type] = serializer
+                serializersByType[type] = serializer
+                serializersByDescriptor[serializer.typeDescriptor] = serializer
                 // TODO: replace all field serializers that reference this?
                 constructed.set(serializer)
+                serializer
                 return serializer
             } else {
                 return this
@@ -76,9 +124,9 @@ class SerializerFactory {
     }
 
     private fun makeSerializer(type: Type, makeSerializer: () -> Serializer): Serializer {
-        val existingSerializer = serializers.computeIfAbsent(type) { UnderConstructionSerializer(type) }
+        val existingSerializer = serializersByType.computeIfAbsent(type) { UnderConstructionSerializer(type) }
         if (existingSerializer is UnderConstructionSerializer) {
-            return existingSerializer.replaceWith(serializers, makeSerializer)
+            return existingSerializer.replaceWith(makeSerializer)
         } else {
             return existingSerializer
         }

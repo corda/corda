@@ -2,6 +2,7 @@ package net.corda.core.serialization.amqp
 
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
@@ -15,6 +16,7 @@ class SerializationOutput {
     // TODO: we wouldn't create this fresh each time for performance.
     private val serializerFactory: SerializerFactory = SerializerFactory()
 
+    @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             val data = Data.Factory.create()

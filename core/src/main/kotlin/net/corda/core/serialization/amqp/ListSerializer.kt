@@ -5,8 +5,9 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 class ListSerializer(val declaredType: ParameterizedType) : Serializer() {
+    override val type: Type get() = declaredType
     private val typeName = declaredType.toString()
-    private val typeDescriptor = declaredType.toString()
+    override val typeDescriptor = declaredType.toString()
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyArray(), "list", Descriptor(typeDescriptor, null), emptyArray())
 
@@ -29,5 +30,10 @@ class ListSerializer(val declaredType: ParameterizedType) : Serializer() {
         }
         data.exit() // exit list
         data.exit() // exit described
+    }
+
+    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+        // TODO: Can we verify the entries in the list?
+        return (obj as List<*>).map { input.readObjectOrNull(it, envelope, declaredType.actualTypeArguments[0]) }
     }
 }
