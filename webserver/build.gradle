@@ -36,8 +36,8 @@ dependencies {
     testCompile project(':node')
 
     // Web stuff: for HTTP[S] servlets
-    compile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
-    compile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
+    compile "org.eclipse.jetty:jetty-webapp:$jetty_version"
     compile "javax.servlet:javax.servlet-api:3.1.0"
     compile "org.jolokia:jolokia-agent-war:$jolokia_version"
     compile "commons-fileupload:commons-fileupload:$fileupload_version"
@@ -50,20 +50,10 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Jersey for JAX-RS implementation for use in Jetty
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
-    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
-    // NOTE there is a Jackson version clash between jersey-media-json-jackson (v2.5.4) and jackson-module-kotlin (v.2.5.5)
-    // Have not found an Issue in the issue tracker for Jersey for this issue
-    compile ("org.glassfish.jersey.media:jersey-media-json-jackson:${jersey_version}") {
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
-    }
-
-    compile ("com.fasterxml.jackson.module:jackson-module-kotlin:${jackson_version}") {
-        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
-    }
+    compile "org.glassfish.jersey.core:jersey-server:$jersey_version"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet-core:$jersey_version"
+    compile "org.glassfish.jersey.containers:jersey-container-jetty-http:$jersey_version"
+    compile "org.glassfish.jersey.media:jersey-media-json-jackson:$jersey_version"
 
     testCompile "junit:junit:$junit_version"
 }
