@@ -58,11 +58,10 @@ object DefaultKryoCustomizer {
             // InputStream subclasses whitelisting, required for attachments.
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(FileInputStream::class.java, InputStreamSerializer)
+            register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
             // Required for HashCheckingStream (de)serialization.
             // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
-
-            register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
 
             noReferencesWithin<WireTransaction>()
 
