@@ -31,6 +31,7 @@ sourceSets {
 
 dependencies {
     compile project(':core')
+    compile project(':finance')
     compile project(':client:rpc')
     compile project(':client:jackson')
     testCompile project(':node')

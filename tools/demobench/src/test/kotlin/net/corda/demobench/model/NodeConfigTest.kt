@@ -220,6 +220,8 @@ class NodeConfigTest {
 
         assertEquals(localPort(20001), webConfig.webAddress)
         assertEquals(localPort(10001), webConfig.p2pAddress)
+        assertEquals("trustpass", webConfig.trustStorePassword)
+        assertEquals("cordacadevpass", webConfig.keyStorePassword)
     }
 
     @Test
