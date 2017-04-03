@@ -61,17 +61,28 @@ class NodeTerminalView : Fragment() {
             val r3pty = R3Pty(config.legalName, TerminalSettingsProvider(), Dimension(160, 80), onExit)
             pty = r3pty
 
-            swingTerminal.content = r3pty.terminal
-            nodeController.runCorda(r3pty, config)
+            if (nodeController.runCorda(r3pty, config)) {
+                swingTerminal.content = r3pty.terminal
 
-            configureDatabaseButton(config)
-            configureExplorerButton(config)
-            configureWebButton(config)
+                configureDatabaseButton(config)
+                configureExplorerButton(config)
+                configureWebButton(config)
 
-            /*
-             * Start RPC client that will update node statistics on UI.
-             */
-            rpc = launchRPC(config)
+                /*
+                 * Start RPC client that will update node statistics on UI.
+                 */
+                rpc = launchRPC(config)
+
+                /*
+                 * Check whether the PTY has exited unexpectedly,
+                 * and close the RPC client if it has.
+                 */
+                if (!r3pty.isConnected) {
+                    log.severe("Node '${config.legalName}' has failed to start.")
+                    swingTerminal.content = null
+                    rpc?.close()
+                }
+            }
         })
     }
 
