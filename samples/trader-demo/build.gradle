@@ -6,15 +6,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     main {
         resources {
@@ -41,12 +32,12 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     compile project(':test-utils')
@@ -82,7 +73,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
-        webPort 10004
         cordapps = []
     }
     node {
@@ -91,7 +81,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         advertisedServices = []
         p2pPort 10005
         rpcPort 10006
-        webPort 10007
         cordapps = []
         rpcUsers = ext.rpcUsers
     }
@@ -101,7 +90,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009
-        webPort 10010
         cordapps = []
         rpcUsers = ext.rpcUsers
     }
@@ -110,7 +98,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         nearestCity "London"
         advertisedServices = []
         p2pPort 10011
-        webPort 10012
         cordapps = []
     }
 }

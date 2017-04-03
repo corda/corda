@@ -68,7 +68,6 @@ fun <A> verifierDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        sshdPortAllocation: PortAllocation = PortAllocation.Incremental(20000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
@@ -78,7 +77,6 @@ fun <A> verifierDriver(
         driverDsl = VerifierDriverDSL(
                 DriverDSL(
                         portAllocation = portAllocation,
-                        sshdPortAllocation = sshdPortAllocation,
                         debugPortAllocation = debugPortAllocation,
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
@@ -260,10 +258,8 @@ data class VerifierDriverDSL(
         val locator = ActiveMQClient.createServerLocatorWithoutHA(transport)
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(NODE_USER, NODE_USER, false, true, true, locator.isPreAcknowledge, locator.ackBatchSize)
-        try {
-            return closure(session)
-        } finally {
-            session.close()
+        return session.use {
+            closure(it)
         }
     }
 

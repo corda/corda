@@ -7,15 +7,6 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 apply plugin: 'application'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 mainClassName = 'net.corda.irs.IRSDemo'
 
 sourceSets {
@@ -44,15 +35,15 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
-    compile project(':node:webserver')
+    compile project(':webserver')
     compile project(':test-utils')
 
     // Javax is required for webapis

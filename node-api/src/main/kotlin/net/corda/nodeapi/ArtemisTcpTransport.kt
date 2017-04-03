@@ -41,7 +41,7 @@ class ArtemisTcpTransport {
         ): TransportConfiguration {
             val options = mutableMapOf<String, Any?>(
                     // Basic TCP target details
-                    TransportConstants.HOST_PROP_NAME to hostAndPort.hostText,
+                    TransportConstants.HOST_PROP_NAME to hostAndPort.host,
                     TransportConstants.PORT_PROP_NAME to hostAndPort.port,
 
                     // Turn on AMQP support, which needs the protocol jar on the classpath.

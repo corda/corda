@@ -1,6 +1,5 @@
 package net.corda.node.services.schema
 
-import kotlinx.support.jdk7.use
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef

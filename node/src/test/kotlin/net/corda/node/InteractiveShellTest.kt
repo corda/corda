@@ -14,6 +14,7 @@ import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.shell.InteractiveShell
 import org.junit.Test
 import org.slf4j.Logger
 import java.util.*

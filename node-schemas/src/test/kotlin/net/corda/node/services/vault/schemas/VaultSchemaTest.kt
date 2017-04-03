@@ -6,6 +6,7 @@ import io.requery.kotlin.`in`
 import io.requery.kotlin.eq
 import io.requery.kotlin.invoke
 import io.requery.kotlin.isNull
+import io.requery.query.RowExpression
 import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
@@ -27,8 +28,6 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import java.sql.Connection
-import java.sql.DriverManager
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -48,9 +47,6 @@ class VaultSchemaTest {
 
     var transaction : LedgerTransaction? = null
 
-    var jdbcInstance : Connection? = null
-    val jdbcConn : Connection get() = jdbcInstance!!
-
     @Before
     fun setup() {
         val dataSource = JdbcDataSource()
@@ -61,8 +57,6 @@ class VaultSchemaTest {
         val tables = SchemaModifier(configuration)
         val mode = TableCreationMode.DROP_CREATE
         tables.createTables(mode)
-
-        jdbcInstance = DriverManager.getConnection(dataSource.getURL())
 
         // create dummy test data
         setupDummyData()
@@ -493,6 +487,9 @@ class VaultSchemaTest {
         Assert.assertEquals(3, states.size)
     }
 
+    /**
+     *  Requery composite key tests (using RowExpression introduced in 1.2.1)
+     */
     @Test
     fun testQueryWithCompositeKey() {
         // txn entity with 4 input states (SingleOwnerState x 3, MultiOwnerState x 1)
@@ -500,30 +497,32 @@ class VaultSchemaTest {
         dummyStatesInsert(txn)
 
         data.invoke {
-            // Requery does not support SQL-92 select by composite key:
-            // Raised Issue:
-            // https://github.com/requery/requery/issues/434
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = txn.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
 
-            // Test Requery raw query for single key field
-            val refs = txn.inputs.map { it.ref }
-            val objArgsTxHash = refs.map { it.txhash.toString() }
-            val objArgsIndex = refs.map { it.index }
+            val result = select(VaultStatesEntity::class) where (expression.`in`(stateRefs))
+            assertEquals(3, result.get().count())
+        }
+    }
 
-            val queryByTxHashString = "SELECT * FROM VAULT_STATES WHERE transaction_id IN ?"
-            val resultRawQueryTxHash = raw(VaultStatesEntity::class, queryByTxHashString, *objArgsTxHash.toTypedArray())
-            assertEquals(8, resultRawQueryTxHash.count())
+    @Test
+    fun testUpdateWithCompositeKey() {
+        // txn entity with 4 input states (SingleOwnerState x 3, MultiOwnerState x 1)
+        val txn = createTxnWithTwoStateTypes()
+        dummyStatesInsert(txn)
 
-            val queryByIndexString = "SELECT * FROM VAULT_STATES WHERE output_index IN ?"
-            val resultRawQueryIndex = raw(VaultStatesEntity::class, queryByIndexString, *objArgsIndex.toTypedArray())
-            assertEquals(18, resultRawQueryIndex.count())
+        data.invoke {
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = txn.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
 
-            // Use JDBC native query for composite key
-            val stateRefs = refs.fold("") { stateRefs, it -> stateRefs + "('${it.txhash}','${it.index}')," }.dropLast(1)
-            val statement = jdbcConn.createStatement()
-            val rs = statement.executeQuery("SELECT transaction_id, output_index, contract_state FROM VAULT_STATES WHERE ((transaction_id, output_index) IN ($stateRefs)) AND (state_status = 0)")
-            var count = 0
-            while (rs.next()) count++
-            assertEquals(3, count)
+            val update = update(VaultStatesEntity::class)
+                    .set(VaultStatesEntity.LOCK_ID, "")
+                    .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
+                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and (expression.`in`(stateRefs)).get()
+            assertEquals(3, update.value())
         }
     }
 
@@ -608,15 +607,16 @@ class VaultSchemaTest {
 
         // release soft lock on states
         data.invoke {
-            val query = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
-                    .and(VaultSchema.VaultStates::lockId eq "LOCK#1")
-            val result = query.get()
-            assertEquals(3, result.count())
-            result.forEach {
-                it.lockId = ""
-                it.lockUpdateTime = Instant.now()
-                upsert(it)
-            }
+            val primaryCompositeKey = listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX)
+            val expression = RowExpression.of(primaryCompositeKey)
+            val stateRefs = transaction!!.inputs.map { listOf("'${it.ref.txhash}'", it.ref.index) }
+
+            val update = update(VaultStatesEntity::class)
+                    .set(VaultStatesEntity.LOCK_ID, "")
+                    .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
+                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and (expression.`in`(stateRefs)).get()
+            assertEquals(3, update.value())
         }
 
         // select unlocked states
@@ -625,55 +625,6 @@ class VaultSchemaTest {
                     .and (VaultSchema.VaultStates::lockId eq "")
             assertEquals(3, result.get().count())
         }
-    }
-
-    @Test
-    fun testMultipleSoftLocksUsingNativeJDBC() {
-        // NOTE:
-        //      - Requery using raw SelectForUpdate not working
-        //      - Requery using raw Update not working
-
-        // using native JDBC
-        val refs = transaction!!.inputs.map { it.ref }
-
-        // insert unconsumed state
-        data.invoke {
-            transaction!!.inputs.forEach {
-                val stateEntity = createStateEntity(it)
-                insert(stateEntity)
-            }
-        }
-
-        // update refs with soft lock id
-        val stateRefs = refs.fold("") { stateRefs, it -> stateRefs + "('${it.txhash}','${it.index}')," }.dropLast(1)
-        val lockId = "LOCK#1"
-        val selectForUpdateStatement = """
-            SELECT transaction_id, output_index, lock_id, lock_timestamp FROM VAULT_STATES
-            WHERE ((transaction_id, output_index) IN ($stateRefs)) FOR UPDATE
-        """
-
-        val statement = jdbcConn.createStatement()
-        val rs = statement.executeQuery(selectForUpdateStatement)
-        while (rs.next()) {
-            val txHash = SecureHash.parse(rs.getString(1))
-            val index = rs.getInt(2)
-            val statement = jdbcConn.createStatement()
-            val updateStatement = """
-             UPDATE VAULT_STATES SET lock_id = '$lockId', lock_timestamp = '${Instant.now()}'
-             WHERE (transaction_id = '$txHash' AND output_index = $index)
-        """
-            statement.executeUpdate(updateStatement)
-        }
-
-        // count locked state refs
-        val selectStatement = """
-            SELECT transaction_id, output_index, contract_state FROM VAULT_STATES
-            WHERE ((transaction_id, output_index) IN ($stateRefs)) AND (lock_id != '')
-        """
-        val rsQuery = statement.executeQuery(selectStatement)
-        var countQuery = 0
-        while (rsQuery.next()) countQuery++
-        assertEquals(3, countQuery)
     }
 
     @Test

@@ -4,6 +4,8 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import java.util.*
 
 /**
@@ -12,6 +14,11 @@ import java.util.*
  * errors on no-match, ends on match.
  */
 abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : Clause<S, C, Issued<T>>() {
+
+    private companion object {
+        val log = loggerFor<AbstractConserveAmount<*,*,*>>()
+    }
+
     /**
      * Gather assets from the given list of states, sufficient to match or exceed the given amount.
      *
@@ -30,9 +37,12 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
             gatheredAmount += Amount(c.state.data.amount.quantity, amount.token)
         }
 
-        if (gatheredAmount < amount)
+        if (gatheredAmount < amount) {
+            log.trace { "Insufficient balance: requested $amount, available $gatheredAmount" }
             throw InsufficientBalanceException(amount - gatheredAmount)
+        }
 
+        log.trace { "Gathered coins: requested $amount, available $gatheredAmount, change: ${gatheredAmount - amount}" }
         return Pair(gathered, gatheredAmount)
     }
 
@@ -61,7 +71,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         // highest total value
         acceptableCoins = acceptableCoins.filter { it.state.notary == tx.notary }
 
-        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, Amount(amount.quantity, currency))
+        val (gathered, gatheredAmount) = gatherCoins(acceptableCoins, amount)
         val takeChangeFrom = gathered.lastOrNull()
         val change = if (takeChangeFrom != null && gatheredAmount > amount) {
             Amount(gatheredAmount.quantity - amount.quantity, takeChangeFrom.state.data.amount.token)

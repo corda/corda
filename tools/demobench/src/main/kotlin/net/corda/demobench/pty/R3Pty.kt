@@ -9,7 +9,6 @@ import net.corda.core.utilities.loggerFor
 import java.awt.*
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -44,7 +43,7 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
     fun run(args: Array<String>, envs: Map<String, String>, workingDir: String?) {
         check(!terminal.isSessionRunning, { "${terminal.sessionName} is already running" })
 
-        val environment = HashMap<String, String>(envs)
+        val environment = envs.toMutableMap()
         if (!UIUtil.isWindows) {
             environment["TERM"] = "xterm"
 
@@ -63,5 +62,8 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
         val session = terminal.createTerminalSession(connector)
         session.start()
     }
+
+    @Throws(InterruptedException::class)
+    fun waitFor(): Int? = terminal.ttyConnector?.waitFor()
 
 }

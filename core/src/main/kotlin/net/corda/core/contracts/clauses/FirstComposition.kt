@@ -4,18 +4,13 @@ import net.corda.core.contracts.AuthenticatedObject
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
-import net.corda.core.utilities.loggerFor
 import java.util.*
 
 /**
  * Compose a number of clauses, such that the first match is run, and it errors if none is run.
  */
 @Deprecated("Use FirstOf instead")
-class FirstComposition<S : ContractState, C : CommandData, K : Any>(val firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
-    companion object {
-        val logger = loggerFor<FirstComposition<*, *, *>>()
-    }
-
+class FirstComposition<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses = ArrayList<Clause<S, C, K>>()
     override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> = listOf(clauses.first { it.matches(commands) })
 

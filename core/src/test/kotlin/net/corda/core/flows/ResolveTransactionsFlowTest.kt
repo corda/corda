@@ -5,7 +5,6 @@ import net.corda.core.crypto.NullSignature
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
-import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.opaque
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY_KEY

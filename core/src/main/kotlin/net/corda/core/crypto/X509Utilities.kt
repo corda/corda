@@ -27,6 +27,7 @@ import java.io.ByteArrayInputStream
 import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
+import java.io.IOException
 import java.math.BigInteger
 import java.net.InetAddress
 import java.nio.file.Path
@@ -151,7 +152,10 @@ object X509Utilities {
      * @param storePassword password to open the store. This does not have to be the same password as any keys stored,
      * but for SSL purposes this is recommended.
      * @return returns the KeyStore opened
+     * @throws IOException if there was an error reading the key store from the file.
+     * @throws KeyStoreException if the password is incorrect or the key store is damaged.
      */
+    @Throws(KeyStoreException::class, IOException::class)
     fun loadKeyStore(keyStoreFilePath: Path, storePassword: String): KeyStore {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
@@ -165,7 +169,10 @@ object X509Utilities {
      * @param storePassword password to open the store. This does not have to be the same password as any keys stored,
      * but for SSL purposes this is recommended.
      * @return returns the KeyStore opened
+     * @throws IOException if there was an error reading the key store from the stream.
+     * @throws KeyStoreException if the password is incorrect or the key store is damaged.
      */
+    @Throws(KeyStoreException::class, IOException::class)
     fun loadKeyStore(input: InputStream, storePassword: String): KeyStore {
         val pass = storePassword.toCharArray()
         val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)

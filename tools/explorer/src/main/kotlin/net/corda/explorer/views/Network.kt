@@ -118,7 +118,7 @@ class Network : CordaView() {
         Bindings.bindContent(mapPane.children, mapLabels)
         // Run once when the screen is ready.
         // TODO : Find a better way to do this.
-        mapPane.heightProperty().addListener { _o, old, _new ->
+        mapPane.heightProperty().addListener { _, old, _ ->
             if (old == 0.0) myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
         }
         // Listen on zooming gesture, if device has gesture support.
@@ -128,7 +128,7 @@ class Network : CordaView() {
         zoomInButton.setOnAction { zoom(1.2) }
         zoomOutButton.setOnAction { zoom(0.8) }
 
-        lastTransactions.addListener { observableValue, old, new ->
+        lastTransactions.addListener { _, _, new ->
             new?.forEach {
                 it.first.value?.let { a ->
                     it.second.value?.let { b ->

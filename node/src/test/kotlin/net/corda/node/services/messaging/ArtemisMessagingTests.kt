@@ -88,6 +88,8 @@ class ArtemisMessagingTests {
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
+        messagingClient = null
+        messagingServer = null
         dataSource.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
@@ -208,10 +210,10 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient()
         startNodeMessagingClient()
-        messagingClient.addMessageHandler(topic) { message, r ->
+        messagingClient.addMessageHandler(topic) { message, _ ->
             receivedMessages.add(message)
         }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, r ->
+        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.

@@ -1,12 +1,15 @@
 package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigValueFactory
+import net.corda.core.div
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
+import net.corda.webserver.WebServerConfig
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import kotlin.test.*
 import org.junit.Test
 
@@ -24,19 +27,19 @@ class NodeConfigTest {
     @Test
     fun `test node directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir.resolve("myname"), config.nodeDir)
+        assertEquals(baseDir/"myname", config.nodeDir)
     }
 
     @Test
     fun `test explorer directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir.resolve("myname-explorer"), config.explorerDir)
+        assertEquals(baseDir/"myname-explorer", config.explorerDir)
     }
 
     @Test
     fun `test plugin directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir.resolve("myname").resolve("plugins"), config.pluginDir)
+        assertEquals(baseDir/"myname"/"plugins", config.pluginDir)
     }
 
     @Test
@@ -177,7 +180,11 @@ class NodeConfigTest {
         )
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
-        val fullConfig = FullNodeConfiguration(Paths.get("."), config.toFileConfig())
+        val nodeConfig = config.toFileConfig()
+                .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                .withFallback(ConfigFactory.parseResources("reference.conf"))
+                .resolve()
+        val fullConfig = FullNodeConfiguration(baseDir, nodeConfig)
 
         assertEquals("My Name", fullConfig.myLegalName)
         assertEquals("Stockholm", fullConfig.nearestCity)
@@ -187,18 +194,45 @@ class NodeConfigTest {
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
         assertEquals(NetworkMapInfo(localPort(12345), "Notary"), fullConfig.networkMapService)
+        assertTrue((fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001"))
         assertTrue(fullConfig.useTestClock)
+    }
+
+    @Test
+    fun `reading webserver configuration`() {
+        val config = createConfig(
+                legalName = "My Name",
+                nearestCity = "Stockholm",
+                p2pPort = 10001,
+                rpcPort = 40002,
+                webPort = 20001,
+                h2Port = 30001,
+                services = listOf("my.service"),
+                users = listOf(user("jenny"))
+        )
+        config.networkMap = NetworkMapConfig("Notary", 12345)
+
+        val nodeConfig = config.toFileConfig()
+                .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                .withFallback(ConfigFactory.parseResources("web-reference.conf"))
+                .resolve()
+        val webConfig = WebServerConfig(baseDir, nodeConfig)
+
+        assertEquals(localPort(20001), webConfig.webAddress)
+        assertEquals(localPort(10001), webConfig.p2pAddress)
+        assertEquals("trustpass", webConfig.trustStorePassword)
+        assertEquals("cordacadevpass", webConfig.keyStorePassword)
     }
 
     @Test
     fun `test moving`() {
         val config = createConfig(legalName = "My Name")
 
-        val elsewhere = baseDir.resolve("elsewhere")
+        val elsewhere = baseDir/"elsewhere"
         val moved = config.moveTo(elsewhere)
-        assertEquals(elsewhere.resolve("myname"), moved.nodeDir)
-        assertEquals(elsewhere.resolve("myname-explorer"), moved.explorerDir)
-        assertEquals(elsewhere.resolve("myname").resolve("plugins"), moved.pluginDir)
+        assertEquals(elsewhere/"myname", moved.nodeDir)
+        assertEquals(elsewhere/"myname-explorer", moved.explorerDir)
+        assertEquals(elsewhere/"myname"/"plugins", moved.pluginDir)
     }
 
     private fun createConfig(

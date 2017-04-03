@@ -1,20 +1,22 @@
 package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.composite
-import net.corda.core.flows.FlowException
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.BOC
+import net.corda.testing.BOC_KEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
@@ -132,12 +134,12 @@ class NodeVaultServiceTest {
             assertThat(services.vaultService.softLockedStates<Cash.State>(softLockId)).hasSize(2)
 
             // excluding softlocked states
-            val unlockedStates1 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false)
+            val unlockedStates1 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false).toList()
             assertThat(unlockedStates1).hasSize(1)
 
             // soft lock release one of the states explicitly
             services.vaultService.softLockRelease(softLockId, setOf(unconsumedStates[1].ref))
-            val unlockedStates2 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false)
+            val unlockedStates2 = services.vaultService.unconsumedStates<Cash.State>(includeSoftLockedStates = false).toList()
             assertThat(unlockedStates2).hasSize(2)
 
             // soft lock release the rest by id
@@ -231,7 +233,7 @@ class NodeVaultServiceTest {
 
         // attempt to lock all 3 states with LockId2
         databaseTransaction(database) {
-            assertThatExceptionOfType(FlowException::class.java).isThrownBy(
+            assertThatExceptionOfType(StatesNotAvailableException::class.java).isThrownBy(
                     { vault.softLockReserve(softLockId2, stateRefsToSoftLock) }
             ).withMessageContaining("only 2 rows available").withNoCause()
         }
@@ -303,6 +305,43 @@ class NodeVaultServiceTest {
             assertThat(spendableStatesUSD).hasSize(1)
             assertThat(spendableStatesUSD[0].state.data.amount.quantity).isEqualTo(100L*100)
             assertThat(services.vaultService.softLockedStates<Cash.State>()).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `unconsumedStatesForSpending from two issuer parties`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
+
+            val spendableStatesUSD = services.vaultService.unconsumedStatesForSpending<Cash.State>(200.DOLLARS, lockId = UUID.randomUUID(),
+                                        onlyFromIssuerParties = setOf(DUMMY_CASH_ISSUER.party, BOC)).toList()
+            spendableStatesUSD.forEach(::println)
+            assertThat(spendableStatesUSD).hasSize(2)
+            assertThat(spendableStatesUSD[0].state.data.amount.token.issuer).isEqualTo(DUMMY_CASH_ISSUER)
+            assertThat(spendableStatesUSD[1].state.data.amount.token.issuer).isEqualTo(BOC.ref(1))
+        }
+    }
+
+    @Test
+    fun `unconsumedStatesForSpending from specific issuer party and refs`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(1))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(2))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(3))
+
+            val unconsumedStates = services.vaultService.unconsumedStates<Cash.State>().toList()
+            assertThat(unconsumedStates).hasSize(4)
+
+            val spendableStatesUSD = services.vaultService.unconsumedStatesForSpending<Cash.State>(200.DOLLARS, lockId = UUID.randomUUID(),
+                    onlyFromIssuerParties = setOf(BOC), withIssuerRefs = setOf(OpaqueBytes.of(1), OpaqueBytes.of(2))).toList()
+            assertThat(spendableStatesUSD).hasSize(2)
+            assertThat(spendableStatesUSD[0].state.data.amount.token.issuer.party).isEqualTo(BOC)
+            assertThat(spendableStatesUSD[0].state.data.amount.token.issuer.reference).isEqualTo(BOC.ref(1).reference)
+            assertThat(spendableStatesUSD[1].state.data.amount.token.issuer.reference).isEqualTo(BOC.ref(2).reference)
         }
     }
 

@@ -3,7 +3,6 @@ package net.corda.irs
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.irs.api.NodeInterestRates
@@ -24,8 +23,8 @@ import java.time.LocalDate
 
 class IRSDemoTest : IntegrationTestCategory {
     val rpcUser = User("user", "password", emptySet())
-    val currentDate = LocalDate.now()
-    val futureDate = currentDate.plusMonths(6)
+    val currentDate: LocalDate = LocalDate.now()
+    val futureDate: LocalDate = currentDate.plusMonths(6)
 
     @Test
     fun `runs IRS demo`() {
@@ -45,7 +44,7 @@ class IRSDemoTest : IntegrationTestCategory {
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
 
             runUploadRates(controllerAddr)
-            runTrade(nodeAAddr, nodeA.nodeInfo.legalIdentity, nodeB.nodeInfo.legalIdentity)
+            runTrade(nodeAAddr)
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
             nextFixingDates.first { it == null || it > currentDate }
 
@@ -73,15 +72,15 @@ class IRSDemoTest : IntegrationTestCategory {
         assert(putJson(url, "\"$futureDate\""))
     }
 
-    private fun runTrade(nodeAddr: HostAndPort, fixedRatePayer: Party, floatingRatePayer: Party) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"))
+    private fun runTrade(nodeAddr: HostAndPort) {
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
         assert(postJson(url, tradeFile))
     }
 
     private fun runUploadRates(host: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"))
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$host/upload/interest-rates")
         assert(uploadFile(url, fileContents))
     }

@@ -151,7 +151,7 @@ object IdenticonRenderer {
 
     private fun drawPatch(g: GraphicsContext, x: Double, y: Double, patchIndex: Int, turn: Int, patchSize: Double, _invert: Boolean, color: PatchColor) {
         val patch = patchTypes[patchIndex % patchTypes.size]
-        val invert = if ((patchFlags[patchIndex].toInt() and PATCH_INVERTED.toInt()) !== 0) !_invert else _invert
+        val invert = if ((patchFlags[patchIndex].toInt() and PATCH_INVERTED.toInt()) != 0) !_invert else _invert
         g.apply {
             // paint background
             clearRect(x, y, patchSize, patchSize)

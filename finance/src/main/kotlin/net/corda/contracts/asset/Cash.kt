@@ -94,7 +94,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         override val participants = listOf(owner)
 
         override fun move(newAmount: Amount<Issued<Currency>>, newOwner: CompositeKey): FungibleAsset<Currency>
-                = copy(amount = amount.copy(newAmount.quantity, amount.token), owner = newOwner)
+                = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 

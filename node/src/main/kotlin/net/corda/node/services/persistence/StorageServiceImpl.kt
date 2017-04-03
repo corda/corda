@@ -10,6 +10,7 @@ open class StorageServiceImpl(override val attachments: AttachmentStorage,
     lateinit override var uploaders: List<FileUploader>
 
     fun initUploaders(uploadersList: List<FileUploader>) {
+        @Suppress("DEPRECATION")
         uploaders = uploadersList
     }
 }

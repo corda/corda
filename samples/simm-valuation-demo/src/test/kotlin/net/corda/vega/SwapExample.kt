@@ -29,7 +29,6 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.ResolvedSwapTrade
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
-import kotlinx.support.jdk8.collections.stream
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.vega.analytics.BimmAnalysisUtils

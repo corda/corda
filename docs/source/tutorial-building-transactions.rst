@@ -102,7 +102,7 @@ tests in ``FxTransactionBuildTutorialTest.kt`` and
 ``WorkflowTransactionBuildTutorialTest.kt``, which drive the flows as 
 part of a simulated in-memory network of nodes. When creating the 
 IntelliJ run configuration for these unit test set the workspace 
-points to the root ``r3prototyping`` folder and add 
+points to the root ``corda`` folder and add 
 ``-javaagent:lib/quasar.jar`` to the VM options, so that the ``Quasar`` 
 instrumentation is correctly configured. 
 

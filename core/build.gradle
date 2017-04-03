@@ -10,18 +10,6 @@ buildscript {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     test {
         resources {
@@ -42,9 +30,8 @@ dependencies {
     testCompile project(":node")
     testCompile project(":test-utils")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Thread safety annotations
@@ -101,12 +88,6 @@ dependencies {
 }
 
 configurations {
-    compile {
-        // We want to use SLF4J's version of these binding: jcl-over-slf4j
-        // Remove any transitive dependency on Apache's version.
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
-
     testArtifacts.extendsFrom testRuntime
 }
 

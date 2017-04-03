@@ -7,8 +7,6 @@ import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -35,11 +33,12 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(null)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
+        val exitStates = serviceHub.vaultService.unconsumedStatesForSpending<Cash.State>(amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
         try {
             Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
-                    serviceHub.vaultService.unconsumedStates<Cash.State>().filter { it.state.data.owner == issuer.party.owningKey })
+                    exitStates)
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }

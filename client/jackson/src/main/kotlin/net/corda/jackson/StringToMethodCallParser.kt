@@ -5,17 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
-import com.google.common.collect.MultimapBuilder
 import net.corda.jackson.StringToMethodCallParser.ParsedMethodCall
 import org.slf4j.LoggerFactory
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
-import java.util.*
 import java.util.concurrent.Callable
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.KotlinReflectionInternalError
+import kotlin.reflect.jvm.internal.KotlinReflectionInternalError
 import kotlin.reflect.jvm.kotlinFunction
 
 /**
@@ -75,14 +73,14 @@ import kotlin.reflect.jvm.kotlinFunction
 @ThreadSafe
 open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         targetType: Class<out T>,
-        private val om: ObjectMapper = JacksonSupport.createNonRpcMapper(YAMLFactory()))
-{
+        private val om: ObjectMapper = JacksonSupport.createNonRpcMapper(YAMLFactory())) {
     /** Same as the regular constructor but takes a Kotlin reflection [KClass] instead of a Java [Class]. */
     constructor(targetType: KClass<out T>) : this(targetType.java)
 
     companion object {
         @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         private val ignoredNames = Object::class.java.methods.map { it.name }
+
         private fun methodsFromType(clazz: Class<*>): Multimap<String, Method> {
             val result = HashMultimap.create<String, Method>()
             for ((key, value) in clazz.methods.filterNot { it.isSynthetic && it.name !in ignoredNames }.map { it.name to it }) {
@@ -90,6 +88,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
             }
             return result
         }
+
         private val log = LoggerFactory.getLogger(StringToMethodCallParser::class.java)!!
     }
 
@@ -126,7 +125,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         return method.parameters.mapIndexed { index, param ->
             when {
                 param.isNamePresent -> param.name
-                // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
+            // index + 1 because the first Kotlin reflection param is 'this', but that doesn't match Java reflection.
                 kf != null -> kf.parameters[index + 1].name ?: throw UnparseableCallException.ReflectionDataMissing(method.name, index)
                 else -> throw UnparseableCallException.ReflectionDataMissing(method.name, index)
             }
@@ -193,7 +192,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         val parameterString = "{ $args }"
         val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
         if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
-        val inOrderParams: List<Any?> = parameters.mapIndexed { index, param ->
+        val inOrderParams: List<Any?> = parameters.mapIndexed { _, param ->
             val (argName, argType) = param
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
             om.readValue(entry.traverse(om), argType)

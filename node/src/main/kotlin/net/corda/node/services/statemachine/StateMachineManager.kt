@@ -9,7 +9,6 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
-import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
@@ -232,7 +231,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             started = true
             stateMachines.keys.forEach { resumeRestoredFiber(it) }
         }
-        serviceHub.networkService.addMessageHandler(sessionTopic) { message, reg ->
+        serviceHub.networkService.addMessageHandler(sessionTopic) { message, _ ->
             executor.checkOnThread()
             onSessionMessage(message)
         }

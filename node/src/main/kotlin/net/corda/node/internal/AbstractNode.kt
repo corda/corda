@@ -53,9 +53,11 @@ import net.corda.node.utilities.databaseTransaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
+import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.KeyStoreException
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -312,9 +314,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
-            // This will throw exception if key file not found or keystore password is incorrect.
+            // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
             X509Utilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            null
+        } catch (e: KeyStoreException) {
+            log.warn("Certificate key store found but key store password does not match configuration.")
             null
         }
         return keyStore?.containsAlias(X509Utilities.CORDA_CLIENT_CA) ?: false
@@ -448,6 +453,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return when (type) {
             SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider)
             ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
                 val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")

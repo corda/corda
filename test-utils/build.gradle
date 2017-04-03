@@ -4,18 +4,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Testing utilities for Corda'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
@@ -26,10 +14,10 @@ dependencies {
     compile project(':finance')
     compile project(':core')
     compile project(':node')
-    compile project(':node:webserver')
+    compile project(':webserver')
     compile project(':verifier')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -43,10 +31,4 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
-}
-
-configurations.compile {
-    // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
 }

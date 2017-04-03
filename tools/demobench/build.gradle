@@ -23,21 +23,17 @@ apply plugin: 'application'
 evaluationDependsOn(':tools:explorer:capsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
-applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig', '-Dorg.jboss.logging.provider=slf4j']
+applicationDefaultJvmArgs = [
+    '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+    '-Dorg.jboss.logging.provider=slf4j'
+]
 
 repositories {
     flatDir {
         dirs 'libs'
     }
-
-    mavenLocal()
-    mavenCentral()
-    jcenter()
     maven {
         url 'http://www.sparetimelabs.com/maven2'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
 
@@ -70,9 +66,11 @@ dependencies {
     compile ':pty4j-0.7.2'
 
     testCompile project(':node')
+    testCompile project(':webserver')
 
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
 }
 
 jar {
@@ -110,7 +108,7 @@ distributions {
                 rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
             }
-            from(project(':node:webserver:webcapsule').tasks.buildWebserverJar) {
+            from(project(':webserver:webcapsule').tasks.buildWebserverJar) {
                 rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
             }

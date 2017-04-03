@@ -11,16 +11,8 @@ To build the documentation, you will need:
 
 * GNU Make
 * Python and pip (tested with Python 2.7.10)
-* Dokka: https://github.com/Kotlin/dokka
 * Sphinx: http://www.sphinx-doc.org/
 * sphinx_rtd_theme: https://github.com/snide/sphinx_rtd_theme
-
-The Dokka JAR file needs to be placed under the ``lib`` directory within the ``r3prototyping`` directory, in order for the
-script to find it, as in:
-
-.. sourcecode:: shell
-
-    corda/lib/dokka.jar
 
 Note that to install under OS X El Capitan, you will need to tell pip to install under ``/usr/local``, which can be
 done by specifying the installation target on the command line:
@@ -38,7 +30,7 @@ documentation by running the following script:
 
 .. sourcecode:: shell
 
-    docs/generate-docsite.sh
+    ./gradlew buildDocs
 
 Alternatively you can build non-HTML formats from the ``docs`` folder. Change directory to the folder and then run the
 following to see a list of all available formats:

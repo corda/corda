@@ -5,19 +5,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Corda node modules'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
@@ -27,10 +14,6 @@ configurations {
         // We don't need these because we already include netty-all.
         exclude group: 'io.netty', module: 'netty-transport'
         exclude group: 'io.netty', module: 'netty-handler'
-
-        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
-        // Remove any transitive dependency on Apache's version.
-        exclude group: 'commons-logging', module: 'commons-logging'
     }
 
     testCompile {
@@ -79,7 +62,7 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -146,15 +129,17 @@ dependencies {
     compile 'co.paralleluniverse:capsule:1.0.3'
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.1.4'
-    compile 'io.atomix.copycat:copycat-server:1.1.4'
+    compile 'io.atomix.copycat:copycat-client:1.2.3'
+    compile 'io.atomix.copycat:copycat-server:1.2.3'
     compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
 
     // Netty: All of it.
     compile "io.netty:netty-all:$netty_version"
 
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
-    compile "org.crashub:crash.shell:$crash_version"
+    compile("com.github.corda.crash:crash.shell:9d242da2a10e686f33a3aefc69e4768824ad0716") {
+        exclude group: "org.slf4j", module: "slf4j-jdk14"
+    }
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

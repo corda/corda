@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -223,13 +224,13 @@ interface VaultService {
 
     /**
      * Reserve a set of [StateRef] for a given [UUID] unique identifier.
-     * Typically, the unique identifier will refer to a Flow id associated with a [Transaction] in an in-flight flow.
+     * Typically, the unique identifier will refer to a Flow lockId associated with a [Transaction] in an in-flight flow.
      * In the case of coin selection, soft locks are automatically taken upon gathering relevant unconsumed input refs.
      *
      * @throws [StatesNotAvailableException] when not possible to softLock all of requested [StateRef]
      */
     @Throws(StatesNotAvailableException::class)
-    fun softLockReserve(id: UUID, stateRefs: Set<StateRef>)
+    fun softLockReserve(lockId: UUID, stateRefs: Set<StateRef>)
 
     /**
      * Release all or an explicitly specified set of [StateRef] for a given [UUID] unique identifier.
@@ -238,7 +239,7 @@ interface VaultService {
      * In the case of coin selection, softLock are automatically released once previously gathered unconsumed input refs
      * are consumed as part of cash spending.
      */
-    fun softLockRelease(id: UUID, stateRefs: Set<StateRef>? = null)
+    fun softLockRelease(lockId: UUID, stateRefs: Set<StateRef>? = null)
 
     /**
      * Retrieve softLockStates for a given [UUID] or return all softLockStates in vault for a given
@@ -247,6 +248,13 @@ interface VaultService {
     fun <T : ContractState> softLockedStates(lockId: UUID? = null): List<StateAndRef<T>>
 
     // DOCEND SoftLockAPI
+
+    /**
+     * TODO: this function should be private to the vault, but currently Cash Exit functionality
+     * is implemented in a separate module (finance) and requires access to it.
+     */
+    @Suspendable
+    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
 
 inline fun <reified T: ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =

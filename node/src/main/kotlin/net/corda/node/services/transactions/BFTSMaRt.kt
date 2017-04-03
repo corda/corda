@@ -102,7 +102,7 @@ object BFTSMaRt {
 
         /** An extractor to build the final response message for the client application from all received replica replies. */
         private fun buildExtractor(): Extractor {
-            return Extractor { replies, sameContent, lastReceived ->
+            return Extractor { replies, _, lastReceived ->
                 val responses = replies.mapNotNull { it?.content?.deserialize<ReplicaResponse>() }
                 val accepted = responses.filterIsInstance<ReplicaResponse.Signature>()
                 val rejected = responses.filterIsInstance<ReplicaResponse.Error>()
@@ -156,7 +156,7 @@ object BFTSMaRt {
         }
 
         override fun appExecuteBatch(command: Array<ByteArray>, mcs: Array<MessageContext>): Array<ByteArray?> {
-            val replies = command.zip(mcs) { c, m ->
+            val replies = command.zip(mcs) { c, _ ->
                 executeCommand(c)
             }
             return replies.toTypedArray()

@@ -21,12 +21,8 @@ val IRS_PROGRAM_ID = InterestRateSwap()
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 @CordaSerializable
-open class UnknownType() {
-
-    override fun equals(other: Any?): Boolean {
-        return (other is UnknownType)
-    }
-
+open class UnknownType {
+    override fun equals(other: Any?): Boolean = other is UnknownType
     override fun hashCode() = 1
 }
 
@@ -188,7 +184,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
  * Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
  */
-class InterestRateSwap() : Contract {
+class InterestRateSwap : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
 
     companion object {
@@ -470,7 +466,7 @@ class InterestRateSwap() : Contract {
         }
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Clauses {
         /**
@@ -519,10 +515,10 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
+        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyOf(Agree(), Fix(), Pay(), Mature())) {
             // Group by Trade ID for in / out states
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State<*>, UniqueIdentifier>> {
-                return tx.groupStates() { state -> state.linearId }
+                return tx.groupStates { state -> state.linearId }
             }
         }
 
@@ -550,8 +546,8 @@ class InterestRateSwap() : Contract {
                 val irs = outputs.filterIsInstance<State<*>>().single()
                 requireThat {
                     "There are no in states for an agreement" by inputs.isEmpty()
-                    "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
-                    "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
+                    "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.isNotEmpty())
+                    "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.isNotEmpty())
                     "All notionals must be non zero" by (irs.fixedLeg.notional.quantity > 0 && irs.floatingLeg.notional.quantity > 0)
                     "The fixed leg rate must be positive" by (irs.fixedLeg.fixedRate.isPositive())
                     "The currency of the notionals must be the same" by (irs.fixedLeg.notional.token == irs.floatingLeg.notional.token)
@@ -739,6 +735,7 @@ class InterestRateSwap() : Contract {
 
         fun toAnonymous(): State<AnonymousParty> {
             return if (this.fixedLeg.fixedRatePayer is AnonymousParty) {
+                @Suppress("UNCHECKED_CAST")
                 this as State<AnonymousParty>
             } else {
                 State(fixedLeg.toAnonymous(), floatingLeg.toAnonymous(), calculation, common, linearId)

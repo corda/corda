@@ -107,11 +107,11 @@ object Crypto {
      * Do not forget to add the DEFAULT_SIGNATURE_SCHEME as well.
      */
     private val supportedSignatureSchemes = mapOf(
-            RSA_SHA256.schemeCodeName                to RSA_SHA256,
-            ECDSA_SECP256K1_SHA256.schemeCodeName    to ECDSA_SECP256K1_SHA256,
-            ECDSA_SECP256R1_SHA256.schemeCodeName    to ECDSA_SECP256R1_SHA256,
-            EDDSA_ED25519_SHA512.schemeCodeName      to EDDSA_ED25519_SHA512,
-            SPHINCS256_SHA256.schemeCodeName         to SPHINCS256_SHA256
+            RSA_SHA256.schemeCodeName to RSA_SHA256,
+            ECDSA_SECP256K1_SHA256.schemeCodeName to ECDSA_SECP256K1_SHA256,
+            ECDSA_SECP256R1_SHA256.schemeCodeName to ECDSA_SECP256R1_SHA256,
+            EDDSA_ED25519_SHA512.schemeCodeName to EDDSA_ED25519_SHA512,
+            SPHINCS256_SHA256.schemeCodeName to SPHINCS256_SHA256
     )
 
     /**
@@ -181,9 +181,9 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        for (sig in supportedSignatureSchemes.values) {
+        for ((_, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
             try {
-                return sig.keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+                return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
                 // ignore it - only used to bypass the scheme that causes an exception.
             }
@@ -218,9 +218,9 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        for (sig in supportedSignatureSchemes.values) {
+        for ((_, _, _, _, keyFactory) in supportedSignatureSchemes.values) {
             try {
-                return sig.keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
+                return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
                 // ignore it - only used to bypass the scheme that causes an exception.
             }

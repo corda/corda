@@ -149,7 +149,7 @@ class AttachmentClassLoaderTests {
         val att2 = storage.importAttachment(ByteArrayInputStream(fakeAttachment("file2.txt", "some other data")))
 
         val cl = AttachmentsClassLoader(arrayOf(att0, att1, att2).map { storage.openAttachment(it)!! })
-        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"))
+        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
         assertEquals("some data", txt)
     }
 

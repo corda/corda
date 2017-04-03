@@ -134,6 +134,7 @@ object NotaryFlow {
                 }
                 if (conflicts.isNotEmpty()) {
                     // TODO: Create a new UniquenessException that only contains the conflicts filtered above.
+                    logger.warn("Notary conflicts for $txId: $conflicts")
                     throw notaryException(txId, e)
                 }
             }
@@ -158,9 +159,7 @@ object NotaryFlow {
  */
 data class TransactionParts(val id: SecureHash, val inputs: List<StateRef>, val timestamp: Timestamp?)
 
-class NotaryException(val error: NotaryError) : FlowException() {
-    override fun toString() = "${super.toString()}: Error response from Notary - $error"
-}
+class NotaryException(val error: NotaryError) : FlowException("Error response from Notary - $error")
 
 @CordaSerializable
 sealed class NotaryError {

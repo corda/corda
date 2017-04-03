@@ -4,7 +4,7 @@
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
-    file("../constants.properties").withInputStream { constants.load(it) }
+    file("$projectDir/../constants.properties").withInputStream { constants.load(it) }
 
     // If you bump this version you must re-bootstrap the codebase. See the README for more information.
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")

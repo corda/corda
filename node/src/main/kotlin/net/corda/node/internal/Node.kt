@@ -25,6 +25,7 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
@@ -143,7 +144,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     private fun makeLocalMessageBroker(): HostAndPort {
         with(configuration) {
-            val useHost = tryDetectIfNotPublicHost(p2pAddress.hostText)
+            val useHost = tryDetectIfNotPublicHost(p2pAddress.host)
             val useAddress = useHost?.let { HostAndPort.fromParts(it, p2pAddress.port) } ?: p2pAddress
             messageBroker = ArtemisMessagingServer(this, useAddress, rpcAddress, services.networkMapCache, userService)
             return useAddress
@@ -194,7 +195,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
-            RaftValidatingNotaryService.type -> with(configuration) {
+            RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
                 RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
             }
             else -> PersistentUniquenessProvider()
@@ -243,7 +244,7 @@ class Node(override val configuration: FullNodeConfiguration,
             JmxReporter.
                     forRegistry(services.monitoringService.metrics).
                     inDomain("net.corda").
-                    createsObjectNamesWith { type, domain, name ->
+                    createsObjectNamesWith { _, domain, name ->
                         // Make the JMX hierarchy a bit better organised.
                         val category = name.substringBefore('.')
                         val subName = name.substringAfter('.', "")

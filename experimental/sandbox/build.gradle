@@ -10,10 +10,6 @@ buildscript {
     ext.asm_version = '5.1'
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     // Asm: bytecode manipulation library.
     compile "org.ow2.asm:asm:$asm_version"

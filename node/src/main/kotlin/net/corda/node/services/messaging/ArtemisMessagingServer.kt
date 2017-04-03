@@ -50,6 +50,7 @@ import rx.Subscription
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
+import java.security.KeyStoreException
 import java.security.Principal
 import java.util.*
 import java.util.concurrent.Executor
@@ -115,6 +116,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * The server will make sure the bridge exists on network map changes, see method [updateBridgesOnNetworkChange]
      * We assume network map will be updated accordingly when the client node register with the network map server.
      */
+    @Throws(IOException::class, KeyStoreException::class)
     fun start() = mutex.locked {
         if (!running) {
             configureAndStartServer()
@@ -132,6 +134,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         running = false
     }
 
+    // TODO: Maybe wrap [IOException] on a key store load error so that it's clearly splitting key store loading from
+    // Artemis IO errors
+    @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
         val config = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
@@ -230,6 +235,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 deleteNonDurableQueue, manage, browse)
     }
 
+    @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val ourCertificate = X509Utilities
                 .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
@@ -360,7 +366,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
                 expectedCommonName = legalName
         )
-        val tcpTransport = createTcpTransport(connectionDirection, target.hostText, target.port)
+        val tcpTransport = createTcpTransport(connectionDirection, target.host, target.port)
         tcpTransport.params[ArtemisMessagingServer::class.java.name] = this
         // We intentionally overwrite any previous connector config in case the peer legal name changed
         activeMQServer.configuration.addConnectorConfiguration(target.toString(), tcpTransport)
@@ -581,7 +587,7 @@ class NodeLoginModule : LoginModule {
         val password = String(passwordCallback.password ?: throw FailedLoginException("Password not provided"))
         val certificates = certificateCallback.certificates
 
-        log.info("Processing login for $username")
+        log.debug { "Processing login for $username" }
 
         try {
             val validatedUser = when (determineUserRole(certificates, username)) {

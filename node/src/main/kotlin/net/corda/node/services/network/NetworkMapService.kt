@@ -1,8 +1,6 @@
 package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
-import kotlinx.support.jdk8.collections.compute
-import kotlinx.support.jdk8.collections.removeIf
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.Party
@@ -108,6 +106,7 @@ interface NetworkMapService {
 
     @CordaSerializable
     data class Update(val wireReg: WireNodeRegistration, val mapVersion: Int, val replyTo: MessageRecipients)
+
     @CordaSerializable
     data class UpdateAcknowledge(val mapVersion: Int, val replyTo: MessageRecipients)
 }
@@ -162,7 +161,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
         handlers += addMessageHandler(QUERY_TOPIC) { req: QueryIdentityRequest -> processQueryRequest(req) }
         handlers += addMessageHandler(REGISTER_TOPIC) { req: RegistrationRequest -> processRegistrationRequest(req) }
         handlers += addMessageHandler(SUBSCRIPTION_TOPIC) { req: SubscribeRequest -> processSubscriptionRequest(req) }
-        handlers += net.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+        handlers += net.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             val req = message.data.deserialize<UpdateAcknowledge>()
             processAcknowledge(req)
         }
@@ -237,7 +236,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
-            nodeRegistrations.compute(node.legalIdentity) { mapKey: Party, existing: NodeRegistrationInfo? ->
+            nodeRegistrations.compute(node.legalIdentity) { _: Party, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"
                 }

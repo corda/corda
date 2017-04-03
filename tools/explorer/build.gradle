@@ -25,14 +25,8 @@ sourceSets {
     }
 }
 
-repositories {
-    jcenter()
-    mavenCentral()
-    mavenLocal()
-}
-
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 

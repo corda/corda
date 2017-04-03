@@ -6,7 +6,7 @@ import net.corda.verifier.Verifier
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.reflect.declaredMemberProperties
+import kotlin.reflect.full.declaredMemberProperties
 
 class ExampleConfigTest {
 

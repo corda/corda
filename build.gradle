@@ -1,7 +1,7 @@
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
-    file("constants.properties").withInputStream { constants.load(it) }
+    file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
     ext.corda_version = "0.10-SNAPSHOT"
@@ -10,7 +10,7 @@ buildscript {
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
     //
     // TODO: Sort this alphabetically.
-    ext.kotlin_version = '1.1.1'
+    ext.kotlin_version = constants.getProperty("kotlinVersion")
     ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.5.3'
@@ -29,14 +29,14 @@ buildscript {
     ext.typesafe_config_version = '1.3.1'
     ext.fileupload_version = '1.3.2'
     ext.junit_version = '4.12'
+    ext.mockito_version = '1.10.19'
     ext.jopt_simple_version = '5.0.2'
     ext.jansi_version = '1.14'
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
-    ext.requery_version = '1.1.1'
+    ext.requery_version = '1.2.1'
     ext.dokka_version = '0.9.13'
-    ext.crash_version = '1.3.2'
 
     repositories {
         mavenLocal()
@@ -72,7 +72,6 @@ apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
-apply plugin: 'org.jetbrains.dokka'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -98,7 +97,20 @@ allprojects {
     version "$corda_version"
 
     repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+        // TODO: remove this once we eliminate Exposed
+        maven {
+            url 'https://dl.bintray.com/kotlin/exposed'
+        }
         maven { url 'https://jitpack.io' }
+    }
+
+    configurations.compile {
+        // We want to use SLF4J's version of these bindings: jcl-over-slf4j
+        // Remove any transitive dependency on Apache's version.
+        exclude group: 'commons-logging', module: 'commons-logging'
     }
 }
 
@@ -124,7 +136,7 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
     runtime project(':client:jfx')
@@ -132,7 +144,7 @@ dependencies {
     runtime project(':client:rpc')
     runtime project(':core')
     runtime project(':finance')
-    runtime project(':node:webserver')
+    runtime project(':webserver')
     testCompile project(':test-utils')
 }
 
@@ -201,7 +213,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['jfx', 'mock', 'rpc', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'webserver']
+    publications = ['jfx', 'mock', 'rpc', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'
@@ -213,25 +225,6 @@ bintrayConfig {
         email = 'dev@corda.net'
     }
 }
-
-// API docs
-
-dokka {
-    moduleName = 'corda'
-    outputDirectory = 'docs/build/html/api/kotlin'
-    processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'client/rpc/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
-}
-
-task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
-    moduleName = 'corda'
-    outputFormat = "javadoc"
-    outputDirectory = 'docs/build/html/api/javadoc'
-    processConfigurations = ['compile']
-    sourceDirs = files('core/src/main/kotlin', 'client/jfx/src/main/kotlin', 'client/mock/src/main/kotlin', 'client/rpc/src/main/kotlin', 'node/src/main/kotlin', 'finance/src/main/kotlin', 'client/jackson/src/main/kotlin')
-}
-
-task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
 // Build a ZIP of all JARs required to compile the Cordapp template
 // Note: corda.jar is used at runtime so no runtime ZIP is necessary.

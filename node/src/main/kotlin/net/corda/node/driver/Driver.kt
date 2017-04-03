@@ -1,7 +1,6 @@
 @file:JvmName("Driver")
 package net.corda.node.driver
 
-import co.paralleluniverse.common.util.ProcessUtil
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
@@ -59,11 +58,12 @@ private val log: Logger = loggerFor<DriverDSL>()
  */
 interface DriverDSLExposedInterface {
     /**
-     * Starts a [Node] in a separate process.
+     * Starts a [net.corda.node.internal.Node] in a separate process.
      *
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
@@ -79,6 +79,7 @@ interface DriverDSLExposedInterface {
      * @param notaryName The legal name of the advertised distributed notary service.
      * @param clusterSize Number of nodes to create for the cluster.
      * @param type The advertised notary service type. Currently the only supported type is [RaftValidatingNotaryService.type].
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
@@ -168,7 +169,6 @@ fun <A> driver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
         portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        sshdPortAllocation: PortAllocation = PortAllocation.Incremental(20000),
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
@@ -177,7 +177,6 @@ fun <A> driver(
 ) = genericDriver(
         driverDsl = DriverDSL(
                 portAllocation = portAllocation,
-                sshdPortAllocation = sshdPortAllocation,
                 debugPortAllocation = debugPortAllocation,
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
@@ -230,7 +229,7 @@ fun getTimestampAsDirectoryName(): String {
 fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            Socket(hostAndPort.host, hostAndPort.port).close()
             Unit
         } catch (_exception: SocketException) {
             null
@@ -241,7 +240,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
 fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
-            Socket(hostAndPort.hostText, hostAndPort.port).close()
+            Socket(hostAndPort.host, hostAndPort.port).close()
             null
         } catch (_exception: SocketException) {
             Unit
@@ -334,7 +333,6 @@ class ShutdownManager(private val executorService: ExecutorService) {
 
 class DriverDSL(
         val portAllocation: PortAllocation,
-        val sshdPortAllocation: PortAllocation,
         val debugPortAllocation: PortAllocation,
         val systemProperties: Map<String, String>,
         val driverDirectory: Path,
@@ -524,7 +522,6 @@ class DriverDSL(
     override fun startNetworkMapService() {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val sshdAddress = portAllocation.nextHostAndPort().toString()
         val baseDirectory = driverDirectory / networkMapLegalName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -566,7 +563,7 @@ class DriverDSL(
 
                 val systemProperties = mapOf(
                         "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "Corda"
+                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}"
                 ) + overriddenSystemProperties
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"

@@ -26,7 +26,7 @@ import kotlin.system.measureTimeMillis
  * TODO: make this value configurable
  * TODO: tune this value, as it's currently mostly a guess
  */
-val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, (Runtime.getRuntime().maxMemory()/1000000 - 128) / 64))).toInt()
+val DEFAULT_MAX_BUCKETS = (256 * (1 + Math.max(0, (Runtime.getRuntime().maxMemory() / 1000000 - 128) / 64))).toInt()
 
 /**
  * A convenient JDBC table backed hash map with iteration order based on insertion order.
@@ -255,7 +255,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(va
     override fun remove(key: K): V? {
         val bucket = getBucket(key)
         var removed: V? = null
-        buckets.computeIfPresent(key.hashCode()) { hashCode, value ->
+        buckets.computeIfPresent(key.hashCode()) { _, value ->
             for (entry in value) {
                 if (entry.key == key) {
                     removed = entry.value
@@ -369,7 +369,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(va
         var oldValue: V? = null
         var oldSeqNo: Int? = null
         getBucket(key)
-        buckets.compute(key.hashCode()) { hashCode, list ->
+        buckets.compute(key.hashCode()) { _, list ->
             val newList = list ?: newBucket()
             val iterator = newList.listIterator()
             while (iterator.hasNext()) {
@@ -424,7 +424,7 @@ abstract class AbstractJDBCHashMap<K : Any, V : Any, out T : JDBCHashedTable>(va
     }
 
     private fun getBucket(key: Any): MutableList<NotReallyMutableEntry<K, V>> {
-        return buckets.computeIfAbsent(key.hashCode()) { hashCode ->
+        return buckets.computeIfAbsent(key.hashCode()) { _ ->
             if (!loadOnInit) {
                 loadBucket(key.hashCode())
             } else {

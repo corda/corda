@@ -4,11 +4,12 @@ import java.awt.GraphicsEnvironment
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.Locale
+import java.util.*
 
 private val nodeJarName = "corda.jar"
 private val webJarName = "corda-webserver.jar"
 private val nodeConfName = "node.conf"
+private val HEADLESS_FLAG = "--headless"
 
 private val os: OS by lazy {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
@@ -21,10 +22,10 @@ private enum class OS { MACOS, WINDOWS, LINUX }
 
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
-    val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == "--headless")))
+    val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == HEADLESS_FLAG)))
     val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
-    val javaArgs = listOf<String>() // TODO: Add args passthrough
+    val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
@@ -71,7 +72,6 @@ private fun execJar(jarName: String, dir: File, args: List<String> = listOf()): 
 private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String> = listOf()): Process {
     val javaCmd = "java -jar $jarName " + args.joinToString(" ") { it }
     val nodeName = "${dir.toPath().fileName} $jarName"
-    val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
     val builder = when (os) {
         OS.MACOS -> ProcessBuilder(
                 "osascript", "-e",

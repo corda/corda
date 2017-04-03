@@ -9,7 +9,7 @@ import net.corda.testing.TestTransactionDSLInterpreter
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
-import kotlin.reflect.memberProperties
+import kotlin.reflect.full.memberProperties
 
 @Suppress("unused") // TODO: Re-evaluate by EOY2016 if this code is still useful and if not, delete.
 class GraphVisualiser(val dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>) {

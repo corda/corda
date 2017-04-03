@@ -38,7 +38,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
     }
 
     private fun createListener(wrapped: WrappedObservableValue<out A>): ChangeListener<A> {
-        val listener = ChangeListener<A> { _observableValue, oldValue, newValue ->
+        val listener = ChangeListener<A> { _, oldValue, _ ->
             val currentIndex = indexMap[wrapped]!!.first
             beginChange()
             nextReplace(currentIndex, currentIndex + 1, listOf(oldValue))
@@ -55,7 +55,7 @@ class FlattenedList<A>(val sourceList: ObservableList<out ObservableValue<out A>
                 val from = c.from
                 val to = c.to
                 val permutation = IntArray(to, { c.getPermutation(it) })
-                indexMap.replaceAll { _observableValue, pair -> Pair(permutation[pair.first], pair.second) }
+                indexMap.replaceAll { _, pair -> Pair(permutation[pair.first], pair.second) }
                 nextPermutation(from, to, permutation)
             } else if (c.wasUpdated()) {
                 throw UnsupportedOperationException("FlattenedList doesn't support Update changes")

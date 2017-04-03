@@ -111,8 +111,14 @@ fun <A> ObservableList<out A>.filter(predicate: ObservableValue<(A) -> Boolean>)
  * val owners: ObservableList<Person> = dogs.map(Dog::owner).filterNotNull()
  */
 fun <A> ObservableList<out A?>.filterNotNull(): ObservableList<A> {
+    //TODO This is a tactical work round for an issue with SAM conversion (https://youtrack.jetbrains.com/issue/ALL-1552) so that the M10 explorer works.
     @Suppress("UNCHECKED_CAST")
-    return filtered { it != null } as ObservableList<A>
+    return (this as ObservableList<A?>).filtered(object : Predicate<A?> {
+        override fun test(t: A?): Boolean {
+            return t != null
+
+        }
+    }) as ObservableList<A>
 }
 
 /**
@@ -158,7 +164,7 @@ fun <K, A, B> ObservableList<out A>.associateBy(toKey: (A) -> K, assemble: (K, A
  * val nameToPerson: ObservableMap<String, Person> = people.associateBy(Person::name)
  */
 fun <K, A> ObservableList<out A>.associateBy(toKey: (A) -> K): ObservableMap<K, A> {
-    return associateBy(toKey) { key, value -> value }
+    return associateBy(toKey) { _, value -> value }
 }
 
 /**
@@ -176,7 +182,7 @@ fun <K : Any, A : Any, B> ObservableList<out A>.associateByAggregation(toKey: (A
  * val heightToPeople: ObservableMap<Long, ObservableList<Person>> = people.associateByAggregation(Person::height)
  */
 fun <K : Any, A : Any> ObservableList<out A>.associateByAggregation(toKey: (A) -> K): ObservableMap<K, ObservableList<A>> {
-    return associateByAggregation(toKey) { key, value -> value }
+    return associateByAggregation(toKey) { _, value -> value }
 }
 
 /**
@@ -260,7 +266,7 @@ fun <A : Any, B : Any, K : Any> ObservableList<A>.leftOuterJoin(
     val leftTableMap = associateByAggregation(leftToJoinKey)
     val rightTableMap = rightTable.associateByAggregation(rightToJoinKey)
     val joinedMap: ObservableMap<K, Pair<ObservableList<A>, ObservableList<B>>> =
-            LeftOuterJoinedMap(leftTableMap, rightTableMap) { _key, left, rightValue ->
+            LeftOuterJoinedMap(leftTableMap, rightTableMap) { _, left, rightValue ->
                 Pair(left, ChosenList(rightValue.map { it ?: FXCollections.emptyObservableList() }))
             }
     return joinedMap
@@ -285,7 +291,7 @@ fun <A> ObservableList<A>.last(): ObservableValue<A?> {
 }
 
 fun <T : Any> ObservableList<T>.unique(): ObservableList<T> {
-    return AggregatedList(this, { it }, { key, _list -> key })
+    return AggregatedList(this, { it }, { key, _ -> key })
 }
 
 fun ObservableValue<*>.isNotNull(): BooleanBinding {

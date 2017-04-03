@@ -7,18 +7,6 @@ apply plugin: 'us.kirchmeier.capsule'
 
 description 'Corda standalone node'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 configurations {
     runtimeArtifacts.extendsFrom runtime
 }

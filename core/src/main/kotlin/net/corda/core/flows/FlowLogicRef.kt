@@ -9,9 +9,9 @@ import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
+import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaType
-import kotlin.reflect.primaryConstructor
 
 /**
  * A class for conversion to and from [FlowLogic] and [FlowLogicRef] instances.

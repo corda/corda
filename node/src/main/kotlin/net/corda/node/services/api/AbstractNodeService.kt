@@ -31,7 +31,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R,
                               crossinline exceptionConsumer: (Message, Exception) -> Unit): MessageHandlerRegistration {
-        return net.addMessageHandler(topic, DEFAULT_SESSION_ID) { message, r ->
+        return net.addMessageHandler(topic, DEFAULT_SESSION_ID) { message, _ ->
             try {
                 val request = message.data.deserialize<Q>()
                 val response = handler(request)
@@ -57,7 +57,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
     protected inline fun <reified Q : ServiceRequestMessage, reified R : Any>
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R): MessageHandlerRegistration {
-        return addMessageHandler(topic, handler, { message: Message, exception: Exception -> throw exception })
+        return addMessageHandler(topic, handler, { _: Message, exception: Exception -> throw exception })
     }
 
 }

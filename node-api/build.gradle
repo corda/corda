@@ -10,18 +10,6 @@ buildscript {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
     test {
         resources {
@@ -38,9 +26,8 @@ sourceSets {
 dependencies {
     compile project(":core")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
     compile "org.apache.activemq:artemis-commons:${artemis_version}"
@@ -51,10 +38,4 @@ dependencies {
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
-}
-
-configurations.compile {
-    // We want to use SLF4J's version of these binding: jcl-over-slf4j
-    // Remove any transitive dependency on Apache's version.
-    exclude group: 'commons-logging', module: 'commons-logging'
 }
