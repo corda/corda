@@ -19,10 +19,7 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 import java.io.*
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
-import net.corda.core.crypto.sha256
-import java.util.zip.Deflater
+import net.corda.core.sizedInputStreamAndHash
 
 internal enum class Role {
     SENDER,
@@ -60,20 +57,12 @@ fun main(args: Array<String>) {
     }
 }
 
-val BANK_OF_LONDON_CP_JAR_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
-var EXPECTED_HASH = BANK_OF_LONDON_CP_JAR_HASH
+var EXPECTED_HASH = SecureHash.zeroHash // Note: We could use another random default value to initialize it.
 
-/**
- * If numOfClearBytes <=0 or not provided, bank-of-london-cp.jar will be used as attachment.
- * Otherwise, an in memory test .zip attachment of at least numOfClearBytes size, will be used.
- */
-fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 0) {
-    if (numOfClearBytes <= 0)
-        sender(rpc, Thread.currentThread().contextClassLoader.getResourceAsStream("bank-of-london-cp.jar"), BANK_OF_LONDON_CP_JAR_HASH)
-    else {
-        val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
-        sender(rpc, inputStream, hash)
-    }
+/** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
+    val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
+    sender(rpc, inputStream, hash)
 }
 
 fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
@@ -82,7 +71,6 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
     val otherSide: Party = rpc.partyFromName("Bank B")!!
 
     // Make sure we have the file in storage
-    // TODO: We should have our own demo file, not share the trader demo file
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
             val id = rpc.uploadAttachment(it)
@@ -138,33 +126,3 @@ private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration
         override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
     }
 }
-
-/**
- * A valid InputStream from an in-memory zip as required for tests.
- * Note that a slightly bigger than numOfExpectedBytes size is expected.
- */
-fun sizedInputStreamAndHash(numOfExpectedBytes : Int) : InputStreamAndHash {
-    if (numOfExpectedBytes <= 0) throw IllegalArgumentException("A positive number of numOfExpectedBytes is required.")
-    val baos = ByteArrayOutputStream()
-    ZipOutputStream(baos).use({ zos ->
-        val arraySize = 1024
-        val bytes = ByteArray(arraySize)
-        val n = (numOfExpectedBytes - 1) / arraySize + 1 // same as Math.ceil(numOfExpectedBytes/arraySize).
-        zos.setLevel(Deflater.NO_COMPRESSION);
-        zos.putNextEntry(ZipEntry("z"))
-        for (i in 0 until n) {
-            zos.write(bytes, 0, arraySize)
-        }
-        zos.closeEntry()
-    })
-    return getInputStreamAndHashFromOutputStream(baos)
-}
-
-fun getInputStreamAndHashFromOutputStream(baos: ByteArrayOutputStream) : InputStreamAndHash {
-    // TODO: Consider converting OutputStream to InputStream without creating a ByteArray, probably using piped streams.
-    val bytes = baos.toByteArray()
-    // TODO: Consider calculating sha256 on the fly using a DigestInputStream.
-    return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
-}
-
-data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHash.SHA256)
