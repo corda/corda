@@ -161,6 +161,11 @@ class NodeWebServer(val config: WebServerConfig) {
             } catch (e: java.nio.file.NoSuchFileException) {
                 log.debug("Tried to open a file that doesn't yet exist, retrying", e)
                 Thread.sleep(retryDelay)
+            } catch (e: Throwable) {
+                // E.g. a plugin cannot be instantiated?
+                // Note that we do want the exception stacktrace.
+                log.error("Cannot start WebServer", e)
+                throw e
             }
         }
     }
