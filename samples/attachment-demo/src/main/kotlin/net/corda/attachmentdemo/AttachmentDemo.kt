@@ -18,6 +18,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
+import java.io.*
+import net.corda.core.sizedInputStreamAndHash
 
 internal enum class Role {
     SENDER,
@@ -55,26 +57,32 @@ fun main(args: Array<String>) {
     }
 }
 
-val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
+var EXPECTED_HASH = SecureHash.zeroHash // Note: We could use another random default value to initialize it.
 
-fun sender(rpc: CordaRPCOps) {
+/** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
+    val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
+    sender(rpc, inputStream, hash)
+}
+
+fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
+    EXPECTED_HASH = hash
     // Get the identity key of the other side (the recipient).
     val otherSide: Party = rpc.partyFromName("Bank B")!!
 
     // Make sure we have the file in storage
-    // TODO: We should have our own demo file, not share the trader demo file
-    if (!rpc.attachmentExists(PROSPECTUS_HASH)) {
-        Thread.currentThread().contextClassLoader.getResourceAsStream("bank-of-london-cp.jar").use {
+    if (!rpc.attachmentExists(hash)) {
+        inputStream.use {
             val id = rpc.uploadAttachment(it)
-            assertEquals(PROSPECTUS_HASH, id)
+            assertEquals(hash, id)
         }
     }
 
     // Create a trivial transaction that just passes across the attachment - in normal cases there would be
     // inputs, outputs and commands that refer to this attachment.
     val ptx = TransactionType.General.Builder(notary = null)
-    require(rpc.attachmentExists(PROSPECTUS_HASH))
-    ptx.addAttachment(PROSPECTUS_HASH)
+    require(rpc.attachmentExists(hash))
+    ptx.addAttachment(hash)
     // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.
 
     // Despite not having any states, we have to have at least one signature on the transaction
@@ -93,8 +101,8 @@ fun recipient(rpc: CordaRPCOps) {
     val stx = rpc.verifiedTransactions().second.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
-        assertEquals(PROSPECTUS_HASH, wtx.attachments.first())
-        require(rpc.attachmentExists(PROSPECTUS_HASH))
+        assertEquals(EXPECTED_HASH, wtx.attachments.first())
+        require(rpc.attachmentExists(EXPECTED_HASH))
         println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
     } else {
         println("Error: no attachments found in ${wtx.id}")
