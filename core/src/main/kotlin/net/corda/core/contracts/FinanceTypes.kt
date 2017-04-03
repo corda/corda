@@ -46,7 +46,7 @@ interface TokenizableAssetInfo {
  * TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
  */
 @CordaSerializable
-data class Amount<T: Any>(val quantity: Long, val displayTokenSize: BigDecimal,val token: T) : Comparable<Amount<T>> {
+data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
     companion object {
         /**
          * Build an Amount from a decimal representation. For example, with an input of "12.34 GBP",
@@ -253,10 +253,9 @@ data class Amount<T: Any>(val quantity: Long, val displayTokenSize: BigDecimal,v
 }
 
 
-
-fun <T: Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
-fun <T: Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
-fun <T: Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
+fun <T : Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+fun <T : Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
+fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
 
 
 /**
@@ -550,43 +549,25 @@ enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
  * There are some additional rules which are explained in the individual cases below.
  */
 @CordaSerializable
-enum class DateRollConvention {
+enum class DateRollConvention(val direction: () -> DateRollDirection, val isModified: Boolean) {
     // direction() cannot be a val due to the throw in the Actual instance
 
     /** Don't roll the date, use the one supplied. */
-    Actual {
-        override fun direction(): DateRollDirection = throw UnsupportedOperationException("Direction is not relevant for convention Actual")
-        override val isModified: Boolean = false
-    },
+    Actual({ throw UnsupportedOperationException("Direction is not relevant for convention Actual") }, false),
     /** Following is the next business date from this one. */
-    Following {
-        override fun direction(): DateRollDirection = DateRollDirection.FORWARD
-        override val isModified: Boolean = false
-    },
+    Following({ DateRollDirection.FORWARD }, false),
     /**
      * "Modified following" is the next business date, unless it's in the next month, in which case use the preceeding
      * business date.
      */
-    ModifiedFollowing {
-        override fun direction(): DateRollDirection = DateRollDirection.FORWARD
-        override val isModified: Boolean = true
-    },
+    ModifiedFollowing({ DateRollDirection.FORWARD }, true),
     /** Previous is the previous business date from this one. */
-    Previous {
-        override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
-        override val isModified: Boolean = false
-    },
+    Previous({ DateRollDirection.BACKWARD }, false),
     /**
      * Modified previous is the previous business date, unless it's in the previous month, in which case use the next
      * business date.
      */
-    ModifiedPrevious {
-        override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
-        override val isModified: Boolean = true
-    };
-
-    abstract fun direction(): DateRollDirection
-    abstract val isModified: Boolean
+    ModifiedPrevious({ DateRollDirection.BACKWARD }, true);
 }
 
 
@@ -630,31 +611,14 @@ enum class PaymentRule {
  */
 @Suppress("unused")   // TODO: Revisit post-Vega and see if annualCompoundCount is still needed.
 @CordaSerializable
-enum class Frequency(val annualCompoundCount: Int) {
-    Annual(1) {
-        override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
-    },
-    SemiAnnual(2) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(6 * n)
-    },
-    Quarterly(4) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(3 * n)
-    },
-    Monthly(12) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(1 * n)
-    },
-    Weekly(52) {
-        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(1 * n)
-    },
-    BiWeekly(26) {
-        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(2 * n)
-    },
-    Daily(365) {
-        override fun offset(d: LocalDate, n: Long) = d.plusDays(1 * n)
-    };
-
-    abstract fun offset(d: LocalDate, n: Long = 1): LocalDate
-    // Daily() // Let's not worry about this for now.
+enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) -> LocalDate) {
+    Annual(1, { plusYears(1 * it) }),
+    SemiAnnual(2, { plusMonths(6 * it) }),
+    Quarterly(4, { plusMonths(3 * it) }),
+    Monthly(12, { plusMonths(1 * it) }),
+    Weekly(52, { plusWeeks(1 * it) }),
+    BiWeekly(26, { plusWeeks(2 * it) }),
+    Daily(365, { plusDays(1 * it) });
 }
 
 
