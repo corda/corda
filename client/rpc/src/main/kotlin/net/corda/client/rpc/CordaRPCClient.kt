@@ -34,6 +34,9 @@ import javax.annotation.concurrent.ThreadSafe
 class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguration? = null, val serviceConfigurationOverride: (ServerLocator.() -> Unit)? = null) : Closeable, ArtemisMessagingComponent() {
     private companion object {
         val log = loggerFor<CordaRPCClient>()
+        /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
+        @JvmStatic val MAX_FILE_SIZE = 10485760
+
     }
 
     // TODO: Certificate handling for clients needs more work.
@@ -63,6 +66,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
                     retryInterval = 5.seconds.toMillis()
                     retryIntervalMultiplier = 1.5  // Exponential backoff
                     maxRetryInterval = 3.minutes.toMillis()
+                    minLargeMessageSize = MAX_FILE_SIZE
                     serviceConfigurationOverride?.invoke(this)
                 }
                 sessionFactory = serverLocator.createSessionFactory()

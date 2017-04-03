@@ -10,6 +10,7 @@ import org.junit.Test
 import java.util.concurrent.CompletableFuture
 
 class AttachmentDemoTest {
+    /** Tested successfully with an attachment of 10,404,514 bytes. */
     @Test fun `runs attachment demo`() {
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
