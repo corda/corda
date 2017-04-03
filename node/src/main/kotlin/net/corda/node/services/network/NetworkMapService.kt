@@ -323,7 +323,7 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
 class WireNodeRegistration(raw: SerializedBytes<NodeRegistration>, sig: DigitalSignature.WithKey) : SignedData<NodeRegistration>(raw, sig) {
     @Throws(IllegalArgumentException::class)
     override fun verifyData(data: NodeRegistration) {
-        require(data.node.legalIdentity.owningKey.composite.isFulfilledBy(sig.by))
+        require(data.node.legalIdentity.owningKey.isFulfilledBy(sig.by))
     }
 }
 

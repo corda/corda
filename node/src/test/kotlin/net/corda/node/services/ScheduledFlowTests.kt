@@ -2,8 +2,9 @@ package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
@@ -47,7 +48,7 @@ class ScheduledFlowTests {
         override val participants: List<PublicKey> = listOf(source.owningKey, destination.owningKey)
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.composite.containsAny(ourKeys) }
+            return participants.any { it.containsAny(ourKeys) }
         }
     }
 

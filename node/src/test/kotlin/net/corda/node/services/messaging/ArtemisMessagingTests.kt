@@ -5,7 +5,7 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.composite
+import com.typesafe.config.ConfigFactory.empty
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.Message
 import net.corda.core.messaging.RPCOps

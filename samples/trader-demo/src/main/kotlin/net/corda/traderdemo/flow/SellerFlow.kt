@@ -43,7 +43,7 @@ class SellerFlow(val otherParty: Party,
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.legalIdentityKey
-        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public.composite, notary)
+        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 
         progressTracker.currentStep = TRADING
 

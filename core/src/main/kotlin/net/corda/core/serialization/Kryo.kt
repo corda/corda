@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
+import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
@@ -374,18 +375,16 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
         output.writeInt(obj.threshold)
         output.writeInt(obj.children.size)
         obj.children.forEach { kryo.writeClassAndObject(output, it) }
-        output.writeInts(obj.weights.toIntArray())
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
         val childCount = input.readInt()
-        val children = (1..childCount).map { kryo.readClassAndObject(input) as PublicKey }
-        val weights = input.readInts(childCount)
-
+        if (childCount <= 1) throw IllegalArgumentException("Trying to construct CompositeKey with duplicated child nodes.")
+        val children = (1..childCount).map { kryo.readClassAndObject(input) as NodeWeight }
         val builder = CompositeKey.Builder()
-        weights.zip(children).forEach { builder.addKey(it.second, it.first) }
-        return builder.build(threshold)
+        children.forEach { builder.addKey(it.node, it.weight)  }
+        return builder.build(threshold) as CompositeKey
     }
 }
 

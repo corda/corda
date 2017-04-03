@@ -10,7 +10,6 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
@@ -26,7 +25,7 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>) {
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = listOf(freshKey.public.composite)))
+            addOutputState(DummyDealContract.State(ref = it, participants = listOf(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
@@ -41,7 +40,7 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int) {
     for (i in 1..numberToCreate) {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(participants = listOf(freshKey.public.composite)))
+            addOutputState(DummyLinearContract.State(participants = listOf(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }

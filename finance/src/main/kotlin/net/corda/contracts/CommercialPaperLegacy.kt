@@ -2,7 +2,7 @@ package net.corda.contracts
 
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NullCompositeKey
+import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.VaultService
@@ -33,7 +33,7 @@ class CommercialPaperLegacy : Contract {
         override val contract = CP_LEGACY_PROGRAM_ID
         override val participants = listOf(owner)
 
-        fun withoutOwner() = copy(owner = NullCompositeKey)
+        fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 

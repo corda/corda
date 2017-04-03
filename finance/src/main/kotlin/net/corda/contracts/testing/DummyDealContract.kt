@@ -20,7 +20,7 @@ class DummyDealContract : Contract {
             override val ref: String,
             override val parties: List<AnonymousParty> = listOf()) : DealState {
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { (it is CompositeKey && it.containsAny(ourKeys)) || it in ourKeys }
+            return participants.any { it.containsAny(ourKeys) }
         }
 
         override fun generateAgreement(notary: Party): TransactionBuilder {

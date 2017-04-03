@@ -2,7 +2,7 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NullCompositeKey
+import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.*
@@ -506,7 +506,7 @@ class ObligationTests {
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
-                obligationDef, oneUnitFcoj.quantity, NullCompositeKey)
+                obligationDef, oneUnitFcoj.quantity, NullPublicKey)
         // Try settling a simple commodity obligation
         ledger {
             unverifiedTransaction {

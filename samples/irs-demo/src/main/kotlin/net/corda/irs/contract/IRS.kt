@@ -683,7 +683,7 @@ class InterestRateSwap : Contract {
             get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return fixedLeg.fixedRatePayer.owningKey.composite.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.composite.containsAny(ourKeys)
+            return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
 
         override val parties: List<AnonymousParty>
