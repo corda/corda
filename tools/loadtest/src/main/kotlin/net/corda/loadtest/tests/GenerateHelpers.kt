@@ -17,7 +17,7 @@ fun generateIssue(
         notary: Party,
         possibleRecipients: List<Party>
 ): Generator<CashFlowCommand.IssueCash> {
-    return generateAmount(0, max, Generator.pure(currency)).combine(
+    return generateAmount(1, max, Generator.pure(currency)).combine(
             Generator.pure(OpaqueBytes.of(0)),
             Generator.pickOne(possibleRecipients)
     ) { amount, ref, recipient ->
