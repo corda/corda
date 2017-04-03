@@ -63,7 +63,6 @@ class CompositeKeyTests {
 
     @Test
     fun `tree canonical form`() {
-        assertFailsWith<IllegalArgumentException> { CompositeKey(1, listOf(NodeWeight(alicePublicKey, 1))) }
         assertEquals(CompositeKey.Builder().addKeys(alicePublicKey).build(), alicePublicKey)
         val node1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(1) // threshold = 1
         val node2 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(2) // threshold = 2
@@ -86,7 +85,6 @@ class CompositeKeyTests {
         assertEquals(tree5, tree6)
 
         // Chain of single nodes should throw.
-        assertFailsWith<IllegalArgumentException> { CompositeKey(1, listOf(NodeWeight(tree1, 1))) }
         assertEquals(CompositeKey.Builder().addKeys(tree1).build(), tree1)
     }
 }
