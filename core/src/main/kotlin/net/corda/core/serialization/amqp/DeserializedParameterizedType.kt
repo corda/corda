@@ -6,6 +6,7 @@ import java.lang.reflect.Type
 
 
 class DeserializedParameterizedType(name: String) : ParameterizedType {
+    // TODO: maybe we need to normalise the name?
     val _typeName: String = name.toString()
     val _rawType = Class.forName(_typeName.substringBefore('<'))
 
@@ -29,5 +30,14 @@ class DeserializedParameterizedType(name: String) : ParameterizedType {
 
     override fun getTypeName(): String {
         return _typeName
+    }
+
+    override fun toString(): String = _typeName
+
+    override fun hashCode(): Int = _typeName.hashCode()
+
+    // TODO: this might be a bit cheeky since to toString() of the built in impl. would be equal.
+    override fun equals(other: Any?): Boolean {
+        return other is ParameterizedType && other.toString() == toString()
     }
 }

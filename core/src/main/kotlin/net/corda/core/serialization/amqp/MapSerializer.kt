@@ -5,11 +5,11 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
-    override val type: Type get() = declaredType
+    override val type: Type = if (declaredType is DeserializedParameterizedType) declaredType else DeserializedParameterizedType(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = declaredType.toString()
 
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyArray(), "map", Descriptor(typeDescriptor, null), emptyArray())
+    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         output.writeTypeNotations(typeNotation)
@@ -22,7 +22,7 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
         data.putDescribed()
         data.enter()
         // Write descriptor
-        data.putObject(typeNotation.descriptor)
+        data.putObject(typeNotation.descriptor.name)
         // Write map
         data.putMap()
         data.enter()

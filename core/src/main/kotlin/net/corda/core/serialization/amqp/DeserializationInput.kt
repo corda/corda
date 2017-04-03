@@ -58,6 +58,7 @@ class DeserializationInput {
         if (obj is DescribedType) {
             // Look up serializer in factory by descriptor
             val serializer = serializerFactory.get(obj.descriptor, envelope)
+            // The ordering of this type comparison is important.  See equals() implementation in [DeserializedParameterizedType].
             if (serializer.type != type && !serializer.type.isSubClassOf(type)) throw NotSerializableException("Described type with descriptor ${obj.descriptor} was expected to be of type $type")
             return serializer.readObject(obj.described, envelope, this)
         } else {

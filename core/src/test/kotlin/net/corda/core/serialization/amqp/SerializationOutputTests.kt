@@ -4,15 +4,22 @@ import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
 import java.nio.ByteBuffer
+import kotlin.test.assertEquals
 
 
 class SerializationOutputTests {
 
     data class Foo(val bar: String, val pub: Int)
 
-    @Test
-    fun `test`() {
-        val obj = Foo("Hello World!", 123)
+    interface FooInterface {
+        val pub: Int
+    }
+
+    data class FooImplements(val bar: String, override val pub: Int) : FooInterface
+
+    data class FooImplementsAndList(val bar: String, override val pub: Int, val names: List<String>) : FooInterface
+
+    private fun serdes(obj: Any): Any {
         val ser = SerializationOutput()
         val bytes = ser.serialize(obj)
 
@@ -33,5 +40,26 @@ class SerializationOutputTests {
         val des = DeserializationInput()
         val desObj = des.deserialize(bytes)
         println(desObj)
+        assertEquals(obj, desObj)
+        return desObj
+    }
+
+    @Test
+    fun `test foo`() {
+        val obj = Foo("Hello World!", 123)
+        serdes(obj)
+    }
+
+
+    @Test
+    fun `test foo implements`() {
+        val obj = FooImplements("Hello World!", 123)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test foo implements and list `() {
+        val obj = FooImplementsAndList("Hello World!", 123, listOf("Fred", "Ginger"))
+        serdes(obj)
     }
 }

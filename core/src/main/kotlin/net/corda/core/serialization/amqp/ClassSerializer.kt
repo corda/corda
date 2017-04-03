@@ -50,7 +50,8 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         } else if (obj is List<*>) {
             if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
-            return construct(obj)
+            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, envelope, input) }
+            return construct(params)
         } else throw NotSerializableException("Body of described type is unexpected $obj")
     }
 
@@ -58,14 +59,14 @@ class ClassSerializer(val clazz: Class<*>, serializerFactory: SerializerFactory)
         return propertySerializers.map { Field(it.name, it.type, it.requires, it.default, null, it.mandatory, false) }
     }
 
-    private fun generateProvides(): Array<String>? {
-        return if (interfaces.isEmpty()) null else interfaces.map { it.typeName }.toTypedArray()
+    private fun generateProvides(): List<String> {
+        return interfaces.map { it.typeName }
     }
 
-    private fun generateInterfaces(clazz: Class<*>): Array<Type> {
+    private fun generateInterfaces(clazz: Class<*>): List<Type> {
         val interfaces = mutableSetOf<Type>()
         exploreType(clazz, interfaces)
-        return interfaces.toTypedArray()
+        return interfaces.toList()
     }
 
     private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {

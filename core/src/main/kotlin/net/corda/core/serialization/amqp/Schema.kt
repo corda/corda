@@ -118,7 +118,7 @@ data class Descriptor(val name: String?, val code: UnsignedLong?) : DescribedTyp
     }
 }
 
-data class Field(val name: String, val type: String, val requires: Array<String>?, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
+data class Field(val name: String, val type: String, val requires: List<String>, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0004L or DESCRIPTOR_MSW)
 
@@ -140,7 +140,7 @@ data class Field(val name: String, val type: String, val requires: Array<String>
 
         override fun newInstance(described: Any?): Field {
             val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return Field(list[0] as String, list[1] as String, list[2] as? Array<String>, list[3] as? String, list[4] as? String, list[5] as Boolean, list[6] as Boolean)
+            return Field(list[0] as String, list[1] as String, list[2] as List<String>, list[3] as? String, list[4] as? String, list[5] as Boolean, list[6] as Boolean)
         }
     }
 
@@ -178,11 +178,11 @@ interface TypeNotation : DescribedType {
 
     val name: String
     val label: String?
-    val provides: Array<String>?
+    val provides: List<String>
     val descriptor: Descriptor
 }
 
-data class CompositeType(override val name: String, override val label: String?, override val provides: Array<String>?, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation {
+data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0005L or DESCRIPTOR_MSW)
 
@@ -204,7 +204,7 @@ data class CompositeType(override val name: String, override val label: String?,
 
         override fun newInstance(described: Any?): CompositeType {
             val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return CompositeType(list[0] as String, list[1] as? String, list[2] as? Array<String>, list[3] as Descriptor, list[4] as List<Field>)
+            return CompositeType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as Descriptor, list[4] as List<Field>)
         }
     }
 
@@ -230,7 +230,7 @@ data class CompositeType(override val name: String, override val label: String?,
     }
 }
 
-data class RestrictedType(override val name: String, override val label: String?, override val provides: Array<String>?, val source: String, override val descriptor: Descriptor, val choices: Array<Choice>?) : TypeNotation {
+data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0006L or DESCRIPTOR_MSW)
 
@@ -252,7 +252,7 @@ data class RestrictedType(override val name: String, override val label: String?
 
         override fun newInstance(described: Any?): RestrictedType {
             val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
-            return RestrictedType(list[0] as String, list[1] as? String, list[2] as? Array<String>, list[3] as String, list[4] as Descriptor, list[5] as? Array<Choice>)
+            return RestrictedType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as String, list[4] as Descriptor, list[5] as List<Choice>)
         }
     }
 
