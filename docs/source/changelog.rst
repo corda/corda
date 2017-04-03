@@ -3,8 +3,8 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release.
 
-UNRELEASED
-----------
+Milestone 10.0
+--------------
 
 API changes:
 

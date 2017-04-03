@@ -4,8 +4,8 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
-UNRELEASED
-----------
+Milestone 10
+------------
 
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
