@@ -379,13 +379,25 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
-        val childCount = input.readInt()
-        if (childCount <= 1) throw IllegalArgumentException("Trying to construct CompositeKey with duplicated child nodes.")
-        val children = (1..childCount).map { kryo.readClassAndObject(input) as NodeWeight }
+        val children = readListOfLength<CompositeKey.NodeWeight>(kryo, input, minLen = 2)
         val builder = CompositeKey.Builder()
         children.forEach { builder.addKey(it.node, it.weight)  }
         return builder.build(threshold) as CompositeKey
     }
+}
+
+/**
+ * Helper function for reading lists with number of elements at the beginning.
+ * @param minLen minimum number of elements we expect for list to include, defaults to 1
+ * @param expectedLen expected length of the list, defaults to null if arbitrary length list read
+  */
+inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 1, expectedLen: Int? = null): List<T> {
+    val elemCount = input.readInt()
+    if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
+    if (expectedLen != null && elemCount != expectedLen)
+        throw KryoException("Cannot deserialize list, expected length: $expectedLen, got: $elemCount.")
+    val list = (1..elemCount).map { kryo.readClassAndObject(input) as T }
+    return list
 }
 
 /** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */

@@ -4,17 +4,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import java.security.PublicKey
 
-// Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
-@CordaSerializable
-data class NodeWeight(val node: PublicKey, val weight: Int): Comparable<NodeWeight> {
-    override fun compareTo(other: NodeWeight): Int {
-        if(weight == other.weight) {
-            return node.hashCode().compareTo(other.node.hashCode())
-        }
-        else return weight.compareTo(other.weight)
-    }
-}
-
 /**
  * A tree data structure that enables the representation of composite public keys.
  * Notice that with that implementation CompositeKey extends PublicKey. Leaves are represented by single public keys.
@@ -33,13 +22,24 @@ data class NodeWeight(val node: PublicKey, val weight: Int): Comparable<NodeWeig
  * signatures required) to satisfy the sub-tree rooted at this node.
  */
 @CordaSerializable
-class CompositeKey(val threshold: Int,
+class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeWeight>) : PublicKey {
     val children = children.sorted()
     init {
         require (children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
         // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees but having different structures.
         require(children.size > 1) { "Cannot construct CompositeKey with only one child node." }
+    }
+
+    // Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
+    @CordaSerializable
+    data class NodeWeight(val node: PublicKey, val weight: Int): Comparable<NodeWeight> {
+        override fun compareTo(other: NodeWeight): Int {
+            if(weight == other.weight) {
+                return node.hashCode().compareTo(other.node.hashCode())
+            }
+            else return weight.compareTo(other.weight)
+        }
     }
 
     companion object {
