@@ -21,10 +21,8 @@ import kotlin.test.assertEquals
 import java.io.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import java.io.ByteArrayInputStream
-import java.io.IOException
-import com.google.common.io.ByteStreams
 import net.corda.core.crypto.sha256
+import java.util.zip.Deflater
 
 internal enum class Role {
     SENDER,
@@ -68,7 +66,6 @@ var EXPECTED_HASH = BANK_OF_LONDON_CP_JAR_HASH
 /**
  * If numOfClearBytes <=0 or not provided, bank-of-london-cp.jar will be used as attachment.
  * Otherwise, an in memory test .zip attachment of at least numOfClearBytes size, will be used.
- *
  */
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 0) {
     if (numOfClearBytes <= 0)
@@ -142,37 +139,31 @@ private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration
     }
 }
 
-// A valid InputStream from an in-memory zip as required for tests. Note that we expect a slightly bigger than numOfExpectedBytes size.
-@Throws(IOException::class, TypeCastException::class, IllegalArgumentException::class)
+/**
+ * A valid InputStream from an in-memory zip as required for tests.
+ * Note that a slightly bigger than numOfExpectedBytes size is expected.
+ */
 fun sizedInputStreamAndHash(numOfExpectedBytes : Int) : InputStreamAndHash {
     if (numOfExpectedBytes <= 0) throw IllegalArgumentException("A positive number of numOfExpectedBytes is required.")
     val baos = ByteArrayOutputStream()
-    try {
-        val stream = Thread.currentThread().contextClassLoader.getResourceAsStream("attachment-demo24KB.zip") as BufferedInputStream
-        val bytes = ByteStreams.toByteArray(stream) // size of attachment-demo24KB.zip = 23848 bytes.
-        ZipOutputStream(baos).use({ zos ->
-            /* As each entry is a 23848-sized .zip file, if we run it for 10,000,000 bytes, it will return 420 entries, as 420x23848 = 10,016,160 bytes.
-             * However, the final .zip is expected to be slightly bigger than the above number, because each entry is already a compressed file,
-             * while there is an additional overhead, due to the zip entries structure.
-             */
-            val n = (numOfExpectedBytes - 1) / 23848 + 1 // same as Math.ceil(numOfExpectedBytes/23848).
-            for (i in 0 until n) {
-                zos.putNextEntry(ZipEntry("$i"))
-                zos.write(bytes, 0, 23848)
-                zos.closeEntry()
-            }
-        })
-    } catch (ioe: IOException) {
-        throw IOException(ioe)
-    } catch (tce: TypeCastException) {
-        throw TypeCastException("Attachment file does not exist.")
-    }
+    ZipOutputStream(baos).use({ zos ->
+        val arraySize = 1024
+        val bytes = ByteArray(arraySize)
+        val n = (numOfExpectedBytes - 1) / arraySize + 1 // same as Math.ceil(numOfExpectedBytes/arraySize).
+        zos.setLevel(Deflater.NO_COMPRESSION);
+        zos.putNextEntry(ZipEntry("z"))
+        for (i in 0 until n) {
+            zos.write(bytes, 0, arraySize)
+        }
+        zos.closeEntry()
+    })
     return getInputStreamAndHashFromOutputStream(baos)
 }
 
 fun getInputStreamAndHashFromOutputStream(baos: ByteArrayOutputStream) : InputStreamAndHash {
+    // TODO: Consider converting OutputStream to InputStream without creating a ByteArray, probably using piped streams.
     val bytes = baos.toByteArray()
-    println(bytes.size)
+    // TODO: Consider calculating sha256 on the fly using a DigestInputStream.
     return InputStreamAndHash(ByteArrayInputStream(bytes), bytes.sha256())
 }
 

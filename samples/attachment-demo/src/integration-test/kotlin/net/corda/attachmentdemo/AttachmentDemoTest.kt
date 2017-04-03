@@ -15,7 +15,7 @@ class AttachmentDemoTest {
         attachmentDemo(0)
     }
 
-    // run with a 10,000,000 bytes zip file. In practice, a slightly bigger in-memory file will be used (~10,050,000 bytes).
+    // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
     @Test fun `runs attachment demo with a 10MB zip file`() {
         attachmentDemo(10000000)
     }
