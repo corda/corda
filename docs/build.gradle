@@ -25,14 +25,14 @@ task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
 task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
     // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'sh make-docsite.sh' // Windows
-    commandLine 'sh', './make-docsite.sh' // Linux
+    commandLine 'cmd', '/c', 'bash make-docsite.sh' // Windows
+    commandLine 'bash', './make-docsite.sh' // Linux
 }
 
 task installDocsiteRequirements(type: Exec) {
     // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'sh install-docsite-requirements.sh' // Windows
-    commandLine 'sh', './install-docsite-requirements.sh' // Linux
+    commandLine 'cmd', '/c', 'bash install-docsite-requirements.sh' // Windows
+    commandLine 'bash', './install-docsite-requirements.sh' // Linux
 }
 
 apidocs.shouldRunAfter makeDocs
