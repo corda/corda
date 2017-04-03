@@ -103,3 +103,17 @@ Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell 
 
 ..
 
+While DemoBench *can* be executed within an IDE, it would be up to the Developer to install all of its runtime dependencies into their correct locations beforehand:
+
+.. parsed-literal::
+
+    corda/
+        corda.jar
+        corda-webserver.jar
+    explorer/
+        node-explorer.jar
+    plugins/
+        bank-of-corda.jar
+
+..
+
