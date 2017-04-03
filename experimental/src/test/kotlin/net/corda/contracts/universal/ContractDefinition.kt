@@ -1,7 +1,6 @@
 package net.corda.contracts.universal
 
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import org.junit.Test
 import java.util.*
@@ -11,7 +10,7 @@ val acmeCorp = Party("ACME Corporation", generateKeyPair().public)
 val highStreetBank = Party("High Street Bank", generateKeyPair().public)
 val momAndPop = Party("Mom and Pop", generateKeyPair().public)
 
-val acmeCorporationHasDefaulted = TerminalEvent(acmeCorp, generateKeyPair().public.composite)
+val acmeCorporationHasDefaulted = TerminalEvent(acmeCorp, generateKeyPair().public)
 
 
 // Currencies

@@ -201,7 +201,7 @@ class GeneratedCommandData(
 ) : CommandData
 
 val keyPairGenerator = Generator.long().map { entropyToKeyPair(BigInteger.valueOf(it)) }
-val publicKeyGenerator = keyPairGenerator.map { it.public.composite }
+val publicKeyGenerator = keyPairGenerator.map { it.public }
 val stateGenerator: Generator<ContractState> =
         Generator.replicatePoisson(2.0, publicKeyGenerator).combine(Generator.long()) { participants, nonce ->
             GeneratedState(nonce, participants)

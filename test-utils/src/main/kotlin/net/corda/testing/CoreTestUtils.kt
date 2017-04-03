@@ -34,6 +34,7 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -57,36 +58,36 @@ import kotlin.reflect.KClass
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: CompositeKey get() = MEGA_CORP_KEY.public.composite
+val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
 
 val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: CompositeKey get() = MINI_CORP_KEY.public.composite
+val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: CompositeKey get() = ORACLE_KEY.public.composite
+val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
 val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
-val ALICE_PUBKEY: CompositeKey get() = ALICE_KEY.public.composite
+val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
 
 val BOB_KEY: KeyPair by lazy { generateKeyPair() }
-val BOB_PUBKEY: CompositeKey get() = BOB_KEY.public.composite
+val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val BOB: Party get() = Party("Bob", BOB_PUBKEY)
 
 val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
-val CHARLIE_PUBKEY: CompositeKey get() = CHARLIE_KEY.public.composite
+val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
-val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
+val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
 val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val BIG_CORP_PUBKEY: CompositeKey get() = BIG_CORP_KEY.public.composite
+val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
 val BIG_CORP: Party get() = Party("BigCorporation", BIG_CORP_PUBKEY)
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 

@@ -16,7 +16,6 @@ import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
 
-// TODO We need to specify if we want to support signatures for CompositeKeys. In that case bits should have specified format.
 /** A wrapper around a digital signature. */
 @CordaSerializable
 open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
@@ -27,7 +26,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey.composite.singleKey, bits)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
 }
 
 @CordaSerializable
@@ -39,7 +38,6 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun toString() = "NULL_KEY"
 }
 
-val NullCompositeKey = NullPublicKey.composite
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable
@@ -83,11 +81,11 @@ fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(byte
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
 // TODO This case will need more careful thinking, as party owningKey can be a CompositeKey. One way of doing that is
 //  implementation of CompositeSignature.
-@Throws(IllegalStateException::class)
+@Throws(InvalidKeyException::class)
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
     val sig = signWithECDSA(bytesToSign)
     val sigKey = when (party.owningKey) { // Quick workaround when we have CompositeKey as Party owningKey.
-        is CompositeKey -> party.owningKey.singleKey
+        is CompositeKey -> throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
         else -> party.owningKey
     }
     sigKey.verifyWithECDSA(bytesToSign, sig)
@@ -98,7 +96,7 @@ fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignatur
 @Throws(SignatureException::class, IllegalStateException::class)
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     val pubKey = when (this) {
-        is CompositeKey -> singleKey // TODO CompositeSignature verification.
+        is CompositeKey -> throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
         else -> this
     }
     val verifier = EdDSAEngine()
@@ -115,19 +113,19 @@ fun PublicKey.toStringShort(): String {
     } ?: toString()
 }
 
-/**
- * If got simple single PublicKey creates a [CompositeKey] with a single leaf node containing the public key.
- *  Type checks if obtained PublicKey is a CompositeKey, in that case returns itself.
- */
-val PublicKey.composite: CompositeKey get() {
-    if (this is CompositeKey) return this
-    else return CompositeKey(1, listOf(this), listOf(1))
-}
-
 val PublicKey.keys: Set<PublicKey> get() {
     return if (this is CompositeKey) this.keys
     else setOf(this)
 }
+
+fun PublicKey.isFulfilledBy(key: PublicKey): Boolean  = isFulfilledBy(setOf(key))
+fun PublicKey.isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
+    return if (this is CompositeKey) this.isFulfilledBy(keys)
+    else this in keys
+}
+
+/** Checks whether any of the given [keys] matches a leaf on the CompositeKey tree or a single PublicKey */
+fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
 
 /** Returns the set of all [PublicKey]s of the signatures */
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()

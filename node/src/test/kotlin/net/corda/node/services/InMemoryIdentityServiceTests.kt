@@ -1,7 +1,6 @@
 package net.corda.node.services
 
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.*
@@ -48,7 +47,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `get identity by name`() {
         val service = InMemoryIdentityService()
-        val identities = listOf("Node A", "Node B", "Node C").map { Party(it, generateKeyPair().public.composite) }
+        val identities = listOf("Node A", "Node B", "Node C").map { Party(it, generateKeyPair().public) }
         assertNull(service.partyFromName(identities.first().name))
         identities.forEach { service.registerIdentity(it) }
         identities.forEach { assertEquals(it, service.partyFromName(it.name)) }

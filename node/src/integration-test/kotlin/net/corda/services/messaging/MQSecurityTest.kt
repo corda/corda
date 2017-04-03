@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClientImpl
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic

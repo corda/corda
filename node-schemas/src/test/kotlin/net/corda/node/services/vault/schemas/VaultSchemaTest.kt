@@ -630,7 +630,7 @@ class VaultSchemaTest {
 
     @Test
     fun insertWithBigCompositeKey() {
-        val keys = (1..314).map { generateKeyPair().public.composite }
+        val keys = (1..314).map { generateKeyPair().public }
         val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
         val vaultStEntity = VaultStatesEntity().apply {
             txId = SecureHash.randomSHA256().toString()

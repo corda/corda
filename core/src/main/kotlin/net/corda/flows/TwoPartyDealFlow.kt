@@ -93,7 +93,7 @@ object TwoPartyDealFlow {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
             // Make the first message we'll send to kick off the flow.
-            val hello = Handshake(payload, myKeyPair.public.composite)
+            val hello = Handshake(payload, myKeyPair.public)
             val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             return maybeSTX

@@ -97,7 +97,7 @@ abstract class AbstractStateReplacementFlow {
             val proposal = Proposal(originalState.ref, modification, stx)
             val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
             return response.unwrap {
-                check(party.owningKey.composite.isFulfilledBy(it.by)) { "Not signed by the required participant" }
+                check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verifyWithECDSA(stx.id)
                 it
             }

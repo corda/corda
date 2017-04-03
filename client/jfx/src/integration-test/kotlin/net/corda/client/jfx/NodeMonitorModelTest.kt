@@ -6,7 +6,7 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
@@ -160,7 +160,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         // Only Alice signed
                         val aliceKey = aliceNode.legalIdentity.owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
-                        require(aliceKey.composite.isFulfilledBy(signaturePubKeys))
+                        require(aliceKey.isFulfilledBy(signaturePubKeys))
                         issueTx = stx
                     },
                     // MOVE
@@ -169,8 +169,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
                         require(stx.tx.outputs.size == 1)
                         val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.legalIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
-                        require(notaryNode.notaryIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
+                        require(aliceNode.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         moveTx = stx
                     }
             )

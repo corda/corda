@@ -95,7 +95,7 @@ object TwoPartyTradeFlow {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val myPublicKey = myKeyPair.public.composite
+            val myPublicKey = myKeyPair.public
             // Make the first message we'll send to kick off the flow.
             val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
@@ -222,7 +222,7 @@ object TwoPartyTradeFlow {
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 

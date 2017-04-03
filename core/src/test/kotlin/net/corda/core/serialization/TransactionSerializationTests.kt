@@ -2,7 +2,6 @@ package net.corda.core.serialization
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -47,7 +46,7 @@ class TransactionSerializationTests {
     val fakeStateRef = generateStateRef()
     val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY), fakeStateRef)
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY)
-    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, DUMMY_KEY_1.public.composite), DUMMY_NOTARY)
+    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, DUMMY_KEY_1.public), DUMMY_NOTARY)
 
 
     lateinit var tx: TransactionBuilder
@@ -55,7 +54,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
-                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(DUMMY_KEY_1.public.composite))
+                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(DUMMY_KEY_1.public))
         )
     }
 
@@ -94,7 +93,7 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = TransactionType.General.Builder(DUMMY_NOTARY).withItems(inputState, outputState, changeState,
-                    Command(TestCash.Commands.Move(), DUMMY_KEY_2.public.composite))
+                    Command(TestCash.Commands.Move(), DUMMY_KEY_2.public))
             tx2.signWith(DUMMY_NOTARY_KEY)
             tx2.signWith(DUMMY_KEY_2)
 

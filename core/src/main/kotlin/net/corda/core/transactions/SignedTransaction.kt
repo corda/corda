@@ -6,7 +6,7 @@ import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.node.ServiceHub
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -69,7 +69,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
         val missing = getMissingSignatures()
         if (missing.isNotEmpty()) {
-            val allowed = allowedToBeMissing.map { it.composite }.toSet()
+            val allowed = allowedToBeMissing.toSet()
             val needed = missing - allowed
             if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
@@ -97,7 +97,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         val sigKeys = sigs.map { it.by }.toSet()
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
         //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
-        val missing = tx.mustSign.filter { !it.composite.isFulfilledBy(sigKeys) }.map { it.composite }.toSet()
+        val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
         return missing
     }
 

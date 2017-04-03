@@ -11,6 +11,7 @@ import net.corda.core.contracts.clauses.Clause;
 import net.corda.core.contracts.clauses.ClauseVerifier;
 import net.corda.core.contracts.clauses.GroupClauseVerifier;
 import net.corda.core.crypto.CryptoUtilities;
+import net.corda.core.crypto.NullPublicKey;
 import net.corda.core.crypto.Party;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.node.services.VaultService;
@@ -126,7 +127,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State withoutOwner() {
-            return new State(issuance, CryptoUtilities.getNullCompositeKey(), faceValue, maturityDate);
+            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
         }
 
         @NotNull

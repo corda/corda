@@ -3,6 +3,8 @@ package net.corda.core.crypto
 import net.corda.core.serialization.OpaqueBytes
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CompositeKeyTests {
@@ -10,9 +12,9 @@ class CompositeKeyTests {
     val bobKey = generateKeyPair()
     val charlieKey = generateKeyPair()
 
-    val alicePublicKey = aliceKey.public.composite
+    val alicePublicKey = aliceKey.public
     val bobPublicKey = bobKey.public
-    val charliePublicKey = charlieKey.public.composite
+    val charliePublicKey = charlieKey.public
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
@@ -57,5 +59,34 @@ class CompositeKeyTests {
         val decoded = parsePublicKeyBase58(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
+    }
+
+    @Test
+    fun `tree canonical form`() {
+        assertFailsWith<IllegalArgumentException> { CompositeKey(1, listOf(NodeWeight(alicePublicKey, 1))) }
+        assertEquals(CompositeKey.Builder().addKeys(alicePublicKey).build(), alicePublicKey)
+        val node1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(1) // threshold = 1
+        val node2 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(2) // threshold = 2
+        assertFalse(node2.isFulfilledBy(alicePublicKey))
+        // Ordering by weight.
+        val tree1 = CompositeKey.Builder().addKey(node1, 13).addKey(node2, 27).build()
+        val tree2 = CompositeKey.Builder().addKey(node2, 27).addKey(node1, 13).build()
+        assertEquals(tree1, tree2)
+        assertEquals(tree1.hashCode(), tree2.hashCode())
+
+        // Ordering by node, weights the same.
+        val tree3 = CompositeKey.Builder().addKeys(node1, node2).build()
+        val tree4 = CompositeKey.Builder().addKeys(node2, node1).build()
+        assertEquals(tree3, tree4)
+        assertEquals(tree3.hashCode(), tree4.hashCode())
+
+        // Duplicate node cases.
+        val tree5 = CompositeKey.Builder().addKey(node1, 3).addKey(node1, 14).build()
+        val tree6 = CompositeKey.Builder().addKey(node1, 14).addKey(node1, 3).build()
+        assertEquals(tree5, tree6)
+
+        // Chain of single nodes should throw.
+        assertFailsWith<IllegalArgumentException> { CompositeKey(1, listOf(NodeWeight(tree1, 1))) }
+        assertEquals(CompositeKey.Builder().addKeys(tree1).build(), tree1)
     }
 }

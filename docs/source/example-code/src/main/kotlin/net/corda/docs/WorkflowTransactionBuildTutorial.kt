@@ -65,7 +65,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
         override val participants: List<PublicKey> get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { (it is CompositeKey && it.containsAny(ourKeys)) || it in ourKeys }
+            return participants.any { it.containsAny(ourKeys) }
         }
     }
 

@@ -258,7 +258,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val extraKey = bobNode.keyManagement.freshKey()
-            val bobsFakeCash = fillUpForBuyer(false, extraKey.public.composite,
+            val bobsFakeCash = fillUpForBuyer(false, extraKey.public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
@@ -459,7 +459,7 @@ class TwoPartyTradeFlowTests {
         val bobKey = bobNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.composite, DUMMY_CASH_ISSUER.party,
+        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
         val alicesFakePaper = databaseTransaction(aliceNode.database) {
             fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,

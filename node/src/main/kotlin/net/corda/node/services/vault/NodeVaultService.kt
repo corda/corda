@@ -14,9 +14,10 @@ import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
@@ -600,7 +601,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-        is OwnableState -> state.owner.composite.containsAny(ourKeys)
+        is OwnableState -> state.owner.containsAny(ourKeys)
     // It's potentially of interest to the vault
         is LinearState -> state.isRelevant(ourKeys)
         else -> false

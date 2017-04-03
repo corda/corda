@@ -136,7 +136,7 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<PublicKey> = signers.filter { !it.composite.isFulfilledBy(gotKeys) }.toSet()
+            val missing: Set<PublicKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }

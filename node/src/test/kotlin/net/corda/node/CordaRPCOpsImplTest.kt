@@ -2,7 +2,7 @@ package net.corda.node
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.composite
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
@@ -163,7 +163,7 @@ class CordaRPCOpsImplTest {
                         // Only Alice signed
                         val aliceKey = aliceNode.info.legalIdentity.owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
-                        require(aliceKey.composite.isFulfilledBy(signaturePubKeys))
+                        require(aliceKey.isFulfilledBy(signaturePubKeys))
                     },
                     // MOVE
                     expect { tx ->
@@ -171,8 +171,8 @@ class CordaRPCOpsImplTest {
                         require(tx.tx.outputs.size == 1)
                         val signaturePubKeys = tx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
-                        require(aliceNode.info.legalIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
-                        require(notaryNode.info.notaryIdentity.owningKey.composite.isFulfilledBy(signaturePubKeys))
+                        require(aliceNode.info.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
+                        require(notaryNode.info.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                     }
             )
         }
