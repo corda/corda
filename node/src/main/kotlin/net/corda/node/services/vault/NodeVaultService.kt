@@ -13,19 +13,13 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
-import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
-import net.corda.core.serialization.storageKryo
+import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -326,9 +320,11 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     val spendLock: ReentrantLock = ReentrantLock()
 
     @Suspendable
-    override fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>?, notary: Party?, lockId: UUID): List<StateAndRef<T>> {
+    override fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>?, notary: Party?, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>?): List<StateAndRef<T>> {
 
         val issuerKeysStr = onlyFromIssuerParties?.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }?.dropLast(1)
+        val issuerRefsStr = withIssuerRefs?.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }?.dropLast(1)
+
         var stateAndRefs = mutableListOf<StateAndRef<T>>()
 
         // TODO: Need to provide a database provider independent means of performing this function.
@@ -359,7 +355,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             (if (notary != null)
                                 " AND vs.notary_key = '${notary.owningKey.toBase58String()}'" else "") +
                             (if (issuerKeysStr != null)
-                                " AND ccs.issuer_key IN $issuerKeysStr" else "")
+                                " AND ccs.issuer_key IN ($issuerKeysStr)" else "") +
+                            (if (issuerRefsStr != null)
+                                " AND ccs.issuer_ref IN ($issuerRefsStr)" else "")
 
                     // Retrieve spendable state refs
                     val rs = statement.executeQuery(selectJoin)
