@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -253,7 +254,7 @@ interface VaultService {
      * is implemented in a separate module (finance) and requires access to it.
      */
     @Suspendable
-    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID): List<StateAndRef<T>>
+    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
 
 inline fun <reified T: ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
