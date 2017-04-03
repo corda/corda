@@ -163,7 +163,8 @@ class NodeWebServer(val config: WebServerConfig) {
                 Thread.sleep(retryDelay)
             } catch (e: Throwable) {
                 // E.g. a plugin cannot be instantiated?
-                log.error("Cannot launch WebServer: {}", e)
+                // Note that we do want the exception stacktrace.
+                log.error("Cannot start WebServer", e)
                 throw e
             }
         }
