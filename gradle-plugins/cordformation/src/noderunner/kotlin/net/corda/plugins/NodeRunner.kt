@@ -24,24 +24,22 @@ data class IncrementalPortAllocator(var basePort: Int = 5005) {
     fun next(): Int = basePort++
 }
 
-private val startedProcesses = mutableListOf<Process>()
 val debugPortAlloc: IncrementalPortAllocator = IncrementalPortAllocator()
 
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
     val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == HEADLESS_FLAG)))
-    val runJar = getJarRunner(headless)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
     val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
 
     workingDir.list().map { File(workingDir, it) }.forEach {
         if (isNode(it)) {
-            startJarProcess(headless, it, nodeJarName, javaArgs)
+            startedProcesses += startJarProcess(headless, it, nodeJarName, javaArgs)
         }
 
         if (isWebserver(it)) {
-            startJarProcess(headless, it, webJarName, javaArgs)
+            startedProcesses += startJarProcess(headless, it, webJarName, javaArgs)
         }
     }
 
@@ -49,12 +47,13 @@ fun main(args: Array<String>) {
     println("Finished starting nodes")
 }
 
-private fun startJarProcess(headless: Boolean, dir: File, jarName: String, javaArgs: List<String>) {
+private fun startJarProcess(headless: Boolean, dir: File, jarName: String, javaArgs: List<String>) : Process {
     val runJar = getJarRunner(headless)
     val debugPort = debugPortAlloc.next()
     println("Starting $jarName in $dir on debug port $debugPort")
-    startedProcesses.add(runJar(jarName, dir, javaArgs, debugPort))
+    val proc = runJar(jarName, dir, javaArgs, debugPort)
     if (os == OS.MACOS) Thread.sleep(1000)
+    return proc
 }
 
 private fun isNode(maybeNodeDir: File) = maybeNodeDir.isDirectory
