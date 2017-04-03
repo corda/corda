@@ -26,7 +26,7 @@ object ProcessUtilities {
         val separator = System.getProperty("file.separator")
         val classpath = System.getProperty("java.class.path")
         val javaPath = System.getProperty("java.home") + separator + "bin" + separator + "java"
-        val debugPortArgument = if (jdwpPort == null) {
+        val debugPortArgument = if (jdwpPort != null) {
             listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
         } else {
             emptyList()
