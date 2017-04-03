@@ -4,7 +4,6 @@ import net.corda.client.mock.Generator
 import net.corda.core.crypto.toBase58String
 import net.corda.node.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.ValidatingNotaryService
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -195,9 +194,9 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
                 notary = notaryNode.second,
                 networkMap = networkMapNode.second,
                 simpleNodes = hostNodeHandleMap.values.filter {
-                    it.info.advertisedServices.filter {
-                        it.info.type in setOf(NetworkMapService.type, ValidatingNotaryService.type)
-                    }.isEmpty()
+                    it.info.advertisedServices.none {
+                        it.info.type == NetworkMapService.type || it.info.type.isNotary()
+                    }
                 }
         )
 
