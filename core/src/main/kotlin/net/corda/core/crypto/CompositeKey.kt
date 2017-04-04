@@ -16,14 +16,14 @@ import java.security.PublicKey
  * Using these constructs we can express e.g. 1 of N (OR) or N of N (AND) signature requirements. By nesting we can
  * create multi-level requirements such as *"either the CEO or 3 of 5 of his assistants need to sign"*.
  *
- * [CompositeKey] maintains a list of [NodeWeigh] which holds child subtree with associated weight carried by child node signatures.
+ * [CompositeKey] maintains a list of [NodeAndWeight]s which holds child subtree with associated weight carried by child node signatures.
  *
  * The [threshold] specifies the minimum total weight required (in the simple case – the minimum number of child
  * signatures required) to satisfy the sub-tree rooted at this node.
  */
 @CordaSerializable
 class CompositeKey private constructor (val threshold: Int,
-                   children: List<NodeWeight>) : PublicKey {
+                   children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
         require (children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
@@ -31,11 +31,13 @@ class CompositeKey private constructor (val threshold: Int,
         require(children.size > 1) { "Cannot construct CompositeKey with only one child node." }
     }
 
-    // Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
+    /**
+     * Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
+     */
     @CordaSerializable
-    data class NodeWeight(val node: PublicKey, val weight: Int): Comparable<NodeWeight> {
-        override fun compareTo(other: NodeWeight): Int {
-            if(weight == other.weight) {
+    data class NodeAndWeight(val node: PublicKey, val weight: Int): Comparable<NodeAndWeight> {
+        override fun compareTo(other: NodeAndWeight): Int {
+            if (weight == other.weight) {
                 return node.hashCode().compareTo(other.node.hashCode())
             }
             else return weight.compareTo(other.weight)
@@ -57,17 +59,11 @@ class CompositeKey private constructor (val threshold: Int,
 
     // TODO Can CompositeKey be fulfilled by other composite keys? With composite signature it makes some sense.
     fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
-        val totalWeight = children.map { it ->
-            if (it.node is CompositeKey) {
-                if (it.node.isFulfilledBy(keys))
-                    it.weight
-                else
-                    0
+        val totalWeight = children.map { (node, weight) ->
+            if (node is CompositeKey) {
+                if (node.isFulfilledBy(keys)) weight else 0
             } else {
-                if (keys.contains(it.node))
-                    it.weight
-                else
-                    0
+                if (keys.contains(node)) weight else 0
             }
         }.sum()
         return totalWeight >= threshold
@@ -96,11 +92,11 @@ class CompositeKey private constructor (val threshold: Int,
 
     /** A helper class for building a [CompositeKey]. */
     class Builder {
-        private val children: MutableList<NodeWeight> = mutableListOf()
+        private val children: MutableList<NodeAndWeight> = mutableListOf()
 
         /** Adds a child [CompositeKey] node. Specifying a [weight] for the child is optional and will default to 1. */
         fun addKey(key: PublicKey, weight: Int = 1): Builder {
-            children.add(NodeWeight(key, weight))
+            children.add(NodeAndWeight(key, weight))
             return this
         }
 
@@ -122,9 +118,9 @@ class CompositeKey private constructor (val threshold: Int,
             if (n > 1)
                 return CompositeKey(threshold ?: n, children)
             else if (n == 1) {
-                if (threshold != null && threshold != children[0].weight)
-                    throw IllegalArgumentException("Trying to build invalid CompositeKey, threshold value different than weight of single child node.")
-                return children[0].node // We can assume that this node is a correct CompositeKey.
+                require(threshold == null || threshold == children.first().weight)
+                    { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
+                return children.first().node // We can assume that this node is a correct CompositeKey.
             }
             else throw IllegalArgumentException("Trying to build CompositeKey without child nodes.")
         }
