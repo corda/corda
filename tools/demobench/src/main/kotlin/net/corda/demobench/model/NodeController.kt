@@ -9,14 +9,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
-import javafx.scene.control.Alert
-import javafx.scene.control.Alert.AlertType.ERROR
-import javafx.stage.Stage
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
-class NodeController : Controller() {
+class NodeController(check: atRuntime = ::checkExists) : Controller() {
     companion object {
         const val firstPort = 10000
         const val minPort = 1024
@@ -44,19 +41,8 @@ class NodeController : Controller() {
         log.info("Corda JAR: $cordaPath")
 
         // Check that the Corda capsule is available.
-        if (!cordaPath.toFile().exists()) {
-            val alert = Alert(ERROR)
-            alert.isResizable = true
-            alert.headerText = "Cannot find Corda JAR."
-            alert.contentText = "'$cordaPath' does not exist.\n" +
-                    "Please install all of DemoBench's runtime dependencies or run the installer. " +
-                    "See the documentation for more details."
-
-            val stage = alert.dialogPane.scene.window as Stage
-            stage.isAlwaysOnTop = true
-
-            alert.show()
-        }
+        // We do NOT want to do this during unit testing!
+        check(cordaPath, "Cannot find Corda JAR.")
     }
 
     /**
