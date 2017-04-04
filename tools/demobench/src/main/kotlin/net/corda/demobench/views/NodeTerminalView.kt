@@ -5,12 +5,13 @@ import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
 import java.awt.Dimension
 import java.util.logging.Level
+import javax.swing.SwingUtilities
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
-import javax.swing.SwingUtilities
+import net.corda.client.rpc.notUsed
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.*
 import net.corda.demobench.pty.R3Pty
@@ -169,7 +170,7 @@ class NodeTerminalView : Fragment() {
 
     // TODO - Will change when we modify RPC Observables handling.
     private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
-        pair.second.subscribe().unsubscribe()
+        pair.second.notUsed()
         return pair.first
     }
 
