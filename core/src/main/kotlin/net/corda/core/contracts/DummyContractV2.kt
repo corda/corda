@@ -11,6 +11,7 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2()
 /**
  * Dummy contract state for testing of the upgrade process.
  */
+// DOCSTART 1
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
     override val legacyContract = DummyContract::class.java
 
@@ -35,7 +36,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
 
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("")
-
+    // DOCEND 1
     /**
      * Generate an upgrade transaction from [DummyContract].
      *
