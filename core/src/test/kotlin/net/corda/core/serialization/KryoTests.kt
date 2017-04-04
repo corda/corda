@@ -131,6 +131,7 @@ class KryoTests {
         assertEquals(logger.name, logger2.name)
         assertTrue(logger === logger2)
     }
+
     @Test
     fun `HashCheckingStream (de)serialize`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })

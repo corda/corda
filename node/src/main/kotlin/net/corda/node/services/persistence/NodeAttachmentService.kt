@@ -68,9 +68,9 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     @VisibleForTesting @CordaSerializable
     class HashCheckingStream(val expected: SecureHash.SHA256,
                              val expectedSize: Int,
-                                     input: InputStream,
-                                     private val counter: CountingInputStream = CountingInputStream(input),
-                                     private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
+                             input: InputStream,
+                             private val counter: CountingInputStream = CountingInputStream(input),
+                             private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
         override fun close() {
             super.close()
 
@@ -87,7 +87,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
                                  private val checkOnLoad: Boolean) : Attachment {
         override fun open(): InputStream {
 
-            var stream = ByteArrayInputStream(attachment)
+            val stream = ByteArrayInputStream(attachment)
 
             // This is just an optional safety check. If it slows things down too much it can be disabled.
             if (id is SecureHash.SHA256 && checkOnLoad)
