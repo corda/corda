@@ -121,7 +121,7 @@ each side.
           data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
                   val price: Amount<Currency>,
-                  val sellerOwnerKey: CompositeKey
+                  val sellerOwnerKey: PublicKey
           )
 
           data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
