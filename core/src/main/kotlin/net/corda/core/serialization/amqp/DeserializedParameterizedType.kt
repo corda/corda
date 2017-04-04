@@ -26,6 +26,9 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
     }
 
     companion object {
+        // Maximum depth/nesting of generics before we suspect some DoS attempt.
+        const val MAX_DEPTH: Int = 32
+
         fun make(name: String, cl: ClassLoader = this.javaClass.classLoader): DeserializedParameterizedType {
             val paramTypes = mutableListOf<Type>()
             val pos = parseTypeList("$name>", paramTypes, cl)
@@ -42,7 +45,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             throw NotSerializableException("Expected type to be parameterized")
         }
 
-        private fun parseTypeList(params: String, types: MutableList<Type>, cl: ClassLoader): Int {
+        private fun parseTypeList(params: String, types: MutableList<Type>, cl: ClassLoader, depth: Int = 0): Int {
             var pos = 0
             var typeStart = 0
             var needAType = true
@@ -51,7 +54,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                 if (params[pos] == '<') {
                     val typeEnd = pos++
                     val paramTypes = mutableListOf<Type>()
-                    pos = parseTypeParams(params, pos, paramTypes, cl)
+                    pos = parseTypeParams(params, pos, paramTypes, cl, depth + 1)
                     types += makeParameterizedType(params.substring(typeStart, typeEnd).trim(), paramTypes, cl)
                     typeStart = pos
                     needAType = false
@@ -111,8 +114,11 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             return DeserializedParameterizedType(makeType(rawTypeName, cl), args.toTypedArray())
         }
 
-        private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader): Int {
-            return startPos + parseTypeList(params.substring(startPos), paramTypes, cl)
+        private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader, depth: Int): Int {
+            if (depth == MAX_DEPTH) {
+                throw NotSerializableException("Maximum depth of nested generics reached: $depth")
+            }
+            return startPos + parseTypeList(params.substring(startPos), paramTypes, cl, depth)
         }
     }
 
