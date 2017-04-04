@@ -20,7 +20,8 @@ class SerializationOutputTests {
     data class FooImplementsAndList(val bar: String, override val pub: Int, val names: List<String>) : FooInterface
 
     private fun serdes(obj: Any): Any {
-        val ser = SerializationOutput()
+        val factory = SerializerFactory()
+        val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
         val decoder = DecoderImpl().apply {
@@ -41,7 +42,13 @@ class SerializationOutputTests {
         val desObj = des.deserialize(bytes)
         println(desObj)
         assertEquals(obj, desObj)
-        return desObj
+
+        // Now repeat with a re-used factory
+        val ser2 = SerializationOutput(factory)
+        val des2 = DeserializationInput(factory)
+        val desObj2 = des2.deserialize(ser2.serialize(obj))
+        assertEquals(obj, desObj2)
+        return desObj2
     }
 
     @Test

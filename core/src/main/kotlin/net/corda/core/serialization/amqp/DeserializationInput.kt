@@ -10,13 +10,9 @@ import java.nio.ByteBuffer
 import java.util.*
 
 
-class DeserializationInput {
+class DeserializationInput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
-
-    // TODO: we wouldn't create this fresh each time, for performance.
-    private val serializerFactory: SerializerFactory = SerializerFactory()
-
 
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)

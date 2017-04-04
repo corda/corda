@@ -8,6 +8,14 @@ import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+// TODO: object references
+// TODO: array support
+// TODO: Set support?
+// TODO: Do we support specific List, Map implementations or force all to interface
+// TODO: Include some hash of the class properties into the text descriptor for a class
+// TODO: Support java constructors via -parameters compiler option and/or an annotation (align with Jackson?)
+// TODO: More generics scrutiny.  What about subclass of List with bound parameters, and/or another generic class?
+// TODO: Write tests for boxed and unboxed primitives.
 class SerializerFactory {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()

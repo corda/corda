@@ -7,20 +7,16 @@ import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
 
-class SerializationOutput {
+class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<Serializer> = mutableSetOf()
     private val schemaHistory: MutableSet<TypeNotation> = mutableSetOf()
 
-    // TODO: we wouldn't create this fresh each time for performance.
-    private val serializerFactory: SerializerFactory = SerializerFactory()
-
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             val data = Data.Factory.create()
-            // TODO: Write envelope
             data.putDescribed()
             data.enter()
             // Descriptor
