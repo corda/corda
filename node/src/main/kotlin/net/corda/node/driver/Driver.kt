@@ -576,6 +576,7 @@ class DriverDSL(
                                 "--logging-level=$loggingLevel",
                                 "--no-local-shell"
                         ),
+                        jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
                         workingDirectory = nodeConf.baseDirectory
