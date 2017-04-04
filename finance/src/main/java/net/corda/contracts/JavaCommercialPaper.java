@@ -217,12 +217,12 @@ public class JavaCommercialPaper implements Contract {
                 Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                 requireThat(require -> {
-                    require.by("must be timestamped", timestamp != null);
-                    require.by("received amount equals the face value: "
+                    require.using("must be timestamped", timestamp != null);
+                    require.using("received amount equals the face value: "
                             + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
-                    require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
-                    require.by("the received amount equals the face value", input.getFaceValue().equals(received));
-                    require.by("the paper must be destroyed", outputs.isEmpty());
+                    require.using("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
+                    require.using("the received amount equals the face value", input.getFaceValue().equals(received));
+                    require.using("the paper must be destroyed", outputs.isEmpty());
                     return Unit.INSTANCE;
                 });
 
@@ -252,11 +252,11 @@ public class JavaCommercialPaper implements Contract {
                         : timestampCommand.getBefore();
 
                 requireThat(require -> {
-                    require.by("output values sum to more than the inputs", inputs.isEmpty());
-                    require.by("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);
-                    require.by("must be timestamped", timestampCommand != null);
-                    require.by("the maturity date is not in the past", time != null && time.isBefore(output.getMaturityDate()));
-                    require.by("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
+                    require.using("output values sum to more than the inputs", inputs.isEmpty());
+                    require.using("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);
+                    require.using("must be timestamped", timestampCommand != null);
+                    require.using("the maturity date is not in the past", time != null && time.isBefore(output.getMaturityDate()));
+                    require.using("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
                     return Unit.INSTANCE;
                 });
 

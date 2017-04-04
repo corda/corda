@@ -79,13 +79,13 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
         when (command.value) {
             is Commands.Issue -> {
                 requireThat {
-                    "Issue of new WorkflowContract must not include any inputs" by (tx.inputs.isEmpty())
-                    "Issue of new WorkflowContract must be in a unique transaction" by (tx.outputs.size == 1)
+                    "Issue of new WorkflowContract must not include any inputs" using (tx.inputs.isEmpty())
+                    "Issue of new WorkflowContract must be in a unique transaction" using (tx.outputs.size == 1)
                 }
                 val issued = tx.outputs.get(0) as TradeApprovalContract.State
                 requireThat {
-                    "Issue requires the source Party as signer" by (command.signers.contains(issued.source.owningKey))
-                    "Initial Issue state must be NEW" by (issued.state == WorkflowState.NEW)
+                    "Issue requires the source Party as signer" using (command.signers.contains(issued.source.owningKey))
+                    "Initial Issue state must be NEW" using (issued.state == WorkflowState.NEW)
                 }
             }
             is Commands.Completed -> {
@@ -95,11 +95,11 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
                     val before = group.inputs.single()
                     val after = group.outputs.single()
                     requireThat {
-                        "Only a non-final trade can be modified" by (before.state == WorkflowState.NEW)
-                        "Output must be a final state" by (after.state in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED))
-                        "Completed command can only change state" by (before == after.copy(state = before.state))
-                        "Completed command requires the source Party as signer" by (command.signers.contains(before.source.owningKey))
-                        "Completed command requires the counterparty as signer" by (command.signers.contains(before.counterparty.owningKey))
+                        "Only a non-final trade can be modified" using (before.state == WorkflowState.NEW)
+                        "Output must be a final state" using (after.state in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED))
+                        "Completed command can only change state" using (before == after.copy(state = before.state))
+                        "Completed command requires the source Party as signer" using (command.signers.contains(before.source.owningKey))
+                        "Completed command requires the counterparty as signer" using (command.signers.contains(before.counterparty.owningKey))
                     }
                 }
             }

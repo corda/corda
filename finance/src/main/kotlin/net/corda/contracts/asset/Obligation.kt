@@ -159,8 +159,8 @@ class Obligation<P: Any> : Contract {
                         .filter { it.amount.token in template.acceptableIssuedProducts }
                 // Catch that there's nothing useful here, so we can dump out a useful error
                 requireThat {
-                    "there are fungible asset state outputs" by (assetStates.size > 0)
-                    "there are defined acceptable fungible asset states" by (acceptableAssetStates.size > 0)
+                    "there are fungible asset state outputs" using (assetStates.size > 0)
+                    "there are defined acceptable fungible asset states" using (acceptableAssetStates.size > 0)
                 }
 
                 val amountReceivedByOwner = acceptableAssetStates.groupBy { it.owner }
@@ -183,15 +183,15 @@ class Obligation<P: Any> : Contract {
                 requireThat {
                     // Insist that we can be the only contract consuming inputs, to ensure no other contract can think it's being
                     // settled as well
-                    "all move commands relate to this contract" by (moveCommands.map { it.value.contractHash }
+                    "all move commands relate to this contract" using (moveCommands.map { it.value.contractHash }
                             .all { it == null || it == Obligation<P>().legalContractReference })
                     // Settle commands exclude all other commands, so we don't need to check for contracts moving at the same
                     // time.
-                    "amounts paid must match recipients to settle" by inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
-                    "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" by (command.value.amount == totalAmountSettled)
-                    "signatures are present from all obligors" by command.signers.containsAll(requiredSigners)
-                    "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-                    "at obligor ${obligor} the obligations after settlement balance" by
+                    "amounts paid must match recipients to settle" using inputs.map { it.owner }.containsAll(amountReceivedByOwner.keys)
+                    "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" using (command.value.amount == totalAmountSettled)
+                    "signatures are present from all obligors" using command.signers.containsAll(requiredSigners)
+                    "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
+                    "at obligor ${obligor} the obligations after settlement balance" using
                             (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)
@@ -215,8 +215,8 @@ class Obligation<P: Any> : Contract {
             private fun verify(inputs: List<State<P>>,
                                outputs: List<State<P>>): Set<C> {
                 requireThat {
-                    "all inputs are in the normal state " by inputs.all { it.lifecycle == Lifecycle.NORMAL }
-                    "all outputs are in the normal state " by outputs.all { it.lifecycle == Lifecycle.NORMAL }
+                    "all inputs are in the normal state " using inputs.all { it.lifecycle == Lifecycle.NORMAL }
+                    "all outputs are in the normal state " using outputs.all { it.lifecycle == Lifecycle.NORMAL }
                 }
                 return emptySet()
             }
@@ -406,17 +406,17 @@ class Obligation<P: Any> : Contract {
                 val expectedOutput = input.copy(lifecycle = expectedOutputLifecycle)
 
                 requireThat {
-                    "there is a timestamp from the authority" by (timestamp != null)
-                    "the due date has passed" by (timestamp!!.after?.isAfter(deadline) ?: false)
-                    "input state lifecycle is correct" by (input.lifecycle == expectedInputLifecycle)
-                    "output state corresponds exactly to input state, with lifecycle changed" by (expectedOutput == actualOutput)
+                    "there is a timestamp from the authority" using (timestamp != null)
+                    "the due date has passed" using (timestamp!!.after?.isAfter(deadline) ?: false)
+                    "input state lifecycle is correct" using (input.lifecycle == expectedInputLifecycle)
+                    "output state corresponds exactly to input state, with lifecycle changed" using (expectedOutput == actualOutput)
                 }
             }
         }
         val owningPubKeys = inputs.filter { it is State<P> }.map { (it as State<P>).beneficiary }.toSet()
         val keysThatSigned = setLifecycleCommand.signers.toSet()
         requireThat {
-            "the owning keys are a subset of the signing keys" by keysThatSigned.containsAll(owningPubKeys)
+            "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
         }
     }
 
@@ -433,10 +433,10 @@ class Obligation<P: Any> : Contract {
         val netState = states.firstOrNull()?.bilateralNetState
 
         requireThat {
-            "at least two states are provided" by (states.size >= 2)
-            "all states are in the normal lifecycle state " by (states.all { it.lifecycle == Lifecycle.NORMAL })
-            "all states must be bilateral nettable" by (states.all { it.bilateralNetState == netState })
-            "signer is in the state parties" by (signer in netState!!.partyKeys)
+            "at least two states are provided" using (states.size >= 2)
+            "all states are in the normal lifecycle state " using (states.all { it.lifecycle == Lifecycle.NORMAL })
+            "all states must be bilateral nettable" using (states.all { it.bilateralNetState == netState })
+            "signer is in the state parties" using (signer in netState!!.partyKeys)
         }
 
         val out = states.reduce(State<P>::net)
@@ -483,7 +483,7 @@ class Obligation<P: Any> : Contract {
                                notary: Party,
                                vararg states: State<P>) {
         requireThat {
-            "all states are in the normal lifecycle state " by (states.all { it.lifecycle == Lifecycle.NORMAL })
+            "all states are in the normal lifecycle state " using (states.all { it.lifecycle == Lifecycle.NORMAL })
         }
         val groups = states.groupBy { it.multilateralNetState }
         val partyLookup = HashMap<CompositeKey, AnonymousParty>()
@@ -562,11 +562,11 @@ class Obligation<P: Any> : Contract {
         val obligationOwner = states.first().data.beneficiary
 
         requireThat {
-            "all fungible asset states use the same notary" by (assetStatesAndRefs.all { it.state.notary == notary })
-            "all obligation states are in the normal state" by (statesAndRefs.all { it.state.data.lifecycle == Lifecycle.NORMAL })
-            "all obligation states use the same notary" by (statesAndRefs.all { it.state.notary == notary })
-            "all obligation states have the same obligor" by (statesAndRefs.all { it.state.data.obligor == obligationIssuer })
-            "all obligation states have the same beneficiary" by (statesAndRefs.all { it.state.data.beneficiary == obligationOwner })
+            "all fungible asset states use the same notary" using (assetStatesAndRefs.all { it.state.notary == notary })
+            "all obligation states are in the normal state" using (statesAndRefs.all { it.state.data.lifecycle == Lifecycle.NORMAL })
+            "all obligation states use the same notary" using (statesAndRefs.all { it.state.notary == notary })
+            "all obligation states have the same obligor" using (statesAndRefs.all { it.state.data.obligor == obligationIssuer })
+            "all obligation states have the same beneficiary" using (statesAndRefs.all { it.state.data.beneficiary == obligationOwner })
         }
 
         // TODO: A much better (but more complex) solution would be to have two iterators, one for obligations,

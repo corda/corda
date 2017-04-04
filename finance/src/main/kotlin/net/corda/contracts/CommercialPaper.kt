@@ -143,8 +143,8 @@ class CommercialPaper : Contract {
                 val command = commands.requireSingleCommand<Commands.Move>()
                 val input = inputs.single()
                 requireThat {
-                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                    "the state is propagated" by (outputs.size == 1)
+                    "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                    "the state is propagated" using (outputs.size == 1)
                     // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                     // the input ignoring the owner field due to the grouping.
                 }
@@ -169,10 +169,10 @@ class CommercialPaper : Contract {
                 val received = tx.outputs.sumCashBy(input.owner)
                 val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                 requireThat {
-                    "the paper must have matured" by (time >= input.maturityDate)
-                    "the received amount equals the face value" by (received == input.faceValue)
-                    "the paper must be destroyed" by outputs.isEmpty()
-                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                    "the paper must have matured" using (time >= input.maturityDate)
+                    "the received amount equals the face value" using (received == input.faceValue)
+                    "the paper must be destroyed" using outputs.isEmpty()
+                    "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
                 }
 
                 return setOf(command.value)
