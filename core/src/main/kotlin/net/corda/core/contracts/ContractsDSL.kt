@@ -57,8 +57,15 @@ infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantit
 
 object Requirements {
     @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
-    infix inline fun String.by(expr: Boolean) {
+    infix inline fun String.using(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
+    }
+    // Avoid overloading Kotlin keywords
+    @Deprecated("This function is deprecated, use 'using' instead",
+        ReplaceWith("using (expr)", "net.corda.core.contracts.Requirements.using"))
+    @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
+    infix inline fun String.by(expr: Boolean) {
+        using(expr)
     }
 }
 
@@ -124,7 +131,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
     val command = commands.requireSingleCommand<T>()
     val keysThatSigned = command.signers.toSet()
     requireThat {
-        "the owning keys are a subset of the signing keys" by keysThatSigned.containsAll(owningPubKeys)
+        "the owning keys are a subset of the signing keys" using keysThatSigned.containsAll(owningPubKeys)
     }
     return command.value
 }

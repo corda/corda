@@ -33,7 +33,7 @@ class TransactionEncumbranceTests {
             val timeLockInput = tx.inputs.filterIsInstance<State>().singleOrNull() ?: return
             val time = tx.timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
             requireThat {
-                "the time specified in the time-lock has passed" by (time >= timeLockInput.validFrom)
+                "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
             }
         }
 

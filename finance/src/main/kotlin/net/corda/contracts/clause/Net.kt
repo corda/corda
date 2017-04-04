@@ -79,9 +79,10 @@ open class NetClause<C : CommandData, P : Any> : Clause<ContractState, C, Unit>(
         // Sum the columns of the matrices. This will yield the net amount payable to/from each party to/from all other participants.
         // The two summaries must match, reflecting that the amounts owed match on both input and output.
         requireThat {
-            "all input states use the same template" by (inputs.all { it.template == template })
-            "all output states use the same template" by (outputs.all { it.template == template })
-            "amounts owed on input and output must match" by (sumAmountsDue(inputBalances) == sumAmountsDue(outputBalances))
+            "all input states use the same template" using (inputs.all { it.template == template })
+            "all output states use the same template" using (outputs.all { it.template == template })
+            "amounts owed on input and output must match" using (sumAmountsDue(inputBalances) == sumAmountsDue
+            (outputBalances))
         }
 
         // TODO: Handle proxies nominated by parties, i.e. a central clearing service

@@ -109,8 +109,8 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
         val amountExitingLedger: Amount<Issued<T>> = exitCommand?.value?.amount ?: Amount(0, groupingKey)
 
         requireThat {
-            "there are no zero sized inputs" by inputs.none { it.amount.quantity == 0L }
-            "for reference ${deposit.reference} at issuer ${deposit.party} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" by
+            "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
+            "for reference ${deposit.reference} at issuer ${deposit.party} the amounts balance: ${inputAmount.quantity} - ${amountExitingLedger.quantity} != ${outputAmount.quantity}" using
                     (inputAmount == outputAmount + amountExitingLedger)
         }
 

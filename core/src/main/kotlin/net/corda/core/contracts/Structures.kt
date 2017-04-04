@@ -252,8 +252,8 @@ interface LinearState : ContractState {
             val inputIds = inputs.map { it.linearId }.distinct()
             val outputIds = outputs.map { it.linearId }.distinct()
             requireThat {
-                "LinearStates are not merged" by (inputIds.count() == inputs.count())
-                "LinearStates are not split" by (outputIds.count() == outputs.count())
+                "LinearStates are not merged" using (inputIds.count() == inputs.count())
+                "LinearStates are not split" using (outputIds.count() == outputs.count())
             }
             return emptySet()
         }

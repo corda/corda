@@ -14,7 +14,7 @@ open class NoZeroSizedOutputs<in S : FungibleAsset<T>, C : CommandData, T : Any>
                         commands: List<AuthenticatedObject<C>>,
                         groupingKey: Issued<T>?): Set<C> {
         requireThat {
-            "there are no zero sized outputs" by outputs.none { it.amount.quantity == 0L }
+            "there are no zero sized outputs" using outputs.none { it.amount.quantity == 0L }
         }
         return emptySet()
     }

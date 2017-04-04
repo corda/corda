@@ -41,11 +41,11 @@ abstract class AbstractIssue<in S : ContractState, C : CommandData, T : Any>(
         val inputAmount = inputs.sumOrZero(groupingKey)
         val outputAmount = outputs.sum()
         requireThat {
-            "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
+            "the issue command has a nonce" using (issueCommand.value.nonce != 0L)
             // TODO: This doesn't work with the trader demo, so use the underlying key instead
             // "output states are issued by a command signer" by (issuer in issueCommand.signingParties)
-            "output states are issued by a command signer" by (issuer.owningKey in issueCommand.signers)
-            "output values sum to more than the inputs" by (outputAmount > inputAmount)
+            "output states are issued by a command signer" using (issuer.owningKey in issueCommand.signers)
+            "output values sum to more than the inputs" using (outputAmount > inputAmount)
         }
 
         // This is safe because we've taken the command from a collection of C objects at the start

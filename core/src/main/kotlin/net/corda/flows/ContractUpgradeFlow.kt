@@ -33,10 +33,10 @@ object ContractUpgradeFlow {
         @Suppress("UNCHECKED_CAST")
         val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
         requireThat {
-            "The signing keys include all participant keys" by keysThatSigned.containsAll(participants)
-            "Inputs state reference the legacy contract" by (input.contract.javaClass == upgradedContract.legacyContract)
-            "Outputs state reference the upgraded contract" by (output.contract.javaClass == command.upgradedContractClass)
-            "Output state must be an upgraded version of the input state" by (output == upgradedContract.upgrade(input))
+            "The signing keys include all participant keys" using keysThatSigned.containsAll(participants)
+            "Inputs state reference the legacy contract" using (input.contract.javaClass == upgradedContract.legacyContract)
+            "Outputs state reference the upgraded contract" using (output.contract.javaClass == command.upgradedContractClass)
+            "Output state must be an upgraded version of the input state" using (output == upgradedContract.upgrade(input))
         }
     }
 
@@ -74,9 +74,9 @@ object ContractUpgradeFlow {
             val proposedTx = proposal.stx.tx
             val expectedTx = assembleBareTx(oldStateAndRef, proposal.modification).toWireTransaction()
             requireThat {
-                "The instigator is one of the participants" by oldStateAndRef.state.data.participants.contains(otherSide.owningKey)
-                "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" by (proposal.modification == authorisedUpgrade)
-                "The proposed tx matches the expected tx for this upgrade" by (proposedTx == expectedTx)
+                "The instigator is one of the participants" using oldStateAndRef.state.data.participants.contains(otherSide.owningKey)
+                "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification == authorisedUpgrade)
+                "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
             }
             ContractUpgradeFlow.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
         }
