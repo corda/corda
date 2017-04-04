@@ -90,4 +90,13 @@ class DeserializedParameterizedTypeTests {
     fun `test parameters on non-generic type`() {
         verify("java.lang.String<java.lang.Integer>")
     }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test excessive nesting`() {
+        var nested = "java.lang.Integer"
+        for (i in 1..DeserializedParameterizedType.MAX_DEPTH) {
+            nested = "java.util.List<$nested>"
+        }
+        verify(nested)
+    }
 }
