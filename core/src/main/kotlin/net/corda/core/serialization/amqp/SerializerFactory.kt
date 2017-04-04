@@ -123,7 +123,6 @@ class SerializerFactory {
                 serializersByDescriptor[serializer.typeDescriptor] = serializer
                 // TODO: replace all field serializers that reference this?
                 constructed.set(serializer)
-                serializer
                 return serializer
             } else {
                 return this
@@ -146,7 +145,7 @@ class SerializerFactory {
             if (isPrimitive(clazz)) {
                 serializersByType.computeIfAbsent(clazz) { PrimitiveSerializer(clazz) }
             } else {
-                makeSerializer(clazz) { ClassSerializer(clazz, this@SerializerFactory) }
+                makeSerializer(clazz) { ClassSerializer(clazz) }
             }
         }()
     }

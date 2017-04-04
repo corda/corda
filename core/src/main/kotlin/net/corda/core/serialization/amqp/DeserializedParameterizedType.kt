@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>) : ParameterizedType {
 
     init {
-        if (params.size == 0) {
+        if (params.isEmpty()) {
             throw NotSerializableException("Must be at least one parameter type in a ParameterizedType")
         }
         if (params.size != rawType.typeParameters.size) {
@@ -29,7 +29,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         // Maximum depth/nesting of generics before we suspect some DoS attempt.
         const val MAX_DEPTH: Int = 32
 
-        fun make(name: String, cl: ClassLoader = this.javaClass.classLoader): DeserializedParameterizedType {
+        fun make(name: String, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): DeserializedParameterizedType {
             val paramTypes = mutableListOf<Type>()
             val pos = parseTypeList("$name>", paramTypes, cl)
             if (pos <= name.length) {

@@ -35,7 +35,7 @@ data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
         override fun getTypeClass(): Class<*> = Envelope::class.java
 
         override fun newInstance(described: Any?): Envelope {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
             return Envelope(list[0], list[1] as Schema)
         }
     }
@@ -63,7 +63,8 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
         override fun getTypeClass(): Class<*> = Schema::class.java
 
         override fun newInstance(described: Any?): Schema {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
+            @Suppress("UNCHECKED_CAST")
             return Schema(list[0] as List<TypeNotation>)
         }
     }
@@ -99,7 +100,7 @@ data class Descriptor(val name: String?, val code: UnsignedLong?) : DescribedTyp
         override fun getTypeClass(): Class<*> = Descriptor::class.java
 
         override fun newInstance(described: Any?): Descriptor {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
             return Descriptor(list[0] as? String, list[1] as? UnsignedLong)
         }
     }
@@ -139,14 +140,15 @@ data class Field(val name: String, val type: String, val requires: List<String>,
         override fun getTypeClass(): Class<*> = Field::class.java
 
         override fun newInstance(described: Any?): Field {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
+            @Suppress("UNCHECKED_CAST")
             return Field(list[0] as String, list[1] as String, list[2] as List<String>, list[3] as? String, list[4] as? String, list[5] as Boolean, list[6] as Boolean)
         }
     }
 
     override fun toString(): String {
         val sb = StringBuilder("<field name=\"$name\" type=\"$type\"")
-        if (requires != null && requires.size > 0) {
+        if (requires.isNotEmpty()) {
             sb.append(" requires=\"")
             sb.append(requires.joinToString(","))
             sb.append("\"")
@@ -203,7 +205,8 @@ data class CompositeType(override val name: String, override val label: String?,
         override fun getTypeClass(): Class<*> = CompositeType::class.java
 
         override fun newInstance(described: Any?): CompositeType {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
+            @Suppress("UNCHECKED_CAST")
             return CompositeType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as Descriptor, list[4] as List<Field>)
         }
     }
@@ -213,17 +216,15 @@ data class CompositeType(override val name: String, override val label: String?,
         if (!label.isNullOrBlank()) {
             sb.append(" label=\"$label\"")
         }
-        if (provides != null && provides.size > 0) {
+        if (provides.isNotEmpty()) {
             sb.append(" provides=\"")
             sb.append(provides.joinToString(","))
             sb.append("\"")
         }
         sb.append(">\n")
         sb.append("  $descriptor\n")
-        if (fields != null) {
-            for (field in fields) {
-                sb.append("  $field\n")
-            }
+        for (field in fields) {
+            sb.append("  $field\n")
         }
         sb.append("</type>")
         return sb.toString()
@@ -251,7 +252,8 @@ data class RestrictedType(override val name: String, override val label: String?
         override fun getTypeClass(): Class<*> = RestrictedType::class.java
 
         override fun newInstance(described: Any?): RestrictedType {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
+            @Suppress("UNCHECKED_CAST")
             return RestrictedType(list[0] as String, list[1] as? String, list[2] as List<String>, list[3] as String, list[4] as Descriptor, list[5] as List<Choice>)
         }
     }
@@ -262,7 +264,7 @@ data class RestrictedType(override val name: String, override val label: String?
             sb.append(" label=\"$label\"")
         }
         sb.append(" source=\"$source\"")
-        if (provides != null && provides.size > 0) {
+        if (provides.isNotEmpty()) {
             sb.append(" provides=\"")
             sb.append(provides.joinToString(","))
             sb.append("\"")
@@ -295,7 +297,7 @@ data class Choice(val name: String, val value: String) : DescribedType {
         override fun getTypeClass(): Class<*> = Choice::class.java
 
         override fun newInstance(described: Any?): Choice {
-            val list = described as? List<Any> ?: throw IllegalStateException("Was expecting a list")
+            val list = described as? List<*> ?: throw IllegalStateException("Was expecting a list")
             return Choice(list[0] as String, list[1] as String)
         }
     }

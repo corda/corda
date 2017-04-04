@@ -5,7 +5,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
-    override val type: Type = if (declaredType is DeserializedParameterizedType) declaredType else DeserializedParameterizedType.make(declaredType.toString())
+    override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = declaredType.toString()
 
