@@ -118,14 +118,17 @@ val PublicKey.keys: Set<PublicKey> get() {
     else setOf(this)
 }
 
-fun PublicKey.isFulfilledBy(key: PublicKey): Boolean  = isFulfilledBy(setOf(key))
-fun PublicKey.isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
-    return if (this is CompositeKey) this.isFulfilledBy(keys)
-    else this in keys
+fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean  = isFulfilledBy(setOf(otherKey))
+fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean {
+    return if (this is CompositeKey) this.isFulfilledBy(otherKeys)
+    else this in otherKeys
 }
 
 /** Checks whether any of the given [keys] matches a leaf on the CompositeKey tree or a single PublicKey */
-fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>) = keys.intersect(otherKeys).isNotEmpty()
+fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
+    return if (this is CompositeKey) keys.intersect(otherKeys).isNotEmpty()
+    else this in otherKeys
+}
 
 /** Returns the set of all [PublicKey]s of the signatures */
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()
