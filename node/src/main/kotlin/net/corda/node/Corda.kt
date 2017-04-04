@@ -118,6 +118,10 @@ fun main(args: Array<String>) {
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+    val agentProperties = sun.misc.VMSupport.getAgentProperties()
+    if(agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+        log.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
+    }
     log.info("Starting as node on ${conf.p2pAddress}")
 
     try {
