@@ -1,17 +1,12 @@
 package net.corda.webserver.internal
 
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.loggerFor
 import net.corda.webserver.api.APIServer
 import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.ws.rs.core.Response
 
 class APIServerImpl(val rpcOps: CordaRPCOps) : APIServer {
-    companion object {
-        val logger = loggerFor<APIServerImpl>()
-    }
-
     override fun serverTime(): LocalDateTime {
         return LocalDateTime.ofInstant(rpcOps.currentNodeTime(), ZoneId.of("UTC"))
     }
