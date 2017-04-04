@@ -80,7 +80,7 @@ private fun execJar(jarName: String, dir: File, args: List<String> = listOf(), d
     val nodeName = dir.toPath().fileName
     val separator = System.getProperty("file.separator")
     val path = System.getProperty("java.home") + separator + "bin" + separator + "java"
-    val builder = ProcessBuilder(listOf(path, "-Dname=$nodeName") + getDebugPortArg(debugPort) + listOf("-jar", jarName) + args)
+    val builder = ProcessBuilder(listOf(path, "-Dname=$nodeName") + getDebugPortArg(debugPort) + listOf("-jar", jarName, "--no-local-shell") + args)
     builder.redirectError(Paths.get("error.${dir.toPath().fileName}.log").toFile())
     builder.inheritIO()
     builder.directory(dir)
