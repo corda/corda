@@ -192,7 +192,7 @@ is a three node example;
 
 .. code-block:: text
 
-    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes" // The output directory
         networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
         node {

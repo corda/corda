@@ -48,7 +48,7 @@ dependencies {
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.

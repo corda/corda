@@ -772,7 +772,7 @@ like to deploy for testing. See further details below:
 
 .. sourcecode:: groovy
 
-  task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
+  task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['jar']) {
       directory "./kotlin-source/build/nodes"                            // The output directory.
       networkMap "Controller"                              // The artemis address of the node to be used as the network map.
       node {

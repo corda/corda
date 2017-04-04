@@ -135,8 +135,9 @@ dependencies {
     compile project(':node')
     compile "com.google.guava:guava:$guava_version"
 
-    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    // Set to compile to ensure it exists now deploy nodes no longer relies on build
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // For the buildCordappDependenciesJar task
     runtime project(':client:jfx')
@@ -173,7 +174,7 @@ tasks.withType(Test) {
     reports.html.destination = file("${reporting.baseDir}/${name}")
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     networkMap "Controller"
     node {

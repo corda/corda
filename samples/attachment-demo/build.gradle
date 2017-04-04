@@ -51,7 +51,7 @@ dependencies {
     }
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [ ['user' : "demo", 'password' : "demo", 'permissions' : ["StartFlow.net.corda.flows.FinalityFlow"]] ]
 
     directory "./build/nodes"
