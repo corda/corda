@@ -1,28 +1,22 @@
-package net.corda.node.services
+package net.corda.node.services.vault
 
 import io.requery.query.Operator
-import net.corda.contracts.asset.Cash
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.unconsumedStates
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -36,9 +30,8 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.test.assertEquals
 
-class NodeVaultServiceTest {
+class VaultQueryTests {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService
     lateinit var dataSource: Closeable
@@ -53,14 +46,14 @@ class NodeVaultServiceTest {
         database = dataSourceAndDatabase.second
         databaseTransaction(database) {
             services = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = makeVaultService(dataSourceProps)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         storageService.validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
-                    vaultSvc.notifyAll(txs.map { it.tx })
+                    vaultService.notifyAll(txs.map { it.tx })
                 }
             }
         }
@@ -70,83 +63,6 @@ class NodeVaultServiceTest {
     fun tearDown() {
         dataSource.close()
         LogHelper.reset(NodeVaultService::class)
-    }
-
-    @Test
-    fun `states not local to instance`() {
-        databaseTransaction(database) {
-
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-
-            val w1 = vaultSvc.unconsumedStates<Cash.State>()
-            assertThat(w1).hasSize(3)
-
-            val originalStorage = services.storageService
-            val originalVault = vaultSvc
-            val services2 = object : MockServices() {
-                override val vaultService: VaultService get() = originalVault
-
-                // We need to be able to find the same transactions as before, too.
-                override val storageService: TxWritableStorageService get() = originalStorage
-
-                override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-                    for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
-                        vaultSvc.notify(stx.tx)
-                    }
-                }
-            }
-
-            val w2 = services2.vaultService.unconsumedStates<Cash.State>()
-            assertThat(w2).hasSize(3)
-        }
-    }
-
-    @Test
-    fun `states for refs`() {
-        databaseTransaction(database) {
-
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-
-            val w1 = vaultSvc.unconsumedStates<Cash.State>().toList()
-            assertThat(w1).hasSize(3)
-
-            val stateRefs = listOf(w1[1].ref, w1[2].ref)
-            val states = vaultSvc.statesForRefs(stateRefs)
-            assertThat(states).hasSize(2)
-        }
-    }
-
-    @Test
-    fun addNoteToTransaction() {
-        databaseTransaction(database) {
-
-            val freshKey = services.legalIdentityKey
-
-            // Issue a txn to Send us some Money
-            val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public.composite, DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
-
-            services.recordTransactions(listOf(usefulTX))
-
-            vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 1")
-            vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 2")
-            vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 3")
-            assertEquals(3, vaultSvc.getTransactionNotes(usefulTX.id).count())
-
-            // Issue more Money (GBP)
-            val anotherTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), freshKey.public.composite, DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
-
-            services.recordTransactions(listOf(anotherTX))
-
-            vaultSvc.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
-            assertEquals(1, vaultSvc.getTransactionNotes(anotherTX.id).count())
-        }
     }
 
     /**
@@ -188,8 +104,7 @@ class NodeVaultServiceTest {
         databaseTransaction(database) {
 
             val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
-            // NOTE: awaiting merge of Soft Locking PR
-//            vaultSvc.softLockReserve(setOf<StateRef>(issuedStates.first(), issuedStates.last()))
+            vaultSvc.softLockReserve(UUID.randomUUID(), setOf(issuedStates.states.first().ref, issuedStates.states.last().ref))
 
             val criteria = QueryCriteria(includeSoftlocks = false)
             val states = vaultSvc.queryBy<ContractState>(criteria)
@@ -227,7 +142,7 @@ class NodeVaultServiceTest {
             val consumedAfterExpression = QueryCriteria.LogicalExpression(
                     QueryCriteria.TimeInstantType.CONSUMED, Operator.GREATER_THAN, arrayOf(asOfDateTime))
             val criteria = QueryCriteria(status = Vault.StateStatus.CONSUMED,
-                                         timeCondition = consumedAfterExpression)
+                    timeCondition = consumedAfterExpression)
             val states = vaultSvc.queryBy<ContractState>(criteria)
             assertThat(states).hasSize(3)
         }
@@ -298,7 +213,7 @@ class NodeVaultServiceTest {
 
             val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
             val criteria = QueryCriteria(linearId = listOf(linearIds.first()),
-                                         latestOnly = true)
+                    latestOnly = true)
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(1)
         }
@@ -313,7 +228,7 @@ class NodeVaultServiceTest {
             val stateRefs = issuedStates.states.map { it.ref }.toList()
 
             val criteria = QueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()),
-                                         latestOnly = true)
+                    latestOnly = true)
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(2)
         }
