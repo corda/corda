@@ -89,7 +89,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     enum class StateStatus {
-        UNCONSUMED, CONSUMED
+        UNCONSUMED, CONSUMED, ALL
     }
 }
 
@@ -139,6 +139,15 @@ interface VaultService {
      * Note: the iterator is lazy and client driven.
      */
     fun <T : ContractState> queryBy(criteria: QueryCriteria): Iterable<StateAndRef<T>>
+
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters
+     * and returns a snapshot as an []Iterable] set of [StateRef] and streaming updates
+     * as an [Observable] of [Vault.Update]
+     *
+     * Note: the iterator is lazy and client driven.
+     */
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s

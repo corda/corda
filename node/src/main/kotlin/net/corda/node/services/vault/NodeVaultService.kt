@@ -15,13 +15,7 @@ import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
-import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
-import net.corda.core.crypto.toBase58String
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.crypto.*
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
@@ -223,7 +217,22 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun <T : ContractState> queryBy(criteria: QueryCriteria): Iterable<StateAndRef<T>> {
-        throw UnsupportedOperationException("not implemented")
+        TODO("not implemented")
+
+        // If [VaultQueryCriteria.PageSpecification] specified
+        // must return (CloseableIterator) result.get().iterator(skip, take)
+        // where
+        //  skip = Max[(pageNumber - 1),0] * pageSize
+        //  take = pageSize
+    }
+
+    override fun <T : ContractState> trackBy(criteria: QueryCriteria): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>> {
+        TODO("not implemented")
+
+        return mutex.locked {
+            Pair(queryBy(criteria),
+                 _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+        }
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {

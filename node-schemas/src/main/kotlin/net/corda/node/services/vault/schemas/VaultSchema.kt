@@ -117,6 +117,51 @@ object VaultSchema {
 
     }
 
+    @Table(name = "vault_fungible_states")
+    @Entity(model = "vault")
+    interface VaultFungibleState : Requery.PersistentState {
+
+        /** [OwnableState] attributes */
+        @get:ForeignKey
+        @get:OneToOne
+        var owner: VaultParty
+
+        /**
+         * [FungibleAsset] attributes
+         */
+
+        /** Amount attributes */
+
+        @get:Column(name = "quantity")
+        var quantity: Long
+
+        // T the type of the token, for example [Currency].
+        // used as a discriminator column ? [JunctionTable]
+        @get:Column(name = "token_type")
+        var tokenType: String
+
+        @get:Column(name = "token_value")
+        var tokenValue: String
+
+        /** Issuer attributes */
+
+        @get:ForeignKey
+        @get:OneToOne
+        var issuerParty: VaultParty
+
+        @get:Column(name = "issuer_reference")
+        var issuerRef: ByteArray
+
+        // the type of product underlying the issuer definition, for example [Currency], [Commodity], CP/Obligation [Terms] .
+        // used as a discriminator column ? [JunctionTable]
+        @get:Column(name = "issued_product_type")
+        var issuedProductType: String
+
+        /** refers to keys used to destroy amount in Exit command */
+        @get:OneToMany(mappedBy = "key")
+        var exitKeys: Set<VaultParty>
+    }
+
     @Table(name = "vault_party")
     @Entity(model = "vault")
     interface VaultParty : Persistable  {
