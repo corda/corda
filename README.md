@@ -61,7 +61,9 @@ To look at the Corda source and run some sample applications:
 
 ## Development State
  
-Corda is under active development and is maturing rapidly. We are targeting production readiness in 2017. The API will continue to evolve throughout 2017; backwards compatibility not assured until version 1.0
+Corda is under active development and is maturing rapidly. We are targeting
+production-readiness in 2017. The API will continue to evolve throughout 2017;
+backwards compatibility not assured until version 1.0.
 
 Pull requests, experiments, and contributions are encouraged and welcomed.
 
