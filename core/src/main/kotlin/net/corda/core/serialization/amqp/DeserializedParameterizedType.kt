@@ -7,7 +7,6 @@ import java.lang.reflect.Type
 
 
 class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>) : ParameterizedType {
-
     init {
         if (params.isEmpty()) {
             throw NotSerializableException("Must be at least one parameter type in a ParameterizedType")

@@ -1,15 +1,12 @@
 package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
-import com.google.common.util.concurrent.SettableFuture
 import org.apache.qpid.proton.amqp.*
-import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
 
 class SerializerFactory {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
@@ -18,7 +15,7 @@ class SerializerFactory {
     @Throws(NotSerializableException::class)
     fun get(actualType: Class<*>?, declaredType: Type): Serializer {
         if (declaredType is ParameterizedType) {
-            return serializersByType[declaredType] ?: {
+            return serializersByType.computeIfAbsent(declaredType) {
                 // We allow only List and Map.
                 // TODO: support Set?
                 val rawType = declaredType.rawType
@@ -34,7 +31,7 @@ class SerializerFactory {
                 } else {
                     throw NotSerializableException("Declared types of $declaredType are not supported.")
                 }
-            }()
+            }
         } else if (declaredType is Class<*>) {
             // Straight classes allowed
             return makeClassSerializer(actualType ?: declaredType)
@@ -72,13 +69,17 @@ class SerializerFactory {
     }
 
     private fun processRestrictedType(typeNotation: RestrictedType) {
-        val type = DeserializedParameterizedType.make(typeNotation.name)
-        get(null, type)
+        serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            val type = DeserializedParameterizedType.make(typeNotation.name)
+            get(null, type)
+        }
     }
 
     private fun processCompositeType(typeNotation: CompositeType) {
-        val clazz = Class.forName(typeNotation.name)
-        get(clazz, clazz)
+        serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            val clazz = Class.forName(typeNotation.name)
+            get(clazz, clazz)
+        }
     }
 
     private fun checkParameterisedTypesConcrete(actualTypeArguments: Array<out Type>) {
@@ -94,64 +95,19 @@ class SerializerFactory {
         }
     }
 
-    inner class UnderConstructionSerializer(override val type: Type) : Serializer() {
-        private val constructing = AtomicBoolean(false)
-        private val constructed: SettableFuture<Serializer> = SettableFuture.create()
-
-        override val typeDescriptor: String
-            get() = constructed.get().typeDescriptor
-
-        override fun writeClassInfo(output: SerializationOutput) {
-            constructed.get().writeClassInfo(output)
-        }
-
-        override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-            constructed.get().writeObject(obj, data, type, output)
-        }
-
-        override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput) {
-            constructed.get().readObject(obj, envelope, input)
-        }
-
-        fun replaceWith(makeSerializer: () -> Serializer): Serializer {
-            if (constructing.compareAndSet(false, true)) {
-                val serializer = makeSerializer()
-                serializersByType[type] = serializer
-                if (type is ParameterizedType && type !is DeserializedParameterizedType) {
-                    serializersByType[DeserializedParameterizedType.make(type.toString())] = serializer
-                }
-                serializersByDescriptor[serializer.typeDescriptor] = serializer
-                // TODO: replace all field serializers that reference this?
-                constructed.set(serializer)
-                return serializer
-            } else {
-                return this
-            }
-        }
-    }
-
-    private fun makeSerializer(type: Type, makeSerializer: () -> Serializer): Serializer {
-        val existingSerializer = serializersByType.computeIfAbsent(type) { UnderConstructionSerializer(type) }
-        if (existingSerializer is UnderConstructionSerializer) {
-            return existingSerializer.replaceWith(makeSerializer)
-        } else {
-            return existingSerializer
-        }
-    }
-
     private fun makeClassSerializer(clazz: Class<*>): Serializer {
-        return serializersByType[clazz] ?: {
+        return serializersByType.computeIfAbsent(clazz) {
             // TODO: check for array type
             if (isPrimitive(clazz)) {
-                serializersByType.computeIfAbsent(clazz) { PrimitiveSerializer(clazz) }
+                PrimitiveSerializer(clazz)
             } else {
-                makeSerializer(clazz) { ClassSerializer(clazz) }
+                ClassSerializer(clazz)
             }
-        }()
+        }
     }
 
     private fun makeListSerializer(declaredType: ParameterizedType): Serializer {
-        return makeSerializer(declaredType) { ListSerializer(declaredType) }
+        return ListSerializer(declaredType)
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): Serializer {
@@ -159,7 +115,7 @@ class SerializerFactory {
         if (HashMap::class.java.isAssignableFrom(rawType) && !LinkedHashMap::class.java.isAssignableFrom(rawType)) {
             throw NotSerializableException("Map type $declaredType is unstable under iteration.")
         }
-        return makeSerializer(declaredType) { MapSerializer(declaredType) }
+        return MapSerializer(declaredType)
     }
 
     companion object {
@@ -189,19 +145,3 @@ class SerializerFactory {
                 Symbol::class.java to "symbol")
     }
 }
-
-class PrimitiveSerializer(clazz: Class<*>) : Serializer() {
-    override val typeDescriptor: String = SerializerFactory.primitiveTypeName(Primitives.wrap(clazz))!!
-    override val type: Type = clazz
-
-    // NOOP since this is a primitive type.
-    override fun writeClassInfo(output: SerializationOutput) {
-    }
-
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        data.putObject(obj)
-    }
-
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any = obj
-}
-

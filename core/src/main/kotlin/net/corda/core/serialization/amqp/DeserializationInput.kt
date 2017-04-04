@@ -14,7 +14,7 @@ class DeserializationInput {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
 
-    // TODO: we wouldn't create this fresh each time for performance.
+    // TODO: we wouldn't create this fresh each time, for performance.
     private val serializerFactory: SerializerFactory = SerializerFactory()
 
 
