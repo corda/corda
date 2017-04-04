@@ -6,10 +6,20 @@ DemoBench is a standalone desktop application that makes it easy to configure an
 Downloading
 -----------
 
-Installers compatible with the latest Corda release will soon be downloadable from the R3 website.
+Installers compatible with the latest Corda release can be downloaded from the `R3 website`_.
+
+.. _R3 website: https://www.corda.net/downloads
 
 Running DemoBench
 -----------------
+
+DemoBench writes a log file to the following location:
+
++--------------+-------------------------------------------+
+| MacOSX/Linux | ``$HOME/demobench/demobench.log``         |
++--------------+-------------------------------------------+
+| Windows      | ``%USERPROFILE%\demobench\demobench.log`` |
++--------------+-------------------------------------------+
 
 Configuring a Node
   Each node must have a unique name to identify it to the network map service. DemoBench will also suggest local port numbers to use.
