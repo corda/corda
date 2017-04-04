@@ -72,7 +72,7 @@ class SerializerFactory {
     }
 
     private fun processRestrictedType(typeNotation: RestrictedType) {
-        val type = DeserializedParameterizedType(typeNotation.name)
+        val type = DeserializedParameterizedType.make(typeNotation.name)
         get(null, type)
     }
 
@@ -118,7 +118,7 @@ class SerializerFactory {
                 val serializer = makeSerializer()
                 serializersByType[type] = serializer
                 if (type is ParameterizedType && type !is DeserializedParameterizedType) {
-                    serializersByType[DeserializedParameterizedType(type.toString())] = serializer
+                    serializersByType[DeserializedParameterizedType.make(type.toString())] = serializer
                 }
                 serializersByDescriptor[serializer.typeDescriptor] = serializer
                 // TODO: replace all field serializers that reference this?

@@ -1,36 +1,130 @@
 package net.corda.core.serialization.amqp
 
+import java.io.NotSerializableException
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 
-class DeserializedParameterizedType(name: String) : ParameterizedType {
-    // TODO: maybe we need to normalise the name?
-    val _typeName: String = name.toString()
-    val _rawType = Class.forName(_typeName.substringBefore('<'))
+class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>) : ParameterizedType {
 
-    val _actualTypeParameters = {
-        // TODO: this needs to parse properly
-        // Parse name of form C<X,Y,Z...>
-        val text = name.toString()
-        val rawTypeName = text.substringBefore('<')
-        val params = text.substringAfter('<').substringBeforeLast('>')
-        val paramList = params.split(',')
-        (paramList.map { Class.forName(it) }).toTypedArray()
-    }()
+    init {
+        if (params.size == 0) {
+            throw NotSerializableException("Must be at least one parameter type in a ParameterizedType")
+        }
+        if (params.size != rawType.typeParameters.size) {
+            throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
+        }
+        // We do not check bounds.  Both our use cases (List and Map) are not bounded.
+    }
 
-    override fun getRawType(): Type = _rawType
+    private val _typeName: String = makeTypeName()
+
+    private fun makeTypeName(): String {
+        val paramsJoined = params.map { it.typeName }.joinToString(",")
+        return "${rawType.name}<$paramsJoined>"
+    }
+
+    companion object {
+        fun make(name: String, cl: ClassLoader = this.javaClass.classLoader): DeserializedParameterizedType {
+            val paramTypes = mutableListOf<Type>()
+            val pos = parseTypeList("$name>", paramTypes, cl)
+            if (pos <= name.length) {
+                throw NotSerializableException("Too many close generics '>'")
+            }
+            if (paramTypes.size != 1) {
+                throw NotSerializableException("Expected only one type, but got $paramTypes")
+            }
+            val type = paramTypes[0]
+            if (type is DeserializedParameterizedType) {
+                return type
+            }
+            throw NotSerializableException("Expected type to be parameterized")
+        }
+
+        private fun parseTypeList(params: String, types: MutableList<Type>, cl: ClassLoader): Int {
+            var pos = 0
+            var typeStart = 0
+            var needAType = true
+            var skippingWhitespace = false
+            while (pos < params.length) {
+                if (params[pos] == '<') {
+                    val typeEnd = pos++
+                    val paramTypes = mutableListOf<Type>()
+                    pos = parseTypeParams(params, pos, paramTypes, cl)
+                    types += makeParameterizedType(params.substring(typeStart, typeEnd).trim(), paramTypes, cl)
+                    typeStart = pos
+                    needAType = false
+                } else if (params[pos] == ',') {
+                    val typeEnd = pos++
+                    val typeName = params.substring(typeStart, typeEnd).trim()
+                    if (!typeName.isEmpty()) {
+                        types += makeType(typeName, cl)
+                    } else if (needAType) {
+                        throw NotSerializableException("Expected a type, not ','")
+                    }
+                    typeStart = pos
+                    needAType = true
+                } else if (params[pos] == '>') {
+                    val typeEnd = pos++
+                    val typeName = params.substring(typeStart, typeEnd).trim()
+                    if (!typeName.isEmpty()) {
+                        types += makeType(typeName, cl)
+                    } else if (needAType) {
+                        throw NotSerializableException("Expected a type, not '>'")
+                    }
+                    return pos
+                } else {
+                    // Skip forwards, checking character types
+                    if (pos == typeStart) {
+                        skippingWhitespace = false
+                        if (params[pos].isWhitespace()) {
+                            typeStart = pos++
+                        } else if (!needAType) {
+                            throw NotSerializableException("Not expecting a type")
+                        } else if (!params[pos].isJavaIdentifierStart()) {
+                            throw NotSerializableException("Invalid character at start of type: ${params[pos]}")
+                        } else {
+                            pos++
+                        }
+                    } else {
+                        if (params[pos].isWhitespace()) {
+                            pos++
+                            skippingWhitespace = true
+                        } else if (!skippingWhitespace && (params[pos] == '.' || params[pos].isJavaIdentifierPart())) {
+                            pos++
+                        } else {
+                            throw NotSerializableException("Invalid character in middle of type: ${params[pos]}")
+                        }
+                    }
+                }
+            }
+            throw NotSerializableException("Missing close generics '>'")
+        }
+
+        private fun makeType(typeName: String, cl: ClassLoader): Class<*> {
+            // Not generic
+            return Class.forName(typeName, false, cl)
+        }
+
+        private fun makeParameterizedType(rawTypeName: String, args: MutableList<Type>, cl: ClassLoader): Type {
+            return DeserializedParameterizedType(makeType(rawTypeName, cl), args.toTypedArray())
+        }
+
+        private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader): Int {
+            return startPos + parseTypeList(params.substring(startPos), paramTypes, cl)
+        }
+    }
+
+    override fun getRawType(): Type = rawType
 
     override fun getOwnerType(): Type {
-        throw UnsupportedOperationException("not implemented") //To change body of created functions use File | Settings | File Templates.
+        throw UnsupportedOperationException("Should not get called")
     }
 
-    override fun getActualTypeArguments(): Array<out Type> = _actualTypeParameters
+    override fun getActualTypeArguments(): Array<out Type> = params
 
-    override fun getTypeName(): String {
-        return _typeName
-    }
+    override fun getTypeName(): String = _typeName
 
     override fun toString(): String = _typeName
 
