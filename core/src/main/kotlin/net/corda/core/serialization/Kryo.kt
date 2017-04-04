@@ -379,7 +379,7 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
-        val children = readListOfLength<CompositeKey.NodeWeight>(kryo, input, minLen = 2)
+        val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
         val builder = CompositeKey.Builder()
         children.forEach { builder.addKey(it.node, it.weight)  }
         return builder.build(threshold) as CompositeKey
