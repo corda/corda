@@ -7,7 +7,7 @@ basedir=$( dirname "$0" )
 cd "$basedir"
 
 if which osascript >/dev/null; then
-    /usr/libexec/java_home -v 1.8 --exec java -jar runnodes.jar
+    /usr/libexec/java_home -v 1.8 --exec java -jar runnodes.jar "$@"
 else
-    java -jar runnodes.jar
+    java -jar runnodes.jar "$@"
 fi
