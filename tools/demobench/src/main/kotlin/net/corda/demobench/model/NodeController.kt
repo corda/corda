@@ -13,7 +13,7 @@ import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
 import tornadofx.Controller
 
-class NodeController : Controller() {
+class NodeController(check: atRuntime = ::checkExists) : Controller() {
     companion object {
         const val firstPort = 10000
         const val minPort = 1024
@@ -39,6 +39,10 @@ class NodeController : Controller() {
     init {
         log.info("Base directory: $baseDir")
         log.info("Corda JAR: $cordaPath")
+
+        // Check that the Corda capsule is available.
+        // We do NOT want to do this during unit testing!
+        check(cordaPath, "Cannot find Corda JAR.")
     }
 
     /**

@@ -1,6 +1,5 @@
 package net.corda.demobench.pty
 
-import com.jediterm.terminal.TtyConnector
 import com.jediterm.terminal.ui.*
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
@@ -21,13 +20,15 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
 
     val terminal = JediTermWidget(dimension, settings)
 
+    val isConnected: Boolean get() = terminal.ttyConnector?.isConnected ?: false
+
     override fun close() {
         log.info("Closing terminal '{}'", name)
         executor.shutdown()
         terminal.close()
     }
 
-    private fun createTtyConnector(command: Array<String>, environment: Map<String, String>, workingDir: String?): TtyConnector {
+    private fun createTtyConnector(command: Array<String>, environment: Map<String, String>, workingDir: String?): PtyProcessTtyConnector {
         val process = PtyProcess.exec(command, environment, workingDir)
 
         try {

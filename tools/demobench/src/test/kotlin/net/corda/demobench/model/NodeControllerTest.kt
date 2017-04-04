@@ -9,7 +9,7 @@ import org.junit.Test
 class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
-    private val controller = NodeController()
+    private val controller = NodeController({_,_ ->})
 
     @Test
     fun `test unique nodes after validate`() {
