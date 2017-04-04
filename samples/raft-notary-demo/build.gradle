@@ -73,7 +73,7 @@ task generateNotaryIdentity(type: JavaExec) {
     args = [nodeDirs, notaryType, notaryName]
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build', 'generateNotaryIdentity']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateNotaryIdentity']) {
     directory deployTo
     networkMap "Notary 1"
     node {

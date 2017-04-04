@@ -54,7 +54,7 @@ dependencies {
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     networkMap "Notary"
     node {
