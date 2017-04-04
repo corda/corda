@@ -3,6 +3,7 @@ package net.corda.core.serialization.amqp
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
+import java.io.NotSerializableException
 import java.nio.ByteBuffer
 import kotlin.test.assertEquals
 
@@ -18,6 +19,8 @@ class SerializationOutputTests {
     data class FooImplements(val bar: String, override val pub: Int) : FooInterface
 
     data class FooImplementsAndList(val bar: String, override val pub: Int, val names: List<String>) : FooInterface
+
+    data class WrapHashMap(val map: Map<String, String>)
 
     private fun serdes(obj: Any): Any {
         val factory = SerializerFactory()
@@ -65,8 +68,15 @@ class SerializationOutputTests {
     }
 
     @Test
-    fun `test foo implements and list `() {
+    fun `test foo implements and list`() {
         val obj = FooImplementsAndList("Hello World!", 123, listOf("Fred", "Ginger"))
+        serdes(obj)
+    }
+
+
+    @Test(expected = NotSerializableException::class)
+    fun `test dislike of HashMap`() {
+        val obj = WrapHashMap(HashMap<String, String>())
         serdes(obj)
     }
 }

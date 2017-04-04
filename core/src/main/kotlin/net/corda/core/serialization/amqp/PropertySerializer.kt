@@ -27,7 +27,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     private fun generateRequires(): List<String> {
-        return if (clazz.isInterface) listOf(clazz.name) else emptyList()
+        return if (clazz.isInterface) listOf(readMethod.genericReturnType.typeName) else emptyList()
     }
 
     private fun generateDefault(): String? {

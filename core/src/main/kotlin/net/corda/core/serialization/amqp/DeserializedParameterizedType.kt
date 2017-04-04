@@ -20,7 +20,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
     private val _typeName: String = makeTypeName()
 
     private fun makeTypeName(): String {
-        val paramsJoined = params.map { it.typeName }.joinToString(",")
+        val paramsJoined = params.map { it.typeName }.joinToString(", ")
         return "${rawType.name}<$paramsJoined>"
     }
 

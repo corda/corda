@@ -1,8 +1,10 @@
 package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.util.*
 
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
@@ -18,6 +20,9 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
+        if (HashMap::class.java.isAssignableFrom(obj.javaClass) && !LinkedHashMap::class.java.isAssignableFrom(obj.javaClass)) {
+            throw NotSerializableException("Map type ${obj.javaClass} is unstable under iteration.")
+        }
         // Write described
         data.putDescribed()
         data.enter()
@@ -36,6 +41,6 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
         // Can we verify the entries in the map?
-        return (obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }
+        return (obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }.toMap()
     }
 }
