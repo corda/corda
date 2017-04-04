@@ -18,10 +18,10 @@ sealed class CashFlowCommand {
     /**
      * A command to initiate the Cash flow with.
      */
-    class IssueCash(val amount: Amount<Currency>,
-                    val issueRef: OpaqueBytes,
-                    val recipient: Party,
-                    val notary: Party) : CashFlowCommand() {
+    data class IssueCash(val amount: Amount<Currency>,
+                         val issueRef: OpaqueBytes,
+                         val recipient: Party,
+                         val notary: Party) : CashFlowCommand() {
         override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashIssueFlow, amount, issueRef, recipient, notary)
     }
 
@@ -31,7 +31,7 @@ sealed class CashFlowCommand {
      * @param amount the amount of currency to issue on to the ledger.
      * @param recipient the party to issue the cash to.
      */
-    class PayCash(val amount: Amount<Currency>, val recipient: Party, val issuerConstraint: Party? = null) : CashFlowCommand() {
+    data class PayCash(val amount: Amount<Currency>, val recipient: Party, val issuerConstraint: Party? = null) : CashFlowCommand() {
         override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashPaymentFlow, amount, recipient)
     }
 
@@ -41,7 +41,7 @@ sealed class CashFlowCommand {
      * @param amount the amount of currency to exit from the ledger.
      * @param issueRef the reference previously specified on the issuance.
      */
-    class ExitCash(val amount: Amount<Currency>, val issueRef: OpaqueBytes) : CashFlowCommand() {
+    data class ExitCash(val amount: Amount<Currency>, val issueRef: OpaqueBytes) : CashFlowCommand() {
         override fun startFlow(proxy: CordaRPCOps) = proxy.startFlow(::CashExitFlow, amount, issueRef)
     }
 }

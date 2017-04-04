@@ -18,7 +18,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
         }
     }
 
-    override fun toString() = BaseEncoding.base16().encode(bytes)
+    override fun toString(): String = BaseEncoding.base16().encode(bytes)
 
     fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
     fun hashConcat(other: SecureHash) = (this.bytes + other.bytes).sha256()

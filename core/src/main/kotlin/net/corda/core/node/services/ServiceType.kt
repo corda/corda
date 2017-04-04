@@ -8,7 +8,7 @@ import net.corda.core.serialization.CordaSerializable
  * don't need a declared service type.
  */
 @CordaSerializable
-sealed class ServiceType(val id: String) {
+class ServiceType private constructor(val id: String) {
     init {
         // Enforce:
         //
@@ -16,9 +16,6 @@ sealed class ServiceType(val id: String) {
         //  * IDs can only contain alphanumeric, full stop and underscore ASCII characters
         require(id.matches(Regex("[a-z][a-zA-Z0-9._]+"))) { id }
     }
-    private class ServiceTypeImpl(baseId: String, subTypeId: String) : ServiceType("$baseId.$subTypeId")
-
-    private class ServiceTypeDirect(id: String) : ServiceType(id)
 
     companion object {
         val corda: ServiceType
@@ -26,7 +23,7 @@ sealed class ServiceType(val id: String) {
                 val stack = Throwable().stackTrace
                 val caller = stack.first().className
                 require(caller.startsWith("net.corda.")) { "Corda ServiceType namespace is reserved for Corda core components" }
-                return ServiceTypeDirect("corda")
+                return ServiceType("corda")
             }
 
         val notary: ServiceType = corda.getSubType("notary")
@@ -35,21 +32,22 @@ sealed class ServiceType(val id: String) {
 
         fun getServiceType(namespace: String, typeId: String): ServiceType {
             require(!namespace.startsWith("corda")) { "Corda namespace is protected" }
-            return ServiceTypeImpl(namespace, typeId)
+            return baseWithSubType(namespace, typeId)
         }
 
-        fun parse(id: String): ServiceType = ServiceTypeDirect(id)
+        fun parse(id: String): ServiceType = ServiceType(id)
+
+        private fun baseWithSubType(baseId: String, subTypeId: String) = ServiceType("$baseId.$subTypeId")
     }
 
-    fun getSubType(subTypeId: String): ServiceType = ServiceTypeImpl(id, subTypeId)
-
-    override operator fun equals(other: Any?): Boolean = (other is ServiceType) && (other.id == this.id)
+    fun getSubType(subTypeId: String): ServiceType = baseWithSubType(id, subTypeId)
 
     fun isSubTypeOf(superType: ServiceType) = (id == superType.id) || id.startsWith(superType.id + ".")
     fun isNotary() = isSubTypeOf(notary)
     fun isValidatingNotary() = isNotary() && id.contains(".validating")
     fun isNetworkMap() = id == networkMap.id
 
+    override fun equals(other: Any?): Boolean = other === this || other is ServiceType && other.id == this.id
     override fun hashCode(): Int = id.hashCode()
     override fun toString(): String = id
 }

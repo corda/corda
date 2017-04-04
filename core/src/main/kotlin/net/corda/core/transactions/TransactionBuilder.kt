@@ -27,7 +27,7 @@ import java.util.*
  * but for the [TransactionType.NotaryChange] transactions it is the set of all input [ContractState.participants].
  */
 open class TransactionBuilder(
-        protected val type: TransactionType = TransactionType.General(),
+        protected val type: TransactionType = TransactionType.General,
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),

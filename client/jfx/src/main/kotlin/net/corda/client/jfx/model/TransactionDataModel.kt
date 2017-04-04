@@ -30,9 +30,13 @@ data class PartiallyResolvedTransaction(
         val inputs: List<ObservableValue<InputResolution>>) {
     val id = transaction.id
 
-    sealed class InputResolution(val stateRef: StateRef) {
-        class Unresolved(stateRef: StateRef) : InputResolution(stateRef)
-        class Resolved(val stateAndRef: StateAndRef<ContractState>) : InputResolution(stateAndRef.ref)
+    sealed class InputResolution {
+        abstract val stateRef: StateRef
+
+        data class Unresolved(override val stateRef: StateRef) : InputResolution()
+        data class Resolved(val stateAndRef: StateAndRef<ContractState>) : InputResolution() {
+            override val stateRef: StateRef get() = stateAndRef.ref
+        }
     }
 
     companion object {
@@ -54,22 +58,13 @@ data class PartiallyResolvedTransaction(
     }
 }
 
-sealed class TransactionCreateStatus(val message: String?) {
-    class Started(message: String?) : TransactionCreateStatus(message)
-    class Failed(message: String?) : TransactionCreateStatus(message)
+data class FlowStatus(val status: String)
 
-    override fun toString(): String = message ?: javaClass.simpleName
-}
+sealed class StateMachineStatus {
+    abstract val stateMachineName: String
 
-data class FlowStatus(
-        val status: String
-)
-
-sealed class StateMachineStatus(val stateMachineName: String) {
-    class Added(stateMachineName: String) : StateMachineStatus(stateMachineName)
-    class Removed(stateMachineName: String) : StateMachineStatus(stateMachineName)
-
-    override fun toString(): String = "${javaClass.simpleName}($stateMachineName)"
+    data class Added(override val stateMachineName: String) : StateMachineStatus()
+    data class Removed(override val stateMachineName: String) : StateMachineStatus()
 }
 
 data class StateMachineData(

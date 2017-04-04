@@ -9,8 +9,8 @@ import java.nio.file.FileSystems
 import java.nio.file.Path
 
 sealed class ConnectionDirection {
-    class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
-    class Outbound(
+    data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
+    data class Outbound(
             val expectedCommonName: String? = null,
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()

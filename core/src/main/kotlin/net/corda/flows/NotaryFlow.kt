@@ -117,7 +117,7 @@ object NotaryFlow {
 
         private fun validateTimestamp(t: Timestamp?) {
             if (t != null && !timestampChecker.isValid(t))
-                throw NotaryException(NotaryError.TimestampInvalid())
+                throw NotaryException(NotaryError.TimestampInvalid)
         }
 
         /**
@@ -163,17 +163,17 @@ class NotaryException(val error: NotaryError) : FlowException("Error response fr
 
 @CordaSerializable
 sealed class NotaryError {
-    class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
+    data class Conflict(val txId: SecureHash, val conflict: SignedData<UniquenessProvider.Conflict>) : NotaryError() {
         override fun toString() = "One or more input states for transaction $txId have been used in another transaction"
     }
 
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
-    class TimestampInvalid : NotaryError()
+    object TimestampInvalid : NotaryError()
 
-    class TransactionInvalid(val msg: String) : NotaryError()
-    class SignaturesInvalid(val msg: String) : NotaryError()
+    data class TransactionInvalid(val msg: String) : NotaryError()
+    data class SignaturesInvalid(val msg: String) : NotaryError()
 
-    class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
+    data class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
         override fun toString() = cause.toString()
     }
 }

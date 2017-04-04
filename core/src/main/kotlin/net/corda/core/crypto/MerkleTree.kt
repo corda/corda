@@ -11,9 +11,11 @@ import java.util.*
  * signers, tx type, timestamp. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
  * from all leaves' hashes. If number of leaves is not a power of two, the tree is padded with zero hashes.
  */
-sealed class MerkleTree(val hash: SecureHash) {
-    class Leaf(val value: SecureHash) : MerkleTree(value)
-    class Node(val value: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree(value)
+sealed class MerkleTree {
+    abstract val hash: SecureHash
+
+    data class Leaf(override val hash: SecureHash) : MerkleTree()
+    data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
 
     companion object {
         private fun isPow2(num: Int): Boolean = num and (num-1) == 0

@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.SecureHash
 
-// TODO revisit when Kotlin 1.1 is released and data classes can extend other classes
 interface FlowIORequest {
     // This is used to identify where we suspended, in case of message mismatch errors and other things where we
     // don't have the original stack trace because it's in a suspended fiber.

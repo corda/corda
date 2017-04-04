@@ -252,16 +252,11 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         return network.createNode(legalName = legalName, nodeFactory = NoNMSNodeFactory)
     }
 
-    sealed class Changed(val node: NodeInfo) {
-        override fun equals(other: Any?): Boolean = other?.javaClass == this.javaClass && (other as Changed).node == this.node
-        override fun hashCode(): Int = node.hashCode()
-        override fun toString(): String = "${javaClass.simpleName}($node)"
-
-        class Added(node: NodeInfo) : Changed(node) {
+    sealed class Changed {
+        data class Added(val node: NodeInfo) : Changed() {
             constructor(node: MockNode) : this(node.info)
         }
-
-        class Removed(node: NodeInfo) : Changed(node) {
+        data class Removed(val node: NodeInfo) : Changed() {
             constructor(node: MockNode) : this(node.info)
         }
     }

@@ -26,17 +26,19 @@ data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
-)
+) {
+    override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
+}
 
 @CordaSerializable
-sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
-        override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
+sealed class StateMachineUpdate {
+    abstract val id: StateMachineRunId
+
+    data class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate() {
+        override val id: StateMachineRunId get() = stateMachineInfo.id
     }
 
-    class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
-        override fun toString() = "Removed($id)"
-    }
+    data class Removed(override val id: StateMachineRunId) : StateMachineUpdate()
 }
 
 /**
