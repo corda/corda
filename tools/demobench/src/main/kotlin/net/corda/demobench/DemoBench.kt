@@ -52,4 +52,4 @@ class DemoBench : App(DemoBenchView::class) {
     }
 }
 
-fun Process.getErrors(): List<String> = InputStreamReader(this.errorStream, UTF_8).readLines()
+fun Process.readErrorLines(): List<String> = InputStreamReader(this.errorStream, UTF_8).readLines()

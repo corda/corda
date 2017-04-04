@@ -1,7 +1,7 @@
 package net.corda.demobench.explorer
 
 import net.corda.core.utilities.loggerFor
-import net.corda.demobench.getErrors
+import net.corda.demobench.readErrorLines
 import java.io.IOException
 import java.util.concurrent.Executors
 import net.corda.demobench.model.NodeConfig
@@ -44,7 +44,7 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
 
             executor.submit {
                 val exitValue = p.waitFor()
-                val errors = p.getErrors()
+                val errors = p.readErrorLines()
                 process = null
 
                 if (errors.isEmpty()) {
