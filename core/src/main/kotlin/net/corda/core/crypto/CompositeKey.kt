@@ -51,28 +51,38 @@ class CompositeKey private constructor (val threshold: Int,
         val FORMAT = "X-Corda-Kryo"
     }
 
+    /**
+     * Takes single PublicKey and checks if CompositeKey requirements hold for that key.
+     */
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
 
     override fun getAlgorithm() = ALGORITHM
     override fun getEncoded(): ByteArray = this.serialize().bytes
     override fun getFormat() = FORMAT
 
-    // TODO Can CompositeKey be fulfilled by other composite keys? With composite signature it makes some sense.
-    fun isFulfilledBy(keys: Iterable<PublicKey>): Boolean {
+    /**
+     * Function checks if the public keys corresponding to the signatures are matched against the leaves of the composite
+     * key tree in question, and the total combined weight of all children is calculated for every intermediary node.
+     * If all thresholds are satisfied, the composite key requirement is considered to be met.
+     */
+    fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
+        if (keysToCheck.any { it is CompositeKey } ) return false
         val totalWeight = children.map { (node, weight) ->
             if (node is CompositeKey) {
-                if (node.isFulfilledBy(keys)) weight else 0
+                if (node.isFulfilledBy(keysToCheck)) weight else 0
             } else {
-                if (keys.contains(node)) weight else 0
+                if (keysToCheck.contains(node)) weight else 0
             }
         }.sum()
         return totalWeight >= threshold
     }
 
+    /**
+     * Set of all leaf keys of that CompositeKey.
+     */
     val keys: Set<PublicKey>
         get() = children.flatMap { it.node.keys }.toSet() // Uses PublicKey.keys extension.
 
-    // Auto-generated. TODO: remove once data class inheritance is enabled
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CompositeKey) return false
@@ -127,6 +137,9 @@ class CompositeKey private constructor (val threshold: Int,
     }
 }
 
-/** Returns the set of all [PublicKey]s contained within the PublicKey. These may be also [CompositeKey]s */
-val Iterable<PublicKey>.keys: Set<PublicKey>
+/**
+ * Returns the set of all single [PublicKey]s contained within the PublicKey iterable. If an element of the set is a single PublicKey
+ * it gives just that key, if it is a CompositeKey it returns all leaf keys for that composite element.
+ */
+val Iterable<PublicKey>.getSingleKeys: Set<PublicKey>
     get() = flatMap { it.keys }.toSet()

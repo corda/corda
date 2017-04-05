@@ -46,7 +46,7 @@ class TransactionTests {
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
                 signers = listOf(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public),
-                type = TransactionType.General(),
+                type = TransactionType.General,
                 timestamp = null
         )
         assertEquals(

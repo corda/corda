@@ -7,7 +7,6 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
-import com.sun.javaws.exceptions.InvalidArgumentException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader

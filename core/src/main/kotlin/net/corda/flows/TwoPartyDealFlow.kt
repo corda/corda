@@ -256,7 +256,7 @@ object TwoPartyDealFlow {
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in signingPubKeys.keys) {
+            for (publicKey in signingPubKeys.getSingleKeys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
                 ptx.signWith(KeyPair(publicKey, privateKey))
             }
