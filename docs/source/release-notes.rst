@@ -7,8 +7,7 @@ the previous milestone release.
 Milestone 10
 ------------
 
-We have delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increase our productivity.
-We have also introduced a new demobench and Corda shell to make running and demoing Corda easier for the corda community.
+We are introducing a new DemoBench and Corda shell in Corda M10 to make running and demoing Corda easier for the corda community.
 
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
@@ -17,18 +16,20 @@ be easily added to the node by simply dropping Groovy or Java files into the nod
 We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
 The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following features:
- #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
- #. Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
- #. You can launch an Explorer instance for each node at the click of a button. Credentials are handed to the Explorer so it starts out logged in already.
+ #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
+ #. Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
+ #. You can launch an Corda Explorer instance for each node at the click of a button. Credentials are handed to the Corda Explorer so it starts out logged in already.
  #. Some basic statistics are shown about each node, informed via the RPC connection.
  #. Another button launches a database viewer in the system browser.
  #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
 
-Soft Locking is a new feature implemented in the vault to prevents a node constructing transactions that attempt to use the same input(s) simultaneously.
-Such transactions would result in naturally wasted work when the notary rejects them as double spend attempts.
+Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the same input(s) simultaneously.
+Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
 Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
 
-This release contains tons of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`changelog`.
+We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increases our productivity.
+
+This release contains a large number of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`changelog`.
 
 Milestone 9
 -----------

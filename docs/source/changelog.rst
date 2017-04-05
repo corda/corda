@@ -8,36 +8,31 @@ Milestone 10.0
 
 .. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij to 2017.1 and kotlin-plugin to 1.1.1 in order to run Corda demos in IntelliJ.
 
-.. warning:: The Kapt generated model are no longer included in our codebase, if you experience ``unresolved references`` error when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or ``./gradlew kaptKotlin`` in other systems.
+.. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references`` errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or ``./gradlew kaptKotlin`` in other systems.
              Alternatively, perform a full gradle build or install.
 
-* Corda Demobench:
+.. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation processor.
+
+* Corda DemoBench:
     * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
-        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
-        * Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
-        * You can launch an Explorer instance for each node via the demobanch UI. Credentials are handed to the Explorer so it starts out logged in already.
+        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
+        * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
+        * You can launch an Corda Explorer instance for each node via the demobanch UI. Credentials are handed to the Corda Explorer so it starts out logged in already.
         * Some basic statistics are shown about each node, informed via the RPC connection.
         * Another button launches a database viewer in the system browser.
         * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
-    * You can download Corda demobench from `here <https://www.corda.net/downloads/>`_
+    * You can download Corda DemoBench from `here <https://www.corda.net/downloads/>`_
 
 * Vault:
-    * Soft Locking is a new feature implemented in the vault which prevents a node constructing transactions that attempt to use the same input(s) simultaneously.
-    * Such transactions would result in naturally wasted work when the notary rejects them as double spend attempts.
+    * Soft Locking is a new feature implemented in the vault which prevent a node constructing transactions that attempt to use the same input(s) simultaneously.
+    * Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
     * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
 
-* Corda Shell:
+* Corda Shell :
     * The shell lets developers and node administrators easily command the node by running flows, RPCs and SQL queries.
     * It provides a variety of commands to monitor the node.
     * The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
     * We have many enhancements planned over time including SSH access, more commands and better tab completion.
-
-* Dependencies changes:
-    * Upgraded Kotlin to v1.1.1.
-    * Upgraded Gradle to v3.4.1.
-    * Upgraded Requery to v1.2.1.
-    * Upgraded H2 to v1.4.194.
-    * Replaced kotlinx-support-jdk8 with kotlin-stdlib-jre8.
 
 * API changes:
     * The new Jackson module provides JSON/YAML serialisers for common Corda datatypes.
@@ -61,7 +56,14 @@ Milestone 10.0
 
 * RPC client changes:
     * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker.
-      CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
+    * CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
+
+* Dependencies changes:
+    * Upgraded Kotlin to v1.1.1.
+    * Upgraded Gradle to v3.4.1.
+    * Upgraded Requery to v1.2.1.
+    * Upgraded H2 to v1.4.194.
+    * Replaced kotlinx-support-jdk8 with kotlin-stdlib-jre8.
 
 * Improvements:
     * Added ``--version`` command line flag to print the version of the node.
