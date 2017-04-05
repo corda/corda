@@ -93,7 +93,7 @@ When opening a Corda project for the first time from the IDEA splash screen, ple
 and then import the Gradle project by clicking "Import Gradle project" in the popup bubble on the lower right-hand side of the screen. 
 If you instead pick "Import Project" on the splash screen, a bug in IDEA will cause Corda's pre-packaged run configurations to be erased. 
 
-If you see this warning too late, that's not a problem - just use ``git checkout .idea/runConfiguration`` or the version control tab in 
+If you see this warning too late, that's not a problem - just use ``git checkout .idea/runConfigurations`` or the version control tab in 
 IDEA to undelete the files.
 
 IDEA's build of the project may need to be resynced from time to time. This can be done from within IDEA by going to "View" -> "Tool Windows" -> "Gradle" 
