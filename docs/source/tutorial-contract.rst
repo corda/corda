@@ -438,8 +438,8 @@ logic.
               is Commands.Move -> {
                   val input = inputs.single()
                   requireThat {
-                      "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                      "the state is propagated" by (group.outputs.size == 1)
+                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                      "the state is propagated" using (group.outputs.size == 1)
                       // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                       // the input ignoring the owner field due to the grouping.
                   }
@@ -451,10 +451,10 @@ logic.
                   val received = tx.outputs.sumCashBy(input.owner)
                   val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                   requireThat {
-                      "the paper must have matured" by (time >= input.maturityDate)
-                      "the received amount equals the face value" by (received == input.faceValue)
-                      "the paper must be destroyed" by outputs.isEmpty()
-                      "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                      "the paper must have matured" using (time >= input.maturityDate)
+                      "the received amount equals the face value" using (received == input.faceValue)
+                      "the paper must be destroyed" using outputs.isEmpty()
+                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
                   }
               }
 
@@ -463,9 +463,9 @@ logic.
                   val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                   requireThat {
                       // Don't allow people to issue commercial paper under other entities identities.
-                      "output states are issued by a command signer" by (output.issuance.party.owningKey in command.signers)
-                      "output values sum to more than the inputs" by (output.faceValue.quantity > 0)
-                      "the maturity date is not in the past" by (time < output.maturityDate)
+                      "output states are issued by a command signer" using (output.issuance.party.owningKey in command.signers)
+                      "output values sum to more than the inputs" using (output.faceValue.quantity > 0)
+                      "the maturity date is not in the past" using (time < output.maturityDate)
                       // Don't allow an existing CP state to be replaced by this issuance.
                       "can't reissue an existing state" by inputs.isEmpty()
                   }
@@ -531,7 +531,7 @@ is straightforward: we are simply using the ``Preconditions.checkState`` method 
 built into the language. In fact *requireThat* is an ordinary function provided by the platform's contract API. Kotlin
 supports the creation of *domain specific languages* through the intersection of several features of the language, and
 we use it here to support the natural listing of requirements. To see what it compiles down to, look at the Java version.
-Each ``"string" by (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
+Each ``"string" using (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
 true, with an ``IllegalStateException`` being thrown that contains the string if not. It's just another way to write out a regular
 assertion, but with the English-language requirement being put front and center.
 

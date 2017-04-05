@@ -459,14 +459,14 @@ To check what validation is performed over the IOU data, have a look at the ``IO
 .. sourcecode:: kotlin
 
   // Generic constraints around the IOU transaction.
-  "No inputs should be consumed when issuing an IOU." by (tx.inputs.isEmpty())
-  "Only one output state should be created." by (tx.outputs.size == 1)
+  "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
+  "Only one output state should be created." using (tx.outputs.size == 1)
   val out = tx.outputs.single() as IOUState
-  "The sender and the recipient cannot be the same entity." by (out.sender != out.recipient)
-  "All of the participants must be signers." by (command.signers.containsAll(out.participants))
+  "The sender and the recipient cannot be the same entity." using (out.sender != out.recipient)
+  "All of the participants must be signers." using (command.signers.containsAll(out.participants))
 
   // IOU-specific constraints.
-  "The IOU's value must be non-negative." by (out.iou.value > 0)
+  "The IOU's value must be non-negative." using (out.iou.value > 0)
 
 **Once an IOU has been submitted:**
 
