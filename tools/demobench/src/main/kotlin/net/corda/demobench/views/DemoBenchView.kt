@@ -14,7 +14,7 @@ import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 
-class DemoBenchView : View("Corda Demo Bench") {
+class DemoBenchView : View("Corda DemoBench") {
 
     override val root by fxml<Parent>()
 

@@ -70,7 +70,7 @@ class NodeTabView : Fragment() {
                     }
                 }
 
-                fieldset("Cordapps") {
+                fieldset("CorDapps") {
                     styleClass.addAll("cordapps-panel")
 
                     listview(cordapps) {
@@ -81,7 +81,7 @@ class NodeTabView : Fragment() {
                             key.consume()
                         }
                     }
-                    button("Add Cordapp") {
+                    button("Add CorDapp") {
                         setOnAction {
                             val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
                             if (!cordapps.contains(app)) {
@@ -121,9 +121,9 @@ class NodeTabView : Fragment() {
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
 
-        chooser.title = "Cordapps"
+        chooser.title = "CorDapps"
         chooser.initialDirectory = jvm.dataHome.toFile()
-        chooser.extensionFilters.add(FileChooser.ExtensionFilter("Cordapps (*.jar)", "*.jar", "*.JAR"))
+        chooser.extensionFilters.add(FileChooser.ExtensionFilter("CorDapps (*.jar)", "*.jar", "*.JAR"))
     }
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
