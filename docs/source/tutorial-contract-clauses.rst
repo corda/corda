@@ -136,8 +136,8 @@ and is included in the ``CommercialPaper.kt`` code.
                     val command = commands.requireSingleCommand<Commands.Move>()
                     val input = inputs.single()
                     requireThat {
-                        "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                        "the state is propagated" by (outputs.size == 1)
+                        "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                        "the state is propagated" using (outputs.size == 1)
                         // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                         // the input ignoring the owner field due to the grouping.
                     }
