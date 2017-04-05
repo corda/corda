@@ -195,7 +195,7 @@ task javapackage(dependsOn: 'distZip') {
                 property(name: 'org.jboss.logging.provider', value: 'slf4j')
             }
 
-            preferences(install: false)
+            preferences(install: true)
         }
     }
 }
