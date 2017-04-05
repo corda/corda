@@ -7,7 +7,30 @@ Milestone 10.0
 --------------
 
 .. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij to 2017.1 and kotlin-plugin to 1.1.1 in order to run Corda demos in IntelliJ.
-             Also, the Kapt generated model are no longer included in our codebase, please run ``kaptKotlin`` gradle task if you experience problem with ``Model`` class when building in IntelliJ.
+
+.. warning:: The Kapt generated model are no longer included in our codebase, if you experience ``unresolved references`` error when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or ``./gradlew kaptKotlin`` in other systems.
+             Alternatively, perform a full gradle build or install.
+
+* Corda Demobench:
+    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
+        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
+        * Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
+        * You can launch an Explorer instance for each node via the demobanch UI. Credentials are handed to the Explorer so it starts out logged in already.
+        * Some basic statistics are shown about each node, informed via the RPC connection.
+        * Another button launches a database viewer in the system browser.
+        * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+    * You can download Corda demobench from `here <https://www.corda.net/downloads/>`_
+
+* Vault:
+    * Soft Locking is a new feature implemented in the vault which prevents a node constructing transactions that attempt to use the same input(s) simultaneously.
+    * Such transactions would result in naturally wasted work when the notary rejects them as double spend attempts.
+    * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
+
+* Corda Shell:
+    * The shell lets developers and node administrators easily command the node by running flows, RPCs and SQL queries.
+    * It provides a variety of commands to monitor the node.
+    * The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
+    * We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
 * Dependencies changes:
     * Upgraded Kotlin to v1.1.1.
@@ -19,13 +42,13 @@ Milestone 10.0
 * API changes:
     * The new Jackson module provides JSON/YAML serialisers for common Corda datatypes.
       If you have previously been using the JSON support in the standalone web server,
-      please be aware that amounts are now serialised as strings instead of { quantity, token } pairs as before.
-      The old format is still accepted, but new JSON will be produced using strings like "1000.00 USD" when writing.
+      please be aware that Amounts are now serialised as strings instead of { quantity, token } pairs as before.
+      The old format is still accepted, but the new JSON will be produced using strings like "1000.00 USD" when writing.
       You can use any format supported by ``Amount.parseCurrency`` as input.
 
     * We have restructured client package in this milestone.
         * ``CordaClientRPC`` is now in the new ``:client:rpc`` module.
-        * The old ``:client`` module has been broken into ``:client:jfx`` and ``:client:mock``.
+        * The old ``:client`` module has been split up into ``:client:jfx`` and ``:client:mock``.
         * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the common RPC classes such as ``RPCException`` and ``User``.
 
 * Configuration:
@@ -37,33 +60,16 @@ Milestone 10.0
     * Pool Kryo instances for efficiency.
 
 * RPC client changes:
-    * Added a non-ssl connector to artemis broker for non-ssl RPC connection.
-      CordaRPCClient can only connect to ``rpcAddress``, please make sure ``rpcAddress`` is configured in the node.
-
-* Vault:
-    * Soft Locking is a new feature implemented in the vault which prevents a node constructing transactions that attempt to use the same input(s) simultaneously.
-    * Such transactions would result in naturally wasted work when the notary rejects them as double spend attempts.
-    * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
-
-* Corda Demobench:
-    * DemoBench is a new tool to make configure and launch local Corda nodes easier. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
-        * New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
-        * Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
-        * You can launch an Explorer instance for each node at the click of a button. Credentials are handed to the Explorer so it starts out logged in already.
-        * Some basic statistics are shown about each node, informed via the RPC connection.
-        * Another button launches a database viewer in the system browser.
-        * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
-    * You can download Corda demobench from `here <https://www.corda.net/downloads/>`_
+    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker.
+      CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
 
 * Improvements:
     * Added ``--version`` command line flag to print the version of the node.
     * Flows written in Java can now execute a sub-flow inside ``UntrustworthyData.unwrap``.
-    * Added additional JUnit tests for coin selection by issuer.
 
 * Bug fixes:
     * ``--logging-level`` command line flag was previously broken, now correctly sets the logging level.
     * Fixed bug whereby Cash Exit was not taking into account the issuer reference.
-
 
 
 Milestone 9.1

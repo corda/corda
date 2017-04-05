@@ -24,7 +24,11 @@ The new "DemoBench" makes it easy to configure and launch local Corda nodes. It 
  #. Another button launches a database viewer in the system browser.
  #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
 
-This release contains tons of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`change-log`.
+Soft Locking is a new feature implemented in the vault to prevents a node constructing transactions that attempt to use the same input(s) simultaneously.
+Such transactions would result in naturally wasted work when the notary rejects them as double spend attempts.
+Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
+
+This release contains tons of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`changelog`.
 
 Milestone 9
 -----------
@@ -68,4 +72,4 @@ clients.
 There have also been dozens of bug fixes, performance improvements and usability tweaks. Upgrading is definitely
 worthwhile and will only take a few minutes for most apps.
 
-For a full list of changes please see :doc:`change-log`.
+For a full list of changes please see :doc:`changelog`.
