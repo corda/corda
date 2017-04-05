@@ -7,19 +7,24 @@ the previous milestone release.
 Milestone 10
 ------------
 
+We have delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increase our productivity.
+We have also introduced a new demobench and Corda shell to make running and demoing Corda easier for the corda community.
+
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
 the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
 be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
 We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
-There is a new tool "DemoBench", which makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following features:
+The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following features:
  #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which Cordapps will be loaded.
  #. Each tab contains a terminal emulator, attached to the pty of the node. This lets you see console output.
  #. You can launch an Explorer instance for each node at the click of a button. Credentials are handed to the Explorer so it starts out logged in already.
  #. Some basic statistics are shown about each node, informed via the RPC connection.
  #. Another button launches a database viewer in the system browser.
  #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+
+This release contains tons of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`change-log`.
 
 Milestone 9
 -----------
