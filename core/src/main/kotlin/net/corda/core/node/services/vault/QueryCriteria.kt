@@ -3,35 +3,43 @@ package net.corda.core.node.services.vault
 import io.requery.kotlin.Logical
 import io.requery.query.Condition
 import io.requery.query.Operator
+import io.requery.query.Order
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria.LogicalExpression
-import net.corda.core.node.services.vault.QueryCriteria.TokenType
-import net.corda.core.node.services.vault.QueryCriteria.IssuedProductType
-import net.corda.core.node.services.vault.QueryCriteria.TimeInstantType
+import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.serialization.OpaqueBytes
 import java.time.Instant
 
+/**
+ * Indexing assumptions:
+ * QueryCriteria assumes underlying schema tables are correctly indexed for performance.
+ *
+ */
+
 interface QueryCriteria {
 
+    fun and(criteria: QueryCriteria): QueryCriteria
+
+    // timestamps stored in the vault states table [VaultSchema.VaultStates]
     enum class TimeInstantType {
         RECORDED,
         CONSUMED
     }
 
+    // Fungible asset: [Amount<T>]
+    // should this be a free-form string attribute?
     enum class TokenType {
-        CURRENCY
-    }
-
-    enum class IssuedProductType {
         CURRENCY,
         COMMODITY,
-        TERMS
+        OTHER
     }
 
+    //
+    // NOTE: this class leverages Requery types: [Logical] [Condition] [Operator]
+    //
     class LogicalExpression<L, R>(leftOperand: L,
                                   operator: Operator,
                                   rightOperand: R?) : Logical<L, R> {
@@ -43,14 +51,7 @@ interface QueryCriteria {
         override fun getRightOperand(): R = rightOperand
         override fun getLeftOperand(): L = leftOperand
     }
-}
 
-open class VaultQueryCriteria(val status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
-                         val stateRefs: Collection<StateRef>? = emptyList(),
-                         val notary: Party? = null,
-                         val includeSoftlocks: Boolean? = true,
-                         val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-                         val paging: PageSpecification? = null) : QueryCriteria {
     /**
      *  Provide simple ability to specify an offset within a result set and the number of results to
      *  return from that offset (eg. page size)
@@ -65,79 +66,77 @@ open class VaultQueryCriteria(val status: Vault.StateStatus? = Vault.StateStatus
     data class PageSpecification(val pageNumber: Int, val pageSize: Int)
 }
 
-/**
- * Specify any query criteria by leveraging the Requery Query DSL
- */
-class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>) : QueryCriteria
+open class VaultQueryCriteria(val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                          // Usability question: single Enum Type value or Collection of Enums?
+                          // Vault.StateState.UNCONSUMED or setOf(Vault.StateState.UNCONSUMED) (default)
+                          // Vault.StateState.CONSUMED or setOf(Vault.StateState.CONSUMED)
+                          // Vault.StateState.ALL or setOf(Vault.StateState.CONSUMED, Vault.StateState.UNCONSUMED)
+                              val stateRefs: Collection<StateRef>? = null,
+                              val notary: Collection<Party>? = null,
+                              val includeSoftlocks: Boolean? = true,
+                              val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
+                              val paging: PageSpecification? = null) : QueryCriteria {
+
+    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
+}
 
 /**
  * LinearStateQueryCriteria
  */
-class LinearStateQueryCriteria(val linearId: List<UniqueIdentifier>? = emptyList(),
+class LinearStateQueryCriteria(val linearId: List<UniqueIdentifier>? = null,
                                val latestOnly: Boolean? = false,
-                               val dealRef: Collection<String>? = emptyList(),
-                               val dealParties: Collection<Party>? = emptySet(),
-                               status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
-                               stateRefs: Collection<StateRef>? = emptyList(),
-                               notary: Party? = null,
-                               includeSoftlocks: Boolean? = true,
-                               timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-                               paging: PageSpecification? = null)
-    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
+                               val dealRef: Collection<String>? = null,
+                               val dealParties: Collection<Party>? = null) : QueryCriteria {
+
+    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
+}
+
+//  NOTE: was originally using inheritance but enforces a lot of boilerplate code duplication
+
+//                               status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
+//                               stateRefs: Collection<StateRef>? = null,
+//                               notary: Collection<Party>? = null,
+//                               includeSoftlocks: Boolean? = true,
+//                               timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
+//                               paging: PageSpecification? = null)
+//    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
 
 /**
  * FungibleStateQueryCriteria
  */
-class FungibleStateQueryCriteria(val owner: Party? = null,
+class FungibleAssetQueryCriteria(val owner: Collection<Party>? = null,
+                                 val quantity: Logical<*,Long>? = null,
                                  val tokenType: TokenType = TokenType.CURRENCY,
-                                 val tokenValue: String? = null,
-                                 val issuerParty: Party? = null,
-                                 val issuerRef: OpaqueBytes,
-                                 val issuedProductType: IssuedProductType? = null,
-                                 val exitKeys: Collection<CompositeKey> = emptySet(),
-                                 status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
-                                 stateRefs: Collection<StateRef>? = emptyList(),
-                                 notary: Party? = null,
-                                 includeSoftlocks: Boolean? = true,
-                                 timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-                                 paging: PageSpecification? = null)
-    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
+                                 val tokenValue: Collection<String>? = null,
+                                 val issuerParty: Collection<Party>? = null,
+                                 val issuerRef: Collection<OpaqueBytes>? = null,
+                                 val exitKeys: Collection<CompositeKey>? = null) : QueryCriteria {
 
-//    /**
-//     * Creates a copy of the builder.
-//     */
-//    fun copy(): TransactionBuilder =
-//            TransactionBuilder(
-//                    type = type,
-//                    notary = notary,
-//                    inputs = ArrayList(inputs),
-//                    attachments = ArrayList(attachments),
-//                    outputs = ArrayList(outputs),
-//                    commands = ArrayList(commands),
-//                    signers = LinkedHashSet(signers),
-//                    timestamp = timestamp
-//            )
+    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
+}
 
-//    /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-//    fun withItems(vararg items: Any): QueryCriteria {
-//        for (t in items) {
-//            when (t) {
-//                is StateAndRef<*> -> addInputState(t)
-//                is TransactionState<*> -> addOutputState(t)
-//                is ContractState -> addOutputState(t)
-//                is Command -> addCommand(t)
-//                is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
-//                else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
-//            }
-//        }
-//        return this
-//    }
+//  NOTE: was originally using inheritance but enforces a lot of boilerplate code duplication
 
-//    fun timeBetween(start: Instant, end: Instant): Logical<Any, Any> = LogicalExpression(start, Operator.BETWEEN, end)
+//                                 status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
+//                                 stateRefs: Collection<StateRef>? = null,
+//                                 notary: Collection<Party>? = null,
+//                                 includeSoftlocks: Boolean? = true,
+//                                 timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
+//                                 paging: PageSpecification? = null)
+//    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
+
+/**
+ * Specify any query criteria by leveraging the Requery Query DSL
+ */
 //
+// NOTE: this class leverages Requery types: [Logical] [Order]
+//
+class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>,
+                                    val ordering: Order? = Order.ASC,
+                                    val paging: PageSpecification? = null) : QueryCriteria {
 
-
-
+    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
+}
 
 
 

@@ -2,20 +2,22 @@ package net.corda.node.services.vault
 
 import io.requery.kotlin.eq
 import io.requery.query.Operator
+import io.requery.query.Order
+import net.corda.contracts.asset.Cash
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER
+import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.composite
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.vault.LinearStateQueryCriteria
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.QueryCriteria.LogicalExpression
-import net.corda.core.node.services.vault.QueryCriteria.TimeInstantType
-import net.corda.core.node.services.vault.VaultCustomQueryCriteria
-import net.corda.core.node.services.vault.VaultQueryCriteria
+import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
@@ -23,8 +25,8 @@ import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.node.services.vault.schemas.VaultSchema
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MINI_CORP
+import net.corda.schemas.CashSchemaV1
+import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -77,7 +79,7 @@ class VaultQueryTests {
      */
 
     /** Generic Query tests
-        (combining both FungibleState and LinearState contract types) */
+    (combining both FungibleState and LinearState contract types) */
 
     @Test
     fun `unconsumed states`() {
@@ -85,7 +87,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             val criteria = VaultQueryCriteria() // default is UNCONSUMED
             val states = vaultSvc.queryBy<ContractState>(criteria)
@@ -102,9 +104,9 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            val criteria = VaultQueryCriteria(notary = CASH_NOTARY)
+            val criteria = VaultQueryCriteria(notary = setOf(CASH_NOTARY))
             val states = vaultSvc.queryBy<ContractState>(criteria)
             assertThat(states).hasSize(3)
         }
@@ -129,7 +131,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             val start = TEST_TX_TIME
             val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
@@ -147,7 +149,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, CASH_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             val asOfDateTime = TEST_TX_TIME
             val consumedAfterExpression = QueryCriteria.LogicalExpression(
@@ -166,7 +168,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST")) // create 2 states with same UID
             services.fillWithSomeTestLinearStates(8)
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
 //            services.consumeLinearStates(UniqueIdentifier("TEST"))
 //            services.consumeDeals("456")
@@ -174,25 +176,99 @@ class VaultQueryTests {
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val states = vaultSvc.queryBy<ContractState>(criteria)
-            assertThat(states).hasSize(12)
+            assertThat(states).hasSize(5)
         }
     }
 
+    // pagination: first page
     @Test
-    fun `all states with paging specification`() {
+    fun `all states with paging specification - first page`() {
         databaseTransaction(database) {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-
-            paging = VaultQueryCriteria.PageSpecification()
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val pagingSpec = QueryCriteria.PageSpecification(1, 10)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, paging = pagingSpec)
             val states = vaultSvc.queryBy<ContractState>(criteria)
-            assertThat(states).hasSize(12)
+            assertThat(states).hasSize(10)
         }
     }
 
-    /** LinearState tests */
+    // pagination: last page
+    @Test
+    fun `all states with paging specification  - last`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
+
+            // Last page implies we need to perform a row count for the Query first,
+            // and then re-query for a given offset defined by (count - pageSize)
+            val pagingSpec = QueryCriteria.PageSpecification(-1, 10)
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, paging = pagingSpec)
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(10) // should retrieve states 90..99
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+//            services.fillWithSomeTestCommodity()
+            services.fillWithSomeTestLinearStates(10)
+
+            val criteria = VaultQueryCriteria() // default is UNCONSUMED
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `consumed fungible assets`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+//          services.consumeCash(2)
+//            services.fillWithSomeTestCommodity()
+//            services.consumeCommodity()
+            services.fillWithSomeTestLinearStates(10)
+//          services.consumeLinearStates(8)
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed cash fungible assets`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestLinearStates(10)
+
+            val criteria = VaultQueryCriteria() // default is UNCONSUMED
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `consumed cash fungible assets`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+//          services.consumeCash(2)
+            services.fillWithSomeTestLinearStates(10)
+//          services.consumeLinearStates(8)
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val states = vaultSvc.queryBy<Cash.State>(criteria)
+            assertThat(states).hasSize(1)
+        }
+    }
 
     @Test
     fun `unconsumed linear heads`() {
@@ -201,7 +277,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
 
-            val criteria = LinearStateQueryCriteria()
+            val criteria = VaultQueryCriteria() // default is UNCONSUMED
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(10)
         }
@@ -212,15 +288,16 @@ class VaultQueryTests {
         databaseTransaction(database) {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-// services.spendCash()
             services.fillWithSomeTestLinearStates(10)
-//            services.consumeLinearStates(8)
+//          services.consumeLinearStates(8)
 
-            val criteria = LinearStateQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(2)
         }
     }
+
+    /** LinearState tests */
 
     @Test
     fun `unconsumed linear heads for linearId`() {
@@ -229,7 +306,7 @@ class VaultQueryTests {
             val issuedStates = services.fillWithSomeTestLinearStates(10)
 
             val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
-            val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first(), linearIds.last()) )
+            val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first(), linearIds.last()))
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(2)
         }
@@ -244,7 +321,7 @@ class VaultQueryTests {
 
             val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
             val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first()),
-                    latestOnly = true)
+                                                    latestOnly = true)
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(1)
         }
@@ -258,9 +335,9 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(8)
             val stateRefs = issuedStates.states.map { it.ref }.toList()
 
-            val criteria = LinearStateQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()),
-                    latestOnly = true)
-            val states = vaultSvc.queryBy<LinearState>(criteria)
+            val vaultCriteria = VaultQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()))
+            val linearStateCriteria = LinearStateQueryCriteria(latestOnly = true)
+            val states = vaultSvc.queryBy<LinearState>(vaultCriteria.and(linearStateCriteria))
             assertThat(states).hasSize(2)
         }
     }
@@ -269,7 +346,7 @@ class VaultQueryTests {
     fun `unconsumed deals`() {
         databaseTransaction(database) {
 
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             val criteria = LinearStateQueryCriteria()
             val states = vaultSvc.queryBy<DealState>(criteria)
@@ -281,7 +358,7 @@ class VaultQueryTests {
     fun `unconsumed deals for ref`() {
         databaseTransaction(database) {
 
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             val criteria = LinearStateQueryCriteria(dealRef = listOf("456"))
             val states = vaultSvc.queryBy<DealState>(criteria)
@@ -317,8 +394,126 @@ class VaultQueryTests {
         }
     }
 
+    /** FungibleAsset tests */
+    @Test
+    fun `unconsumed fungible assets of token type`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestLinearStates(10)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+
+            val criteria = FungibleAssetQueryCriteria() // default TokenType is CURRENCY
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(9)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets for single currency`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestLinearStates(10)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+
+            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(USD.currencyCode))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets for single currency and quantity greater than`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestLinearStates(10)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+
+            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(GBP.currencyCode),
+                                                      quantity = LogicalExpression(this, Operator.GREATER_THAN, 50))
+            val states = vaultSvc.queryBy<Cash.State>(criteria)
+            assertThat(states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets for several currencies`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
+
+            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(CHF.currencyCode, GBP.currencyCode))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets for issuer party`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
+
+            val criteria = FungibleAssetQueryCriteria(issuerParty = setOf(BOC))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets for specific issuer party and refs`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(1))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(2))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(3))
+
+            val criteria = FungibleAssetQueryCriteria(issuerParty = setOf(BOC), issuerRef = setOf(BOC.ref(1).reference, BOC.ref(2).reference))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(2)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets with exit keys`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
+
+            val criteria = FungibleAssetQueryCriteria(exitKeys = setOf(DUMMY_CASH_ISSUER_KEY.public.composite))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `unconsumed fungible assets by owner`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
+            // issue some cash to BOB
+            // issue some cash to ALICE
+
+            val criteria = FungibleAssetQueryCriteria(owner = setOf(BOB, ALICE))
+            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            assertThat(states).hasSize(1)
+        }
+    }
+
     /** Custom Query tests */
 
+    // chaining LogicalExpressions with AND and OR
     @Test
     fun `consumed linear heads for linearId between two timestamps`() {
         databaseTransaction(database) {
@@ -342,4 +537,82 @@ class VaultQueryTests {
             assertThat(states).hasSize(2)
         }
     }
+
+    // specifying Order
+    @Test
+    fun `all states with paging specification reverse order`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
+
+            val statusAllExpression = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.ALL)
+            val pagingSpec = PageSpecification(1, 10)
+            val criteria = VaultCustomQueryCriteria(expression = statusAllExpression,
+                    ordering = Order.DESC,
+                    paging = pagingSpec)
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(10)
+        }
+    }
+
+    // specifying Order by custom attribute
+    @Test
+    fun `all states with paging specification reverse chronological order by recorded timestamp`() {
+
+    }
+
+    // specifying Query on custom Contract state attributes
+    @Test
+    fun `unconsumed cash states with amount of currency greater or equal than`() {
+
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+
+            val statusUnconsumedExpr = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.UNCONSUMED)
+            val currencyExpr = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
+            val quantityExpr = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
+            val combinedExpr = statusUnconsumedExpr.and(currencyExpr).and(quantityExpr)
+
+            val criteria = VaultCustomQueryCriteria(expression = combinedExpr)
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(2)
+        }
+    }
+
+    // chaining QueryCriteria specifications
+    @Test
+    fun `all cash states with amount of currency greater or equal than`() {
+
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            // services.spend(100.DOLLARS)
+            services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+
+            // custom criteria
+            val currencyExpr = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
+            val quantityExpr = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
+            val customCriteria = VaultCustomQueryCriteria(currencyExpr.and(quantityExpr))
+
+            val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+            val states = vaultSvc.queryBy<ContractState>(vaultCriteria.and(customCriteria))
+            assertThat(states).hasSize(2)
+        }
+    }
+
+    /**
+     *  USE CASE demonstrations (outside of mainline Corda)
+     *
+     *  1) Template / Tutorial CorDapp service using Vault API Custom Query to access attributes of IOU State
+     *  2) Template / Tutorial Flow using a JDBC session to execute a custom query
+     *  3) Template / Tutorial CorDapp service query extension executing Named Queries via JPA
+     *  4) Advanced pagination queries using Spring Data (and/or Hibernate/JPQL)
+     */
 }
