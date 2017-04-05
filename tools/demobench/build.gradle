@@ -170,7 +170,7 @@ task javapackage(dependsOn: 'distZip') {
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {
             application(name: 'DemoBench', version: pkg_version, mainClass: mainClassName)
-            info(title: 'DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
+            info(title: 'Corda DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
@@ -190,12 +190,15 @@ task javapackage(dependsOn: 'distZip') {
                 }
             }
 
+            // This is specific to the MacOSX packager.
+            bundleArgument(arg: 'mac.CFBundleName', value: 'Corda DemoBench')
+
             platform {
                 property(name: 'java.util.logging.config.class', value: 'net.corda.demobench.config.LoggingConfig')
                 property(name: 'org.jboss.logging.provider', value: 'slf4j')
             }
 
-            preferences(install: false)
+            preferences(install: true)
         }
     }
 }
