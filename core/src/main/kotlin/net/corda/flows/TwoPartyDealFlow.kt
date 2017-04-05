@@ -83,7 +83,7 @@ object TwoPartyDealFlow {
 
         override fun getCounterpartyMarker(party: Party): String {
             return if (serviceHub.networkMapCache.regulatorNodes.any { it.legalIdentity == party }) {
-                MarkerForBogusRegulatorFlow::class.java.simpleName // TODO
+                MarkerForBogusRegulatorFlow::class.java.simpleName
             } else {
                 super.getCounterpartyMarker(party)
             }

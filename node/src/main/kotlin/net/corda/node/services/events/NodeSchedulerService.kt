@@ -162,7 +162,6 @@ class NodeSchedulerService(private val database: Database,
         services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
     }
 
-    // TODO I guess that versioning of some flows doesn't make sense, like in this case.
     @FlowVersion("1.0")
     class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
         companion object {

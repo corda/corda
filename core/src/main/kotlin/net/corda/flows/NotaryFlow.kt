@@ -32,17 +32,6 @@ object NotaryFlow {
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
-        override fun getCounterpartyMarker(party: Party): String = "NotaryFlow"
-
-//        // TODO or just assume that there is only one NotaryFlow
-//        override fun getCounterpartyMarker(party: Party): String {
-//            val partyInfo = serviceHub.networkMapCache.getPartyInfo(party)
-//            return when (partyInfo) {
-//                is PartyInfo.Service -> getNotaryFlowName(partyInfo)
-//                else -> javaClass.simpleName
-//            }
-//        }
-//        fun getNotaryFlowName(party)
 
         companion object {
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")

@@ -47,13 +47,13 @@ abstract class FlowLogic<out T> {
      * Return the marker [Class] which [party] has used to register the counterparty flow that is to execute on the
      * other side. The default implementation returns the class object of this FlowLogic, but any [Class] instance
      * will do as long as the other side registers with it.
-     * There is a problem with that approach when taking into consideration flow versions. In situations when we want to
-     * communicate with different parties and run different flows (without subflowing). How to do version negotiation in
-     * that case? There are two approaches, assume that all flows in that communication are part of one generalFlow and
-     * are versioned together. Second approach is that we start different flowName on other side, but we still have to
-     * version it together with the one that started communication (otherwise it's impossible to reach consensus without
-     * complicated mapping).
      */
+    // TODO There is a problem with that approach when taking into consideration flow versions. In situations when we want to
+    //  communicate with different parties and run different flows (without subflowing). How to do version negotiation in
+    //  that case? There are two approaches, assume that all flows in that communication are part of one generalFlow and
+    //  are versioned together. Second approach is that we start different flowName on other side, but we still have to
+    //  version it together with the one that started communication (otherwise it's impossible to reach consensus without
+    //  complicated mapping).
     open fun getCounterpartyMarker(party: Party): String = javaClass.simpleName
 
     /**
@@ -144,7 +144,7 @@ abstract class FlowLogic<out T> {
             subLogic.sessionFlow = this
         }
         logger.debug { "Calling subflow: $subLogic" }
-        // TODO Flow versioning -> problems if they share parent session (no version negotiation)
+        // TODO Flow versioning there are problems if flows share parent session (no version negotiation).
         //  Think about CashFlow that doesn't do send/receive, but calls subflows.
         //  Only subflows versions will be negotiated (however with assumption that what we started is what we want to negotiate it's fine).
         val result = subLogic.call()

@@ -7,27 +7,21 @@ import net.corda.core.serialization.CordaSerializable
 
 val versionRegex = Regex("^(\\d+\\.\\d+)$") // Format: Major.Minor
 
-// Get rid of number at the end of class name if present.
+// Gets rid of number at the end of class name if present.
 fun String.stripNumber(): String {
     return dropLastWhile { it.isDigit() }
 }
 
-//TODO Do want to have inherited annotation of sublcasses? It makes life easier when testing + defaults, but it's hard to debug when you don't annotate your flow.
 /**
- * Annotation used for flow to indicate it's general flow it belongs to (for example, if you have Sender-Receiver classes)
- * that belong to one general flow "SendReceive" - it would be the name of flow, and this name would be registered as
- * flow initiator on the node, also it can be advertised in [NetworkMapService].
+ * Annotation used for flow to indicate it's version.
  * @param version version of this [FlowLogic] class
- * @param genericName name of the flow that [FlowLogic] belongs to
  * @param preference what versions we accept when negotiating connection
- * @param advertise do we want to advertise this [FlowLogic] in [NetworkMapService]
  */
 // Retention is default true at runtime.
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Inherited
-annotation class FlowVersion(val version: String, val preference: Array<String> = arrayOf("")) //TODO min max version, TODO default emptyArray
-// But... it's highly impossible that we will keep lots of flow versions on the node.
+annotation class FlowVersion(val version: String, val preference: Array<String> = arrayOf(""))
 
 fun majorVersionMatch(version1: String, version2: String): Boolean {
     require(version1.matches(versionRegex) && version2.matches(versionRegex)) { "Incorrect version formats" }
@@ -35,8 +29,6 @@ fun majorVersionMatch(version1: String, version2: String): Boolean {
 }
 
 // I needed whole flow metadata stored, later it can be useful with encoding flow backward compatibility etc.
-// Problem with flows on our platform is that on incoming connection we can register as an initiator whatever we want.
-// With that solution it's easier to hold some data and have control over that process.
 // Used if we have more than one flow version on the node, we can specify how it will be advertised.
 /**
  * Way of registering multiple versions of [FlowLogic] at once. Also makes specifying of flow metadata much easier.
@@ -45,7 +37,6 @@ fun majorVersionMatch(version1: String, version2: String): Boolean {
  * @param deprecated other versions we support on the node
  * @param genericFlowName name of the flow that [FlowLogic]s in that set belong to
  * @param toAdvertise do we want to advertise this flows in [NetworkMapService]
- * TODO more documentation
  */
 interface FlowFactory {
     val preferred: String // TODO defaults

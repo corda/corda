@@ -11,7 +11,6 @@ import net.corda.core.serialization.CordaSerializable
  * Information for an advertised service including the service specific identity information.
  * The identity can be used in flows and is distinct from the Node's legalIdentity
  */
-// TODO It needs refactor ServiceEntry, ServiceInfo, NodeInfo.
 @CordaSerializable
 data class ServiceEntry(val info: ServiceInfo, val identity: Party)
 

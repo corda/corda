@@ -2,11 +2,13 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.unwrap
 
+@FlowVersion("1.0")
 class NonValidatingNotaryFlow(otherSide: Party,
                               timestampChecker: TimestampChecker,
                               uniquenessProvider: UniquenessProvider) : NotaryFlow.Service(otherSide, timestampChecker, uniquenessProvider) {

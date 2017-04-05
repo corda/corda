@@ -81,12 +81,12 @@ interface NetworkMapCache {
         return partyNodes.filter { it.advertisedServices.any { it.identity.owningKey == compositeKey } }
     }
 
-    // TODO Surely it shouldn't be checked in NMC ;)
+    // TODO It shouldn't be checked in NMC.
+    // TODO It needs more thinking, how to handle situations when we have distributed service, but nodes run different versions.
     /**
      * Look up all flow versions from nodes advertising the service owned by [compositeKey]. Return AdvertisedFlow.
      * If nodes advertise different flow versions (in theory they shouldn't) throw exception.
      */
-    // TODO It needs more thinking, how to handle situations when we have distributed service, but nodes run different versions.
     //  It's version where we have grouped flows advertised by the service.
 //    private fun getServiceFlowVersions(compositeKey: CompositeKey, flowName: String): AdvertisedFlow? {
 //        val maybeFlowsInfo = ArrayList<AdvertisedFlow?>()

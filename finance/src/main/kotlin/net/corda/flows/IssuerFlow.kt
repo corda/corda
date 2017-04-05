@@ -34,7 +34,7 @@ object IssuerFlow {
     @FlowVersion("1.0")
     class IssuanceRequester(val amount: Amount<Currency>, val issueToParty: Party, val issueToPartyRef: OpaqueBytes,
                             val issuerBankParty: Party): FlowLogic<SignedTransaction>() {
-        override fun getCounterpartyMarker(party: Party): String = "IssuerFlow" //TODO
+        override fun getCounterpartyMarker(party: Party): String = "IssuerFlow"
 
         @Suspendable
         @Throws(CashException::class)

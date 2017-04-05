@@ -38,6 +38,7 @@ public class FlowsInJavaTest {
         assertThat(result.get()).isEqualTo("Hello");
     }
 
+    @FlowVersion(version = "1.0")
     private static class SendInUnwrapFlow extends FlowLogic<String> {
         private final Party otherParty;
 
@@ -55,6 +56,7 @@ public class FlowsInJavaTest {
         }
     }
 
+    @FlowVersion(version = "1.0")
     private static class OtherFlow extends FlowLogic<String> {
         private final Party otherParty;
         private final String payload;
