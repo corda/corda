@@ -100,11 +100,10 @@ reject each other's trade proposals which is implemented in
 examples using the IntelliJ IDE one can run/step the respective unit 
 tests in ``FxTransactionBuildTutorialTest.kt`` and 
 ``WorkflowTransactionBuildTutorialTest.kt``, which drive the flows as 
-part of a simulated in-memory network of nodes. When creating the 
-IntelliJ run configuration for these unit test set the workspace 
-points to the root ``corda`` folder and add 
-``-javaagent:lib/quasar.jar`` to the VM options, so that the ``Quasar`` 
-instrumentation is correctly configured. 
+part of a simulated in-memory network of nodes. Before creating the IntelliJ 
+run configurations for these unit tests, go to Run -> Edit Configurations -> 
+Defaults -> JUnit and add ``-javaagent:$PROJECT_DIR$/lib/quasar.jar`` to the 
+VM options, so that the ``Quasar`` instrumentation is correctly configured. 
 
 For the Cash transaction let’s assume the cash resources are using the 
 standard ``CashState`` in the ``:financial`` Gradle module. The Cash 
