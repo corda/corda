@@ -62,8 +62,8 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
         serializer.writeObject(obj, data, type, this)
     }
 
-    internal fun writeTypeNotations(vararg typeNotation: TypeNotation) {
-        schemaHistory.addAll(typeNotation)
+    internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
+        return schemaHistory.addAll(typeNotation)
     }
 
     internal fun requireSerializer(type: Type) {

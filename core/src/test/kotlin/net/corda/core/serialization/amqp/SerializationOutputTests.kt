@@ -22,6 +22,8 @@ class SerializationOutputTests {
 
     data class WrapHashMap(val map: Map<String, String>)
 
+    data class WrapFooListArray(val listArray: Array<List<Foo>>)
+
     private fun serdes(obj: Any): Any {
         val factory = SerializerFactory()
         val ser = SerializationOutput(factory)
@@ -76,6 +78,31 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test dislike of HashMap`() {
         val obj = WrapHashMap(HashMap<String, String>())
+        serdes(obj)
+    }
+
+    @Test
+    fun `test string array`() {
+        val obj = arrayOf("Fred", "Ginger")
+        serdes(obj)
+    }
+
+    @Test
+    fun `test foo array`() {
+        val obj = arrayOf(Foo("Fred", 1), Foo("Ginger", 2))
+        serdes(obj)
+    }
+
+    @Test
+    fun `test top level list array`() {
+        val obj = arrayOf(listOf("Fred", "Ginger"), listOf("Rogers", "Hammerstein"))
+        serdes(obj)
+    }
+
+
+    @Test
+    fun `test foo list array`() {
+        val obj = WrapFooListArray(arrayOf(listOf(Foo("Fred", 1), Foo("Ginger", 2)), listOf(Foo("Rogers", 3), Foo("Hammerstein", 4))))
         serdes(obj)
     }
 }

@@ -14,9 +14,10 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
-        output.writeTypeNotations(typeNotation)
-        output.requireSerializer(declaredType.actualTypeArguments[0])
-        output.requireSerializer(declaredType.actualTypeArguments[1])
+        if (output.writeTypeNotations(typeNotation)) {
+            output.requireSerializer(declaredType.actualTypeArguments[0])
+            output.requireSerializer(declaredType.actualTypeArguments[1])
+        }
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {

@@ -3,6 +3,7 @@ package net.corda.core.serialization.amqp
 import com.google.common.primitives.Primitives
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
+import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -43,6 +44,8 @@ class SerializerFactory {
         } else if (declaredType is Class<*>) {
             // Straight classes allowed
             return makeClassSerializer(actualType ?: declaredType)
+        } else if (declaredType is GenericArrayType) {
+            TODO("generic array type")
         } else {
             throw NotSerializableException("Declared types of $declaredType are not supported.")
         }
@@ -63,16 +66,11 @@ class SerializerFactory {
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) {
-        // TODO: use sealed types for TypeNotation?
-        // TODO: for now we know the type is directly convertible, and we don't do any comparison etc etc
-        if (typeNotation is CompositeType) {
+        when (typeNotation) {
             // java.lang.Class (whether a class or interface)
-            processCompositeType(typeNotation)
-        } else if (typeNotation is RestrictedType) {
+            is CompositeType -> processCompositeType(typeNotation)
             // List / Map, possibly with generics
-            processRestrictedType(typeNotation)
-        } else {
-            throw NotSerializableException("Unexpected type $typeNotation")
+            is RestrictedType -> processRestrictedType(typeNotation)
         }
     }
 
@@ -105,12 +103,15 @@ class SerializerFactory {
 
     private fun makeClassSerializer(clazz: Class<*>): Serializer {
         return serializersByType.computeIfAbsent(clazz) {
-            // TODO: check for array type
+            //if(clazz.isArray) {
+            //    ArraySerializer(clazz)
+            //} else {
             if (isPrimitive(clazz)) {
                 PrimitiveSerializer(clazz)
             } else {
                 ClassSerializer(clazz)
             }
+            //}
         }
     }
 

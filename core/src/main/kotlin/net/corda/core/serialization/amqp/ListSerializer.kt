@@ -12,8 +12,9 @@ class ListSerializer(val declaredType: ParameterizedType) : Serializer() {
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
-        output.writeTypeNotations(typeNotation)
-        output.requireSerializer(declaredType.actualTypeArguments[0])
+        if (output.writeTypeNotations(typeNotation)) {
+            output.requireSerializer(declaredType.actualTypeArguments[0])
+        }
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {

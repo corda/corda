@@ -153,7 +153,7 @@ data class Field(val name: String, val type: String, val requires: List<String>,
             sb.append(requires.joinToString(","))
             sb.append("\"")
         }
-        if (!default.isNullOrBlank()) {
+        if (default != null) {
             sb.append(" default=\"$default\"")
         }
         if (!label.isNullOrBlank()) {
@@ -164,7 +164,7 @@ data class Field(val name: String, val type: String, val requires: List<String>,
     }
 }
 
-interface TypeNotation : DescribedType {
+sealed class TypeNotation : DescribedType {
     companion object {
         fun get(obj: Any): TypeNotation {
             val describedType = obj as DescribedType
@@ -178,13 +178,13 @@ interface TypeNotation : DescribedType {
         }
     }
 
-    val name: String
-    val label: String?
-    val provides: List<String>
-    val descriptor: Descriptor
+    abstract val name: String
+    abstract val label: String?
+    abstract val provides: List<String>
+    abstract val descriptor: Descriptor
 }
 
-data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation {
+data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation() {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0005L or DESCRIPTOR_MSW)
 
@@ -231,7 +231,7 @@ data class CompositeType(override val name: String, override val label: String?,
     }
 }
 
-data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation {
+data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0006L or DESCRIPTOR_MSW)
 

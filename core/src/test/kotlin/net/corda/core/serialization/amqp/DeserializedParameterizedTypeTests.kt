@@ -13,7 +13,7 @@ class DeserializedParameterizedTypeTests {
 
     private fun verify(typeName: String) {
         val type = DeserializedParameterizedType.make(typeName)
-        assertEquals(type.typeName, normalise(typeName))
+        assertEquals(normalise(type.typeName), normalise(typeName))
     }
 
     @Test
