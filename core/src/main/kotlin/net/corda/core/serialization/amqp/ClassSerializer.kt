@@ -16,7 +16,7 @@ class ClassSerializer(val clazz: Class<*>) : Serializer() {
     override val type: Type get() = clazz
     private val propertySerializers = generatePropertySerializers(clazz)
     private val typeName = clazz.name
-    override val typeDescriptor: String = clazz.name // TODO need a better algo
+    override val typeDescriptor = "${hashType(type)}"
     private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())

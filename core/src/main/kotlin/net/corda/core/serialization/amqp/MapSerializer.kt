@@ -9,7 +9,7 @@ import java.util.*
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
-    override val typeDescriptor = declaredType.toString()
+    override val typeDescriptor = "${hashType(type)}"
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 

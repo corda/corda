@@ -1,11 +1,17 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.OpaqueBytes
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
+import java.lang.reflect.GenericArrayType
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.javaType
 
 val DESCRIPTOR_MSW: Long = 0xc0da0000
 
@@ -304,5 +310,26 @@ data class Choice(val name: String, val value: String) : DescribedType {
 
     override fun toString(): String {
         return "<choice name=\"$name\" value=\"$value\"/>"
+    }
+}
+
+private val ARRAY_HASH: SecureHash = SecureHash.sha256(java.lang.reflect.Array::class.java.name)
+private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen")
+
+fun hashType(type: Type, alreadySeen: Set<Type> = mutableSetOf()): SecureHash {
+    return if (type in alreadySeen) {
+        ALREADY_SEEN_HASH
+    } else if (type is Class<*>) {
+        // TODO: we need to align properties with constructor params in some unified utility functions / classes
+        // Hash the class + properties
+        type.kotlin.primaryConstructor?.run { parameters.fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.type.javaType, alreadySeen)).hashConcat(SecureHash.sha256(param.name!!)) } } ?: SecureHash.sha256(type.name)
+    } else if (type is ParameterizedType) {
+        // Hash the rawType + params
+        type.actualTypeArguments.fold(hashType(type.rawType, alreadySeen)) { orig, paramType -> orig.hashConcat(hashType(paramType, alreadySeen)) }
+    } else if (type is GenericArrayType) {
+        // Hash the element type + some array hash
+        hashType(type.genericComponentType, alreadySeen).hashConcat(ARRAY_HASH)
+    } else {
+        throw NotSerializableException("Don't know how to hash $type")
     }
 }
