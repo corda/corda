@@ -158,7 +158,7 @@ object VaultSchema {
         var issuedProductType: String
 
         /** refers to keys used to destroy amount in Exit command */
-        @get:OneToMany(mappedBy = "key")
+//        @get:OneToMany(mappedBy = "key")
         var exitKeys: Set<VaultParty>
     }
 

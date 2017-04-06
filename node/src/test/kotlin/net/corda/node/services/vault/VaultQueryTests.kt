@@ -95,6 +95,37 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `unconsumed states for state refs`() {
+        databaseTransaction(database) {
+
+            val issuedStates = services.fillWithSomeTestLinearStates(2)
+            val stateRefs = issuedStates.states.map { it.ref }.toList()
+            services.fillWithSomeTestLinearStates(8)
+
+            val vaultCriteria = VaultQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()))
+            val states = vaultSvc.queryBy<LinearState>(vaultCriteria)
+            assertThat(states).hasSize(2)
+            assertThat(states.first().ref).isEqualTo(issuedStates.states.first().ref)
+            assertThat(states.last().ref).isEqualTo(issuedStates.states.last().ref)
+        }
+    }
+
+    @Test
+    fun `unconsumed states for contract state types`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestLinearStates(10)
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+            // default State.Status is UNCONSUMED
+            val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java, DealState::class.java))
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(6)
+        }
+    }
+
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
     val CASH_NOTARY: Party get() = Party("Notary Service", CASH_NOTARY_KEY.public)
 
@@ -155,7 +186,7 @@ class VaultQueryTests {
             val consumedAfterExpression = QueryCriteria.LogicalExpression(
                     QueryCriteria.TimeInstantType.CONSUMED, Operator.GREATER_THAN, arrayOf(asOfDateTime))
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
-                    timeCondition = consumedAfterExpression)
+                                              timeCondition = consumedAfterExpression)
             val states = vaultSvc.queryBy<ContractState>(criteria)
             assertThat(states).hasSize(3)
         }

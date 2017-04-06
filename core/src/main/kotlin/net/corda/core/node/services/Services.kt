@@ -130,6 +130,8 @@ interface VaultService {
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
+    // TODO: Remove this from the interface
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
 
     /**
@@ -151,8 +153,9 @@ interface VaultService {
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
-     * TODO: revisit and generalize this exposed API function.
      */
+    // TODO: Remove this from the interface
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
 
     /**
@@ -230,6 +233,8 @@ interface VaultService {
      * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
      * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
+    // TODO: Remove this from the interface
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
     fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
     // DOCEND VaultStatesQuery
 
@@ -275,17 +280,25 @@ interface VaultService {
     fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
 
+// TODO: Remove this from the interface
+@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
 inline fun <reified T : ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
 
+// TODO: Remove this from the interface
+@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
 inline fun <reified T : ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
 
 /** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
+// TODO: Remove this from the interface
+@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
                 .associateBy { it.state.data.linearId }.mapValues { it.value }
 
+// TODO: Remove this from the interface
+@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealParties = listOf(<Party>)))"))
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }

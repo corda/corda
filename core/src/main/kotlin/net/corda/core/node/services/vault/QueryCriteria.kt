@@ -4,6 +4,7 @@ import io.requery.kotlin.Logical
 import io.requery.query.Condition
 import io.requery.query.Operator
 import io.requery.query.Order
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.CompositeKey
@@ -72,6 +73,7 @@ open class VaultQueryCriteria(val status: Vault.StateStatus = Vault.StateStatus.
                           // Vault.StateState.CONSUMED or setOf(Vault.StateState.CONSUMED)
                           // Vault.StateState.ALL or setOf(Vault.StateState.CONSUMED, Vault.StateState.UNCONSUMED)
                               val stateRefs: Collection<StateRef>? = null,
+                              val contractStateTypes: Set<Class<out ContractState>>? = null,
                               val notary: Collection<Party>? = null,
                               val includeSoftlocks: Boolean? = true,
                               val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
