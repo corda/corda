@@ -7,8 +7,6 @@ the previous milestone release.
 Milestone 10
 ------------
 
-We are introducing a new DemoBench and Corda shell in Corda M10 to make running and demoing Corda easier for the corda community.
-
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
 the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
@@ -26,6 +24,10 @@ The new "DemoBench" makes it easy to configure and launch local Corda nodes. It 
 Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the same input(s) simultaneously.
 Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
 Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
+
+The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
+
+We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
 
 We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increases our productivity.
 

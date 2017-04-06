@@ -46,6 +46,8 @@ Milestone 10.0
         * The old ``:client`` module has been split up into ``:client:jfx`` and ``:client:mock``.
         * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between ``node`` and ``client``.
 
+    * The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
+
 * Configuration:
     * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration.
     * Replace ``artemisAddress`` with ``p2pAddress`` in node configuration.
