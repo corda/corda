@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 // TODO: object references
 // TODO: Set support?
 // TODO: Do we support specific List, Map implementations or force all to interface
-// TODO: Include some hash of the class properties into the text descriptor for a class
+// TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Support java constructors via -parameters compiler option and/or an annotation (align with Jackson?)
 // TODO: More generics scrutiny.  What about subclass of List with bound parameters, and/or another generic class?
 // TODO: Write tests for boxed and unboxed primitives.
@@ -26,7 +26,6 @@ class SerializerFactory {
         if (declaredType is ParameterizedType) {
             return serializersByType.computeIfAbsent(declaredType) {
                 // We allow only List and Map.
-                // TODO: support Set?
                 val rawType = declaredType.rawType
                 if (rawType is Class<*>) {
                     checkParameterisedTypesConcrete(declaredType.actualTypeArguments)
