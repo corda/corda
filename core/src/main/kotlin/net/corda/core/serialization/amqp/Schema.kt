@@ -313,16 +313,19 @@ data class Choice(val name: String, val value: String) : DescribedType {
     }
 }
 
-private val ARRAY_HASH: SecureHash = SecureHash.sha256(java.lang.reflect.Array::class.java.name)
-private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen")
+private val ARRAY_HASH: SecureHash = SecureHash.sha256("Array = true")
+private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen = true")
+private val NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = true")
+private val NOT_NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = false")
 
+// TODO: write tests
 fun hashType(type: Type, alreadySeen: Set<Type> = mutableSetOf()): SecureHash {
     return if (type in alreadySeen) {
         ALREADY_SEEN_HASH
     } else if (type is Class<*>) {
         // TODO: we need to align properties with constructor params in some unified utility functions / classes
         // Hash the class + properties
-        type.kotlin.primaryConstructor?.run { parameters.fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.type.javaType, alreadySeen)).hashConcat(SecureHash.sha256(param.name!!)) } } ?: SecureHash.sha256(type.name)
+        type.kotlin.primaryConstructor?.run { parameters.fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.type.javaType, alreadySeen)).hashConcat(SecureHash.sha256(param.name!!)).hashConcat(if (param.type.isMarkedNullable) NULLABLE_HASH else NOT_NULLABLE_HASH) } } ?: SecureHash.sha256(type.name)
     } else if (type is ParameterizedType) {
         // Hash the rawType + params
         type.actualTypeArguments.fold(hashType(type.rawType, alreadySeen)) { orig, paramType -> orig.hashConcat(hashType(paramType, alreadySeen)) }
