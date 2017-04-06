@@ -19,6 +19,8 @@ import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import java.io.BufferedInputStream
+import java.io.FileInputStream
+import java.io.InputStream
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -53,6 +55,7 @@ object DefaultKryoCustomizer {
             ImmutableMapSerializer.registerSerializers(this)
             ImmutableMultimapSerializer.registerSerializers(this)
 
+            // InputStream subclasses whitelisting, required for attachments.
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
 
@@ -80,6 +83,11 @@ object DefaultKryoCustomizer {
             register(BitSet::class.java, ReferencesAwareJavaSerializer)
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
+
+            register(FileInputStream::class.java, InputStreamSerializer)
+            // Required for HashCheckingStream (de)serialization.
+            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
+            addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }
