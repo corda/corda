@@ -6,7 +6,7 @@ Here are brief summaries of what's changed between each snapshot release.
 Milestone 10.0
 --------------
 
-.. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij to 2017.1 and kotlin-plugin to 1.1.1 in order to run Corda demos in IntelliJ.
+.. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
 
 .. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references`` errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or ``./gradlew kaptKotlin`` in other systems.
              Alternatively, perform a full gradle build or install.
@@ -61,7 +61,7 @@ Milestone 10.0
 * Dependencies changes:
     * Upgraded Kotlin to v1.1.1.
     * Upgraded Gradle to v3.4.1.
-    * Upgraded Requery to v1.2.1.
+    * Upgraded requery to v1.2.1.
     * Upgraded H2 to v1.4.194.
     * Replaced kotlinx-support-jdk8 with kotlin-stdlib-jre8.
 
