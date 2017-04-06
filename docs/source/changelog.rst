@@ -17,7 +17,7 @@ Milestone 10.0
     * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
         * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
         * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
-        * You can launch an Corda Explorer instance for each node via the demobanch UI. Credentials are handed to the Corda Explorer so it starts out logged in already.
+        * You can launch an Corda Explorer instance for each node via the DemoBench UI. Credentials are handed to the Corda Explorer so it starts out logged in already.
         * Some basic statistics are shown about each node, informed via the RPC connection.
         * Another button launches a database viewer in the system browser.
         * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
@@ -44,7 +44,7 @@ Milestone 10.0
     * We have restructured client package in this milestone.
         * ``CordaClientRPC`` is now in the new ``:client:rpc`` module.
         * The old ``:client`` module has been split up into ``:client:jfx`` and ``:client:mock``.
-        * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the common RPC classes such as ``RPCException`` and ``User``.
+        * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between ``node`` and ``client``.
 
 * Configuration:
     * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration.
@@ -55,7 +55,7 @@ Milestone 10.0
     * Pool Kryo instances for efficiency.
 
 * RPC client changes:
-    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker.
+    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker, SSL must not be used for RPC connection.
     * CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
 
 * Dependencies changes:
@@ -68,6 +68,7 @@ Milestone 10.0
 * Improvements:
     * Added ``--version`` command line flag to print the version of the node.
     * Flows written in Java can now execute a sub-flow inside ``UntrustworthyData.unwrap``.
+    * Added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
 
 * Bug fixes:
     * ``--logging-level`` command line flag was previously broken, now correctly sets the logging level.
