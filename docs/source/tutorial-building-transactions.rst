@@ -106,6 +106,9 @@ points to the root ``corda`` folder and add
 ``-javaagent:lib/quasar.jar`` to the VM options, so that the ``Quasar`` 
 instrumentation is correctly configured. 
 
+.. note:: You can set up IntelliJ to do this automatically for every new unit test run config.
+    In Run -> Edit Configurations -> Defaults -> JUnit, add ``-javaagent:$PROJECT_DIR$/lib/quasar.jar`` to VM options.
+
 For the Cash transaction let’s assume the cash resources are using the 
 standard ``CashState`` in the ``:financial`` Gradle module. The Cash 
 contract uses ``FungibleAsset`` states to model holdings of 
