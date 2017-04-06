@@ -54,7 +54,6 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
         if (obj is DescribedType) {
             // Look up serializer in factory by descriptor
             val serializer = serializerFactory.get(obj.descriptor, envelope)
-            // The ordering of this type comparison is important.  See equals() implementation in [DeserializedParameterizedType].
             if (serializer.type != type && !serializer.type.isSubClassOf(type)) throw NotSerializableException("Described type with descriptor ${obj.descriptor} was expected to be of type $type")
             return serializer.readObject(obj.described, envelope, this)
         } else {
@@ -63,7 +62,7 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
     }
 
     private fun Type.isSubClassOf(type: Type): Boolean {
-        return this is Class<*> && type is Class<*> && type.isAssignableFrom(this)
+        return type == Object::class.java || (this is Class<*> && type is Class<*> && type.isAssignableFrom(this))
     }
 
     private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {

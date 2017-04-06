@@ -5,7 +5,8 @@ import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
 import java.io.NotSerializableException
 import java.nio.ByteBuffer
-import kotlin.test.assertEquals
+import java.util.*
+import kotlin.test.assertTrue
 
 
 class SerializationOutputTests {
@@ -22,7 +23,11 @@ class SerializationOutputTests {
 
     data class WrapHashMap(val map: Map<String, String>)
 
-    data class WrapFooListArray(val listArray: Array<List<Foo>>)
+    data class WrapFooListArray(val listArray: Array<List<Foo>>) {
+        override fun equals(other: Any?): Boolean {
+            return other is WrapFooListArray && Objects.deepEquals(listArray, other.listArray)
+        }
+    }
 
     private fun serdes(obj: Any): Any {
         val factory = SerializerFactory()
@@ -46,13 +51,13 @@ class SerializationOutputTests {
         val des = DeserializationInput()
         val desObj = des.deserialize(bytes)
         println(desObj)
-        assertEquals(obj, desObj)
+        assertTrue(Objects.deepEquals(obj, desObj))
 
         // Now repeat with a re-used factory
         val ser2 = SerializationOutput(factory)
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj))
-        assertEquals(obj, desObj2)
+        assertTrue(Objects.deepEquals(obj, desObj2))
         return desObj2
     }
 
@@ -93,12 +98,11 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test
-    fun `test top level list array`() {
+    @Test(expected = NotSerializableException::class)
+    fun `test top level list array not serializable since type erased`() {
         val obj = arrayOf(listOf("Fred", "Ginger"), listOf("Rogers", "Hammerstein"))
         serdes(obj)
     }
-
 
     @Test
     fun `test foo list array`() {

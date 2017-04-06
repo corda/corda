@@ -34,7 +34,7 @@ class ArraySerializer(override val type: Type) : Serializer() {
         // Write list
         data.putList()
         data.enter()
-        for (entry in obj as List<*>) {
+        for (entry in obj as Array<*>) {
             output.writeObjectOrNull(entry, data, elementType)
         }
         data.exit() // exit list
@@ -48,13 +48,13 @@ class ArraySerializer(override val type: Type) : Serializer() {
     private fun <T> List<T>.toArrayOfType(type: Type): Any {
         return if (type is Class<*>) {
             return java.lang.reflect.Array.newInstance(type, this.size).apply {
-                for (i in 0..size) {
+                for (i in 0..lastIndex) {
                     java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
                 }
             }
         } else if (type is ParameterizedType) {
             return java.lang.reflect.Array.newInstance(type.rawType as Class<*>, this.size).apply {
-                for (i in 0..size) {
+                for (i in 0..lastIndex) {
                     java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
                 }
             }

@@ -28,7 +28,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         // Maximum depth/nesting of generics before we suspect some DoS attempt.
         const val MAX_DEPTH: Int = 32
 
-        fun make(name: String, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): DeserializedParameterizedType {
+        fun make(name: String, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): Type {
             val paramTypes = mutableListOf<Type>()
             val pos = parseTypeList("$name>", paramTypes, cl)
             if (pos <= name.length) {
@@ -37,11 +37,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             if (paramTypes.size != 1) {
                 throw NotSerializableException("Expected only one type, but got $paramTypes")
             }
-            val type = paramTypes[0]
-            if (type is DeserializedParameterizedType) {
-                return type
-            }
-            throw NotSerializableException("Expected type to be parameterized")
+            return paramTypes[0]
         }
 
         private fun parseTypeList(params: String, types: MutableList<Type>, cl: ClassLoader, depth: Int = 0): Int {

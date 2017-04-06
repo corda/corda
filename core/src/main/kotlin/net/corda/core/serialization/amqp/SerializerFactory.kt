@@ -10,13 +10,13 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 // TODO: object references
-// TODO: array support
 // TODO: Set support?
 // TODO: Do we support specific List, Map implementations or force all to interface
 // TODO: Include some hash of the class properties into the text descriptor for a class
 // TODO: Support java constructors via -parameters compiler option and/or an annotation (align with Jackson?)
 // TODO: More generics scrutiny.  What about subclass of List with bound parameters, and/or another generic class?
 // TODO: Write tests for boxed and unboxed primitives.
+// TODO: Inner classes etc
 class SerializerFactory {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()
@@ -45,7 +45,7 @@ class SerializerFactory {
             // Straight classes allowed
             return makeClassSerializer(actualType ?: declaredType)
         } else if (declaredType is GenericArrayType) {
-            TODO("generic array type")
+            return serializersByType.computeIfAbsent(declaredType) { ArraySerializer(declaredType) }
         } else {
             throw NotSerializableException("Declared types of $declaredType are not supported.")
         }
@@ -74,9 +74,18 @@ class SerializerFactory {
         }
     }
 
+    private fun restrictedTypeForName(name: String): Type {
+        return if (name.endsWith("[]")) {
+            DeserializedGenericArrayType(restrictedTypeForName(name.substring(0, name.lastIndex - 1)))
+        } else {
+            DeserializedParameterizedType.make(name)
+        }
+    }
+
     private fun processRestrictedType(typeNotation: RestrictedType) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
-            val type = DeserializedParameterizedType.make(typeNotation.name)
+            // TODO: This could be GenericArrayType or even a regular Array
+            val type = restrictedTypeForName(typeNotation.name)
             get(null, type)
         }
     }
@@ -103,15 +112,15 @@ class SerializerFactory {
 
     private fun makeClassSerializer(clazz: Class<*>): Serializer {
         return serializersByType.computeIfAbsent(clazz) {
-            //if(clazz.isArray) {
-            //    ArraySerializer(clazz)
-            //} else {
-            if (isPrimitive(clazz)) {
-                PrimitiveSerializer(clazz)
+            if (clazz.isArray) {
+                ArraySerializer(clazz)
             } else {
-                ClassSerializer(clazz)
+                if (isPrimitive(clazz)) {
+                    PrimitiveSerializer(clazz)
+                } else {
+                    ClassSerializer(clazz)
+                }
             }
-            //}
         }
     }
 
@@ -152,5 +161,15 @@ class SerializerFactory {
                 ByteArray::class.java to "binary",
                 String::class.java to "string",
                 Symbol::class.java to "symbol")
+    }
+}
+
+class DeserializedGenericArrayType(private val componentType: Type) : GenericArrayType {
+    override fun getGenericComponentType(): Type = componentType
+    override fun getTypeName(): String = "${componentType.typeName}[]"
+    override fun toString(): String = typeName
+    override fun hashCode(): Int = componentType.hashCode() * 31
+    override fun equals(other: Any?): Boolean {
+        return other is GenericArrayType && componentType.equals(other.genericComponentType)
     }
 }

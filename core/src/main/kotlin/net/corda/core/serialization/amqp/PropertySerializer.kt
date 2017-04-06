@@ -1,9 +1,7 @@
 package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Method
-import java.lang.reflect.ParameterizedType
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaMethod
 
@@ -12,27 +10,30 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any?
 
-    protected val clazz = (readMethod.genericReturnType as? Class<*> ?: (readMethod.genericReturnType as? ParameterizedType)?.rawType as? Class<*>) ?: throw NotSerializableException("Property does return class: ${readMethod.genericReturnType}")
+    //protected val clazz = (readMethod.genericReturnType as? Class<*> ?: (readMethod.genericReturnType as? ParameterizedType)?.rawType as? Class<*>) ?: throw NotSerializableException("Property does return class: ${readMethod.genericReturnType}")
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
     val default: String? = generateDefault()
     val mandatory: Boolean = generateMandatory()
 
+    private val isInterface: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isInterface ?: false
+    private val isPrimitive: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isPrimitive ?: false
+
     private fun generateType(): String {
-        return if (clazz.isInterface) "*" else {
-            val primitiveName = SerializerFactory.primitiveTypeName(clazz)
-            return primitiveName ?: clazz.name
+        return if (isInterface) "*" else {
+            val primitiveName = SerializerFactory.primitiveTypeName(readMethod.genericReturnType)
+            return primitiveName ?: readMethod.genericReturnType.typeName
         }
     }
 
     private fun generateRequires(): List<String> {
-        return if (clazz.isInterface) listOf(readMethod.genericReturnType.typeName) else emptyList()
+        return if (isInterface) listOf(readMethod.genericReturnType.typeName) else emptyList()
     }
 
     private fun generateDefault(): String? {
-        if (clazz.isPrimitive) {
-            if (clazz == java.lang.Boolean.TYPE) {
+        if (isPrimitive) {
+            if (readMethod.genericReturnType == java.lang.Boolean.TYPE) {
                 return "false"
             } else {
                 return "0"
@@ -44,7 +45,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
 
     private fun generateMandatory(): Boolean {
         // TODO: support @NotNull
-        return clazz.isPrimitive || !readMethod.returnsKotlinNullable()
+        return isPrimitive || !readMethod.returnsKotlinNullable()
     }
 
     private fun Method.returnsKotlinNullable(): Boolean {
