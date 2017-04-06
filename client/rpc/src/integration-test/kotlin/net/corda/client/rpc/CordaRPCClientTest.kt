@@ -1,6 +1,5 @@
-package net.corda.client.jfx
+package net.corda.client.rpc
 
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
