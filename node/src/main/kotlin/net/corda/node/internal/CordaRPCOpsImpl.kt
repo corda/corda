@@ -1,5 +1,7 @@
 package net.corda.node.internal
 
+import com.google.common.util.concurrent.ListenableFuture
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
@@ -8,14 +10,12 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.StateMachineInfo
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
@@ -101,12 +101,22 @@ class CordaRPCOpsImpl(
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
-    override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+    override fun <T : Any> startFlowProgressDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         requirePermission(startFlowPermission(logicType))
         val stateMachine = services.invokeFlowAsync(logicType, *args) as FlowStateMachineImpl<T>
-        return FlowHandle(
+        return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 progress = stateMachine.logic.track()?.second ?: Observable.empty(),
+                returnValue = stateMachine.resultFuture
+        )
+    }
+
+    // TODO: Check that this flow is annotated as being intended for RPC invocation
+    override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        requirePermission(startFlowPermission(logicType))
+        val stateMachine = services.invokeFlowAsync(logicType, *args)
+        return FlowProgressHandleImpl(
+                id = stateMachine.id,
                 returnValue = stateMachine.resultFuture
         )
     }
@@ -161,5 +171,21 @@ class CordaRPCOpsImpl(
                 AddOrRemove.REMOVE -> StateMachineUpdate.Removed(change.id)
             }
         }
+    }
+}
+
+@CordaSerializable
+private data class FlowProgressHandleImpl<A> (
+        override val id: StateMachineRunId,
+        override val progress: Observable<String> = Observable.empty(),
+        override val returnValue: ListenableFuture<A>) : FlowProgressHandle<A> {
+
+    /**
+     * Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources.
+     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
+     */
+    override fun close() {
+        returnValue.cancel(false)
+        progress.notUsed()
     }
 }

@@ -44,7 +44,7 @@ sealed class StateMachineUpdate {
 
 /**
  * RPC operations that the node exposes to clients using the Java client library. These can be called from
- * client apps and are implemented by the node in the [CordaRPCOpsImpl] class.
+ * client apps and are implemented by the node in the [net.corda.node.internal.CordaRPCOpsImpl] class.
  */
 
 // TODO: The use of Pairs throughout is unfriendly for Java interop.
@@ -82,11 +82,17 @@ interface CordaRPCOps : RPCOps {
     fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
+     * Start the given flow with the given arguments.
+     */
+    @RPCReturnsObservables
+    fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+
+    /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
      * result of running the flow.
      */
     @RPCReturnsObservables
-    fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+    fun <T : Any> startFlowProgressDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
@@ -187,20 +193,20 @@ interface CordaRPCOps : RPCOps {
 inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: () -> R
-) = startFlowDynamic(R::class.java)
+): FlowHandle<T> = startFlowDynamic(R::class.java)
 
 inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A) -> R,
         arg0: A
-) = startFlowDynamic(R::class.java, arg0)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0)
 
 inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A, B) -> R,
         arg0: A,
         arg1: B
-) = startFlowDynamic(R::class.java, arg0, arg1)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1)
 
 inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
@@ -208,7 +214,7 @@ inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         arg0: A,
         arg1: B,
         arg2: C
-) = startFlowDynamic(R::class.java, arg0, arg1, arg2)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2)
 
 inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
@@ -217,44 +223,42 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
         arg1: B,
         arg2: C,
         arg3: D
-) = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
 /**
- * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
- *
- * @param id The started state machine's ID.
- * @param progress The stream of progress tracker events.
- * @param returnValue A [ListenableFuture] of the flow's return value.
+ * Same again, except this time with progress-tracking enabled.
  */
-@CordaSerializable
-data class FlowHandle<A>(
-        val id: StateMachineRunId,
-        val progress: Observable<String>,
-        val returnValue: ListenableFuture<A>) : AutoCloseable {
+inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: () -> R
+): FlowProgressHandle<T> = startFlowProgressDynamic(R::class.java)
 
-    /**
-     * Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources.
-     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
-     */
-    override fun close() {
-        returnValue.cancel(false)
-        progress.notUsed()
-    }
-}
+inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: (A) -> R,
+        arg0: A
+): FlowProgressHandle<T> = startFlowProgressDynamic(R::class.java, arg0)
 
-/**
- * This function should be invoked on any unwanted Observables returned from RPC to release the server resources.
- * TODO: Delete this function when this file is moved to RPC module, as Observable<T>.notUsed() exists there already.
- *
- * subscribe({}, {}) was used instead of simply calling subscribe()
- * because if an {@code onError} emission arrives (eg. due to an non-correct transaction, such as 'Not sufficient funds')
- * then {@link OnErrorNotImplementedException} is thrown. As we won't handle exceptions from unused Observables,
- * empty inputs are used to subscribe({}, {}).
- */
-fun <T> Observable<T>.notUsed() {
-    try {
-        this.subscribe({}, {}).unsubscribe()
-    } catch (e: Exception) {
-        // Swallow any other exceptions as well; we won't handle exceptions from unused Observables.
-    }
-}
+inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: (A, B) -> R,
+        arg0: A,
+        arg1: B
+): FlowProgressHandle<T> = startFlowProgressDynamic(R::class.java, arg0, arg1)
+
+inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: (A, B, C) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C
+): FlowProgressHandle<T> = startFlowProgressDynamic(R::class.java, arg0, arg1, arg2)
+
+inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: (A, B, C, D) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D
+): FlowProgressHandle<T> = startFlowProgressDynamic(R::class.java, arg0, arg1, arg2, arg3)

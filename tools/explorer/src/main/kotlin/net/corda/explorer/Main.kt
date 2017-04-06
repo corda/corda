@@ -14,7 +14,6 @@ import net.corda.client.jfx.model.observableValue
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
-import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
@@ -229,7 +228,6 @@ fun main(args: Array<String>) {
             // Log to logger when flow finish.
             fun FlowHandle<SignedTransaction>.log(seq: Int, name: String) {
                 val out = "[$seq] $name $id :"
-                progress.notUsed()
                 returnValue.success {
                     Main.log.info("$out ${it.id} ${(it.tx.outputs.first().data as Cash.State).amount}")
                 }.failure {
@@ -242,7 +240,6 @@ fun main(args: Array<String>) {
                 for (ref in 0..1) {
                     for ((currency, issuer) in issuers) {
                         CashFlowCommand.IssueCash(Amount(1_000_000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity).startFlow(issuer)
-                                .progress.notUsed()
                     }
                 }
             }
