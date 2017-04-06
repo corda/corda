@@ -170,8 +170,13 @@ sealed class NotaryError {
     /** Thrown if the time specified in the timestamp command is outside the allowed tolerance */
     object TimestampInvalid : NotaryError()
 
-    data class TransactionInvalid(val msg: String) : NotaryError()
-    data class SignaturesInvalid(val msg: String) : NotaryError()
+    data class TransactionInvalid(val msg: String) : NotaryError() {
+        override fun toString() = msg
+    }
+
+    data class SignaturesInvalid(val msg: String) : NotaryError() {
+        override fun toString() = msg
+    }
 
     data class SignaturesMissing(val cause: SignedTransaction.SignaturesMissingException) : NotaryError() {
         override fun toString() = cause.toString()
