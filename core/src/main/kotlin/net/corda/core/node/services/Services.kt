@@ -144,7 +144,7 @@ interface VaultService {
 
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters
-     * and returns a snapshot as an []Iterable] set of [StateRef] and streaming updates
+     * and returns a snapshot as an [Iterable] set of [StateRef] and streaming updates
      * as an [Observable] of [Vault.Update]
      *
      * Note: the iterator is lazy and client driven.

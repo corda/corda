@@ -15,12 +15,12 @@ import net.corda.core.crypto.composite
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.node.services.vault.schemas.VaultSchema
 import net.corda.node.utilities.configureDatabase
@@ -48,7 +48,6 @@ class VaultQueryTests {
 
     @Before
     fun setUp() {
-        LogHelper.setLevel(NodeVaultService::class)
         val dataSourceProps = makeTestDataSourceProperties()
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
@@ -71,7 +70,6 @@ class VaultQueryTests {
     @After
     fun tearDown() {
         dataSource.close()
-        LogHelper.reset(NodeVaultService::class)
     }
 
     /**
@@ -395,6 +393,39 @@ class VaultQueryTests {
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, ordering = Order.DESC)
             val states = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
             assertThat(states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `DEPRECATED return linear states for a given id`() {
+        databaseTransaction(database) {
+
+            val linearUid = UniqueIdentifier("TEST")
+            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+
+            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+            val states = vaultSvc.linearHeadsOfType<LinearState>().filter { it.key == linearUid }
+            assertThat(states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `DEPRECATED return consumed linear states for a given id`() {
+        databaseTransaction(database) {
+
+            val linearUid = UniqueIdentifier("TEST")
+            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+
+            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+            val states = vaultSvc.states(setOf(LinearState::class.java),
+                                         EnumSet.of(Vault.StateStatus.CONSUMED)).filter { it.state.data.linearId == linearUid }
+            assertThat(states).hasSize(3)
         }
     }
 
