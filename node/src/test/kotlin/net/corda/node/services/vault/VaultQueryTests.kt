@@ -126,6 +126,45 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `consumed states`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST")) // create 2 states with same UID
+            services.fillWithSomeTestLinearStates(8)
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+//            services.consumeLinearStates(UniqueIdentifier("TEST"))
+//            services.consumeDeals("456")
+//            services.consumeCash(80.DOLLARS)
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(5)
+        }
+    }
+
+    @Test
+    fun `all states`() {
+        databaseTransaction(database) {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST")) // create 2 states with same UID
+            services.fillWithSomeTestLinearStates(8)
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
+
+//            services.consumeLinearStates(UniqueIdentifier("TEST"))
+//            services.consumeDeals("456")
+//            services.consumeCash(80.DOLLARS)
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            assertThat(states).hasSize(16)
+        }
+    }
+
+
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
     val CASH_NOTARY: Party get() = Party("Notary Service", CASH_NOTARY_KEY.public)
 
@@ -192,25 +231,6 @@ class VaultQueryTests {
         }
     }
 
-    @Test
-    fun `consumed states`() {
-        databaseTransaction(database) {
-
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST")) // create 2 states with same UID
-            services.fillWithSomeTestLinearStates(8)
-            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-
-//            services.consumeLinearStates(UniqueIdentifier("TEST"))
-//            services.consumeDeals("456")
-//            services.consumeCash(80.DOLLARS)
-
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-            val states = vaultSvc.queryBy<ContractState>(criteria)
-            assertThat(states).hasSize(5)
-        }
-    }
-
     // pagination: first page
     @Test
     fun `all states with paging specification - first page`() {
@@ -250,7 +270,7 @@ class VaultQueryTests {
 //            services.fillWithSomeTestCommodity()
             services.fillWithSomeTestLinearStates(10)
 
-            val criteria = VaultQueryCriteria() // default is UNCONSUMED
+            val criteria = VaultQueryCriteria(contractStateTypes = setOf(FungibleAsset::class.java)) // default is UNCONSUMED
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states).hasSize(4)
         }
@@ -267,7 +287,8 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
 //          services.consumeLinearStates(8)
 
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
+                                              contractStateTypes = setOf(FungibleAsset::class.java))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states).hasSize(3)
         }
@@ -280,8 +301,8 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
 
-            val criteria = VaultQueryCriteria() // default is UNCONSUMED
-            val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java)) // default is UNCONSUMED
+            val states = vaultSvc.queryBy<Cash.State>(criteria)
             assertThat(states).hasSize(3)
         }
     }
@@ -308,7 +329,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestLinearStates(10)
 
-            val criteria = VaultQueryCriteria() // default is UNCONSUMED
+            val criteria = VaultQueryCriteria(contractStateTypes = setOf(LinearState::class.java)) // default is UNCONSUMED
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(10)
         }
@@ -322,7 +343,8 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
 //          services.consumeLinearStates(8)
 
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
+                                              contractStateTypes = setOf(LinearState::class.java))
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(2)
         }
@@ -355,6 +377,24 @@ class VaultQueryTests {
                                                     latestOnly = true)
             val states = vaultSvc.queryBy<LinearState>(criteria)
             assertThat(states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `return chain of linear state for a given id`() {
+        databaseTransaction(database) {
+
+            val id = UniqueIdentifier("TEST")
+            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+//            services.processLinearState(id)  // consume current and produce new state reference
+
+            // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+            val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(id))
+            val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, ordering = Order.DESC)
+            val states = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
+            assertThat(states).hasSize(4)
         }
     }
 
@@ -577,11 +617,11 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
             val statusAllExpression = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.ALL)
+            val customCriteria = VaultCustomQueryCriteria(expression = statusAllExpression)
+
             val pagingSpec = PageSpecification(1, 10)
-            val criteria = VaultCustomQueryCriteria(expression = statusAllExpression,
-                    ordering = Order.DESC,
-                    paging = pagingSpec)
-            val states = vaultSvc.queryBy<ContractState>(criteria)
+            val vaultCriteria = VaultQueryCriteria(ordering = Order.DESC, paging = pagingSpec)
+            val states = vaultSvc.queryBy<ContractState>(vaultCriteria.and(customCriteria))
             assertThat(states).hasSize(10)
         }
     }

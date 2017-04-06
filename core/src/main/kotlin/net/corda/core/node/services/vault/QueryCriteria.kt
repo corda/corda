@@ -68,16 +68,18 @@ interface QueryCriteria {
 }
 
 open class VaultQueryCriteria(val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                          // Usability question: single Enum Type value or Collection of Enums?
-                          // Vault.StateState.UNCONSUMED or setOf(Vault.StateState.UNCONSUMED) (default)
-                          // Vault.StateState.CONSUMED or setOf(Vault.StateState.CONSUMED)
-                          // Vault.StateState.ALL or setOf(Vault.StateState.CONSUMED, Vault.StateState.UNCONSUMED)
                               val stateRefs: Collection<StateRef>? = null,
                               val contractStateTypes: Set<Class<out ContractState>>? = null,
                               val notary: Collection<Party>? = null,
                               val includeSoftlocks: Boolean? = true,
                               val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-                              val paging: PageSpecification? = null) : QueryCriteria {
+                              val paging: PageSpecification? = null,
+                              val ordering: Order? = Order.ASC) : QueryCriteria {
+
+    // Usability question: single Enum Type value or Collection of Enums?
+    // Vault.StateState.UNCONSUMED or setOf(Vault.StateState.UNCONSUMED) (default)
+    // Vault.StateState.CONSUMED or setOf(Vault.StateState.CONSUMED)
+    // Vault.StateState.ALL or setOf(Vault.StateState.CONSUMED, Vault.StateState.UNCONSUMED)
 
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
 }
@@ -133,9 +135,7 @@ class FungibleAssetQueryCriteria(val owner: Collection<Party>? = null,
 //
 // NOTE: this class leverages Requery types: [Logical] [Order]
 //
-class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>,
-                                    val ordering: Order? = Order.ASC,
-                                    val paging: PageSpecification? = null) : QueryCriteria {
+class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>? = null) : QueryCriteria {
 
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
 }
