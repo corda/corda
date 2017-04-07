@@ -7,6 +7,8 @@ the previous milestone release.
 Milestone 10
 ------------
 
+Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_, `Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions to Corda in M10.
+
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
 the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
