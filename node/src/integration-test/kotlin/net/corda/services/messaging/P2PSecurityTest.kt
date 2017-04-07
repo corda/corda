@@ -7,6 +7,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
+import net.corda.core.utilities.BOB
 import net.corda.flows.sendRequest
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
@@ -29,7 +30,7 @@ class P2PSecurityTest : NodeBasedTest() {
     @Test
     fun `incorrect legal name for the network map service config`() {
         val incorrectNetworkMapName = random63BitValue().toString()
-        val node = startNode("Bob", configOverrides = mapOf(
+        val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),
                         "legalName" to incorrectNetworkMapName

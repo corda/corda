@@ -6,6 +6,7 @@ import javafx.scene.input.KeyCode
 import javafx.scene.layout.Pane
 import javafx.stage.FileChooser
 import javafx.util.converter.NumberStringConverter
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
@@ -115,7 +116,7 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.legalName.value = if (nodeController.hasNetworkMap()) "" else "Notary"
+        model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort

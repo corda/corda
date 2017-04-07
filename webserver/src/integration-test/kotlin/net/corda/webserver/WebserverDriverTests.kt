@@ -2,6 +2,7 @@ package net.corda.webserver
 
 import com.google.common.net.HostAndPort
 import net.corda.core.getOrThrow
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.node.driver.addressMustBeBound
 import net.corda.node.driver.addressMustNotBeBound
 import net.corda.node.driver.driver
@@ -24,7 +25,7 @@ class DriverTests {
     @Test
     fun `starting a node and independent web server works`() {
         val addr = driver {
-            val node = startNode("test").getOrThrow()
+            val node = startNode(DUMMY_BANK_A.name).getOrThrow()
             val webserverAddr = startWebserver(node).getOrThrow()
             webserverMustBeUp(webserverAddr)
             webserverAddr

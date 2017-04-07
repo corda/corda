@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
@@ -152,14 +153,14 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig("Notary", 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         assertEquals("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"MyName\","
                 + "\"nearestCity\":\"Stockholm\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"Notary\"},"
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"NotaryService\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -182,7 +183,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig("Notary", 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -196,7 +197,7 @@ class NodeConfigTest {
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
         assertEquals(listOf(user("jenny")), fullConfig.rpcUsers)
-        assertEquals(NetworkMapInfo(localPort(12345), "Notary"), fullConfig.networkMapService)
+        assertEquals(NetworkMapInfo(localPort(12345), DUMMY_NOTARY.name), fullConfig.networkMapService)
         assertTrue((fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001"))
         assertTrue(fullConfig.useTestClock)
     }
@@ -213,7 +214,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig("Notary", 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))

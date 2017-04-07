@@ -6,6 +6,9 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.toBase58String
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.postJson
@@ -31,9 +34,9 @@ class IRSDemoTest : IntegrationTestCategory {
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = Futures.allAsList(
-                    startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
-                    startNode("Bank A", rpcUsers = listOf(rpcUser)),
-                    startNode("Bank B")
+                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                    startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
+                    startNode(DUMMY_BANK_B.name)
             ).getOrThrow()
 
             val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(

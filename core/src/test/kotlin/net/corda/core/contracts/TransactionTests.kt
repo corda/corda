@@ -10,13 +10,13 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_KEY_1
 import net.corda.core.utilities.DUMMY_KEY_2
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.testing.ALICE
 import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.BOB
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals

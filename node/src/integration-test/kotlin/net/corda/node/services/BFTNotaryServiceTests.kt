@@ -9,6 +9,7 @@ import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.ALICE
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -30,7 +31,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
     @Test
     fun `detect double spend`() {
         val masterNode = startBFTNotaryCluster(notaryName, 4, BFTNonValidatingNotaryService.type).first()
-        val alice = startNode("Alice").getOrThrow()
+        val alice = startNode(ALICE.name).getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
         val notaryNodeKeyPair = databaseTransaction(masterNode.database) { masterNode.services.notaryIdentityKey }

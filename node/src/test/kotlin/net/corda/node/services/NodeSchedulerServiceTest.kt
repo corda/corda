@@ -13,11 +13,11 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.core.utilities.ALICE_KEY
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.ALICE_KEY
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.TestClock

@@ -10,12 +10,12 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.BOB_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.BOB_KEY
 import net.corda.testing.BOB_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY

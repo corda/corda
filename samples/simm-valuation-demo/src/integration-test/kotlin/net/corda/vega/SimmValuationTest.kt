@@ -4,6 +4,9 @@ import com.google.common.util.concurrent.Futures
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
@@ -20,14 +23,14 @@ class SimmValuationTest : IntegrationTestCategory {
     private companion object {
         // SIMM demo can only currently handle one valuation date due to a lack of market data or a market data source.
         val valuationDate = LocalDate.parse("2016-06-06")
-        val nodeALegalName = "Bank A"
-        val nodeBLegalName = "Bank B"
+        val nodeALegalName = DUMMY_BANK_A.name
+        val nodeBLegalName = DUMMY_BANK_B.name
         val testTradeId = "trade1"
     }
 
     @Test fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
-            startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
+            startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
             val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
                     .getOrThrow()

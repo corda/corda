@@ -16,8 +16,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.ProcessUtilities
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -145,8 +144,8 @@ sealed class PortAllocation {
 /**
  * [driver] allows one to start up nodes like this:
  *   driver {
- *     val noService = startNode("NoService")
- *     val notary = startNode("Notary")
+ *     val noService = startNode(DUMMY_BANK_A.name)
+ *     val notary = startNode(DUMMY_NOTARY.name)
  *
  *     (...)
  *   }
@@ -344,7 +343,7 @@ class DriverDSL(
         val isDebug: Boolean,
         val automaticallyStartNetworkMap: Boolean
 ) : DriverDSLInternalInterface {
-    private val networkMapLegalName = "NetworkMapService"
+    private val networkMapLegalName = DUMMY_MAP.name
     private val networkMapAddress = portAllocation.nextHostAndPort()
     val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(2))
     val shutdownManager = ShutdownManager(executorService)
@@ -458,7 +457,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { "Notary Node $it" }
+        val nodeNames = (1..clusterSize).map { "${DUMMY_NOTARY.name} $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
@@ -539,9 +538,9 @@ class DriverDSL(
 
     companion object {
         val name = arrayOf(
-                "Alice",
-                "Bob",
-                "Bank"
+                ALICE.name,
+                BOB.name,
+                DUMMY_BANK_A.name
         )
 
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]

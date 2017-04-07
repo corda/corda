@@ -26,6 +26,9 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.loggerFor
 import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
@@ -162,12 +165,12 @@ fun main(args: Array<String>) {
                 startFlowPermission<IssuanceRequester>())
         )
         // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-        val notary = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
+        val notary = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
                 customOverrides = mapOf("nearestCity" to "Zurich"))
-        val alice = startNode("Alice", rpcUsers = arrayListOf(user),
+        val alice = startNode(ALICE.name, rpcUsers = arrayListOf(user),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                 customOverrides = mapOf("nearestCity" to "Milan"))
-        val bob = startNode("Bob", rpcUsers = arrayListOf(user),
+        val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                 customOverrides = mapOf("nearestCity" to "Madrid"))
         val issuerGBP = startNode("UK Bank Plc", rpcUsers = arrayListOf(manager),

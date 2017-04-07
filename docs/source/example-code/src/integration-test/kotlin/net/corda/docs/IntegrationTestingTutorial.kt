@@ -9,16 +9,16 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.parallel
-import net.corda.testing.sequence
+import net.corda.testing.*
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
@@ -36,9 +36,9 @@ class IntegrationTestingTutorial {
                     startFlowPermission<CashPaymentFlow>()
             ))
             val (alice, bob, notary) = Futures.allAsList(
-                    startNode("Alice", rpcUsers = listOf(aliceUser)),
-                    startNode("Bob", rpcUsers = listOf(bobUser)),
-                    startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+                    startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
+                    startNode(BOB.name, rpcUsers = listOf(bobUser)),
+                    startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             ).getOrThrow()
             // END 1
 
