@@ -10,9 +10,12 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
+import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
+import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
@@ -46,10 +49,12 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
 
     private fun makeSessionFactoryForSchema(schema: MappedSchema): SessionFactory {
         logger.info("Creating session factory for schema $schema")
+        val serviceRegistry = BootstrapServiceRegistryBuilder().build()
+        val metadataSources = MetadataSources(serviceRegistry);
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
-        val config = Configuration().setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", "update")
                 .setProperty("hibernate.show_sql", "false")
                 .setProperty("hibernate.format_sql", "true")
@@ -61,14 +66,8 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
         }
         val tablePrefix = options?.tablePrefix ?: "contract_" // We always have this as the default for aesthetic reasons.
         logger.debug { "Table prefix = $tablePrefix" }
-        config.setPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-            override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                val default = super.toPhysicalTableName(name, context)
-                return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-            }
-        })
         schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
-        val sessionFactory = config.buildSessionFactory()
+        val sessionFactory = buildSessionFactory(config, metadataSources, tablePrefix)
         logger.info("Created session factory for schema $schema")
         return sessionFactory
     }
@@ -87,12 +86,36 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
 
     private fun persistStateWithSchema(state: QueryableState, stateRef: StateRef, schema: MappedSchema) {
         val sessionFactory = sessionFactoryForSchema(schema)
-        val session = sessionFactory.openStatelessSession(TransactionManager.current().connection)
+        val session = sessionFactory.withOptions().
+                connection(TransactionManager.current().connection).
+                flushMode(FlushMode.MANUAL).
+                openSession()
         session.use {
             val mappedObject = schemaService.generateMappedObject(state, schema)
             mappedObject.stateRef = PersistentStateRef(stateRef)
-            session.insert(mappedObject)
+            session.persist(mappedObject)
+            session.flush()
         }
+    }
+
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
+        config.standardServiceRegistryBuilder.applySettings(config.properties)
+        val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
+        metadataBuilder.applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
+            override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                val default = super.toPhysicalTableName(name, context)
+                return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+            }
+        })
+
+        val metadata = metadataBuilder.build()
+
+        val sessionFactoryBuilder = metadata.getSessionFactoryBuilder()
+        sessionFactoryBuilder.allowOutOfTransactionUpdateOperations(true)
+        sessionFactoryBuilder.applySecondLevelCacheSupport(false)
+        sessionFactoryBuilder.applyQueryCacheSupport(false)
+        sessionFactoryBuilder.enableReleaseResourcesOnCloseEnabled(true)
+        return sessionFactoryBuilder.build()
     }
 
     // Supply Hibernate with connections from our underlying Exposed database integration.  Only used
