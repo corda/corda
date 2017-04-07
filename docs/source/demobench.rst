@@ -6,15 +6,17 @@ DemoBench is a standalone desktop application that makes it easy to configure an
 Downloading
 -----------
 
-Installers compatible with the latest Corda release will soon be downloadable from the R3 website.
+Installers compatible with the latest Corda release can be downloaded from the `Corda website`_.
+
+.. _Corda website: https://www.corda.net/downloads
 
 Running DemoBench
 -----------------
 
 Configuring a Node
-  Each node must have a unique name to identify it to the network map service. DemoBench will also suggest local port numbers to use.
+  Each node must have a unique name to identify it to the network map service. DemoBench will suggest local port numbers to use.
 
-  The first node will host the network map service, and therefore *must* be a notary. Hence only notary services will be available to be selected in the ``Services`` list. For subsequent nodes you may also select any of Corda's other built-in services.
+  The first node will host the network map service, and we are forcing that node also to be a notary. Hence only notary services will be available to be selected in the ``Services`` list. For subsequent nodes you may also select any of Corda's other built-in services.
 
 .. note:: Press ``Ctrl``/``Cmd`` and then click with the mouse to select multiple services, and also to deselect a service again.
 
@@ -29,12 +31,13 @@ Running Nodes
 
 ..
 
+It is currently impossible from DemoBench to restart a node that has terminated, e.g. because the user typed "bye" at the node's shell prompt. However, that node's data and logs still remain in its directory.
 
 Exiting DemoBench
   When you terminate DemoBench, it will automatically shut down any nodes and explorers that it has launched and then exit.
 
 Profiles
-  You can save all of DemoBench's currently running nodes into a profile, which is a ``ZIP`` file with the following layout, e.g.:
+  You can save the configurations and CorDapps for all of DemoBench's currently running nodes into a profile, which is a ``ZIP`` file with the following layout, e.g.:
 
 .. parsed-literal::
 
@@ -52,7 +55,15 @@ Profiles
 
 ..
 
-  When DemoBench reloads this profile it will close any nodes that it is currently running and then launch these new nodes instead. Note that the ``node.conf`` files within each profile are JSON/HOCON format, and so can be extracted and edited as required.
+  When DemoBench reloads this profile it will close any nodes that it is currently running and then launch these new nodes instead. All nodes will be created with a brand new database. Note that the ``node.conf`` files within each profile are JSON/HOCON format, and so can be extracted and edited as required.
+
+DemoBench writes a log file to the following location:
+
++--------------+-------------------------------------------+
+| MacOSX/Linux | ``$HOME/demobench/demobench.log``         |
++--------------+-------------------------------------------+
+| Windows      | ``%USERPROFILE%\demobench\demobench.log`` |
++--------------+-------------------------------------------+
 
 Building the Installers
 -----------------------
@@ -90,6 +101,20 @@ Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell 
 .. parsed-literal::
 
     > java -Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig -jar lib/demobench-$version.jar
+
+..
+
+While DemoBench *can* be executed within an IDE, it would be up to the Developer to install all of its runtime dependencies beforehand into their correct locations relative to the value of the ``user.dir`` system property (i.e. the current working directory of the JVM):
+
+.. parsed-literal::
+
+    corda/
+        corda.jar
+        corda-webserver.jar
+    explorer/
+        node-explorer.jar
+    plugins/
+        bank-of-corda.jar
 
 ..
 
