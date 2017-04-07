@@ -20,9 +20,65 @@ import java.time.Instant
  *
  */
 
-interface QueryCriteria {
+sealed class QueryCriteria {
 
-    fun and(criteria: QueryCriteria): QueryCriteria
+    /**
+     * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
+     * plus simple paging and sorting.
+     */
+    data class VaultQueryCriteria @JvmOverloads constructor (
+            val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            val stateRefs: Collection<StateRef>? = null,
+            val contractStateTypes: Set<Class<out ContractState>>? = null,
+            val notary: Collection<Party>? = null,
+            val includeSoftlocks: Boolean? = true,
+            val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
+            val paging: PageSpecification? = null,
+            val ordering: Order? = Order.ASC) : QueryCriteria()
+
+    /**
+     * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
+     */
+    data class LinearStateQueryCriteria @JvmOverloads constructor(
+            val linearId: List<UniqueIdentifier>? = null,
+            val latestOnly: Boolean? = false,
+            val dealRef: Collection<String>? = null,
+            val dealParties: Collection<Party>? = null) : QueryCriteria()
+
+   /**
+    * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
+    */
+    data class FungibleAssetQueryCriteria @JvmOverloads constructor(
+            val owner: Collection<Party>? = null,
+            val quantity: Logical<*,Long>? = null,
+            val tokenType: TokenType = TokenType.CURRENCY,
+            val tokenValue: Collection<String>? = null,
+            val issuerParty: Collection<Party>? = null,
+            val issuerRef: Collection<OpaqueBytes>? = null,
+            val exitKeys: Collection<CompositeKey>? = null) : QueryCriteria()
+
+    /**
+     * Specify any query criteria by leveraging the Requery Query DSL:
+     * provides query ability on any [Queryable] custom contract state attribute defined by a [MappedSchema]
+     */
+    data class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>? = null) : QueryCriteria()
+
+    // enable composition of [QueryCriteria]
+    data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
+    data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
+
+    /**
+     *  Provide simple ability to specify an offset within a result set and the number of results to
+     *  return from that offset (eg. page size)
+     *
+     *  Note: it is the responsibility of the calling client to manage page windows.
+     *
+     *  For advanced pagination it is recommended you utilise standard JPA query frameworks such as
+     *  Spring Data's JPARepository which extends the [PagingAndSortingRepository] interface to provide
+     *  paging and sorting capability:
+     *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
+     */
+    data class PageSpecification(val pageNumber: Int, val pageSize: Int)
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
     enum class TimeInstantType {
@@ -52,70 +108,7 @@ interface QueryCriteria {
         override fun getRightOperand(): R = rightOperand
         override fun getLeftOperand(): L = leftOperand
     }
-
-    /**
-     *  Provide simple ability to specify an offset within a result set and the number of results to
-     *  return from that offset (eg. page size)
-     *
-     *  Note: it is the responsibility of the calling client to manage page windows.
-     *
-     *  For advanced pagination it is recommended you utilise standard JPA query frameworks such as
-     *  Spring Data's JPARepository which extends the [PagingAndSortingRepository] interface to provide
-     *  paging and sorting capability:
-     *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
-     */
-    data class PageSpecification(val pageNumber: Int, val pageSize: Int)
 }
 
-
-open class VaultQueryCriteria @JvmOverloads constructor (
-                              val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                              val stateRefs: Collection<StateRef>? = null,
-                              val contractStateTypes: Set<Class<out ContractState>>? = null,
-                              val notary: Collection<Party>? = null,
-                              val includeSoftlocks: Boolean? = true,
-                              val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-                              val paging: PageSpecification? = null,
-                              val ordering: Order? = Order.ASC) : QueryCriteria {
-    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
-}
-
-/**
- * LinearStateQueryCriteria
- */
-class LinearStateQueryCriteria @JvmOverloads constructor(
-                               val linearId: List<UniqueIdentifier>? = null,
-                               val latestOnly: Boolean? = false,
-                               val dealRef: Collection<String>? = null,
-                               val dealParties: Collection<Party>? = null) : QueryCriteria {
-
-    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
-}
-
-/**
- * FungibleStateQueryCriteria
- */
-class FungibleAssetQueryCriteria @JvmOverloads constructor(
-                                 val owner: Collection<Party>? = null,
-                                 val quantity: Logical<*,Long>? = null,
-                                 val tokenType: TokenType = TokenType.CURRENCY,
-                                 val tokenValue: Collection<String>? = null,
-                                 val issuerParty: Collection<Party>? = null,
-                                 val issuerRef: Collection<OpaqueBytes>? = null,
-                                 val exitKeys: Collection<CompositeKey>? = null) : QueryCriteria {
-
-    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
-}
-
-/**
- * Specify any query criteria by leveraging the Requery Query DSL
- */
-class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>? = null) : QueryCriteria {
-
-    override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
-}
-
-
-
-
-
+fun QueryCriteria.and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
+fun QueryCriteria.or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)

@@ -9,6 +9,7 @@ import net.corda.core.node.services.vault.*;
 import net.corda.core.serialization.*;
 import net.corda.core.transactions.*;
 import net.corda.testing.node.*;
+import net.corda.core.node.services.vault.QueryCriteria.*;
 import org.jetbrains.annotations.*;
 import org.jetbrains.exposed.sql.*;
 import org.junit.*;
@@ -28,6 +29,7 @@ import static net.corda.core.utilities.TestConstants.getDUMMY_NOTARY;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.testing.CoreTestUtils.getMEGA_CORP;
+import static net.corda.core.node.services.vault.QueryCriteriaKt.and;
 
 public class VaultQueryJavaTests {
 
@@ -92,30 +94,15 @@ public class VaultQueryJavaTests {
             Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
-            // OPTION 1: JavaBeans setter
-            VaultQueryCriteria criteria1 = new VaultQueryCriteria();
-            criteria1.setStatus(status); // setter (JavaBeans convention); requires Kotlin var
-            criteria1.setContractStateTypes(contractStateTypes); // setter (JavaBeans convention); requires Kotlin var
-
+            VaultQueryCriteria criteria1 = new VaultQueryCriteria(status, contractStateTypes);
             Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(criteria1);
-            assertThat(states).hasSize(3);
-
-            // OPTION 2: Builder
-            VaultQueryCriteria criteria2 = new VaultQueryCriteria.Builder()
-                    .status(status)
-                    .contractStateTypes(contractStateTypes)
-                    .build();
-
-            Iterable<StateAndRef<ContractState>> states2 = vaultSvc.queryBy(criteria2);
             // DOCEND VaultJavaQueryExample1
 
-            assertThat(states2).hasSize(3);
+            assertThat(states).hasSize(3);
 
             return tx;
         });
     }
-
-
 
     @Test
     public void consumedDealStates() {
@@ -128,19 +115,15 @@ public class VaultQueryJavaTests {
             fillWithSomeTestDeals(services, dealIds, 0);
 
             // DOCSTART VaultJavaQueryExample2
-            VaultQueryCriteria vaultCriteria = new VaultQueryCriteria();
-            HashSet contractStateTypes = new HashSet(Arrays.asList(DealState.class));
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
-            vaultCriteria.setStatus(status); // setter (JavaBeans convention); requires Kotlin var
-            vaultCriteria.setContractStateTypes(contractStateTypes); // setter (JavaBeans convention); requires Kotlin var
+            HashSet contractStateTypes = new HashSet(Arrays.asList(DealState.class));
+            QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
             List<Party> dealParties = Arrays.asList(getMEGA_CORP());
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealParties);
 
-            LinearStateQueryCriteria dealCriteriaEmpty = new LinearStateQueryCriteria();
-            LinearStateQueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealParties);
-
-            QueryCriteria compositeCriteria = dealCriteriaAll.and(vaultCriteria);
+            QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 
             Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(compositeCriteria);
             // DOCEND VaultJavaQueryExample2
