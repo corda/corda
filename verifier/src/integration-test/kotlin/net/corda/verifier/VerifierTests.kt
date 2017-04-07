@@ -9,6 +9,8 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.config.VerifierType
@@ -33,7 +35,7 @@ class VerifierTests {
     @Test
     fun `single verifier works with requestor`() {
         verifierDriver(automaticallyStartNetworkMap = false) {
-            val aliceFuture = startVerificationRequestor("Alice")
+            val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             startVerifier(alice)
@@ -50,7 +52,7 @@ class VerifierTests {
     @Test
     fun `multiple verifiers work with requestor`() {
         verifierDriver(automaticallyStartNetworkMap = false) {
-            val aliceFuture = startVerificationRequestor("Alice")
+            val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             val numberOfVerifiers = 4
@@ -70,7 +72,7 @@ class VerifierTests {
     @Test
     fun `verification redistributes on verifier death`() {
         verifierDriver(automaticallyStartNetworkMap = false) {
-            val aliceFuture = startVerificationRequestor("Alice")
+            val aliceFuture = startVerificationRequestor(ALICE.name)
             val numberOfTransactions = 100
             val transactions = generateTransactions(numberOfTransactions)
             val alice = aliceFuture.get()
@@ -98,7 +100,7 @@ class VerifierTests {
     @Test
     fun `verification request waits until verifier comes online`() {
         verifierDriver(automaticallyStartNetworkMap = false) {
-            val aliceFuture = startVerificationRequestor("Alice")
+            val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
             val futures = transactions.map { alice.verifyTransaction(it) }
@@ -110,8 +112,8 @@ class VerifierTests {
     @Test
     fun `single verifier works with a node`() {
         verifierDriver {
-            val aliceFuture = startNode("Alice")
-            val notaryFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
+            val aliceFuture = startNode(ALICE.name)
+            val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
             val alice = aliceFuture.get()
             val notary = notaryFuture.get()
             startVerifier(notary)

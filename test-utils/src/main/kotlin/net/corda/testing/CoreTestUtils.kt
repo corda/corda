@@ -14,8 +14,7 @@ import net.corda.core.node.Version
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.*
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.*
@@ -63,17 +62,9 @@ val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
 val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
-val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
 val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
-val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
-
-val BOB_KEY: KeyPair by lazy { generateKeyPair() }
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
-val BOB: Party get() = Party("Bob", BOB_PUBKEY)
-
-val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
-val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
 
 val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)

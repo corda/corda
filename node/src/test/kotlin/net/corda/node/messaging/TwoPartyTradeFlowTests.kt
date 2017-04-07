@@ -16,6 +16,8 @@ import net.corda.core.rootCause
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.TEST_TX_TIME

@@ -1,5 +1,6 @@
 package net.corda.demobench.model
 
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.nodeapi.User
 import org.junit.Test
 import java.nio.file.Path
@@ -96,7 +97,7 @@ class NodeControllerTest {
     @Test
     fun `test register non-network-map node`() {
         val config = createConfig(legalName = "Node is not Network Map")
-        config.networkMap = NetworkMapConfig("Notary", 10000)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
         assertFalse(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())

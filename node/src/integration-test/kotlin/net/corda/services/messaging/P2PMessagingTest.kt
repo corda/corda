@@ -11,6 +11,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.*
 import net.corda.flows.ServiceRequestMessage
 import net.corda.flows.sendRequest
 import net.corda.node.internal.Node
@@ -26,7 +27,8 @@ import java.util.*
 class P2PMessagingTest : NodeBasedTest() {
     @Test
     fun `network map will work after restart`() {
-        fun startNodes() = Futures.allAsList(startNode("NodeA"), startNode("NodeB"), startNode("Notary"))
+        val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+        fun startNodes() = Futures.allAsList(identities.map { startNode(it.name) })
 
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
@@ -40,7 +42,7 @@ class P2PMessagingTest : NodeBasedTest() {
     fun `communicating with a service running on the network map node`() {
         startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         networkMapNode.respondWith("Hello")
-        val alice = startNode("Alice").getOrThrow()
+        val alice = startNode(ALICE.name).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
             alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
@@ -55,14 +57,14 @@ class P2PMessagingTest : NodeBasedTest() {
 
         val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
-                listOf(root / "NetworkMap", root / "Service Node 2"),
+                listOf(root / DUMMY_MAP.name, root / "Service Node 2"),
                 RaftValidatingNotaryService.type.id,
                 serviceName)
 
         val distributedService = ServiceInfo(RaftValidatingNotaryService.type, serviceName)
         val notaryClusterAddress = freeLocalHostAndPort()
         startNetworkMapNode(
-                "NetworkMap",
+                DUMMY_MAP.name,
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = Futures.allAsList(
@@ -72,7 +74,7 @@ class P2PMessagingTest : NodeBasedTest() {
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
-                startNode("Alice")
+                startNode(ALICE.name)
         ).getOrThrow()
 
         assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)

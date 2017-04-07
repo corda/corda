@@ -22,6 +22,8 @@ import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
 import net.corda.node.services.network.NodeRegistration
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
@@ -44,7 +46,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Before
     fun setup() {
         network = MockNetwork(defaultFactory = nodeFactory)
-        network.createTwoNodes(firstNodeName = "map service", secondNodeName = "alice").apply {
+        network.createTwoNodes(firstNodeName = "map service", secondNodeName = ALICE.name).apply {
             mapServiceNode = first
             alice = second
         }
@@ -110,7 +112,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     @Test
     fun `de-register unknown node`() {
-        val bob = newNodeSeparateFromNetworkMap("Bob")
+        val bob = newNodeSeparateFromNetworkMap(BOB.name)
         val response = bob.registration(REMOVE)
         swizzle()
         assertThat(response.getOrThrow().error).isNotNull()  // Make sure send error message is sent back
@@ -121,7 +123,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     fun `subscribed while new node registers`() {
         val updates = alice.subscribe()
         swizzle()
-        val bob = addNewNodeToNetworkMap("Bob")
+        val bob = addNewNodeToNetworkMap(BOB.name)
         swizzle()
         val update = updates.single()
         assertThat(update.mapVersion).isEqualTo(networkMapService.mapVersion)
@@ -130,7 +132,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     @Test
     fun `subscribed while node de-registers`() {
-        val bob = addNewNodeToNetworkMap("Bob")
+        val bob = addNewNodeToNetworkMap(BOB.name)
         val updates = alice.subscribe()
         bob.registration(REMOVE)
         swizzle()
@@ -140,7 +142,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     @Test
     fun unsubscribe() {
         val updates = alice.subscribe()
-        val bob = addNewNodeToNetworkMap("Bob")
+        val bob = addNewNodeToNetworkMap(BOB.name)
         alice.unsubscribe()
         addNewNodeToNetworkMap("Charlie")
         swizzle()
@@ -151,7 +153,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     fun `surpass unacknowledged update limit`() {
         val subscriber = newNodeSeparateFromNetworkMap("Subscriber")
         val updates = subscriber.subscribe()
-        val bob = addNewNodeToNetworkMap("Bob")
+        val bob = addNewNodeToNetworkMap(BOB.name)
         var serial = updates.first().wireReg.verified().serial
         repeat(networkMapService.maxUnacknowledgedUpdates) {
             bob.registration(ADD, serial = ++serial)
@@ -165,7 +167,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     fun `delay sending update ack until just before unacknowledged update limit`() {
         val subscriber = newNodeSeparateFromNetworkMap("Subscriber")
         val updates = subscriber.subscribe()
-        val bob = addNewNodeToNetworkMap("Bob")
+        val bob = addNewNodeToNetworkMap(BOB.name)
         var serial = updates.first().wireReg.verified().serial
         repeat(networkMapService.maxUnacknowledgedUpdates - 1) {
             bob.registration(ADD, serial = ++serial)

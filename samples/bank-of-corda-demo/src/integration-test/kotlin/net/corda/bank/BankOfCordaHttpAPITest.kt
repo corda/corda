@@ -7,6 +7,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.testing.BOC
 import org.junit.Test
 
 class BankOfCordaHttpAPITest {
@@ -14,11 +15,11 @@ class BankOfCordaHttpAPITest {
     fun `issuer flow via Http`() {
         driver(dsl = {
             val (nodeBankOfCorda) = Futures.allAsList(
-                    startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type))),
+                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type))),
                     startNode("BigCorporation")
             ).getOrThrow()
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow()
-            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", "BankOfCorda")))
+            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", BOC.name)))
         }, isDebug = true)
     }
 }

@@ -10,6 +10,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
@@ -33,7 +34,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     private val counterpartyNode by lazy {
-        rpc.networkMapUpdates().first.first { it.legalIdentity.name == "Counterparty" }
+        rpc.networkMapUpdates().first.first { it.legalIdentity.name == BOB.name }
     }
 
     private companion object {

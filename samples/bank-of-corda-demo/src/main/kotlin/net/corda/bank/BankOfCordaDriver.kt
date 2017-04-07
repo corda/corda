@@ -7,12 +7,14 @@ import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.BOC
 import kotlin.system.exitProcess
 
 /**
@@ -53,8 +55,8 @@ private class BankOfCordaDriver {
             driver(dsl = {
                 val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
                 val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
-                startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
+                val bankOfCorda = startNode(BOC.name, rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
                 startNode("BigCorporation", rpcUsers = listOf(bigCorpUser))
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()

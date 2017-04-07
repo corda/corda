@@ -10,6 +10,8 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.driver.NodeHandle
@@ -39,9 +41,9 @@ class DistributedServiceTests : DriverBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>())
         )
-        val aliceFuture = startNode("Alice", rpcUsers = listOf(testUser))
+        val aliceFuture = startNode(ALICE.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
-                "Notary",
+                DUMMY_NOTARY.name,
                 rpcUsers = listOf(testUser),
                 clusterSize = clusterSize,
                 type = RaftValidatingNotaryService.type

@@ -8,6 +8,7 @@ import net.corda.core.flatMap
 import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.DUMMY_MAP
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -53,7 +54,7 @@ abstract class NodeBasedTest {
      * You can use this method to start the network map node in a more customised manner. Otherwise it
      * will automatically be started with the default parameters.
      */
-    fun startNetworkMapNode(legalName: String = "Network Map",
+    fun startNetworkMapNode(legalName: String = DUMMY_MAP.name,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): Node {

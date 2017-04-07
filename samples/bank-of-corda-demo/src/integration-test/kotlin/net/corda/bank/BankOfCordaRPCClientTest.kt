@@ -10,10 +10,7 @@ import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.BIG_CORP_PARTY_REF
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.sequence
+import net.corda.testing.*
 import org.junit.Test
 
 class BankOfCordaRPCClientTest {
@@ -23,7 +20,7 @@ class BankOfCordaRPCClientTest {
             val bocManager = User("bocManager", "password1", permissions = setOf(startFlowPermission<IssuanceRequester>()))
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = Futures.allAsList(
-                    startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
+                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
                     startNode("BigCorporation", rpcUsers = listOf(bigCorpCFO))
             ).getOrThrow()
 

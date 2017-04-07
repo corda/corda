@@ -6,6 +6,8 @@ import net.corda.core.list
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.readLines
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -36,7 +38,7 @@ class DriverTests {
     @Test
     fun `simple node startup and shutdown`() {
         val (notary, regulator) = driver {
-            val notary = startNode("TestNotary", setOf(ServiceInfo(SimpleNotaryService.type)))
+            val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
             val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
 
             nodeMustBeUp(notary.getOrThrow().nodeInfo)
@@ -50,7 +52,7 @@ class DriverTests {
     @Test
     fun `starting node with no services`() {
         val noService = driver {
-            val noService = startNode("NoService")
+            val noService = startNode(DUMMY_BANK_A.name)
             nodeMustBeUp(noService.getOrThrow().nodeInfo)
             noService.getOrThrow()
         }
@@ -60,7 +62,7 @@ class DriverTests {
     @Test
     fun `random free port allocation`() {
         val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
-            val nodeInfo = startNode("NoService")
+            val nodeInfo = startNode(DUMMY_BANK_A.name)
             nodeMustBeUp(nodeInfo.getOrThrow().nodeInfo)
             nodeInfo.getOrThrow()
         }
@@ -73,7 +75,7 @@ class DriverTests {
         val logConfigFile = Paths.get("..", "config", "dev", "log4j2.xml").toAbsolutePath()
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
-            val baseDirectory = startNode("Alice").getOrThrow().configuration.baseDirectory
+            val baseDirectory = startNode(DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()

@@ -3,6 +3,9 @@ package net.corda.attachmentdemo
 import com.google.common.util.concurrent.Futures
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -25,9 +28,9 @@ class AttachmentDemoTest {
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
             val (nodeA, nodeB) = Futures.allAsList(
-                    startNode("Bank A", rpcUsers = demoUser),
-                    startNode("Bank B", rpcUsers = demoUser),
-                    startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
+                    startNode(DUMMY_BANK_A.name, rpcUsers = demoUser),
+                    startNode(DUMMY_BANK_B.name, rpcUsers = demoUser),
+                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
             ).getOrThrow()
 
             val senderThread = CompletableFuture.supplyAsync {
