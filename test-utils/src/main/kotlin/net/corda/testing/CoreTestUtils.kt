@@ -94,7 +94,7 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 
 val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
-val MOCK_VERSION = Version(0, 0, false)
+val MOCK_VERSION = Version(0, 0, 0, false)
 val MOCK_NODE_VERSION_INFO = NodeVersionInfo(MOCK_VERSION, "Mock revision", "Mock Vendor")
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)

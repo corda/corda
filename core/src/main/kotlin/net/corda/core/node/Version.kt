@@ -11,18 +11,25 @@ import java.util.regex.Pattern
  * builds of the node. [NodeVersionInfo.revision] would be required to differentiate the two.
  */
 @CordaSerializable
-data class Version(val major: Int, val minor: Int, val snapshot: Boolean) {
+data class Version(val major: Int, val minor: Int, val patch: Int?, val snapshot: Boolean) {
     companion object {
-        private val pattern = Pattern.compile("""(\d+)\.(\d+)(-SNAPSHOT)?""")
+        private val pattern = Pattern.compile("""(\d+)\.(\d+)(.(\d+))?(-SNAPSHOT)?""")
 
         fun parse(string: String): Version {
             val matcher = pattern.matcher(string)
             require(matcher.matches())
-            return Version(matcher.group(1).toInt(), matcher.group(2).toInt(), matcher.group(3) != null)
+            val patch = matcher.group(4)?.toInt()
+            return Version(matcher.group(1).toInt(), matcher.group(2).toInt(), patch, matcher.group(5) != null)
         }
     }
 
-    override fun toString(): String = if (snapshot) "$major.$minor-SNAPSHOT" else "$major.$minor"
+    override fun toString(): String {
+        val sb = StringBuilder()
+        sb.append(major, ".", minor)
+        if(patch != null) sb.append(".", patch)
+        if(snapshot) sb.append("-SNAPSHOT")
+        return sb.toString()
+    }
 }
 
 data class NodeVersionInfo(val version: Version, val revision: String, val vendor: String)
