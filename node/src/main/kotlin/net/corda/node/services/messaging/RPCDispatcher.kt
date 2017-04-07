@@ -65,6 +65,13 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
             val dispatcher = toDispatcher(kryo)
             val handle = dispatcher.handleCounter.andIncrement
             output.writeInt(handle, true)
+
+            val empty: Observable<Any> = Observable.empty()
+            if (obj == empty) {
+                // Don't create a subscription for the dummy Observable.
+                return
+            }
+
             // Observables can do three kinds of callback: "next" with a content object, "completed" and "error".
             // Materializing the observable converts these three kinds of callback into a single stream of objects
             // representing what happened, which is useful for us to send over the wire.
