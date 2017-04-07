@@ -80,7 +80,7 @@ class CompositeKey private constructor (val threshold: Int,
     /**
      * Set of all leaf keys of that CompositeKey.
      */
-    val keys: Set<PublicKey>
+    val leavesKeys: Set<PublicKey>
         get() = children.flatMap { it.node.keys }.toSet() // Uses PublicKey.keys extension.
 
     override fun equals(other: Any?): Boolean {
@@ -138,8 +138,9 @@ class CompositeKey private constructor (val threshold: Int,
 }
 
 /**
- * Returns the set of all single [PublicKey]s contained within the PublicKey iterable. If an element of the set is a single PublicKey
- * it gives just that key, if it is a CompositeKey it returns all leaf keys for that composite element.
+ * Expands all [CompositeKey]s present in PublicKey iterable to set of single [PublicKey]s.
+ * If an element of the set is a single PublicKey it gives just that key, if it is a [CompositeKey] it returns all leaf
+ * keys for that composite element.
  */
-val Iterable<PublicKey>.getSingleKeys: Set<PublicKey>
+val Iterable<PublicKey>.expandCompositeKeys: Set<PublicKey>
     get() = flatMap { it.keys }.toSet()
