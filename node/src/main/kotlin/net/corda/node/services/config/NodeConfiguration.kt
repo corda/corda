@@ -1,7 +1,6 @@
 package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
-import com.typesafe.config.Config
 import net.corda.core.div
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.ServiceInfo
@@ -12,19 +11,13 @@ import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.User
-import net.corda.nodeapi.config.getListOrElse
-import net.corda.nodeapi.config.getOrElse
-import net.corda.nodeapi.config.getValue
+import net.corda.nodeapi.config.OldConfig
+import net.corda.nodeapi.config.SSLConfiguration
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-enum class VerifierType {
-    InMemory,
-    OutOfProcess
-}
-
-interface NodeConfiguration : net.corda.nodeapi.config.SSLConfiguration {
+interface NodeConfiguration : SSLConfiguration {
     val baseDirectory: Path
     override val certificatesDirectory: Path get() = baseDirectory / "certificates"
     val myLegalName: String
@@ -32,83 +25,89 @@ interface NodeConfiguration : net.corda.nodeapi.config.SSLConfiguration {
     val nearestCity: String
     val emailAddress: String
     val exportJMXto: String
-    val dataSourceProperties: Properties get() = Properties()
-    val rpcUsers: List<User> get() = emptyList()
+    val dataSourceProperties: Properties
+    val rpcUsers: List<User>
     val devMode: Boolean
     val certificateSigningService: URL
-    val certificateChainCheckPolicies: Map<String, CertificateChainCheckPolicy>
+    val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
 }
 
-/**
- * [baseDirectory] is not retrieved from the config file but rather from a command line argument.
- */
-class FullNodeConfiguration(override val baseDirectory: Path, val config: Config) : NodeConfiguration {
-    override val myLegalName: String by config
-    override val nearestCity: String by config
-    override val emailAddress: String by config
+data class FullNodeConfiguration(
+        // TODO Remove this subsitution value and use baseDirectory as the subsitution instead
+        @Deprecated(
+                "This is a subsitution value which points to the baseDirectory and is manually added into the config before parsing",
+                ReplaceWith("baseDirectory"))
+        val basedir: Path,
+        override val myLegalName: String,
+        override val nearestCity: String,
+        override val emailAddress: String,
+        override val keyStorePassword: String,
+        override val trustStorePassword: String,
+        override val dataSourceProperties: Properties,
+        override val certificateSigningService: URL,
+        override val networkMapService: NetworkMapInfo?,
+        override val rpcUsers: List<User>,
+        override val verifierType: VerifierType,
+        val useHTTPS: Boolean,
+        @OldConfig("artemisAddress")
+        val p2pAddress: HostAndPort,
+        val rpcAddress: HostAndPort?,
+        // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
+        // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
+        val messagingServerAddress: HostAndPort?,
+        val extraAdvertisedServiceIds: List<String>,
+        val notaryNodeId: Int?,
+        val notaryNodeAddress: HostAndPort?,
+        val notaryClusterAddresses: List<HostAndPort>,
+        override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
+        override val devMode: Boolean = false,
+        val useTestClock: Boolean = false
+) : NodeConfiguration {
+    /** This is not retrieved from the config file but rather from a command line argument. */
+    @Suppress("DEPRECATION")
+    override val baseDirectory: Path get() = basedir
     override val exportJMXto: String get() = "http"
-    override val keyStorePassword: String by config
-    override val trustStorePassword: String by config
-    override val dataSourceProperties: Properties by config
-    override val devMode: Boolean by config.getOrElse { false }
-    override val certificateSigningService: URL by config
-    override val networkMapService: NetworkMapInfo? = config.getOptionalConfig("networkMapService")?.run {
-        NetworkMapInfo(
-                HostAndPort.fromString(getString("address")),
-                getString("legalName"))
-    }
-    override val rpcUsers: List<User> = config
-            .getListOrElse<Config>("rpcUsers") { emptyList() }
-            .map {
-                val username = it.getString("user")
-                require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
-                val password = it.getString("password")
-                val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
-                User(username, password, permissions)
-            }
-    override val certificateChainCheckPolicies = config.getOptionalConfig("certificateChainCheckPolicies")?.run {
-        entrySet().associateByTo(HashMap(), { it.key }, { parseCertificateChainCheckPolicy(getConfig(it.key)) })
-    } ?: emptyMap<String, CertificateChainCheckPolicy>()
-    override val verifierType: VerifierType by config
-    val useHTTPS: Boolean by config
-    val p2pAddress: HostAndPort by config
-    val rpcAddress: HostAndPort? by config
-    val webAddress: HostAndPort by config
-    // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
-    // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
-    val messagingServerAddress: HostAndPort? by config
-    val extraAdvertisedServiceIds: List<String> = config.getListOrElse<String>("extraAdvertisedServiceIds") { emptyList() }
-    val useTestClock: Boolean by config.getOrElse { false }
-    val notaryNodeId: Int? by config
-    val notaryNodeAddress: HostAndPort? by config
-    val notaryClusterAddresses: List<HostAndPort> = config
-            .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
-            .map { HostAndPort.fromString(it) }
 
-    fun createNode(nodeVersionInfo: NodeVersionInfo): Node {
+    init {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
+        // TODO Move this to ArtemisMessagingServer
+        rpcUsers.forEach {
+            require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
+        }
+    }
 
+    fun createNode(nodeVersionInfo: NodeVersionInfo): Node {
         val advertisedServices = extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
-        if (networkMapService == null) advertisedServices.add(ServiceInfo(NetworkMapService.type))
+        if (networkMapService == null) advertisedServices += ServiceInfo(NetworkMapService.type)
 
         return Node(this, advertisedServices, nodeVersionInfo, if (useTestClock) TestClock() else NodeClock())
     }
 }
 
-private fun parseCertificateChainCheckPolicy(config: Config): CertificateChainCheckPolicy {
-    val policy = config.getString("policy")
-    return when (policy) {
-        "Any" -> CertificateChainCheckPolicy.Any
-        "RootMustMatch" -> CertificateChainCheckPolicy.RootMustMatch
-        "LeafMustMatch" -> CertificateChainCheckPolicy.LeafMustMatch
-        "MustContainOneOf" -> CertificateChainCheckPolicy.MustContainOneOf(config.getStringList("trustedAliases").toSet())
-        else -> throw IllegalArgumentException("Invalid certificate chain check policy $policy")
-    }
+enum class VerifierType {
+    InMemory,
+    OutOfProcess
 }
 
-private fun Config.getOptionalConfig(path: String): Config? = if (hasPath(path)) getConfig(path) else null
+enum class CertChainPolicyType {
+    Any,
+    RootMustMatch,
+    LeafMustMatch,
+    MustContainOneOf
+}
+
+data class CertChainPolicyConfig(val role: String, val policy: CertChainPolicyType, val trustedAliases: Set<String>) {
+    val certificateChainCheckPolicy: CertificateChainCheckPolicy get() {
+        return when (policy) {
+            CertChainPolicyType.Any -> CertificateChainCheckPolicy.Any
+            CertChainPolicyType.RootMustMatch -> CertificateChainCheckPolicy.RootMustMatch
+            CertChainPolicyType.LeafMustMatch -> CertificateChainCheckPolicy.LeafMustMatch
+            CertChainPolicyType.MustContainOneOf -> CertificateChainCheckPolicy.MustContainOneOf(trustedAliases)
+        }
+    }
+}

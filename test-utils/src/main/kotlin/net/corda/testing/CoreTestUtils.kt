@@ -5,8 +5,6 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.typesafe.config.Config
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
@@ -20,12 +18,11 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureDevKeyAndTrustStores
-import net.corda.node.services.config.VerifierType
-import net.corda.node.services.messaging.CertificateChainCheckPolicy
+import net.corda.node.services.config.*
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.nodeapi.User
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -162,22 +159,47 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
     return future
 }
 
+// TODO Replace this with testConfiguration
 data class TestNodeConfiguration(
         override val baseDirectory: Path,
         override val myLegalName: String,
         override val networkMapService: NetworkMapInfo?,
         override val keyStorePassword: String = "cordacadevpass",
         override val trustStorePassword: String = "trustpass",
+        override val rpcUsers: List<User> = emptyList(),
         override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
         override val nearestCity: String = "Null Island",
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
         override val devMode: Boolean = true,
         override val certificateSigningService: URL = URL("http://localhost"),
-        override val certificateChainCheckPolicies: Map<String, CertificateChainCheckPolicy> = emptyMap(),
+        override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
         override val verifierType: VerifierType = VerifierType.InMemory) : NodeConfiguration
 
-fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
+fun testConfiguration(baseDirectory: Path, legalName: String, basePort: Int): FullNodeConfiguration {
+    return FullNodeConfiguration(
+            basedir = baseDirectory,
+            myLegalName = legalName,
+            networkMapService = null,
+            nearestCity = "Null Island",
+            emailAddress = "",
+            keyStorePassword = "cordacadevpass",
+            trustStorePassword = "trustpass",
+            dataSourceProperties = makeTestDataSourceProperties(legalName),
+            certificateSigningService = URL("http://localhost"),
+            rpcUsers = emptyList(),
+            verifierType = VerifierType.InMemory,
+            useHTTPS = false,
+            p2pAddress = HostAndPort.fromParts("localhost", basePort),
+            rpcAddress = HostAndPort.fromParts("localhost", basePort + 1),
+            messagingServerAddress = null,
+            extraAdvertisedServiceIds = emptyList(),
+            notaryNodeId = null,
+            notaryNodeAddress = null,
+            notaryClusterAddresses = emptyList(),
+            certificateChainCheckPolicies = emptyList(),
+            devMode = true)
+}
 
 @JvmOverloads
 fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {

@@ -7,11 +7,15 @@ import net.corda.core.div
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
+import net.corda.nodeapi.config.parseAs
 import net.corda.webserver.WebServerConfig
+import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.test.*
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeConfigTest {
 
@@ -129,7 +133,7 @@ class NodeConfigTest {
                 +     "\"p2pAddress\":\"localhost:10001\","
                 +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
+                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
                 +     "],"
                 +     "\"useTestClock\":true,"
                 +     "\"webAddress\":\"localhost:20001\""
@@ -159,7 +163,7 @@ class NodeConfigTest {
                 +     "\"p2pAddress\":\"localhost:10001\","
                 +     "\"rpcAddress\":\"localhost:40002\","
                 +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"user\":\"jenny\"}"
+                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
                 +     "],"
                 +     "\"useTestClock\":true,"
                 +     "\"webAddress\":\"localhost:20001\""
@@ -184,11 +188,10 @@ class NodeConfigTest {
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
                 .resolve()
-        val fullConfig = FullNodeConfiguration(baseDir, nodeConfig)
+        val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
         assertEquals("My Name", fullConfig.myLegalName)
         assertEquals("Stockholm", fullConfig.nearestCity)
-        assertEquals(localPort(20001), fullConfig.webAddress)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)

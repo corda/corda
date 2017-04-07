@@ -85,7 +85,7 @@ path to the node's base directory.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
-:webAddress: The host and port on which the bundled webserver will listen if it is started.
+:webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
         of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative
@@ -123,7 +123,7 @@ path to the node's base directory.
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
-        :user: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
         :password: The password
         :permissions: A list of permission strings which RPC methods can use to control access
 

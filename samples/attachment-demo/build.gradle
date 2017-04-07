@@ -52,7 +52,7 @@ dependencies {
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
-    ext.rpcUsers = [ ['user' : "demo", 'password' : "demo", 'permissions' : ["StartFlow.net.corda.flows.FinalityFlow"]] ]
+    ext.rpcUsers = [ ['username' : "demo", 'password' : "demo", 'permissions' : ["StartFlow.net.corda.flows.FinalityFlow"]] ]
 
     directory "./build/nodes"
     networkMap "Controller"

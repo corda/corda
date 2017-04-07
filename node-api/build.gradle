@@ -38,4 +38,9 @@ dependencies {
 
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
+
+    // Unit testing helpers.
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
+    testCompile project(':test-utils')
 }

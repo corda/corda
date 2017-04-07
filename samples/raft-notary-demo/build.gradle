@@ -83,7 +83,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         p2pPort 10002
         rpcPort 10003
         cordapps = []
-        rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
+        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
                 'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
                 'StartFlow.net.corda.flows.NotaryFlow$Client'
         ]]]

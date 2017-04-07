@@ -4,16 +4,13 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import io.netty.handler.ssl.SslHandler
-import net.corda.core.ThreadBox
+import net.corda.core.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
-import net.corda.core.div
-import net.corda.core.minutes
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.seconds
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
@@ -251,8 +248,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         )
         val keyStore = X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
         val trustStore = X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
-        val certChecks = defaultCertPolicies.mapValues {
-            (config.certificateChainCheckPolicies[it.key] ?: it.value).createCheck(keyStore, trustStore)
+        val certChecks = defaultCertPolicies.mapValues { (role, defaultPolicy) ->
+            val configPolicy = config.certificateChainCheckPolicies.noneOrSingle { it.role == role }?.certificateChainCheckPolicy
+            (configPolicy ?: defaultPolicy).createCheck(keyStore, trustStore)
         }
         val securityConfig = object : SecurityConfiguration() {
             // Override to make it work with our login module

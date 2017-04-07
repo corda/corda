@@ -26,6 +26,7 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.RaftNonValidatingNotaryService
+import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
@@ -128,7 +129,7 @@ class Node(override val configuration: FullNodeConfiguration,
     }
 
     override fun makeMessagingService(): MessagingServiceInternal {
-        userService = RPCUserServiceImpl(configuration)
+        userService = RPCUserServiceImpl(configuration.rpcUsers)
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
         return NodeMessagingClient(

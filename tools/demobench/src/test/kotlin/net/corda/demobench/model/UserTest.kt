@@ -2,7 +2,7 @@ package net.corda.demobench.model
 
 import net.corda.nodeapi.User
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
 
 class UserTest {
 
@@ -17,7 +17,7 @@ class UserTest {
     @Test
     fun createFromMap() {
         val map = mapOf(
-            "user" to "MyName",
+            "username" to "MyName",
             "password" to "MyPassword",
             "permissions" to listOf("Flow.MyFlow")
         )
@@ -31,7 +31,7 @@ class UserTest {
     fun userToMap() {
         val user = User("MyName", "MyPassword", setOf("Flow.MyFlow"))
         val map = user.toMap()
-        assertEquals("MyName", map["user"])
+        assertEquals("MyName", map["username"])
         assertEquals("MyPassword", map["password"])
         assertEquals(setOf("Flow.MyFlow"), map["permissions"])
     }

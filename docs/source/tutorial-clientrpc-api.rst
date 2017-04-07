@@ -123,7 +123,7 @@ When starting a standalone node using a configuration file we must supply the RP
 .. code-block:: text
 
     rpcUsers : [
-        { user=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
+        { username=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
     ]
 
 When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar manner:
@@ -131,7 +131,7 @@ When using the gradle Cordformation plugin to configure and deploy a node you mu
 .. code-block:: text
 
         rpcUsers = [
-                ['user' : "user",
+                ['username' : "user",
                  'password' : "password",
                  'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
         ]

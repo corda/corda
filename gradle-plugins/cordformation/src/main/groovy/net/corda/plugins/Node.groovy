@@ -36,7 +36,7 @@ class Node {
     /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
      * The recommended current structure is:
-     * [[['user': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
+     * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
      * The above is a list to a map of keys to values using Groovy map and list shorthands.
      *
      * @note Incorrect configurations will not cause a DSL error.

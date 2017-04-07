@@ -12,6 +12,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
+import net.corda.nodeapi.config.OldConfig
 import org.apache.commons.fileupload.MultipartStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -24,7 +25,11 @@ val rpcLog: Logger by lazy { LoggerFactory.getLogger("net.corda.rpc") }
 /** Used in the RPC wire protocol to wrap an observation with the handle of the observable it's intended for. */
 data class MarshalledObservation(val forHandle: Int, val what: Notification<*>)
 
-data class User(val username: String, val password: String, val permissions: Set<String>) {
+data class User(
+        @OldConfig("user")
+        val username: String,
+        val password: String,
+        val permissions: Set<String>) {
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
 }
 

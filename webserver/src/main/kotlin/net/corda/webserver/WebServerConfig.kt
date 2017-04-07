@@ -3,9 +3,7 @@ package net.corda.webserver
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import net.corda.core.div
-import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.nodeapi.config.getListOrElse
 import net.corda.nodeapi.config.getValue
 import java.nio.file.Path
 

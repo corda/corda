@@ -27,6 +27,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.Logger
@@ -115,6 +116,7 @@ data class NodeHandle(
         val nodeInfo: NodeInfo,
         val rpc: CordaRPCOps,
         val configuration: FullNodeConfiguration,
+        val webAddress: HostAndPort,
         val process: Process
 ) {
     fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
@@ -421,7 +423,7 @@ class DriverDSL(
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
-                            "user" to it.username,
+                            "username" to it.username,
                             "password" to it.password,
                             "permissions" to it.permissions
                     )
@@ -429,22 +431,19 @@ class DriverDSL(
                 "verifierType" to verifierType.name
         ) + customOverrides
 
-        val configuration = FullNodeConfiguration(
-                baseDirectory,
-                ConfigHelper.loadConfig(
+        val config = ConfigHelper.loadConfig(
                         baseDirectory = baseDirectory,
                         allowMissingConfig = true,
-                        configOverrides = configOverrides
-                )
-        )
+                        configOverrides = configOverrides)
+        val configuration = config.parseAs<FullNodeConfiguration>()
 
-        val processFuture = startNode(executorService, configuration, quasarJarPath, debugPort, systemProperties)
+        val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
         return processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
             establishRpc(p2pAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
-                    NodeHandle(rpc.nodeIdentity(), rpc, configuration, process)
+                    NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }
         }
@@ -482,34 +481,29 @@ class DriverDSL(
         }
     }
 
-    private fun queryWebserver(configuration: FullNodeConfiguration, process: Process): HostAndPort? {
-        val protocol = if (configuration.useHTTPS) {
-            "https://"
-        } else {
-            "http://"
-        }
-        val url = URL(protocol + configuration.webAddress.toString() + "/api/status")
-        val client = OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
+    private fun queryWebserver(handle: NodeHandle, process: Process): HostAndPort {
+        val protocol = if (handle.configuration.useHTTPS) "https://" else "http://"
+        val url = URL("$protocol${handle.webAddress}/api/status")
+        val client = OkHttpClient.Builder().connectTimeout(5, SECONDS).readTimeout(60, SECONDS).build()
 
         while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
             if (response.isSuccessful && (response.body().string() == "started")) {
-                return configuration.webAddress
+                return handle.webAddress
             }
         } catch(e: ConnectException) {
-            log.debug("Retrying webserver info at ${configuration.webAddress}")
+            log.debug("Retrying webserver info at ${handle.webAddress}")
         }
 
-        log.error("Webserver at ${configuration.webAddress} has died")
-        return null
+        throw IllegalStateException("Webserver at ${handle.webAddress} has died")
     }
 
     override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val process = DriverDSL.startWebserver(executorService, handle.configuration, debugPort)
+        val process = DriverDSL.startWebserver(executorService, handle, debugPort)
         registerProcess(process)
         return process.map {
-            queryWebserver(handle.configuration, it)!!
+            queryWebserver(handle, it)
         }
     }
 
@@ -537,7 +531,7 @@ class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        val startNode = startNode(executorService, FullNodeConfiguration(baseDirectory, config), quasarJarPath, debugPort, systemProperties)
+        val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
     }
 
@@ -553,13 +547,14 @@ class DriverDSL(
         private fun startNode(
                 executorService: ListeningScheduledExecutorService,
                 nodeConf: FullNodeConfiguration,
+                config: Config,
                 quasarJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>
         ): ListenableFuture<Process> {
             return executorService.submit<Process> {
                 // Write node.conf
-                writeConfig(nodeConf.baseDirectory, "node.conf", nodeConf.config)
+                writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
                 val systemProperties = mapOf(
                         "name" to nodeConf.myLegalName,
@@ -586,19 +581,19 @@ class DriverDSL(
 
         private fun startWebserver(
                 executorService: ListeningScheduledExecutorService,
-                nodeConf: FullNodeConfiguration,
+                handle: NodeHandle,
                 debugPort: Int?
         ): ListenableFuture<Process> {
             return executorService.submit<Process> {
                 val className = "net.corda.webserver.WebServer"
                 ProcessUtilities.startJavaProcess(
                         className = className, // cannot directly get class for this, so just use string
-                        arguments = listOf("--base-directory", nodeConf.baseDirectory.toString()),
+                        arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
-                        extraJvmArguments = listOf("-Dname=node-${nodeConf.p2pAddress}-webserver"),
+                        extraJvmArguments = listOf("-Dname=node-${handle.configuration.p2pAddress}-webserver"),
                         errorLogPath = Paths.get("error.$className.log")
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.webAddress).map { process } }
+            }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress).map { process } }
         }
     }
 }

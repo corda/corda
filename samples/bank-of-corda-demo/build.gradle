@@ -70,7 +70,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10007
         cordapps = []
         rpcUsers = [
-                ['user' : "bankUser",
+                ['username' : "bankUser",
                  'password' : "test",
                  'permissions' : ["StartFlow.net.corda.flows.CashPaymentFlow",
                                   "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
@@ -85,7 +85,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         webPort 10010
         cordapps = []
         rpcUsers = [
-                ['user' : "bigCorpUser",
+                ['username' : "bigCorpUser",
                  'password' : "test",
                  'permissions' : ["StartFlow.net.corda.flows.CashPaymentFlow"]]
         ]
