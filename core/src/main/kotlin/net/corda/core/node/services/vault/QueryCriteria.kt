@@ -67,52 +67,24 @@ interface QueryCriteria {
     data class PageSpecification(val pageNumber: Int, val pageSize: Int)
 }
 
-open class VaultQueryCriteria(var status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+
+open class VaultQueryCriteria @JvmOverloads constructor (
+                              val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                               val stateRefs: Collection<StateRef>? = null,
-                              var contractStateTypes: Set<Class<out ContractState>>? = null,
+                              val contractStateTypes: Set<Class<out ContractState>>? = null,
                               val notary: Collection<Party>? = null,
                               val includeSoftlocks: Boolean? = true,
                               val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
                               val paging: PageSpecification? = null,
                               val ordering: Order? = Order.ASC) : QueryCriteria {
-
-    // Usability question: single Enum Type value or Collection of Enums?
-    // Vault.StateState.UNCONSUMED or setOf(Vault.StateState.UNCONSUMED) (default)
-    // Vault.StateState.CONSUMED or setOf(Vault.StateState.CONSUMED)
-    // Vault.StateState.ALL or setOf(Vault.StateState.CONSUMED, Vault.StateState.UNCONSUMED)
-
-    // Java usability
-    // Option 1 : provide setters (eg. var types in constructor - loss of immutability)
-    // Option 2 : provide Builder (below - lots of boilerplate code)
-
-    private constructor(builder: Builder) : this (status = builder.status,
-                                                  contractStateTypes = builder.contractStateTypes)
-
-    class Builder {
-        var status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
-            private set
-        var contractStateTypes: Set<Class<out ContractState>>? = null
-            private set
-
-        fun status(status: Vault.StateStatus): Builder {
-            this.status = status
-            return this
-        }
-        fun contractStateTypes(contractStateTypes: Set<Class<out ContractState>>?): Builder {
-            this.contractStateTypes = contractStateTypes
-            return this
-        }
-
-        fun build() = VaultQueryCriteria(this)
-    }
-
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
 }
 
 /**
  * LinearStateQueryCriteria
  */
-class LinearStateQueryCriteria(val linearId: List<UniqueIdentifier>? = null,
+class LinearStateQueryCriteria @JvmOverloads constructor(
+                               val linearId: List<UniqueIdentifier>? = null,
                                val latestOnly: Boolean? = false,
                                val dealRef: Collection<String>? = null,
                                val dealParties: Collection<Party>? = null) : QueryCriteria {
@@ -120,20 +92,11 @@ class LinearStateQueryCriteria(val linearId: List<UniqueIdentifier>? = null,
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
 }
 
-//  NOTE: was originally using inheritance but enforces a lot of boilerplate code duplication
-
-//                               status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
-//                               stateRefs: Collection<StateRef>? = null,
-//                               notary: Collection<Party>? = null,
-//                               includeSoftlocks: Boolean? = true,
-//                               timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-//                               paging: PageSpecification? = null)
-//    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
-
 /**
  * FungibleStateQueryCriteria
  */
-class FungibleAssetQueryCriteria(val owner: Collection<Party>? = null,
+class FungibleAssetQueryCriteria @JvmOverloads constructor(
+                                 val owner: Collection<Party>? = null,
                                  val quantity: Logical<*,Long>? = null,
                                  val tokenType: TokenType = TokenType.CURRENCY,
                                  val tokenValue: Collection<String>? = null,
@@ -144,22 +107,9 @@ class FungibleAssetQueryCriteria(val owner: Collection<Party>? = null,
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
 }
 
-//  NOTE: was originally using inheritance but enforces a lot of boilerplate code duplication
-
-//                                 status: Vault.StateStatus? = Vault.StateStatus.UNCONSUMED,
-//                                 stateRefs: Collection<StateRef>? = null,
-//                                 notary: Collection<Party>? = null,
-//                                 includeSoftlocks: Boolean? = true,
-//                                 timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-//                                 paging: PageSpecification? = null)
-//    : VaultQueryCriteria(status, stateRefs, notary, includeSoftlocks, timeCondition, paging)
-
 /**
  * Specify any query criteria by leveraging the Requery Query DSL
  */
-//
-// NOTE: this class leverages Requery types: [Logical] [Order]
-//
 class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>? = null) : QueryCriteria {
 
     override fun and(criteria: QueryCriteria): QueryCriteria = criteria.and(this)
