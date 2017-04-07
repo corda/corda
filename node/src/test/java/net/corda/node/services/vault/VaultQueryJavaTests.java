@@ -75,7 +75,7 @@ public class VaultQueryJavaTests {
      */
 
     @Test
-    public void unconsumedStates() {
+    public void consumedStates() {
         databaseTransaction(database, tx -> {
             fillWithSomeTestCash(services,
                                  new Amount(100, Currency.getInstance("USD")),
@@ -88,8 +88,9 @@ public class VaultQueryJavaTests {
                                  getDUMMY_CASH_ISSUER(),
                                  getDUMMY_CASH_ISSUER_KEY() );
 
+            // DOCSTART VaultJavaQueryExample1
             Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
-            Vault.StateStatus status = Vault.StateStatus.UNCONSUMED;
+            Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
             // OPTION 1: JavaBeans setter
             VaultQueryCriteria criteria1 = new VaultQueryCriteria();
@@ -106,6 +107,8 @@ public class VaultQueryJavaTests {
                     .build();
 
             Iterable<StateAndRef<ContractState>> states2 = vaultSvc.queryBy(criteria2);
+            // DOCEND VaultJavaQueryExample1
+
             assertThat(states2).hasSize(3);
 
             return tx;
@@ -115,7 +118,7 @@ public class VaultQueryJavaTests {
 
 
     @Test
-    public void unconsumedDealStates() {
+    public void consumedDealStates() {
         databaseTransaction(database, tx -> {
 
             UniqueIdentifier uid = new UniqueIdentifier();
@@ -124,9 +127,10 @@ public class VaultQueryJavaTests {
             List<String> dealIds = Arrays.asList("123", "456", "789");
             fillWithSomeTestDeals(services, dealIds, 0);
 
+            // DOCSTART VaultJavaQueryExample2
             VaultQueryCriteria vaultCriteria = new VaultQueryCriteria();
             HashSet contractStateTypes = new HashSet(Arrays.asList(DealState.class));
-            Vault.StateStatus status = Vault.StateStatus.UNCONSUMED;
+            Vault.StateStatus status = Vault.StateStatus.CONSUMED;
             vaultCriteria.setStatus(status); // setter (JavaBeans convention); requires Kotlin var
             vaultCriteria.setContractStateTypes(contractStateTypes); // setter (JavaBeans convention); requires Kotlin var
 
@@ -139,6 +143,8 @@ public class VaultQueryJavaTests {
             QueryCriteria compositeCriteria = dealCriteriaAll.and(vaultCriteria);
 
             Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(compositeCriteria);
+            // DOCEND VaultJavaQueryExample2
+
             assertThat(states).hasSize(4);
 
             return tx;
@@ -150,7 +156,7 @@ public class VaultQueryJavaTests {
      */
 
     @Test
-    public void unconsumedStatesDeprecated() {
+    public void consumedStatesDeprecated() {
         databaseTransaction(database, tx -> {
             fillWithSomeTestCash(services,
                     new Amount(100, Currency.getInstance("USD")),
@@ -163,11 +169,14 @@ public class VaultQueryJavaTests {
                     getDUMMY_CASH_ISSUER(),
                     getDUMMY_CASH_ISSUER_KEY() );
 
+            // DOCSTART VaultDeprecatedJavaQueryExample1
             Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
-            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.UNCONSUMED);
+            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
             Iterable<StateAndRef<ContractState>> states = vaultSvc.states(contractStateTypes, status, true);
+            // DOCEND VaultDeprecatedJavaQueryExample1
+
             assertThat(states).hasSize(3);
 
             return tx;
@@ -175,22 +184,25 @@ public class VaultQueryJavaTests {
     }
 
     @Test
-    public void unconsumedStatesForLinearIdDeprecated() {
+    public void consumedStatesForLinearIdDeprecated() {
         databaseTransaction(database, tx -> {
 
             UniqueIdentifier trackUid = new UniqueIdentifier();
             fillWithSomeTestLinearStates(services, 1, trackUid);
             fillWithSomeTestLinearStates(services, 4, new UniqueIdentifier());
 
+            // DOCSTART VaultDeprecatedJavaQueryExample2
             Set contractStateTypes = new HashSet(Arrays.asList(LinearState.class));
-            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.UNCONSUMED);
+            EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
             Iterable<StateAndRef<ContractState>> states = vaultSvc.states(contractStateTypes, status, true);
-            assertThat(states).hasSize(4);
 
             Stream<StateAndRef<ContractState>> trackedLinearState = StreamSupport.stream(states.spliterator(), false).filter(
                     state -> ((LinearState) state.component1().getData()).getLinearId() == trackUid);
+            // DOCEND VaultDeprecatedJavaQueryExample2
+
+            assertThat(states).hasSize(4);
             assertThat(trackedLinearState).hasSize(1);
 
             return tx;

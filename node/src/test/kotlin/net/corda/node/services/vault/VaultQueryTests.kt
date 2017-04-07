@@ -87,8 +87,10 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
+            // DOCSTART VaultQueryExample1
             val criteria = VaultQueryCriteria() // default is UNCONSUMED
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample1
             assertThat(states).hasSize(16)
         }
     }
@@ -101,8 +103,11 @@ class VaultQueryTests {
             val stateRefs = issuedStates.states.map { it.ref }.toList()
             services.fillWithSomeTestLinearStates(8)
 
+            // DOCSTART VaultQueryExample2
             val vaultCriteria = VaultQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()))
             val states = vaultSvc.queryBy<LinearState>(vaultCriteria)
+            // DOCEND VaultQueryExample2
+
             assertThat(states).hasSize(2)
             assertThat(states.first().ref).isEqualTo(issuedStates.states.first().ref)
             assertThat(states.last().ref).isEqualTo(issuedStates.states.last().ref)
@@ -118,8 +123,10 @@ class VaultQueryTests {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             // default State.Status is UNCONSUMED
+            // DOCSTART VaultQueryExample3
             val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java, DealState::class.java))
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample3
             assertThat(states).hasSize(6)
         }
     }
@@ -174,8 +181,10 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
+            // DOCSTART VaultQueryExample4
             val criteria = VaultQueryCriteria(notary = setOf(CASH_NOTARY))
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample4
             assertThat(states).hasSize(3)
         }
     }
@@ -201,12 +210,14 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
+            // DOCSTART VaultQueryExample5
             val start = TEST_TX_TIME
             val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
             val recordedBetweenExpression = QueryCriteria.LogicalExpression(
                     QueryCriteria.TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
             val criteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample5
             assertThat(states).hasSize(3)
         }
     }
@@ -219,12 +230,14 @@ class VaultQueryTests {
             services.fillWithSomeTestLinearStates(10)
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
+            // DOCSTART VaultQueryExample6
             val asOfDateTime = TEST_TX_TIME
             val consumedAfterExpression = QueryCriteria.LogicalExpression(
                     QueryCriteria.TimeInstantType.CONSUMED, Operator.GREATER_THAN, arrayOf(asOfDateTime))
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
                                               timeCondition = consumedAfterExpression)
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample6
             assertThat(states).hasSize(3)
         }
     }
@@ -236,9 +249,11 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
+            // DOCSTART VaultQueryExample7
             val pagingSpec = QueryCriteria.PageSpecification(1, 10)
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, paging = pagingSpec)
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample7
             assertThat(states).hasSize(10)
         }
     }
@@ -356,9 +371,11 @@ class VaultQueryTests {
 
             val issuedStates = services.fillWithSomeTestLinearStates(10)
 
+            // DOCSTART VaultQueryExample8
             val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
             val criteria = LinearStateQueryCriteria(linearId = listOf(linearIds.first(), linearIds.last()))
             val states = vaultSvc.queryBy<LinearState>(criteria)
+            // DOCEND VaultQueryExample8
             assertThat(states).hasSize(2)
         }
     }
@@ -389,9 +406,11 @@ class VaultQueryTests {
 //            services.processLinearState(id)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+            // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(id))
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, ordering = Order.DESC)
             val states = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
+            // DOCEND VaultQueryExample9
             assertThat(states).hasSize(4)
         }
     }
@@ -407,7 +426,11 @@ class VaultQueryTests {
 //            services.processLinearState(id)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+
+            // DOCSTART VaultDeprecatedQueryExample1
             val states = vaultSvc.linearHeadsOfType<LinearState>().filter { it.key == linearUid }
+            // DOCEND VaultDeprecatedQueryExample1
+
             assertThat(states).hasSize(4)
         }
     }
@@ -423,8 +446,12 @@ class VaultQueryTests {
 //            services.processLinearState(id)  // consume current and produce new state reference
 
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
+
+            // DOCSTART VaultDeprecatedQueryExample2
             val states = vaultSvc.states(setOf(LinearState::class.java),
                                          EnumSet.of(Vault.StateStatus.CONSUMED)).filter { it.state.data.linearId == linearUid }
+            // DOCEND VaultDeprecatedQueryExample2
+
             assertThat(states).hasSize(3)
         }
     }
@@ -462,9 +489,12 @@ class VaultQueryTests {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
-            val criteria = LinearStateQueryCriteria(dealRef = listOf("456"))
+            // DOCSTART VaultQueryExample10
+            val criteria = LinearStateQueryCriteria(dealRef = listOf("456", "789"))
             val states = vaultSvc.queryBy<DealState>(criteria)
-            assertThat(states).hasSize(1)
+            // DOCEND VaultQueryExample10
+
+            assertThat(states).hasSize(2)
         }
     }
 
@@ -490,8 +520,11 @@ class VaultQueryTests {
             services.fillWithSomeTestDeals(listOf("456"), 3)        // specify party
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
+            // DOCSTART VaultQueryExample11
             val criteria = LinearStateQueryCriteria(dealParties = listOf(MEGA_CORP, MINI_CORP))
             val states = vaultSvc.queryBy<DealState>(criteria)
+            // DOCEND VaultQueryExample11
+
             assertThat(states).hasSize(1)
         }
     }
@@ -521,8 +554,11 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
+            // DOCSTART VaultQueryExample12
             val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(USD.currencyCode))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            // DOCEND VaultQueryExample12
+
             assertThat(states).hasSize(3)
         }
     }
@@ -537,9 +573,12 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(50.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
+            // DOCSTART VaultQueryExample13
             val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(GBP.currencyCode),
                                                       quantity = LogicalExpression(this, Operator.GREATER_THAN, 50))
             val states = vaultSvc.queryBy<Cash.State>(criteria)
+            // DOCEND VaultQueryExample13
+
             assertThat(states).hasSize(1)
         }
     }
@@ -565,8 +604,11 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
 
+            // DOCSTART VaultQueryExample14
             val criteria = FungibleAssetQueryCriteria(issuerParty = setOf(BOC))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            // DOCEND VaultQueryExample14
+
             assertThat(states).hasSize(1)
         }
     }
@@ -593,8 +635,11 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
 
+            // DOCSTART VaultQueryExample15
             val criteria = FungibleAssetQueryCriteria(exitKeys = setOf(DUMMY_CASH_ISSUER_KEY.public.composite))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
+            // DOCEND VaultQueryExample15
+
             assertThat(states).hasSize(1)
         }
     }
@@ -614,31 +659,6 @@ class VaultQueryTests {
     }
 
     /** Custom Query tests */
-
-    // chaining LogicalExpressions with AND and OR
-    @Test
-    fun `consumed linear heads for linearId between two timestamps`() {
-        databaseTransaction(database) {
-            val issuedStates = services.fillWithSomeTestLinearStates(10)
-            val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
-            val filterByLinearIds = listOf(linearIds.first(), linearIds.last())
-
-            val start = TEST_TX_TIME
-            val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
-            val recordedBetweenExpression = LogicalExpression(TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
-
-            // TODO: enforce strict type safety of Attributes (via Enum) ???
-            val linearIdsExpression = LogicalExpression(LinearState::linearId, Operator.IN, filterByLinearIds)
-            val linearIdCondition = (VaultSchema.VaultLinearState::uuid eq linearIds[2])
-
-            val compositeExpression = recordedBetweenExpression.and(linearIdsExpression).or(linearIdCondition)
-
-            val criteria = VaultCustomQueryCriteria(compositeExpression)
-            val states = vaultSvc.queryBy<LinearState>(criteria)
-
-            assertThat(states).hasSize(2)
-        }
-    }
 
     // specifying Order
     @Test
@@ -674,6 +694,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
 
+            // DOCSTART VaultQueryExample16
             val statusUnconsumedExpr = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.UNCONSUMED)
             val currencyExpr = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
             val quantityExpr = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
@@ -681,6 +702,35 @@ class VaultQueryTests {
 
             val criteria = VaultCustomQueryCriteria(expression = combinedExpr)
             val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample16
+
+            assertThat(states).hasSize(2)
+        }
+    }
+
+    // chaining LogicalExpressions with AND and OR
+    @Test
+    fun `consumed linear heads for linearId between two timestamps`() {
+        databaseTransaction(database) {
+            val issuedStates = services.fillWithSomeTestLinearStates(10)
+            val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
+            val filterByLinearIds = listOf(linearIds.first(), linearIds.last())
+
+            // DOCSTART VaultQueryExample17
+            val start = TEST_TX_TIME
+            val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
+            val recordedBetweenExpression = LogicalExpression(TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
+
+            // TODO: enforce strict type safety of Attributes (via Enum) ???
+            val linearIdsExpression = LogicalExpression(LinearState::linearId, Operator.IN, filterByLinearIds)
+            val linearIdCondition = (VaultSchema.VaultLinearState::uuid eq linearIds[2])
+
+            val compositeExpression = recordedBetweenExpression.and(linearIdsExpression).or(linearIdCondition)
+
+            val criteria = VaultCustomQueryCriteria(compositeExpression)
+            val states = vaultSvc.queryBy<LinearState>(criteria)
+            // DOCEND VaultQueryExample17
+
             assertThat(states).hasSize(2)
         }
     }

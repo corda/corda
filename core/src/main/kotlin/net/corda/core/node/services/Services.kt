@@ -134,6 +134,7 @@ interface VaultService {
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
 
+    // DOCSTART VaultQueryAPI
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters
      * and returns an [Iterable] set of [StateAndRef]
@@ -150,6 +151,7 @@ interface VaultService {
      * Note: the iterator is lazy and client driven.
      */
     fun <T : ContractState> trackBy(criteria: QueryCriteria): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
+    // DOCEND VaultQueryAPI
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
