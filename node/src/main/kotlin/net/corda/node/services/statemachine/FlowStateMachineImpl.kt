@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.CordaSerializable
@@ -102,11 +103,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logic.stateMachine = this
     }
 
-    override fun createHandle(hasProgress: Boolean): FlowProgressHandle<R> = FlowProgressHandleImpl(
-            id = id,
-            returnValue = resultFuture,
-            progress = if (hasProgress) logic.track()?.second ?: Observable.empty() else Observable.empty()
-    )
+    override fun createHandle(hasProgress: Boolean): FlowHandle<R> {
+        return if (hasProgress)
+            FlowProgressHandleImpl(
+                id = id,
+                returnValue = resultFuture,
+                progress = logic.track()?.second ?: Observable.empty()
+            )
+        else
+            FlowHandleImpl(
+                id = id,
+                returnValue = resultFuture
+            )
+    }
 
     @Suspendable
     override fun run() {
@@ -421,6 +430,22 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 }
 
+// I would prefer for [FlowProgressHandleImpl] to extend [FlowHandleImpl],
+// but Kotlin doesn't allow this for data classes, not even to create
+// another data class!
+@CordaSerializable
+private data class FlowHandleImpl<A>(
+        override val id: StateMachineRunId,
+        override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
+
+    /**
+     * Use this function for flows whose returnValue is not going to be used, so as to free up server resources.
+     */
+    override fun close() {
+        returnValue.cancel(false)
+    }
+}
+
 @CordaSerializable
 private data class FlowProgressHandleImpl<A> (
         override val id: StateMachineRunId,
@@ -428,7 +453,7 @@ private data class FlowProgressHandleImpl<A> (
         override val progress: Observable<String>) : FlowProgressHandle<A> {
 
     /**
-     * Use this function for flows that returnValue and progress are not going to be used or tracked, so as to free up server resources.
+     * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up server resources.
      * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
      */
     override fun close() {

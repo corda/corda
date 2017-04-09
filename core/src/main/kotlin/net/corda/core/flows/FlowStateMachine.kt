@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -42,7 +42,7 @@ interface FlowStateMachine<R> {
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
 
-    fun createHandle(hasProgress: Boolean): FlowProgressHandle<R>
+    fun createHandle(hasProgress: Boolean): FlowHandle<R>
 
     val serviceHub: ServiceHub
     val logger: Logger

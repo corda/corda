@@ -99,7 +99,7 @@ class CordaRPCOpsImpl(
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowWithProgressDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = true)
+        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
