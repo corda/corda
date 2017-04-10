@@ -65,6 +65,7 @@ class HibernateObserverTests {
         var children: MutableSet<Child> = mutableSetOf()
     }
 
+    @Suppress("unused")
     @Entity
     @Table(name = "Children")
     class Child {
@@ -79,71 +80,72 @@ class HibernateObserverTests {
     }
 
     @Test
-    fun `test`() {
+    fun `test child objects are persisted`() {
         val testSchema = object : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {}
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
         val vaultService = object : VaultService {
             override val rawUpdates: Observable<Vault.Update> = rawUpdatesPublisher
 
             override val updates: Observable<Vault.Update>
-                get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                get() = throw UnsupportedOperationException()
+
             override val cashBalances: Map<Currency, Amount<Currency>>
-                get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                get() = throw UnsupportedOperationException()
 
             override fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun notifyAll(txns: Iterable<WireTransaction>) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun getAuthorisedContractUpgrade(ref: StateRef): Class<out UpgradedContract<*, *>>? {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun authoriseContractUpgrade(stateAndRef: StateAndRef<*>, upgradedContractClass: Class<out UpgradedContract<*, *>>) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun addNoteToTransaction(txnId: SecureHash, noteText: String) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun getTransactionNotes(txnId: SecureHash): Iterable<String> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun generateSpend(tx: TransactionBuilder, amount: Amount<Currency>, to: CompositeKey, onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<CompositeKey>> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun softLockReserve(lockId: UUID, stateRefs: Set<StateRef>) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun softLockRelease(lockId: UUID, stateRefs: Set<StateRef>?) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
 
             override fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>?, notary: Party?, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>?): List<StateAndRef<T>> {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                throw UnsupportedOperationException()
             }
         }
         val schemaService = object : SchemaService {
@@ -159,6 +161,7 @@ class HibernateObserverTests {
             }
 
         }
+        @Suppress("UNUSED_VARIABLE")
         val observer = HibernateObserver(vaultService, schemaService)
         databaseTransaction(database) {
             rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(object : QueryableState {
@@ -167,13 +170,15 @@ class HibernateObserverTests {
                 }
 
                 override fun generateMappedObject(schema: MappedSchema): PersistentState {
-                    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                    throw UnsupportedOperationException()
                 }
 
                 override val contract: Contract
-                    get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                    get() = throw UnsupportedOperationException()
+
                 override val participants: List<CompositeKey>
-                    get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+                    get() = throw UnsupportedOperationException()
+
             }, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
 
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from contract_Parents").executeQuery()

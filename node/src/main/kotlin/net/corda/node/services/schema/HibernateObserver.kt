@@ -50,7 +50,7 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
     private fun makeSessionFactoryForSchema(schema: MappedSchema): SessionFactory {
         logger.info("Creating session factory for schema $schema")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
-        val metadataSources = MetadataSources(serviceRegistry);
+        val metadataSources = MetadataSources(serviceRegistry)
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
