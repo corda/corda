@@ -93,29 +93,30 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
         session.use {
             val mappedObject = schemaService.generateMappedObject(state, schema)
             mappedObject.stateRef = PersistentStateRef(stateRef)
-            session.persist(mappedObject)
-            session.flush()
+            it.persist(mappedObject)
+            it.flush()
         }
     }
 
     private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
-        val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())
-        metadataBuilder.applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-            override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                val default = super.toPhysicalTableName(name, context)
-                return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-            }
-        })
+        val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
+            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
+                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                    val default = super.toPhysicalTableName(name, context)
+                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+                }
+            })
+            build()
+        }
 
-        val metadata = metadataBuilder.build()
-
-        val sessionFactoryBuilder = metadata.getSessionFactoryBuilder()
-        sessionFactoryBuilder.allowOutOfTransactionUpdateOperations(true)
-        sessionFactoryBuilder.applySecondLevelCacheSupport(false)
-        sessionFactoryBuilder.applyQueryCacheSupport(false)
-        sessionFactoryBuilder.enableReleaseResourcesOnCloseEnabled(true)
-        return sessionFactoryBuilder.build()
+        return metadata.sessionFactoryBuilder.run {
+            allowOutOfTransactionUpdateOperations(true)
+            applySecondLevelCacheSupport(false)
+            applyQueryCacheSupport(false)
+            enableReleaseResourcesOnCloseEnabled(true)
+            build()
+        }
     }
 
     // Supply Hibernate with connections from our underlying Exposed database integration.  Only used

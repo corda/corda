@@ -79,6 +79,22 @@ class HibernateObserverTests {
         var parent: Parent? = null
     }
 
+    class TestState : QueryableState {
+        override fun supportedSchemas(): Iterable<MappedSchema> {
+            throw UnsupportedOperationException()
+        }
+
+        override fun generateMappedObject(schema: MappedSchema): PersistentState {
+            throw UnsupportedOperationException()
+        }
+
+        override val contract: Contract
+            get() = throw UnsupportedOperationException()
+
+        override val participants: List<CompositeKey>
+            get() = throw UnsupportedOperationException()
+    }
+
     // This method does not use back quotes for a nice name since it seems to kill the kotlin compiler.
     @Test
     fun testChildObjectsArePersisted() {
@@ -160,28 +176,12 @@ class HibernateObserverTests {
                 parent.children.add(Child())
                 return parent
             }
-
         }
+
         @Suppress("UNUSED_VARIABLE")
         val observer = HibernateObserver(vaultService, schemaService)
         databaseTransaction(database) {
-            rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(object : QueryableState {
-                override fun supportedSchemas(): Iterable<MappedSchema> {
-                    return setOf(testSchema)
-                }
-
-                override fun generateMappedObject(schema: MappedSchema): PersistentState {
-                    throw UnsupportedOperationException()
-                }
-
-                override val contract: Contract
-                    get() = throw UnsupportedOperationException()
-
-                override val participants: List<CompositeKey>
-                    get() = throw UnsupportedOperationException()
-
-            }, MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
-
+            rawUpdatesPublisher.onNext(Vault.Update(emptySet(), setOf(StateAndRef(TransactionState(TestState(), MEGA_CORP), StateRef(SecureHash.sha256("dummy"), 0)))))
             val parentRowCountResult = TransactionManager.current().connection.prepareStatement("select count(*) from contract_Parents").executeQuery()
             parentRowCountResult.next()
             val parentRows = parentRowCountResult.getInt(1)
