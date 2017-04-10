@@ -3,6 +3,8 @@ package net.corda.client.rpc
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startFlowWithProgress
 import net.corda.core.node.services.ServiceInfo
@@ -22,8 +24,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.io.use
+import kotlin.test.*
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
@@ -88,6 +90,16 @@ class CordaRPCClientTest : NodeBasedTest() {
         // TODO Restrict this to CashException once RPC serialisation has been fixed
         assertThatExceptionOfType(FlowException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `check basic flow has no progress`() {
+        client.start(rpcUser.username, rpcUser.password)
+        val proxy = client.proxy()
+        proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity).use {
+            assertFalse(it is FlowProgressHandle<*>)
+            assertTrue(it is FlowHandle<*>)
         }
     }
 

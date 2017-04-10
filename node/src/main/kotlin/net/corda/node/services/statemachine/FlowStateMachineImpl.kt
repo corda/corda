@@ -103,19 +103,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logic.stateMachine = this
     }
 
-    override fun createHandle(hasProgress: Boolean): FlowHandle<R> {
-        return if (hasProgress)
-            FlowProgressHandleImpl(
-                id = id,
-                returnValue = resultFuture,
-                progress = logic.track()?.second ?: Observable.empty()
-            )
-        else
-            FlowHandleImpl(
-                id = id,
-                returnValue = resultFuture
-            )
-    }
+    override fun createHandle(hasProgress: Boolean): FlowHandle<R> = if (hasProgress)
+        FlowProgressHandleImpl(
+            id = id,
+            returnValue = resultFuture,
+            progress = logic.track()?.second ?: Observable.empty()
+        )
+    else
+        FlowHandleImpl(id = id, returnValue = resultFuture)
 
     @Suspendable
     override fun run() {
