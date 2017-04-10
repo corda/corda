@@ -28,7 +28,7 @@ val debugPortAlloc: IncrementalPortAllocator = IncrementalPortAllocator()
 
 fun main(args: Array<String>) {
     val startedProcesses = mutableListOf<Process>()
-    val headless = (GraphicsEnvironment.isHeadless() || (!args.isEmpty() && (args[0] == HEADLESS_FLAG)))
+    val headless = GraphicsEnvironment.isHeadless() || (args.isNotEmpty() && args[0] == HEADLESS_FLAG)
     val workingDir = Paths.get(System.getProperty("user.dir")).toFile()
     val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
@@ -69,7 +69,7 @@ private fun isWebserver(maybeWebserverDir: File) = maybeWebserverDir.isDirectory
 private fun hasWebserverPort(nodeConfDir: File) = Files.readAllLines(File(nodeConfDir, nodeConfName).toPath()).joinToString { it }.contains("webAddress")
 
 private fun getDebugPortArg(debugPort: Int?) = if (debugPort != null) {
-    listOf("""-Dcapsule.jvm.args="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort"""")
+    listOf("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
 } else {
     emptyList()
 }
