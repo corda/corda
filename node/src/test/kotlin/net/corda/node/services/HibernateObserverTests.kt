@@ -79,8 +79,9 @@ class HibernateObserverTests {
         var parent: Parent? = null
     }
 
+    // This method does not use back quotes for a nice name since it seems to kill the kotlin compiler.
     @Test
-    fun `test child objects are persisted`() {
+    fun testChildObjectsArePersisted() {
         val testSchema = object : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {}
         val rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
         val vaultService = object : VaultService {
