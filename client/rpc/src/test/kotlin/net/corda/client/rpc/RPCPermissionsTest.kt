@@ -1,8 +1,9 @@
 package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
-import net.corda.node.services.User
 import net.corda.node.services.messaging.*
+import net.corda.nodeapi.PermissionException
+import net.corda.nodeapi.User
 import org.junit.After
 import org.junit.Test
 import kotlin.test.*

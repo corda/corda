@@ -7,9 +7,9 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.RPCReturnsObservables
 import net.corda.core.success
-import net.corda.node.services.User
-import net.corda.node.services.messaging.CURRENT_RPC_USER
-import net.corda.node.services.messaging.RPCSinceVersion
+import net.corda.nodeapi.CURRENT_RPC_USER
+import net.corda.nodeapi.RPCSinceVersion
+import net.corda.nodeapi.User
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
