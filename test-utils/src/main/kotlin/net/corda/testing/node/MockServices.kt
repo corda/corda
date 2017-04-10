@@ -17,8 +17,8 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.MOCK_VERSION
@@ -28,7 +28,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -74,7 +73,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     fun makeVaultService(dataSourceProps: Properties): VaultService {
         val vaultService = NodeVaultService(this, dataSourceProps)
         // Vault cash spending requires access to contract_cash_states and their updates
-        HibernateObserver(vaultService, NodeSchemaService())
+        HibernateObserver(vaultService.rawUpdates, NodeSchemaService())
         return vaultService
     }
 }

@@ -3,7 +3,7 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.schemas.QueryableState
@@ -21,6 +21,7 @@ import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import rx.Observable
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver(vaultService: VaultService, val schemaService: SchemaService) {
+class HibernateObserver(vaultUpdates: Observable<Vault.Update>, val schemaService: SchemaService) {
     companion object {
         val logger = loggerFor<HibernateObserver>()
     }
@@ -40,7 +41,7 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
         schemaService.schemaOptions.map { it.key }.forEach {
             makeSessionFactoryForSchema(it)
         }
-        vaultService.rawUpdates.subscribe { persist(it.produced) }
+        vaultUpdates.subscribe { persist(it.produced) }
     }
 
     private fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {

@@ -287,7 +287,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         VaultSoftLockManager(vault, smm)
         CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(vault, schemas)
+        HibernateObserver(vault.rawUpdates, schemas)
     }
 
     private fun makeInfo(): NodeInfo {
