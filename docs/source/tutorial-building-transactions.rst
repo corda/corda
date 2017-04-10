@@ -101,9 +101,10 @@ examples using the IntelliJ IDE one can run/step the respective unit
 tests in ``FxTransactionBuildTutorialTest.kt`` and 
 ``WorkflowTransactionBuildTutorialTest.kt``, which drive the flows as 
 part of a simulated in-memory network of nodes. Before creating the IntelliJ 
-run configurations for these unit tests, go to Run -> Edit Configurations -> 
-Defaults -> JUnit and add ``-javaagent:$PROJECT_DIR$/lib/quasar.jar`` to the 
-VM options, so that the ``Quasar`` instrumentation is correctly configured. 
+run configurations for these unit tests go to Run -> Edit Configurations -> 
+Defaults -> JUnit, add ``-javaagent:lib/quasar.jar`` to the VM options, and 
+set Working directory to ``$PROJECT_DIR$`` so that the ``Quasar`` 
+instrumentation is correctly configured. 
 
 For the Cash transaction let’s assume the cash resources are using the 
 standard ``CashState`` in the ``:financial`` Gradle module. The Cash 
