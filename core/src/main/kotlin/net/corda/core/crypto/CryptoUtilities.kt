@@ -12,6 +12,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.*
 
 /** A wrapper around a digital signature. */
@@ -112,14 +113,50 @@ operator fun KeyPair.component2() = this.public
 fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
 
 /**
- * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
- * you want hard-coded private keys.
+ * Returns a key pair derived from the given entropy.
+ *
+ * @param entropy the seed in form of BigInteger.
+ * @return the generated EdDSA keypair.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair {
+fun entropyToKeyPair(entropy: BigInteger): KeyPair =
+        deterministicKeyPair(entropy.toByteArray())
+
+/**
+ * Returns a deterministically generated key pair from a given private key and an index (similarly to BIP32 hardened keys).
+ * This is useful, as no backup of private keys is required and they can be re-generated from their parent key.
+ * TODO: check with Mike if we need full implementation of the BIP32 protocol as we still do not support PublicParent -> PublicChild
+ *
+ * @param parentPrivateKey the parent private key from which we will generate a new keypair.
+ * @param index a number input that will be concatenated to the  parent key to form the final seed.
+ * @return the generated EdDSA keypair.
+ */
+fun privKeyToNewKeyPair(parentPrivateKey: EdDSAPrivateKey, index: Int): KeyPair =
+        deterministicKeyPair(parentPrivateKey.abyte.plus(index.bytes()))
+
+/**
+ * Returns a deterministically generated key pair from a provided seed. This is useful for deterministic
+ * or hierarchical deterministic key derivation, unit tests and other cases where you want hard-coded private keys.
+ *
+ * @param bytes the seed for deterministic key generation.
+ * @return the generated EdDSA keypair.
+ */
+fun deterministicKeyPair(bytes: ByteArray): KeyPair {
     val params = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
-    val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
     val priv = EdDSAPrivateKeySpec(bytes, params)
     val pub = EdDSAPublicKeySpec(priv.a, params)
     val key = KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     return key
 }
+
+/*
+ * Extension function to return the ByteArray representation of an Int.
+ * TODO: check which of the bytes() and bytesV2() performs better
+ */
+fun Int.bytes() =
+        byteArrayOf(this.ushr(24).toByte(), this.ushr(16).toByte(), this.ushr(8).toByte(), this.toByte())
+
+/*
+ * Extension function to return the ByteArray representation of an Int.
+ */
+fun Int.bytesV2() =
+        ByteBuffer.allocate(4).putInt(this).array()
