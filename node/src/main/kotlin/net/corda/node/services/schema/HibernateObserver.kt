@@ -3,21 +3,25 @@ package net.corda.node.services.schema
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.node.services.VaultService
+import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.schemas.QueryableState
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
+import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
+import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
 import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder
 import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
 import org.jetbrains.exposed.sql.transactions.TransactionManager
+import rx.Observable
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
  * A vault observer that extracts Object Relational Mappings for contract states that support it, and persists them with Hibernate.
  */
 // TODO: Manage version evolution of the schemas via additional tooling.
-class HibernateObserver(vaultService: VaultService, val schemaService: SchemaService) {
+class HibernateObserver(vaultUpdates: Observable<Vault.Update>, val schemaService: SchemaService) {
     companion object {
         val logger = loggerFor<HibernateObserver>()
     }
@@ -37,7 +41,7 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
         schemaService.schemaOptions.map { it.key }.forEach {
             makeSessionFactoryForSchema(it)
         }
-        vaultService.rawUpdates.subscribe { persist(it.produced) }
+        vaultUpdates.subscribe { persist(it.produced) }
     }
 
     private fun sessionFactoryForSchema(schema: MappedSchema): SessionFactory {
@@ -46,10 +50,12 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
 
     private fun makeSessionFactoryForSchema(schema: MappedSchema): SessionFactory {
         logger.info("Creating session factory for schema $schema")
+        val serviceRegistry = BootstrapServiceRegistryBuilder().build()
+        val metadataSources = MetadataSources(serviceRegistry)
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
-        val config = Configuration().setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
+        val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
                 .setProperty("hibernate.hbm2ddl.auto", "update")
                 .setProperty("hibernate.show_sql", "false")
                 .setProperty("hibernate.format_sql", "true")
@@ -61,14 +67,8 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
         }
         val tablePrefix = options?.tablePrefix ?: "contract_" // We always have this as the default for aesthetic reasons.
         logger.debug { "Table prefix = $tablePrefix" }
-        config.setPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
-            override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
-                val default = super.toPhysicalTableName(name, context)
-                return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
-            }
-        })
         schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
-        val sessionFactory = config.buildSessionFactory()
+        val sessionFactory = buildSessionFactory(config, metadataSources, tablePrefix)
         logger.info("Created session factory for schema $schema")
         return sessionFactory
     }
@@ -87,11 +87,36 @@ class HibernateObserver(vaultService: VaultService, val schemaService: SchemaSer
 
     private fun persistStateWithSchema(state: QueryableState, stateRef: StateRef, schema: MappedSchema) {
         val sessionFactory = sessionFactoryForSchema(schema)
-        val session = sessionFactory.openStatelessSession(TransactionManager.current().connection)
+        val session = sessionFactory.withOptions().
+                connection(TransactionManager.current().connection).
+                flushMode(FlushMode.MANUAL).
+                openSession()
         session.use {
             val mappedObject = schemaService.generateMappedObject(state, schema)
             mappedObject.stateRef = PersistentStateRef(stateRef)
-            session.insert(mappedObject)
+            it.persist(mappedObject)
+            it.flush()
+        }
+    }
+
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, tablePrefix: String): SessionFactory {
+        config.standardServiceRegistryBuilder.applySettings(config.properties)
+        val metadata = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build()).run {
+            applyPhysicalNamingStrategy(object : PhysicalNamingStrategyStandardImpl() {
+                override fun toPhysicalTableName(name: Identifier?, context: JdbcEnvironment?): Identifier {
+                    val default = super.toPhysicalTableName(name, context)
+                    return Identifier.toIdentifier(tablePrefix + default.text, default.isQuoted)
+                }
+            })
+            build()
+        }
+
+        return metadata.sessionFactoryBuilder.run {
+            allowOutOfTransactionUpdateOperations(true)
+            applySecondLevelCacheSupport(false)
+            applyQueryCacheSupport(false)
+            enableReleaseResourcesOnCloseEnabled(true)
+            build()
         }
     }
 
