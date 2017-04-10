@@ -98,8 +98,8 @@ class SerializationOutputTests {
         serdes(obj)
     }
 
-    @Test(expected = NotSerializableException::class)
-    fun `test top level list array not serializable since type erased`() {
+    @Test
+    fun `test top level list array`() {
         val obj = arrayOf(listOf("Fred", "Ginger"), listOf("Rogers", "Hammerstein"))
         serdes(obj)
     }

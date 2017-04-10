@@ -50,7 +50,7 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, type)
+            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type)
         }
     }
 
@@ -67,9 +67,11 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
     }
 
     internal fun requireSerializer(type: Type) {
-        val serializer = serializerFactory.get(null, type)
-        if (serializer !in serializerHistory) {
-            serializer.writeClassInfo(this)
+        if (type != SerializerFactory.AnyType) {
+            val serializer = serializerFactory.get(null, type)
+            if (serializer !in serializerHistory) {
+                serializer.writeClassInfo(this)
+            }
         }
     }
 }

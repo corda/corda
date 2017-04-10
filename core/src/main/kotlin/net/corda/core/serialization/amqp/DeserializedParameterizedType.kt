@@ -17,11 +17,17 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         // We do not check bounds.  Both our use cases (List and Map) are not bounded.
     }
 
+    val isFullyWildcarded: Boolean = params.all { it == SerializerFactory.AnyType }
+
     private val _typeName: String = makeTypeName()
 
     private fun makeTypeName(): String {
-        val paramsJoined = params.map { it.typeName }.joinToString(", ")
-        return "${rawType.name}<$paramsJoined>"
+        return if (isFullyWildcarded) {
+            rawType.name
+        } else {
+            val paramsJoined = params.map { it.typeName }.joinToString(", ")
+            "${rawType.name}<$paramsJoined>"
+        }
     }
 
     companion object {
@@ -80,6 +86,8 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
                             typeStart = pos++
                         } else if (!needAType) {
                             throw NotSerializableException("Not expecting a type")
+                        } else if (params[pos] == '*') {
+                            pos++
                         } else if (!params[pos].isJavaIdentifierStart()) {
                             throw NotSerializableException("Invalid character at start of type: ${params[pos]}")
                         } else {
@@ -100,13 +108,13 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             throw NotSerializableException("Missing close generics '>'")
         }
 
-        private fun makeType(typeName: String, cl: ClassLoader): Class<*> {
+        private fun makeType(typeName: String, cl: ClassLoader): Type {
             // Not generic
-            return Class.forName(typeName, false, cl)
+            return if (typeName == "*") SerializerFactory.AnyType else Class.forName(typeName, false, cl)
         }
 
         private fun makeParameterizedType(rawTypeName: String, args: MutableList<Type>, cl: ClassLoader): Type {
-            return DeserializedParameterizedType(makeType(rawTypeName, cl), args.toTypedArray())
+            return DeserializedParameterizedType(makeType(rawTypeName, cl) as Class<*>, args.toTypedArray())
         }
 
         private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader, depth: Int): Int {

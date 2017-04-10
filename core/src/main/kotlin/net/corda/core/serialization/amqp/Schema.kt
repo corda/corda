@@ -10,8 +10,6 @@ import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.jvm.javaType
 
 val DESCRIPTOR_MSW: Long = 0xc0da0000
 
@@ -314,25 +312,39 @@ data class Choice(val name: String, val value: String) : DescribedType {
 }
 
 private val ARRAY_HASH: SecureHash = SecureHash.sha256("Array = true")
+private val INTERFACE_HASH: SecureHash = SecureHash.sha256("Interface = true")
 private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen = true")
 private val NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = true")
 private val NOT_NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = false")
+private val ANY_TYPE_HASH: SecureHash = SecureHash.sha256("Any type = true")
 
 // TODO: write tests
-fun hashType(type: Type, alreadySeen: Set<Type> = mutableSetOf()): SecureHash {
+fun hashType(type: Type, alreadySeen: MutableSet<Type> = mutableSetOf()): SecureHash {
     return if (type in alreadySeen) {
         ALREADY_SEEN_HASH
-    } else if (type is Class<*>) {
-        // TODO: we need to align properties with constructor params in some unified utility functions / classes
-        // Hash the class + properties
-        type.kotlin.primaryConstructor?.run { parameters.fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.type.javaType, alreadySeen)).hashConcat(SecureHash.sha256(param.name!!)).hashConcat(if (param.type.isMarkedNullable) NULLABLE_HASH else NOT_NULLABLE_HASH) } } ?: SecureHash.sha256(type.name)
-    } else if (type is ParameterizedType) {
-        // Hash the rawType + params
-        type.actualTypeArguments.fold(hashType(type.rawType, alreadySeen)) { orig, paramType -> orig.hashConcat(hashType(paramType, alreadySeen)) }
-    } else if (type is GenericArrayType) {
-        // Hash the element type + some array hash
-        hashType(type.genericComponentType, alreadySeen).hashConcat(ARRAY_HASH)
     } else {
-        throw NotSerializableException("Don't know how to hash $type")
+        alreadySeen += type
+        if (type is SerializerFactory.AnyType) {
+            ANY_TYPE_HASH
+        } else if (type is Class<*>) {
+            if (type.isArray) {
+                hashType(type.componentType).hashConcat(ARRAY_HASH)
+            } else if (type.isInterface) {
+                SecureHash.sha256(type.name).hashConcat(INTERFACE_HASH)
+            } else if (SerializerFactory.isPrimitive(type)) {
+                SecureHash.sha256(type.name)
+            } else {
+                // Hash the class + properties
+                propertiesForSerialization(constructorForDeserialization(type)).fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.readMethod.returnType, alreadySeen)).hashConcat(SecureHash.sha256(param.name)).hashConcat(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH) }
+            }
+        } else if (type is ParameterizedType) {
+            // Hash the rawType + params
+            type.actualTypeArguments.fold(hashType(type.rawType, alreadySeen)) { orig, paramType -> orig.hashConcat(hashType(paramType, alreadySeen)) }
+        } else if (type is GenericArrayType) {
+            // Hash the element type + some array hash
+            hashType(type.genericComponentType, alreadySeen).hashConcat(ARRAY_HASH)
+        } else {
+            throw NotSerializableException("Don't know how to hash $type")
+        }
     }
 }

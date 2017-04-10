@@ -2,19 +2,18 @@ package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
-import java.beans.Introspector
-import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaConstructor
 
 
 class ClassSerializer(val clazz: Class<*>) : Serializer() {
     override val type: Type get() = clazz
-    private val propertySerializers = generatePropertySerializers(clazz)
+    private val konstructor = if (isConcrete()) constructorForDeserialization(clazz) else null
+    private val javaConstructor = if (konstructor != null) konstructor.javaConstructor!! else null
+    private val propertySerializers = if (konstructor != null) propertiesForSerialization(konstructor) else emptyList()
     private val typeName = clazz.name
     override val typeDescriptor = "${hashType(type)}"
     private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations.
@@ -82,49 +81,12 @@ class ClassSerializer(val clazz: Class<*>) : Serializer() {
         }
     }
 
-    private fun generatePropertySerializers(clazz: Class<*>): List<PropertySerializer> {
-        val properties = sortAndFilterProperties(Introspector.getBeanInfo(clazz).propertyDescriptors)
-        return properties.map { makePropertySerializer(it) }
-    }
-
-    // Sort alphabetically and/or apply annotation based customisations.
-    private fun sortAndFilterProperties(propertyDescriptors: Array<PropertyDescriptor>): List<PropertyDescriptor> {
-        return propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }
-    }
-
-    private fun makePropertySerializer(property: PropertyDescriptor): PropertySerializer {
-        if (property.writeMethod != null) throw NotSerializableException("Property ${property.name} is read/write for $clazz.")
-        return PropertySerializer.make(property.name, property.readMethod)
-    }
-
     fun isConcrete(): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
-
-    // TODO: Only supports kotlin for now...
-    // TODO: Include type in the mapping, not just name!
-    private val javaConstructor = if (isConcrete()) clazz.kotlin.primaryConstructor!!.javaConstructor!! else null
-    private val constructorParamIndexes = if (isConcrete()) makeParamMapping(clazz.kotlin.primaryConstructor!!.parameters.map { it.name!! }) else null
-
-    private fun makeParamMapping(constructorParamNames: List<String>): List<Int> {
-        val paramNameToIndex = mutableMapOf<String, Int>()
-        var index = 0
-        for (field in propertySerializers) {
-            paramNameToIndex[field.name] = index++
-        }
-        val indexes = mutableListOf<Int>()
-        for (paramName in constructorParamNames) {
-            indexes += paramNameToIndex[paramName] ?: throw NotSerializableException("Could not find property matching constructor parameter $paramName for $clazz")
-        }
-        if (indexes.size != propertySerializers.size) throw NotSerializableException("Number of properties not equal to number of primary constructor parameter for $clazz")
-        return indexes
-    }
 
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
         }
-        val params = Array<Any?>(properties.size) {
-            properties[constructorParamIndexes!![it]]
-        }
-        return javaConstructor.newInstance(*params)
+        return javaConstructor.newInstance(*properties.toTypedArray())
     }
 }

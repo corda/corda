@@ -42,7 +42,13 @@ class SerializerFactory {
             }
         } else if (declaredType is Class<*>) {
             // Straight classes allowed
-            return makeClassSerializer(actualType ?: declaredType)
+            if (declaredType.isAssignableFrom(List::class.java)) {
+                return makeListSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType)))
+            } else if (declaredType.isAssignableFrom(Map::class.java)) {
+                return makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType)))
+            } else {
+                return makeClassSerializer(actualType ?: declaredType)
+            }
         } else if (declaredType is GenericArrayType) {
             return serializersByType.computeIfAbsent(declaredType) { ArraySerializer(declaredType) }
         } else {
@@ -98,11 +104,11 @@ class SerializerFactory {
 
     private fun checkParameterisedTypesConcrete(actualTypeArguments: Array<out Type>) {
         for (type in actualTypeArguments) {
-            // Needs to be another parameterised type or a class
+            // Needs to be another parameterised type or a class, or any type.
             if (type !is Class<*>) {
                 if (type is ParameterizedType) {
                     checkParameterisedTypesConcrete(type.actualTypeArguments)
-                } else {
+                } else if (type != AnyType) {
                     throw NotSerializableException("Declared parameterised types containing $type as a parameter are not supported.")
                 }
             }
@@ -160,5 +166,9 @@ class SerializerFactory {
                 ByteArray::class.java to "binary",
                 String::class.java to "string",
                 Symbol::class.java to "symbol")
+    }
+
+    object AnyType : Type {
+        override fun toString(): String = "*"
     }
 }

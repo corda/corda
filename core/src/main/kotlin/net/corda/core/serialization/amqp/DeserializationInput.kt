@@ -62,7 +62,9 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
     }
 
     private fun Type.isSubClassOf(type: Type): Boolean {
-        return type == Object::class.java || (this is Class<*> && type is Class<*> && type.isAssignableFrom(this))
+        return type == Object::class.java ||
+                (this is Class<*> && type is Class<*> && type.isAssignableFrom(this)) ||
+                (this is DeserializedParameterizedType && type is Class<*> && this.rawType == type && this.isFullyWildcarded)
     }
 
     private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {
