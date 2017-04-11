@@ -24,9 +24,11 @@ import static net.corda.core.contracts.ContractsDSL.*;
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
+@SuppressWarnings("unused")
 public class JavaCommercialPaper implements Contract {
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
+    @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
         private CompositeKey owner;
@@ -56,10 +58,6 @@ public class JavaCommercialPaper implements Contract {
         @Override
         public Pair<CommandData, OwnableState> withNewOwner(@NotNull CompositeKey newOwner) {
             return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
-        }
-
-        public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
-            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue) {
@@ -127,6 +125,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public interface Clauses {
+        @SuppressWarnings("unused")
         class Group extends GroupClauseVerifier<State, Commands, State> {
             // This complains because we're passing generic types into a varargs, but it is valid so we suppress the
             // warning.
@@ -146,6 +145,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Move extends Clause<State, Commands, State> {
             @NotNull
             @Override
@@ -177,6 +177,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Redeem extends Clause<State, Commands, State> {
             @NotNull
             @Override
@@ -219,6 +220,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Issue extends Clause<State, Commands, State> {
             @NotNull
             @Override
