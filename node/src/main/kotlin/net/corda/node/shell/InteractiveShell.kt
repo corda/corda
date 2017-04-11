@@ -217,7 +217,7 @@ object InteractiveShell {
             return
         } else if (matches.size > 1) {
             output.println("Ambigous name provided, please be more specific. Your options are:")
-            matches.forEachIndexed { i, s -> output.println("${i+1}. $s", Color.yellow) }
+            matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
         val match = matches.single()

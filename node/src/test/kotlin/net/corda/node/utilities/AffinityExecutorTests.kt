@@ -5,7 +5,6 @@ import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertNotEquals

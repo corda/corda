@@ -26,6 +26,7 @@ interface SessionInitResponse : ExistingSessionMessage {
     val initiatorSessionId: Long
     override val recipientSessionId: Long get() = initiatorSessionId
 }
+
 data class SessionConfirm(override val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse
 data class SessionReject(override val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse
 

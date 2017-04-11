@@ -14,9 +14,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
-import net.corda.node.services.schema.HibernateObserver
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.BOB_KEY
@@ -138,9 +135,9 @@ class VaultWithCashTest {
         databaseTransaction(database) {
             // A tx that sends us money.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L),
-                                            issuedBy = MEGA_CORP.ref(1),
-                                            issuerKey = MEGA_CORP_KEY,
-                                            ownedBy = freshKey.public.composite)
+                    issuedBy = MEGA_CORP.ref(1),
+                    issuerKey = MEGA_CORP_KEY,
+                    ownedBy = freshKey.public.composite)
             println("Cash balance: ${vault.cashBalances[USD]}")
 
             assertThat(vault.unconsumedStates<Cash.State>()).hasSize(10)
@@ -173,8 +170,7 @@ class VaultWithCashTest {
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     txn1
-                }
-                catch(e: Exception) {
+                } catch(e: Exception) {
                     println(e)
                 }
             }
@@ -206,8 +202,7 @@ class VaultWithCashTest {
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     txn2
-                }
-                catch(e: Exception) {
+                } catch(e: Exception) {
                     println(e)
                 }
             }
@@ -219,7 +214,7 @@ class VaultWithCashTest {
         countDown.await()
         databaseTransaction(database) {
             println("Cash balance: ${vault.cashBalances[USD]}")
-            assertThat(vault.cashBalances[USD]).isIn(DOLLARS(20),DOLLARS(40))
+            assertThat(vault.cashBalances[USD]).isIn(DOLLARS(20), DOLLARS(40))
         }
     }
 
@@ -287,7 +282,7 @@ class VaultWithCashTest {
             val cash = vault.unconsumedStates<Cash.State>()
             cash.forEach { println(it.state.data.amount) }
 
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>()
             deals.forEach { println(it.state.data.ref) }
         }
@@ -315,7 +310,7 @@ class VaultWithCashTest {
         val freshKey = services.keyManagementService.freshKey()
         databaseTransaction(database) {
 
-            services.fillWithSomeTestDeals(listOf("123","456","789"))
+            services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>().toList()
             deals.forEach { println(it.state.data.ref) }
 

@@ -23,10 +23,9 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.node.services.transactions.RaftNonValidatingNotaryService
 import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
-import net.corda.node.services.transactions.RaftNonValidatingNotaryService
-import net.corda.node.services.transactions.*
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress

@@ -1,4 +1,5 @@
 package net.corda.node.services.vault
+
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
@@ -19,7 +20,7 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
     init {
         smm.changes.subscribe { change ->
             if (change.addOrRemove == AddOrRemove.REMOVE && trackingFlowIds.contains(change.id.uuid)) {
-                log.trace( "${change.addOrRemove} Flow name ${change.logic.javaClass} with id ${change.id}")
+                log.trace("${change.addOrRemove} Flow name ${change.logic.javaClass} with id ${change.id}")
                 unregisterSoftLocks(change.id, change.logic)
             }
             trackingFlowIds.remove(change.id.uuid)

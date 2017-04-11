@@ -4,7 +4,9 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.requery.Persistable
 import io.requery.meta.EntityModel
-import io.requery.sql.*
+import io.requery.sql.KotlinEntityDataStore
+import io.requery.sql.SchemaModifier
+import io.requery.sql.TableCreationMode
 import net.corda.core.utilities.loggerFor
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection

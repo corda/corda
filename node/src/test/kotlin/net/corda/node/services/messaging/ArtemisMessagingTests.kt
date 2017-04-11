@@ -15,7 +15,6 @@ import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.InMemoryNetworkMapCache

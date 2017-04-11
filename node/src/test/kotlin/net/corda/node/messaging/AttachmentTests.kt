@@ -14,8 +14,8 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.node.MockNetwork
 import net.corda.node.utilities.databaseTransaction
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
 import org.junit.Before

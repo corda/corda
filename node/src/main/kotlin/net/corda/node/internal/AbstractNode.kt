@@ -199,10 +199,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.warn("Corda node is running in dev mode.")
             configuration.configureWithDevSSLCertificate()
         }
-        require(hasSSLCertificates()) { "Identity certificate not found. " +
-                "Please either copy your existing identity key and certificate from another node, " +
-                "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
-                "Read more at: https://docs.corda.net/permissioning.html" }
+        require(hasSSLCertificates()) {
+            "Identity certificate not found. " +
+                    "Please either copy your existing identity key and certificate from another node, " +
+                    "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
+                    "Read more at: https://docs.corda.net/permissioning.html"
+        }
 
         log.info("Node starting up ...")
 
@@ -487,7 +489,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun makeSchemaService(): SchemaService = NodeSchemaService()
 
-    protected abstract fun makeTransactionVerifierService() : TransactionVerifierService
+    protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
 
     open fun stop() {
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the

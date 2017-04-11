@@ -1,4 +1,5 @@
 @file:JvmName("Driver")
+
 package net.corda.node.driver
 
 import com.google.common.net.HostAndPort
@@ -287,6 +288,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
         val registeredShutdowns = ArrayList<ListenableFuture<() -> Unit>>()
         var isShutdown = false
     }
+
     private val state = ThreadBox(State())
 
     fun shutdown() {
@@ -302,7 +304,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             /** Could not get all of them, collect what we have */
             shutdownFutures.filter { it.isDone }.map { it.get() }
         }
-        shutdowns.reversed().forEach{ it() }
+        shutdowns.reversed().forEach { it() }
     }
 
     fun registerShutdown(shutdown: ListenableFuture<() -> Unit>) {
@@ -432,9 +434,9 @@ class DriverDSL(
         ) + customOverrides
 
         val config = ConfigHelper.loadConfig(
-                        baseDirectory = baseDirectory,
-                        allowMissingConfig = true,
-                        configOverrides = configOverrides)
+                baseDirectory = baseDirectory,
+                allowMissingConfig = true,
+                configOverrides = configOverrides)
         val configuration = config.parseAs<FullNodeConfiguration>()
 
         val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)

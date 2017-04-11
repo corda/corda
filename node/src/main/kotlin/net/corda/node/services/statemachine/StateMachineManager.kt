@@ -5,7 +5,6 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
-import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
@@ -79,6 +78,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     companion object {
         private val logger = loggerFor<StateMachineManager>()
         internal val sessionTopic = TopicSession("platform.session")
+
         init {
             Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
                 (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
@@ -101,12 +101,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         var started = false
         val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
         val changesPublisher = PublishSubject.create<Change>()!!
-        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash,  FlowStateMachineImpl<*>>()!!
+        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
             changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
         }
     }
+
     private val mutex = ThreadBox(InnerState())
 
     // True if we're shutting down, so don't resume anything.

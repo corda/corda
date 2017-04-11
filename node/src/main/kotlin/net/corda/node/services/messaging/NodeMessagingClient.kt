@@ -104,6 +104,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         var rpcNotificationConsumer: ClientConsumer? = null
         var verificationResponseConsumer: ClientConsumer? = null
     }
+
     val verifierService = when (config.verifierType) {
         VerifierType.InMemory -> InMemoryTransactionVerifierService(numberOfWorkers = 4)
         VerifierType.OutOfProcess -> createOutOfProcessVerifierService()
@@ -421,8 +422,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                         putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelay)
                     }
                 }
-                log.trace { "Send to: $mqAddress topic: ${message.topicSession.topic} " +
-                        "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}" }
+                log.trace {
+                    "Send to: $mqAddress topic: ${message.topicSession.topic} " +
+                            "sessionID: ${message.topicSession.sessionID} uuid: ${message.uniqueMessageId}"
+                }
                 producer!!.send(mqAddress, artemisMessage)
             }
         }
@@ -499,19 +502,19 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     private fun createOutOfProcessVerifierService(): TransactionVerifierService {
         return object : OutOfProcessTransactionVerifierService(monitoringService) {
-                override fun sendRequest(nonce: Long, transaction: LedgerTransaction) {
-                    messagingExecutor.fetchFrom {
-                        state.locked {
-                            val message = session!!.createMessage(false)
-                            val request = VerifierApi.VerificationRequest(nonce, transaction, SimpleString(verifierResponseAddress))
-                            request.writeToClientMessage(message)
-                            producer!!.send(VERIFICATION_REQUESTS_QUEUE_NAME, message)
-                        }
+            override fun sendRequest(nonce: Long, transaction: LedgerTransaction) {
+                messagingExecutor.fetchFrom {
+                    state.locked {
+                        val message = session!!.createMessage(false)
+                        val request = VerifierApi.VerificationRequest(nonce, transaction, SimpleString(verifierResponseAddress))
+                        request.writeToClientMessage(message)
+                        producer!!.send(VERIFICATION_REQUESTS_QUEUE_NAME, message)
                     }
                 }
-
             }
+
         }
+    }
 
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {

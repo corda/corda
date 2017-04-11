@@ -1,4 +1,5 @@
 @file:JvmName("Corda")
+
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
@@ -116,7 +117,7 @@ fun main(args: Array<String>) {
     log.info("Machine: ${InetAddress.getLocalHost().hostName}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
     val agentProperties = sun.misc.VMSupport.getAgentProperties()
-    if(agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+    if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
         log.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
     }
     log.info("Starting as node on ${conf.p2pAddress}")
@@ -172,7 +173,7 @@ private fun printPluginsAndServices(node: Node) {
     }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
-            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.")}
+            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.") }
             .map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())
@@ -217,7 +218,7 @@ private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
         val (msg1, msg2) = messageOfTheDay()
 
         println(Ansi.ansi().fgBrightRed().a(
-"""
+                """
    ______               __
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(

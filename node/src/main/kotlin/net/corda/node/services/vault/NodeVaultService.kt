@@ -13,7 +13,10 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
@@ -55,7 +58,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val log = loggerFor<NodeVaultService>()
 
         // Define composite primary key used in Requery Expression
-        val stateRefCompositeColumn : RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
+        val stateRefCompositeColumn: RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
     }
 
     val configuration = RequeryConfiguration(dataSourceProperties)
@@ -136,7 +139,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                     }
                     upsert(state ?: cashBalanceEntity)
                     val total = state?.amount ?: cashBalanceEntity.amount
-                    log.trace{"Updating Cash balance for $currency by ${cashBalanceEntity.amount} pennies (total: $total)"}
+                    log.trace { "Updating Cash balance for $currency by ${cashBalanceEntity.amount} pennies (total: $total)" }
                 }
             }
         }
@@ -171,24 +174,24 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         }
     }
 
-    override fun <T: ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
+    override fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
         val stateAndRefs =
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                var query = select(VaultSchema.VaultStates::class)
-                                .where(VaultSchema.VaultStates::stateStatus `in` statuses)
-                // TODO: temporary fix to continue supporting track() function (until becomes Typed)
-                if (!clazzes.map {it.name}.contains(ContractState::class.java.name))
-                    query.and (VaultSchema.VaultStates::contractStateClassName `in` (clazzes.map { it.name }))
-                if (!includeSoftLockedStates)
-                    query.and(VaultSchema.VaultStates::lockId.isNull())
-                val iterator = query.get().iterator()
-                Sequence{iterator}
-                        .map { it ->
-                            val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                            StateAndRef(state, stateRef)
-                        }
-            }
+                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                    var query = select(VaultSchema.VaultStates::class)
+                            .where(VaultSchema.VaultStates::stateStatus `in` statuses)
+                    // TODO: temporary fix to continue supporting track() function (until becomes Typed)
+                    if (!clazzes.map { it.name }.contains(ContractState::class.java.name))
+                        query.and(VaultSchema.VaultStates::contractStateClassName `in` (clazzes.map { it.name }))
+                    if (!includeSoftLockedStates)
+                        query.and(VaultSchema.VaultStates::lockId.isNull())
+                    val iterator = query.get().iterator()
+                    Sequence { iterator }
+                            .map { it ->
+                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
+                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                StateAndRef(state, stateRef)
+                            }
+                }
         return stateAndRefs.asIterable()
     }
 
@@ -286,14 +289,13 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 val update = update(VaultStatesEntity::class)
                         .set(VaultStatesEntity.LOCK_ID, null)
                         .set(VaultStatesEntity.LOCK_UPDATE_TIME, services.clock.instant())
-                        .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
-                        .and (VaultStatesEntity.LOCK_ID eq lockId.toString()).get()
+                        .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                        .and(VaultStatesEntity.LOCK_ID eq lockId.toString()).get()
                 if (update.value() > 0) {
                     log.trace("Releasing ${update.value()} soft locked states for $lockId")
                 }
             }
-        }
-        else if (stateRefs.isNotEmpty()) {
+        } else if (stateRefs.isNotEmpty()) {
             try {
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
                     val updatedRows = update(VaultStatesEntity::class)
@@ -412,21 +414,21 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
         val stateAndRefs =
-            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                var query = select(VaultSchema.VaultStates::class)
-                        .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                        .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)
-                if (lockId != null)
-                    query.and(VaultSchema.VaultStates::lockId eq lockId)
-                else
-                    query.and(VaultSchema.VaultStates::lockId.notNull())
-                query.get()
-                        .map { it ->
-                            val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                            StateAndRef(state, stateRef)
-                        }.toList()
-            }
+                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                    var query = select(VaultSchema.VaultStates::class)
+                            .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
+                            .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)
+                    if (lockId != null)
+                        query.and(VaultSchema.VaultStates::lockId eq lockId)
+                    else
+                        query.and(VaultSchema.VaultStates::lockId.notNull())
+                    query.get()
+                            .map { it ->
+                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
+                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                StateAndRef(state, stateRef)
+                            }.toList()
+                }
         return stateAndRefs
     }
 
@@ -561,8 +563,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         if (tx.inputs.isNotEmpty()) {
             session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
                 val result = select(VaultStatesEntity::class).
-                             where (stateRefCompositeColumn.`in`(stateRefArgs(tx.inputs))).
-                             and (VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
+                        where(stateRefCompositeColumn.`in`(stateRefArgs(tx.inputs))).
+                        and(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
                 result.get().forEach {
                     val txHash = SecureHash.parse(it.txId)
                     val index = it.index

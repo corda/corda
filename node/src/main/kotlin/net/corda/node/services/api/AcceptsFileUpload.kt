@@ -7,7 +7,7 @@ import net.corda.core.node.services.FileUploader
  *
  * TODO: In future, also accept uploads over the MQ interface too.
  */
-interface AcceptsFileUpload: FileUploader {
+interface AcceptsFileUpload : FileUploader {
     /** A string that prefixes the URLs, e.g. "attachments" or "interest-rates". Should be OK for URLs. */
     val dataTypePrefix: String
 
