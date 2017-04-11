@@ -233,6 +233,7 @@ class ConfigParsingTest {
     data class OldData(
             @OldConfig("oldValue")
             val newValue: String)
+
     enum class TestEnum { Value1, Value2 }
 
 }

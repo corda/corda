@@ -20,7 +20,7 @@ dependencies {
 sourceSets {
     main {
         kotlin {
-           srcDir "$buildDir/generated/source/kapt/main"
+            srcDir "$buildDir/generated/source/kapt/main"
         }
     }
 }
