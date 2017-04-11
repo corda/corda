@@ -17,7 +17,7 @@ import rx.subjects.PublishSubject
 class MockNetworkMapCache : InMemoryNetworkMapCache() {
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
-    data class MockAddress(val id: String): SingleMessageRecipient
+    data class MockAddress(val id: String) : SingleMessageRecipient
 
     init {
         val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")), MOCK_VERSION)
@@ -41,7 +41,7 @@ class MockNetworkMapCache : InMemoryNetworkMapCache() {
      * not a change being received.
      */
     @VisibleForTesting
-    fun deleteRegistration(legalIdentity: Party) : Boolean {
+    fun deleteRegistration(legalIdentity: Party): Boolean {
         return registeredNodes.remove(legalIdentity.owningKey) != null
     }
 }

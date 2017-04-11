@@ -68,6 +68,7 @@ inline fun <reified E : Any> expect(
  * @param expectations The pieces of DSL that should run sequentially when events arrive.
  */
 fun <E> sequence(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Sequential(listOf(*expectations))
+
 fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Sequential(expectations)
 
 /**
@@ -76,6 +77,7 @@ fun <E> sequence(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = Expec
  * @param expectations The pieces of DSL all of which should run but in an unspecified order depending on what sequence events arrive.
  */
 fun <E> parallel(vararg expectations: ExpectCompose<E>): ExpectCompose<E> = ExpectCompose.Parallel(listOf(*expectations))
+
 fun <E> parallel(expectations: List<ExpectCompose<E>>): ExpectCompose<E> = ExpectCompose.Parallel(expectations)
 
 /**
@@ -202,6 +204,7 @@ private sealed class ExpectComposeState<E : Any> {
         override fun nextState(event: E) = null
         override fun getExpectedEvents(): List<Class<E>> = listOf()
     }
+
     class Single<E : Any, T : E>(val single: ExpectCompose.Single<E, T>) : ExpectComposeState<E>() {
         override fun nextState(event: E): Pair<() -> Unit, ExpectComposeState<E>>? =
                 if (single.expect.clazz.isAssignableFrom(event.javaClass)) {
@@ -215,6 +218,7 @@ private sealed class ExpectComposeState<E : Any> {
                 } else {
                     null
                 }
+
         override fun getExpectedEvents() = listOf(single.expect.clazz)
     }
 
@@ -266,6 +270,7 @@ private sealed class ExpectComposeState<E : Any> {
             }
             return null
         }
+
         override fun getExpectedEvents() = states.flatMap { it.getExpectedEvents() }
     }
 

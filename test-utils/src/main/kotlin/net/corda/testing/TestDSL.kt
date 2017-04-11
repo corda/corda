@@ -200,8 +200,8 @@ data class TestLedgerDSLInterpreter private constructor(
     internal inline fun <reified S : ContractState> resolveStateRef(stateRef: StateRef): TransactionState<S> {
         val transactionWithLocation =
                 transactionWithLocations[stateRef.txhash] ?:
-                nonVerifiedTransactionWithLocations[stateRef.txhash] ?:
-                throw TransactionResolutionException(stateRef.txhash)
+                        nonVerifiedTransactionWithLocations[stateRef.txhash] ?:
+                        throw TransactionResolutionException(stateRef.txhash)
         val output = transactionWithLocation.transaction.outputs[stateRef.index]
         return if (S::class.java.isAssignableFrom(output.data.javaClass)) @Suppress("UNCHECKED_CAST") {
             output as TransactionState<S>

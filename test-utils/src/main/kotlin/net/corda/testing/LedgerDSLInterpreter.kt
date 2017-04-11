@@ -1,6 +1,8 @@
 package net.corda.testing
 
-import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -122,7 +124,7 @@ interface LedgerDSLInterpreter<out T : TransactionDSLInterpreter> : Verifies, Ou
  * functionality then first add your primitive to [LedgerDSLInterpreter] and then add the convenience defaults/extension
  * methods here.
  */
-class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<T>> (val interpreter: L) :
+class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<T>>(val interpreter: L) :
         LedgerDSLInterpreter<TransactionDSLInterpreter> by interpreter {
 
     /**
@@ -132,6 +134,7 @@ class LedgerDSL<out T : TransactionDSLInterpreter, out L : LedgerDSLInterpreter<
     fun transaction(label: String? = null, transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
                     dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) =
             _transaction(label, transactionBuilder, dsl)
+
     /**
      * @see LedgerDSLInterpreter._unverifiedTransaction
      */
