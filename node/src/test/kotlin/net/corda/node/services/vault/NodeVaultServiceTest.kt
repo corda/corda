@@ -373,7 +373,7 @@ class NodeVaultServiceTest {
             val spendableStatesUSD = (services.vaultService as NodeVaultService).unconsumedStatesForSpending<Cash.State>(1.DOLLARS, lockId = UUID.randomUUID())
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
-            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(1L * 100)
+            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(100L)
             assertThat(services.vaultService.softLockedStates<Cash.State>()).hasSize(1)
         }
     }

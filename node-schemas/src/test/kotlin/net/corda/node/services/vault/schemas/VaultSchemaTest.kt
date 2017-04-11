@@ -28,6 +28,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import sun.misc.MessageUtils.where
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -554,7 +555,7 @@ class VaultSchemaTest {
         // select unlocked states
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId eq stateEntity.txId)
-                    .and(VaultSchema.VaultStates::lockId.isNull())
+                             .and(VaultSchema.VaultStates::lockId.isNull())
             assertEquals(0, result.get().count())
         }
 

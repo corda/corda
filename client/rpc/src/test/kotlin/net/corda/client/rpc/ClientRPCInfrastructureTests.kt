@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class ClientRPCInfrastructureTests : AbstractClientRPC() {
+class ClientRPCInfrastructureTests : AbstractClientRPCTest() {
     // TODO: Test that timeouts work
 
     lateinit var proxy: TestOps

@@ -24,8 +24,7 @@ import org.junit.Before
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 
-abstract class AbstractClientRPC {
-
+abstract class AbstractClientRPCTest {
     lateinit var artemis: EmbeddedActiveMQ
     lateinit var serverSession: ClientSession
     lateinit var clientSession: ClientSession
@@ -93,8 +92,10 @@ abstract class AbstractClientRPC {
         return CordaRPCClientImpl(clientSession, ReentrantLock(), rpcUser.username).proxyFor(type)
     }
 
-    fun safeClose(obj: Any) = try {
-        (obj as AutoCloseable).close()
-    } catch (e: Exception) {
+    fun safeClose(obj: Any) {
+        try {
+            (obj as AutoCloseable).close()
+        } catch (e: Exception) {
+        }
     }
 }

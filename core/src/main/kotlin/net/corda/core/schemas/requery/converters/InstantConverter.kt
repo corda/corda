@@ -10,30 +10,13 @@ import java.time.Instant
  * UTC zone offset.
  */
 class InstantConverter : Converter<Instant, Timestamp> {
+    override fun getMappedType() = Instant::class.java
 
-    override fun getMappedType(): Class<Instant> {
-        return Instant::class.java
-    }
+    override fun getPersistedType() = Timestamp::class.java
 
-    override fun getPersistedType(): Class<Timestamp> {
-        return Timestamp::class.java
-    }
+    override fun getPersistedSize() = null
 
-    override fun getPersistedSize(): Int? {
-        return null
-    }
+    override fun convertToPersisted(value: Instant?) = value?.let { Timestamp.from(it) }
 
-    override fun convertToPersisted(value: Instant?): Timestamp? {
-        if (value == null) {
-            return null
-        }
-        return Timestamp.from(value)
-    }
-
-    override fun convertToMapped(type: Class<out Instant>, value: Timestamp?): Instant? {
-        if (value == null) {
-            return null
-        }
-        return value.toInstant()
-    }
+    override fun convertToMapped(type: Class<out Instant>, value: Timestamp?) = value?.toInstant()
 }
