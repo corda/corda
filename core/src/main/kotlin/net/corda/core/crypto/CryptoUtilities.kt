@@ -14,6 +14,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
+import java.security.InvalidKeyException
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
