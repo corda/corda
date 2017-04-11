@@ -85,7 +85,10 @@ class MockIdentityService(val identities: List<Party>) : IdentityService, Single
     private val nameToParties: Map<String, Party>
         get() = synchronized(identities) { identities.associateBy { it.name } }
 
-    override fun registerIdentity(party: Party) { throw UnsupportedOperationException() }
+    override fun registerIdentity(party: Party) {
+        throw UnsupportedOperationException()
+    }
+
     override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
     override fun partyFromAnonymous(party: AnonymousParty): Party? = keyToParties[party.owningKey]
     override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
@@ -171,7 +174,7 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
                          override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
                          override val uploaders: List<FileUploader> = listOf<FileUploader>(),
                          override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage())
-: SingletonSerializeAsToken(), TxWritableStorageService
+    : SingletonSerializeAsToken(), TxWritableStorageService
 
 /**
  * Make properties appropriate for creating a DataSource for unit tests.

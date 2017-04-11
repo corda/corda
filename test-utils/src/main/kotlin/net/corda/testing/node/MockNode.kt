@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   private val threadPerNode: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
-                      InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
+                  InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
     private var nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
@@ -246,7 +246,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: String? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
                    vararg advertisedServices: ServiceInfo): MockNode
-        = createNode(networkMapAddress, forcedID, nodeFactory, start, legalName, overrideServices, BigInteger.valueOf(random63BitValue()), *advertisedServices)
+            = createNode(networkMapAddress, forcedID, nodeFactory, start, legalName, overrideServices, BigInteger.valueOf(random63BitValue()), *advertisedServices)
 
     /**
      * Returns a node, optionally created by the passed factory method.

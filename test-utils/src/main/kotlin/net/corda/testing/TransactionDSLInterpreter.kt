@@ -84,6 +84,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
         }
         input(transaction.outRef<ContractState>(0).ref)
     }
+
     fun input(stateClosure: () -> ContractState) = input(stateClosure())
 
     /**
@@ -92,6 +93,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     @JvmOverloads
     fun output(label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
             _output(label, notary, encumbrance, contractStateClosure())
+
     /**
      * @see TransactionDSLInterpreter._output
      */
@@ -106,6 +108,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      */
     fun command(vararg signers: CompositeKey, commandDataClosure: () -> CommandData) =
             _command(listOf(*signers), commandDataClosure())
+
     /**
      * @see TransactionDSLInterpreter._command
      */

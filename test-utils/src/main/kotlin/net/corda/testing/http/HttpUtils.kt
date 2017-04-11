@@ -25,18 +25,18 @@ object HttpUtils {
         ObjectMapper().registerModule(JavaTimeModule()).registerModule(KotlinModule())
     }
 
-    fun putJson(url: URL, data: String) : Boolean {
+    fun putJson(url: URL, data: String): Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
         return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").put(body).build())
     }
 
-    fun postJson(url: URL, data: String) : Boolean {
+    fun postJson(url: URL, data: String): Boolean {
         val body = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), data)
         return makeRequest(Request.Builder().url(url).header("Content-Type", "application/json").post(body).build())
     }
 
-    inline fun<reified T: Any> getJson(url: URL, params: Map<String, String> = mapOf()) : T {
-        val paramString = if(params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
+    inline fun <reified T : Any> getJson(url: URL, params: Map<String, String> = mapOf()): T {
+        val paramString = if (params.isEmpty()) "" else "?" + params.map { "${it.key}=${it.value}" }.joinToString("&")
         val parameterisedUrl = URL(url.toExternalForm() + paramString)
         return defaultMapper.readValue(parameterisedUrl, T::class.java)
     }

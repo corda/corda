@@ -4,13 +4,13 @@ import com.google.common.net.HostAndPort
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.ConnectException
-import java.net.SocketException
 import java.net.HttpURLConnection
+import java.net.SocketException
 import java.net.URL
 import kotlin.test.assertEquals
 
 class NodeApi {
-    class NodeDidNotStartException(message: String): Exception(message)
+    class NodeDidNotStartException(message: String) : Exception(message)
 
     companion object {
         // Increased timeout to two minutes.
