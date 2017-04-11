@@ -389,9 +389,13 @@ class CordaRPCClientImpl(private val session: ClientSession,
                     false
             }
             if (closed) {
-                rpcLog.warn("A hot observable returned from an RPC ($rpcName) was never subscribed to. " +
-                        "This wastes server-side resources because it was queueing observations for retrieval. " +
-                        "It is being closed now, but please adjust your code to subscribe and unsubscribe from the observable to close it explicitly.", rpcLocation)
+                rpcLog.warn("""A hot observable returned from an RPC ($rpcName) was never subscribed to.
+                               This wastes server-side resources because it was queueing observations for retrieval.
+                               It is being closed now, but please adjust your code to call .notUsed() on the observable
+                               to close it explicitly. (Java users: subscribe to it then unsubscribe). This warning
+                               will appear less frequently in future versions of the platform and you can ignore it
+                               if you want to.
+                            """.trimIndent().replace('\n', ' '), rpcLocation)
             }
         }
     }
