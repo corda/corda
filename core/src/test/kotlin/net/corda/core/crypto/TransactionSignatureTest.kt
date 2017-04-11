@@ -7,7 +7,6 @@ import java.security.Security
 import java.security.SignatureException
 import java.time.Instant
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /**
  * Digital signature MetaData tests

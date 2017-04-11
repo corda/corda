@@ -14,7 +14,6 @@ import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
-import java.util.*
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
@@ -123,7 +122,7 @@ class WireTransaction(
      * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
      */
     fun filterWithFun(filtering: (Any) -> Boolean): FilteredLeaves {
-        fun notNullFalse(elem: Any?): Any? = if(elem == null || !filtering(elem)) null else elem
+        fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering(elem)) null else elem
         return FilteredLeaves(
                 inputs.filter { filtering(it) },
                 attachments.filter { filtering(it) },

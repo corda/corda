@@ -23,11 +23,10 @@ import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.IPAddress
 import org.bouncycastle.util.io.pem.PemReader
-import java.io.ByteArrayInputStream
 import java.io.FileReader
 import java.io.FileWriter
-import java.io.InputStream
 import java.io.IOException
+import java.io.InputStream
 import java.math.BigInteger
 import java.net.InetAddress
 import java.nio.file.Path

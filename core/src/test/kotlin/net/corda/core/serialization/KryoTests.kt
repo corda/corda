@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
 import net.corda.core.messaging.Ack
+import net.corda.node.services.persistence.NodeAttachmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -11,14 +12,13 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import net.corda.node.services.persistence.NodeAttachmentService
-import java.io.ByteArrayInputStream
 
 class KryoTests {
 
@@ -102,7 +102,7 @@ class KryoTests {
     fun `InputStream serialisation`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
         val readRubbishStream: InputStream = rubbish.inputStream().serialize(kryo).deserialize(kryo)
-        for (i in 0 .. 12344) {
+        for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
@@ -135,8 +135,8 @@ class KryoTests {
     @Test
     fun `HashCheckingStream (de)serialize`() {
         val rubbish = ByteArray(12345, { (it * it * 0.12345).toByte() })
-        val readRubbishStream : InputStream = NodeAttachmentService.HashCheckingStream(SecureHash.sha256(rubbish), rubbish.size, ByteArrayInputStream(rubbish)).serialize(kryo).deserialize(kryo)
-        for (i in 0 .. 12344) {
+        val readRubbishStream: InputStream = NodeAttachmentService.HashCheckingStream(SecureHash.sha256(rubbish), rubbish.size, ByteArrayInputStream(rubbish)).serialize(kryo).deserialize(kryo)
+        for (i in 0..12344) {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())

@@ -27,6 +27,7 @@ class EncodingUtilsTest {
         assertEquals("", emptyByteArray.toBase64())
         assertEquals("", emptyByteArray.toHex())
     }
+
     @Test
     fun `encoding 7 zero bytes`() {
         val sevenZeroByteArray = ByteArray(7)

@@ -32,8 +32,8 @@ fun commodity(code: String) = Commodity.getInstance(code)!!
 @JvmField val RUB = currency("RUB")
 @JvmField val FCOJ = commodity("FCOJ")   // Frozen concentrated orange juice, yum!
 
-fun <T: Any>AMOUNT(amount: Int, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount.toLong()), token)
-fun <T: Any>AMOUNT(amount: Double, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
+fun <T : Any> AMOUNT(amount: Int, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount.toLong()), token)
+fun <T : Any> AMOUNT(amount: Double, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
 fun DOLLARS(amount: Int): Amount<Currency> = AMOUNT(amount, USD)
 fun DOLLARS(amount: Double): Amount<Currency> = AMOUNT(amount, USD)
 fun POUNDS(amount: Int): Amount<Currency> = AMOUNT(amount, GBP)

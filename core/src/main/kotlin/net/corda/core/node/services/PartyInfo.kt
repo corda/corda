@@ -13,6 +13,7 @@ sealed class PartyInfo {
     data class Node(val node: NodeInfo) : PartyInfo() {
         override val party get() = node.legalIdentity
     }
+
     data class Service(val service: ServiceEntry) : PartyInfo() {
         override val party get() = service.identity
     }

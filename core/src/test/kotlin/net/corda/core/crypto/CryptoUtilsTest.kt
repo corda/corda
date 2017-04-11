@@ -17,9 +17,13 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.security.KeyFactory
 import java.security.Security
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.util.*
-import java.security.spec.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 /**
  * Run tests for cryptographic algorithms
@@ -356,9 +360,9 @@ class CryptoUtilsTest {
     // test list of supported algorithms
     @Test
     fun `Check supported algorithms`() {
-        val algList : List<String> = Crypto.listSupportedSignatureSchemes()
-        val expectedAlgSet = setOf("RSA_SHA256","ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512","SPHINCS-256_SHA512")
-        assertTrue { Sets.symmetricDifference(expectedAlgSet,algList.toSet()).isEmpty(); }
+        val algList: List<String> = Crypto.listSupportedSignatureSchemes()
+        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512")
+        assertTrue { Sets.symmetricDifference(expectedAlgSet, algList.toSet()).isEmpty(); }
     }
 
     // Unfortunately, there isn't a standard way to encode/decode keys, so we need to test per case
@@ -453,13 +457,13 @@ class CryptoUtilsTest {
         //2nd method for encoding/decoding
 
         // Encode and decode private key.
-        val privKeyInfo : PrivateKeyInfo = PrivateKeyInfo.getInstance(privKey.encoded)
+        val privKeyInfo: PrivateKeyInfo = PrivateKeyInfo.getInstance(privKey.encoded)
         val decodedPrivKey = BCSphincs256PrivateKey(privKeyInfo)
         // Check that decoded private key is equal to the initial one.
         assertEquals(decodedPrivKey, privKey)
 
         // Encode and decode public key.
-        val pubKeyInfo : SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKey.encoded)
+        val pubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKey.encoded)
         val extractedPubKey = BCSphincs256PublicKey(pubKeyInfo)
         // Check that decoded private key is equal to the initial one.
         assertEquals(extractedPubKey, pubKey)
@@ -601,7 +605,7 @@ class CryptoUtilsTest {
     @Test
     fun `Failure test between K1 and R1 keys`() {
         val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val privK1= keyPairK1.private
+        val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
         val decodedPrivK1 = Crypto.decodePrivateKey(encodedPrivK1)
 

@@ -41,6 +41,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
+
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")
 
         // TODO: Make all tracker() methods @JvmStatic
@@ -90,6 +91,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return needsNotarisation && hasNoNotarySignature(stx)
 
     }
+
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
         val signers = stx.sigs.map { it.by }.toSet()

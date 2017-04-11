@@ -83,7 +83,7 @@ class PartialMerkleTreeTest {
     fun `check full tree`() {
         val h = SecureHash.randomSHA256()
         val left = MerkleTree.Node(h, MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)),
-                    MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
+                MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h)))
         val right = MerkleTree.Node(h, MerkleTree.Leaf(h), MerkleTree.Leaf(h))
         val tree = MerkleTree.Node(h, left, right)
         assertFailsWith<MerkleTreeException> { PartialMerkleTree.build(tree, listOf(h)) }
@@ -103,6 +103,7 @@ class PartialMerkleTreeTest {
                 else -> false
             }
         }
+
         val mt = testTx.buildFilteredTransaction(::filtering)
         val leaves = mt.filteredLeaves
         val d = WireTransaction.deserialize(testTx.serialized)
@@ -127,7 +128,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `nothing filtered`() {
-        val mt = testTx.buildFilteredTransaction( {false} )
+        val mt = testTx.buildFilteredTransaction({ false })
         assertTrue(mt.filteredLeaves.attachments.isEmpty())
         assertTrue(mt.filteredLeaves.commands.isEmpty())
         assertTrue(mt.filteredLeaves.inputs.isEmpty())

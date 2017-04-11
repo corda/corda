@@ -43,7 +43,7 @@ class NonEmptySet<T>(initial: T) : MutableSet<T> {
             if (size > elements.size)
                 set.removeAll(elements)
             else if (!containsAll(elements))
-                // Remove the common elements
+            // Remove the common elements
                 set.removeAll(elements)
             else
                 throw IllegalStateException()

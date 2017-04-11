@@ -1,6 +1,8 @@
 package net.corda.core.crypto
 
-import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGeneratorSpi
+import java.security.Signature
 import java.security.spec.AlgorithmParameterSpec
 
 /**

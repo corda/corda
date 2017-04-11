@@ -16,9 +16,10 @@ abstract class AbstractParty(val owningKey: CompositeKey) {
 
     /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
     override fun equals(other: Any?): Boolean = other is AbstractParty && this.owningKey == other.owningKey
+
     override fun hashCode(): Int = owningKey.hashCode()
-    abstract fun toAnonymous() : AnonymousParty
-    abstract fun nameOrNull() : String?
+    abstract fun toAnonymous(): AnonymousParty
+    abstract fun nameOrNull(): String?
 
     abstract fun ref(bytes: OpaqueBytes): PartyAndReference
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))

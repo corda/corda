@@ -9,20 +9,30 @@ import net.corda.core.crypto.SecureHash
  */
 class StateRefConverter : Converter<StateRef, Pair<String, Int>> {
 
-    override fun getMappedType(): Class<StateRef> { return StateRef::class.java }
+    override fun getMappedType(): Class<StateRef> {
+        return StateRef::class.java
+    }
 
     @Suppress("UNCHECKED_CAST")
-    override fun getPersistedType(): Class<Pair<String,Int>> { return Pair::class.java as Class<Pair<String,Int>> }
+    override fun getPersistedType(): Class<Pair<String, Int>> {
+        return Pair::class.java as Class<Pair<String, Int>>
+    }
 
-    override fun getPersistedSize(): Int? { return null }
+    override fun getPersistedSize(): Int? {
+        return null
+    }
 
-    override fun convertToPersisted(value: StateRef?): Pair<String,Int>? {
-        if (value == null) { return null }
+    override fun convertToPersisted(value: StateRef?): Pair<String, Int>? {
+        if (value == null) {
+            return null
+        }
         return Pair(value.txhash.toString(), value.index)
     }
 
-    override fun convertToMapped(type: Class<out StateRef>, value: Pair<String,Int>?): StateRef? {
-        if (value == null) { return null }
+    override fun convertToMapped(type: Class<out StateRef>, value: Pair<String, Int>?): StateRef? {
+        if (value == null) {
+            return null
+        }
         return StateRef(SecureHash.parse(value.first), value.second)
     }
 }
