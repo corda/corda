@@ -14,8 +14,8 @@ class BankOfCordaHttpAPITest {
     fun `issuer flow via Http`() {
         driver(dsl = {
             val (nodeBankOfCorda) = Futures.allAsList(
-                startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type))),
-                startNode("BigCorporation")
+                    startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type))),
+                    startNode("BigCorporation")
             ).getOrThrow()
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow()
             assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", "BankOfCorda")))

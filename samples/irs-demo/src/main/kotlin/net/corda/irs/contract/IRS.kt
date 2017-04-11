@@ -304,7 +304,7 @@ class InterestRateSwap : Contract {
     }
 
     @CordaSerializable
-    open class FixedLeg<P: AbstractParty>(
+    open class FixedLeg<P : AbstractParty>(
             var fixedRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
@@ -362,6 +362,7 @@ class InterestRateSwap : Contract {
                 fixedRatePayer, notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate,
                 terminationDateAdjustment, dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay,
                 paymentCalendar, interestPeriodAdjustment, fixedRate, rollConvention)
+
         fun toAnonymous(): FixedLeg<AnonymousParty> {
             return FixedLeg(fixedRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
                     dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
@@ -370,7 +371,7 @@ class InterestRateSwap : Contract {
     }
 
     @CordaSerializable
-    open class FloatingLeg<P: AbstractParty>(
+    open class FloatingLeg<P : AbstractParty>(
             var floatingRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
@@ -458,6 +459,7 @@ class InterestRateSwap : Contract {
                 paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment, rollConvention,
                 fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment,
                 fixingCalendar, index, indexSource, indexTenor)
+
         fun toAnonymous(): FloatingLeg<AnonymousParty> {
             return FloatingLeg(floatingRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
                     dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
@@ -662,7 +664,7 @@ class InterestRateSwap : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
-    data class State<P: AbstractParty>(
+    data class State<P : AbstractParty>(
             val fixedLeg: FixedLeg<P>,
             val floatingLeg: FloatingLeg<P>,
             val calculation: Calculation,

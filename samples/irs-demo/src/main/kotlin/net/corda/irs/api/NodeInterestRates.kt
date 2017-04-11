@@ -213,6 +213,7 @@ object NodeInterestRates {
                     else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
                 }
             }
+
             val leaves = ftx.filteredLeaves
             if (!leaves.checkWithFun(::check))
                 throw IllegalArgumentException()

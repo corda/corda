@@ -4,11 +4,11 @@ import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.flows.IssuerFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashPaymentFlow
+import net.corda.flows.IssuerFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -59,8 +59,7 @@ private class BankOfCordaDriver {
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
-        }
-        else {
+        } else {
             try {
                 val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), "BigCorporation", "1", "BankOfCorda")
                 when (role) {
@@ -76,10 +75,10 @@ private class BankOfCordaDriver {
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }
-                    Role.ISSUER -> {}
+                    Role.ISSUER -> {
+                    }
                 }
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 println("Exception occurred: $e \n ${e.printStackTrace()}")
                 exitProcess(1)
             }
