@@ -61,9 +61,9 @@ data class CmdLineOptions(val baseDirectory: Path,
     }
 
     private fun loadConfig(baseDirectory: Path,
-                   configFile: Path = baseDirectory / "node.conf",
-                   allowMissingConfig: Boolean = false,
-                   configOverrides: Map<String, Any?> = emptyMap()): Config {
+                           configFile: Path = baseDirectory / "node.conf",
+                           allowMissingConfig: Boolean = false,
+                           configOverrides: Map<String, Any?> = emptyMap()): Config {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("web-reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
