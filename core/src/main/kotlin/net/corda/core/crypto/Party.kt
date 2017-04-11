@@ -24,7 +24,7 @@ import java.security.PublicKey
  */
 class Party(val name: String, owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
-    override fun toString() = "${owningKey.toBase58String()} (${name})"
+    override fun toString() = "${owningKey.toBase58String()} ($name)"
     override fun nameOrNull(): String? = name
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this.toAnonymous(), bytes)

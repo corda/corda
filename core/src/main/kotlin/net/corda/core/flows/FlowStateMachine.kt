@@ -16,10 +16,9 @@ import java.util.*
  * has at least one flow, but that flow may also invoke sub-flows: they all share the same run id.
  */
 @CordaSerializable
-data class StateMachineRunId private constructor(val uuid: UUID) {
+data class StateMachineRunId(val uuid: UUID) {
     companion object {
         fun createRandom(): StateMachineRunId = StateMachineRunId(UUID.randomUUID())
-        fun wrap(uuid: UUID): StateMachineRunId = StateMachineRunId(uuid)
     }
 
     override fun toString(): String = "[$uuid]"

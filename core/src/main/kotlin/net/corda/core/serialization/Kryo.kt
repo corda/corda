@@ -72,10 +72,12 @@ fun p2PKryo(): KryoPool = kryoPool
 // Same again, but this has whitelisting turned off for internal storage use only.
 fun storageKryo(): KryoPool = internalKryoPool
 
+
 /**
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
+@Suppress("unused")  // Type parameter is just for documentation purposes.
 class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = false) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
@@ -539,25 +541,6 @@ fun <T> Kryo.withAttachmentStorage(attachmentStorage: AttachmentStorage?, block:
         return block()
     } finally {
         this.context.put(ATTACHMENT_STORAGE, priorAttachmentStorage)
-    }
-}
-
-object OrderedSerializer : Serializer<HashMap<Any, Any>>() {
-    override fun write(kryo: Kryo, output: Output, obj: HashMap<Any, Any>) {
-        //Change a HashMap to LinkedHashMap.
-        val linkedMap = LinkedHashMap<Any, Any>()
-        val sorted = obj.toList().sortedBy { it.first.hashCode() }
-        for ((k, v) in sorted) {
-            linkedMap.put(k, v)
-        }
-        kryo.writeClassAndObject(output, linkedMap)
-    }
-
-    //It will be deserialized as a LinkedHashMap.
-    @Suppress("UNCHECKED_CAST")
-    override fun read(kryo: Kryo, input: Input, type: Class<HashMap<Any, Any>>): HashMap<Any, Any> {
-        val hm = kryo.readClassAndObject(input) as HashMap<Any, Any>
-        return hm
     }
 }
 

@@ -19,7 +19,7 @@ open class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Claus
 
     override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> {
         clauses.forEach { clause ->
-            check(clause.matches(commands)) { "Failed to match clause ${clause}" }
+            check(clause.matches(commands)) { "Failed to match clause $clause" }
         }
         return clauses
     }

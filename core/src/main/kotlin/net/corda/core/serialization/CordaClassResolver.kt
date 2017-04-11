@@ -26,10 +26,6 @@ fun makeNoWhitelistClassResolver(): ClassResolver {
 }
 
 class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
-    companion object {
-        private val logger = loggerFor<CordaClassResolver>()
-    }
-
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
@@ -147,10 +143,14 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
     }
 }
 
+
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
  * and was used to track down the initial set.
+ *
+ * @suppress
  */
+@Suppress("unused")
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {
     companion object {
         val log = loggerFor<LoggingWhitelist>()
@@ -178,9 +178,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
             alreadySeen += type.name
             val className = Util.className(type)
             log.warn("Dynamically whitelisted class $className")
-            if (journalWriter != null) {
-                journalWriter.println(className)
-            }
+            journalWriter?.println(className)
         }
         return true
     }

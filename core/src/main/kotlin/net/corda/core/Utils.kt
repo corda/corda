@@ -105,7 +105,7 @@ infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = 
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
-infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, Function { (mapper as (F?) -> T)(it) })
+infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
@@ -156,7 +156,7 @@ fun Path.writeLines(lines: Iterable<CharSequence>, charset: Charset = UTF_8, var
 fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
-infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)
+infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {
@@ -349,6 +349,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
 val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
 
 /** Representation of an operation that may have thrown an error. */
+@Suppress("DataClassPrivateConstructor")
 @CordaSerializable
 data class ErrorOr<out A> private constructor(val value: A?, val error: Throwable?) {
     // The ErrorOr holds a value iff error == null

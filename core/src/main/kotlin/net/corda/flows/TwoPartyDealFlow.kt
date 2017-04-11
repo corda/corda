@@ -31,17 +31,6 @@ import java.security.PublicKey
  *
  */
 object TwoPartyDealFlow {
-
-    @CordaSerializable
-    class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
-        override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
-    }
-
-    @CordaSerializable
-    class DealRefMismatchException(val expectedDeal: StateRef, val actualDeal: StateRef) : Exception() {
-        override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
-    }
-
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable
     data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
