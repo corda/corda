@@ -68,7 +68,7 @@ class X509UtilitiesTest {
             if (typeId == GeneralName.iPAddress) {
                 assertEquals("10.0.0.54", value)
             } else if (value == "alias name") {
-                    foundAliasDnsName = true
+                foundAliasDnsName = true
             }
         }
         assertTrue(foundAliasDnsName)

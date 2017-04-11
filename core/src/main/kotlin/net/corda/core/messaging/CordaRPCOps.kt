@@ -112,7 +112,7 @@ interface CordaRPCOps : RPCOps {
      * Checks whether an attachment with the given hash is stored on the node.
      */
     fun attachmentExists(id: SecureHash): Boolean
-    
+
     /**
      * Download an attachment JAR by ID
      */
@@ -221,7 +221,7 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  * @param returnValue A [ListenableFuture] of the flow's return value.
  */
 @CordaSerializable
-data class FlowHandle<A> (
+data class FlowHandle<A>(
         val id: StateMachineRunId,
         val progress: Observable<String>,
         val returnValue: ListenableFuture<A>) : AutoCloseable {

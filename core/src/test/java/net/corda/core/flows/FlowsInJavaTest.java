@@ -1,15 +1,13 @@
 package net.corda.core.flows;
 
-import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.crypto.Party;
-import net.corda.testing.node.MockNetwork;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import co.paralleluniverse.fibers.*;
+import net.corda.core.crypto.*;
+import net.corda.testing.node.*;
+import org.junit.*;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.*;
 
 public class FlowsInJavaTest {
 

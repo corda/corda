@@ -5,7 +5,6 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.unwrap
 import java.security.cert.Certificate

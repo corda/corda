@@ -196,7 +196,9 @@ abstract class FlowLogic<out T> {
      */
     var stateMachine: FlowStateMachine<*>
         get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")
-        set(value) { _stateMachine = value }
+        set(value) {
+            _stateMachine = value
+        }
 
     // This points to the outermost flow and is changed when a subflow is invoked.
     private var sessionFlow: FlowLogic<*> = this

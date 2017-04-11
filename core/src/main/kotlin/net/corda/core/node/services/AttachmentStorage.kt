@@ -14,8 +14,8 @@ interface AttachmentStorage {
      * human browsing convenience: the attachment itself will still be the file (that is, edits to the extracted directory
      * will not have any effect).
      */
-    var automaticallyExtractAttachments : Boolean
-    var storePath : Path
+    var automaticallyExtractAttachments: Boolean
+    var storePath: Path
 
     /**
      * Returns a handle to a locally stored attachment, or null if it's not known. The handle can be used to open

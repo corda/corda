@@ -91,7 +91,7 @@ class TransactionResolutionException(val hash: SecureHash) : FlowException() {
     override fun toString(): String = "Transaction resolution failure for $hash"
 }
 
-class AttachmentResolutionException(val hash : SecureHash) : FlowException() {
+class AttachmentResolutionException(val hash: SecureHash) : FlowException() {
     override fun toString(): String = "Attachment resolution failure for $hash"
 }
 
@@ -104,6 +104,7 @@ sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: 
     class SignersMissing(tx: LedgerTransaction, val missing: List<CompositeKey>) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Signers missing: ${missing.joinToString()}"
     }
+
     class DuplicateInputStates(tx: LedgerTransaction, val duplicates: Set<StateRef>) : TransactionVerificationException(tx, null) {
         override fun toString(): String = "Duplicate inputs: ${duplicates.joinToString()}"
     }

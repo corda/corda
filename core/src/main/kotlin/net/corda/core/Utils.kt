@@ -317,7 +317,7 @@ fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
  * Note that a slightly bigger than numOfExpectedBytes size is expected.
  */
 @Throws(IllegalArgumentException::class)
-fun sizedInputStreamAndHash(numOfExpectedBytes : Int) : InputStreamAndHash {
+fun sizedInputStreamAndHash(numOfExpectedBytes: Int): InputStreamAndHash {
     if (numOfExpectedBytes <= 0) throw IllegalArgumentException("A positive number of numOfExpectedBytes is required.")
     val baos = ByteArrayOutputStream()
     ZipOutputStream(baos).use({ zos ->
@@ -335,7 +335,7 @@ fun sizedInputStreamAndHash(numOfExpectedBytes : Int) : InputStreamAndHash {
 }
 
 /** Convert a [ByteArrayOutputStream] to [InputStreamAndHash]. */
-fun getInputStreamAndHashFromOutputStream(baos: ByteArrayOutputStream) : InputStreamAndHash {
+fun getInputStreamAndHashFromOutputStream(baos: ByteArrayOutputStream): InputStreamAndHash {
     // TODO: Consider converting OutputStream to InputStream without creating a ByteArray, probably using piped streams.
     val bytes = baos.toByteArray()
     // TODO: Consider calculating sha256 on the fly using a DigestInputStream.

@@ -143,7 +143,7 @@ class AmountTests {
                 SourceAndAmount(partyA, POUNDS(256), 5),
                 SourceAndAmount(partyB, POUNDS(256), 6)
         )
-        val collector = Collectors.toMap<SourceAndAmount<Currency, String>, Pair<String, Currency>, BigDecimal>({ Pair(it.source, it.amount.token)}, {it.amount.toDecimal()}, { x,y -> x + y})
+        val collector = Collectors.toMap<SourceAndAmount<Currency, String>, Pair<String, Currency>, BigDecimal>({ Pair(it.source, it.amount.token) }, { it.amount.toDecimal() }, { x, y -> x + y })
         val originalTotals = sourceAccounts.stream().collect(collector)
 
         val smallTransfer = AmountTransfer.fromDecimal(BigDecimal("10"), USD, partyA, partyB)

@@ -82,8 +82,8 @@ class PartialMerkleTree(val root: PartialTree) {
             return when (tree) {
                 is MerkleTree.Leaf -> level
                 is MerkleTree.Node -> {
-                    val l1 = checkFull(tree.left, level+1)
-                    val l2 = checkFull(tree.right, level+1)
+                    val l1 = checkFull(tree.left, level + 1)
+                    val l2 = checkFull(tree.right, level + 1)
                     if (l1 != l2) throw MerkleTreeException("Got not full binary tree.")
                     l1
                 }

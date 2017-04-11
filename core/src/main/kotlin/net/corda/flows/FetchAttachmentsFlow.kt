@@ -23,7 +23,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class ByteArrayAttachment(private val wire : ByteArray) : Attachment {
+    private class ByteArrayAttachment(private val wire: ByteArray) : Attachment {
         override val id: SecureHash by lazy { wire.sha256() }
         override fun open(): InputStream = wire.inputStream()
         override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id

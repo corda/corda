@@ -19,7 +19,7 @@ object TxKeyFlow {
     }
 
     class Requester(val otherSide: Party,
-                    override val progressTracker: ProgressTracker): FlowLogic<Pair<CompositeKey, Certificate?>>() {
+                    override val progressTracker: ProgressTracker) : FlowLogic<Pair<CompositeKey, Certificate?>>() {
         constructor(otherSide: Party) : this(otherSide, tracker())
 
         companion object {
@@ -40,7 +40,7 @@ object TxKeyFlow {
      * counterparty and as the result from the flow.
      */
     class Provider(val otherSide: Party,
-                   override val progressTracker: ProgressTracker): FlowLogic<CompositeKey>() {
+                   override val progressTracker: ProgressTracker) : FlowLogic<CompositeKey>() {
         constructor(otherSide: Party) : this(otherSide, tracker())
 
         companion object {

@@ -19,7 +19,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
      * to infinity. Google Maps, for example, uses a square map image, and square maps yield latitude extents
      * of 85.0511 to -85.0511 = arctan(sinh(π)).
      */
-    @Suppress("unused")  // Used from the visualiser GUI.
+    @Suppress("unused") // Used from the visualiser GUI.
     fun project(screenWidth: Double, screenHeight: Double, topLatitude: Double, bottomLatitude: Double,
                 leftLongitude: Double, rightLongitude: Double): Pair<Double, Double> {
         require(latitude in bottomLatitude..topLatitude)

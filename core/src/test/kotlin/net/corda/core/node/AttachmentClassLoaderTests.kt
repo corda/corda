@@ -12,7 +12,6 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
-import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test

@@ -1,8 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.serialization.opaque
 import java.security.InvalidKeyException
-import java.security.PublicKey
 import java.security.SignatureException
 
 /**

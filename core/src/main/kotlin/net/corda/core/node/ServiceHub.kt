@@ -81,7 +81,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
     fun <T : ContractState> toStateAndRef(ref: StateRef): StateAndRef<T> {
-        val definingTx =  storageService.validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
+        val definingTx = storageService.validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
         return definingTx.tx.outRef<T>(ref.index)
     }
 

@@ -18,7 +18,7 @@ sealed class MerkleTree {
     data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
 
     companion object {
-        private fun isPow2(num: Int): Boolean = num and (num-1) == 0
+        private fun isPow2(num: Int): Boolean = num and (num - 1) == 0
 
         /**
          * Merkle tree building using hashes, with zero hash padding to full power of 2.
@@ -54,9 +54,9 @@ sealed class MerkleTree {
                 val newLevelHashes: MutableList<MerkleTree> = ArrayList()
                 val n = lastNodesList.size
                 require((n and 1) == 0) { "Sanity check: number of nodes should be even." }
-                for (i in 0..n-2 step 2) {
+                for (i in 0..n - 2 step 2) {
                     val left = lastNodesList[i]
-                    val right = lastNodesList[i+1]
+                    val right = lastNodesList[i + 1]
                     val newHash = left.hash.hashConcat(right.hash)
                     val combined = Node(newHash, left, right)
                     newLevelHashes.add(combined)

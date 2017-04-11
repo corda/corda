@@ -128,7 +128,7 @@ class ProgressTracker(vararg steps: Step) {
             curChangeSubscription?.unsubscribe()
             stepIndex = index
             _changes.onNext(Change.Position(this, steps[index]))
-            curChangeSubscription = currentStep.changes.subscribe( { _changes.onNext(it) }, { _changes.onError(it) })
+            curChangeSubscription = currentStep.changes.subscribe({ _changes.onNext(it) }, { _changes.onError(it) })
 
             if (currentStep == DONE) _changes.onCompleted()
         }

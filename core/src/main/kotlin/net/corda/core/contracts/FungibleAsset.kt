@@ -19,7 +19,7 @@ class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException
  * @param T a type that represents the asset in question. This should describe the basic type of the asset
  * (GBP, USD, oil, shares in company <X>, etc.) and any additional metadata (issuer, grade, class, etc.).
  */
-interface FungibleAsset<T: Any> : OwnableState {
+interface FungibleAsset<T : Any> : OwnableState {
     val amount: Amount<Issued<T>>
     /**
      * There must be an ExitCommand signed by these keys to destroy the amount. While all states require their
@@ -45,7 +45,7 @@ interface FungibleAsset<T: Any> : OwnableState {
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        interface Exit<T: Any> : Commands {
+        interface Exit<T : Any> : Commands {
             val amount: Amount<Issued<T>>
         }
     }
@@ -54,8 +54,8 @@ interface FungibleAsset<T: Any> : OwnableState {
 // Small DSL extensions.
 
 /** Sums the asset states in the list, returning null if there are none. */
-fun <T: Any> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrNull()
+fun <T : Any> Iterable<ContractState>.sumFungibleOrNull() = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrNull()
 
 /** Sums the asset states in the list, returning zero of the given token if there are none. */
-fun <T: Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
+fun <T : Any> Iterable<ContractState>.sumFungibleOrZero(token: Issued<T>) = filterIsInstance<FungibleAsset<T>>().map { it.amount }.sumOrZero(token)
 
