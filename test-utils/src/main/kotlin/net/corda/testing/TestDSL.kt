@@ -335,7 +335,7 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
-    wtx.mustSign.expandCompositeKeys.forEach {
+    wtx.mustSign.expandedCompositeKeys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
         signatures += key.signWithECDSA(wtx.id)
     }

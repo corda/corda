@@ -142,5 +142,5 @@ class CompositeKey private constructor (val threshold: Int,
  * If an element of the set is a single PublicKey it gives just that key, if it is a [CompositeKey] it returns all leaf
  * keys for that composite element.
  */
-val Iterable<PublicKey>.expandCompositeKeys: Set<PublicKey>
+val Iterable<PublicKey>.expandedCompositeKeys: Set<PublicKey>
     get() = flatMap { it.keys }.toSet()
