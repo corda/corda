@@ -72,6 +72,7 @@ object TwoPartyTradeFlow {
             object COMMITTING : ProgressTracker.Step("Committing transaction to the ledger") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
             }
+
             // DOCEND 3
             object SENDING_FINAL_TX : ProgressTracker.Step("Sending final transaction to buyer")
 
@@ -143,6 +144,7 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
+
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
         object SENDING_SIGNATURES : ProgressTracker.Step("Sending signatures to the seller")

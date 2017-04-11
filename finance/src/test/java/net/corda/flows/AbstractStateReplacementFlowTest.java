@@ -1,8 +1,8 @@
 package net.corda.flows;
 
-import net.corda.core.crypto.Party;
-import net.corda.core.utilities.ProgressTracker;
-import org.jetbrains.annotations.NotNull;
+import net.corda.core.crypto.*;
+import net.corda.core.utilities.*;
+import org.jetbrains.annotations.*;
 
 @SuppressWarnings("unused")
 public class AbstractStateReplacementFlowTest {
@@ -12,7 +12,9 @@ public class AbstractStateReplacementFlowTest {
         public TestAcceptorCanBeInheritedInJava(@NotNull Party otherSide, @NotNull ProgressTracker progressTracker) {
             super(otherSide, progressTracker);
         }
+
         @Override
-        protected void verifyProposal(@NotNull AbstractStateReplacementFlow.Proposal proposal) {}
+        protected void verifyProposal(@NotNull AbstractStateReplacementFlow.Proposal proposal) {
+        }
     }
 }

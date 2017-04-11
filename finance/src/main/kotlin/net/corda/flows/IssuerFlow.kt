@@ -29,7 +29,7 @@ object IssuerFlow {
      * Returns the transaction created by the Issuer to move the cash to the Requester.
      */
     class IssuanceRequester(val amount: Amount<Currency>, val issueToParty: Party, val issueToPartyRef: OpaqueBytes,
-                            val issuerBankParty: Party): FlowLogic<SignedTransaction>() {
+                            val issuerBankParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         @Throws(CashException::class)
         override fun call(): SignedTransaction {
@@ -42,12 +42,13 @@ object IssuerFlow {
      * Issuer refers to a Node acting as a Bank Issuer of [FungibleAsset], and processes requests from a [IssuanceRequester] client.
      * Returns the generated transaction representing the transfer of the [Issued] [FungibleAsset] to the issue requester.
      */
-    class Issuer(val otherParty: Party): FlowLogic<SignedTransaction>() {
+    class Issuer(val otherParty: Party) : FlowLogic<SignedTransaction>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
             object ISSUING : ProgressTracker.Step("Self issuing asset")
             object TRANSFERRING : ProgressTracker.Step("Transferring asset to issuance requester")
             object SENDING_CONFIRM : ProgressTracker.Step("Confirming asset issuance to requester")
+
             fun tracker() = ProgressTracker(AWAITING_REQUEST, ISSUING, TRANSFERRING, SENDING_CONFIRM)
             private val VALID_CURRENCIES = listOf(USD, GBP, EUR, CHF)
         }

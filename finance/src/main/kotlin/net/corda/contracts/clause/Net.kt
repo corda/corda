@@ -12,7 +12,7 @@ import net.corda.core.crypto.CompositeKey
  * Common interface for the state subsets used when determining nettability of two or more states. Exposes the
  * underlying issued thing.
  */
-interface NetState<P: Any> {
+interface NetState<P : Any> {
     val template: Obligation.Terms<P>
 }
 
@@ -21,7 +21,7 @@ interface NetState<P: Any> {
  * If two obligation state objects produce equal bilateral net states, they are considered safe to net directly.
  * Bilateral states are used in close-out netting.
  */
-data class BilateralNetState<P: Any>(
+data class BilateralNetState<P : Any>(
         val partyKeys: Set<CompositeKey>,
         override val template: Obligation.Terms<P>
 ) : NetState<P>
@@ -34,7 +34,7 @@ data class BilateralNetState<P: Any>(
  * input and output is handled elsewhere.
  * Used in cases where all parties (or their proxies) are signing, such as central clearing.
  */
-data class MultilateralNetState<P: Any>(
+data class MultilateralNetState<P : Any>(
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 
@@ -42,7 +42,7 @@ data class MultilateralNetState<P: Any>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<C : CommandData, P: Any> : Clause<ContractState, C, Unit>() {
+open class NetClause<C : CommandData, P : Any> : Clause<ContractState, C, Unit>() {
     override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
