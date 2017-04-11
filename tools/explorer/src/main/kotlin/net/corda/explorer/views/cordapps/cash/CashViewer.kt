@@ -213,7 +213,7 @@ class CashViewer : CordaView("Cash") {
                     treeItem
                 }
 
-        cashViewerTable.apply() {
+        cashViewerTable.apply {
             root = TreeItem()
             val children: List<TreeItem<out ViewerNode>> = root.children
             Bindings.bindContent(children, cashViewerIssueNodes)
@@ -280,7 +280,7 @@ class CashViewer : CordaView("Cash") {
         }
     }
 
-    private class CashWidget() : VBox() {
+    private class CashWidget : VBox() {
         // Inject data.
         private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
         private val cashStates by observableList(ContractStateModel::cashStates)

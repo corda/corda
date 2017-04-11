@@ -196,4 +196,4 @@ class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val fr
             RollOut(startDate, endDate, frequency, super.final())
 }
 
-class Dummy {}
+class Dummy

@@ -127,7 +127,7 @@ data class SingletonSerializationToken private constructor(private val className
  * A base class for implementing large objects / components / services that need to serialize themselves to a string token
  * to indicate which instance the token is a serialized form of.
  */
-abstract class SingletonSerializeAsToken() : SerializeAsToken {
+abstract class SingletonSerializeAsToken : SerializeAsToken {
     @Suppress("LeakingThis")
     private val token = SingletonSerializationToken(this)
 

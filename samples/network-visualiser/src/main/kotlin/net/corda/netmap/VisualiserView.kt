@@ -25,7 +25,7 @@ import net.corda.netmap.VisualiserViewModel.Style
 
 data class TrackerWidget(val vbox: VBox, val cursorBox: Pane, val label: Label, val cursor: Polygon)
 
-internal class VisualiserView() {
+internal class VisualiserView {
     lateinit var root: Pane
     lateinit var stage: Stage
     lateinit var splitter: SplitPane
@@ -70,7 +70,7 @@ internal class VisualiserView() {
                 //repositionNodes()
             }
         }
-        scaleMap(displayStyle);
+        scaleMap(displayStyle)
         root = Pane(mapImage)
         root.background = Background(BackgroundFill(backgroundColor, CornerRadii.EMPTY, Insets.EMPTY))
         scrollPane = buildScrollPane(backgroundColor, displayStyle)

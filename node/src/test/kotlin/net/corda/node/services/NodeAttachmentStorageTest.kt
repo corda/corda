@@ -106,7 +106,7 @@ class NodeAttachmentStorageTest {
         val id = testJar.read { storage.importAttachment(it) }
 
         // Corrupt the file in the store.
-        val bytes = testJar.readAll();
+        val bytes = testJar.readAll()
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
         val corruptAttachment = AttachmentEntity()

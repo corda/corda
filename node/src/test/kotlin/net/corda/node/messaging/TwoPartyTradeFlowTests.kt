@@ -165,7 +165,7 @@ class TwoPartyTradeFlowTests {
             val bobTransactionsBeforeCrash = databaseTransaction(bobNode.database) {
                 (storage as DBTransactionStorage).transactions
             }
-            assertThat(bobTransactionsBeforeCrash).isNotEmpty()
+            assertThat(bobTransactionsBeforeCrash).isNotEmpty
 
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobNode.stop()

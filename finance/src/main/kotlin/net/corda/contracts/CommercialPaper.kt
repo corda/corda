@@ -152,7 +152,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Redeem() : Clause<State, Commands, Issued<Terms>>() {
+        class Redeem : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
             override fun verify(tx: TransactionForContract,

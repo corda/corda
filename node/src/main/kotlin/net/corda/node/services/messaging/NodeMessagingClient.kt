@@ -153,7 +153,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverHostPort, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
-            locator.setMinLargeMessageSize(ArtemisMessagingServer.MAX_FILE_SIZE)
+            locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             clientFactory = locator.createSessionFactory()
 
             // Login using the node username. The broker will authentiate us as its node (as opposed to another peer)

@@ -76,7 +76,7 @@ class VaultSchemaTest {
         data.close()
     }
 
-    private class VaultNoopContract() : Contract {
+    private class VaultNoopContract : Contract {
         override val legalContractReference = SecureHash.sha256("")
 
         data class VaultNoopState(override val owner: CompositeKey) : OwnableState {

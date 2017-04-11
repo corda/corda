@@ -31,7 +31,7 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
         class Group : GroupClauseVerifier<IRSState, Commands, UniqueIdentifier>(AnyOf(Agree())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<IRSState, UniqueIdentifier>>
                     // Group by Trade ID for in / out states
-                    = tx.groupStates() { state -> state.linearId }
+                    = tx.groupStates { state -> state.linearId }
         }
 
         class Agree : Clause<IRSState, Commands, UniqueIdentifier>() {

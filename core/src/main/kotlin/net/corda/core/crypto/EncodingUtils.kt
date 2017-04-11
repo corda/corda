@@ -33,7 +33,7 @@ fun String.base58ToByteArray(): ByteArray = Base58.decode(this)
 fun String.base64ToByteArray(): ByteArray = Base64.getDecoder().decode(this)
 
 /** Hex-String to [ByteArray]. Accept any hex form (capitalized, lowercase, mixed). */
-fun String.hexToByteArray(): ByteArray = DatatypeConverter.parseHexBinary(this);
+fun String.hexToByteArray(): ByteArray = DatatypeConverter.parseHexBinary(this)
 
 
 // Encoding changers

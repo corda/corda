@@ -11,7 +11,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** A dummy Uniqueness provider that stores the whole history of consumed states in memory */
 @ThreadSafe
-class InMemoryUniquenessProvider() : UniquenessProvider {
+class InMemoryUniquenessProvider : UniquenessProvider {
     /** For each input state store the consuming transaction information */
     private val committedStates = ThreadBox(HashMap<StateRef, UniquenessProvider.ConsumingTx>())
 

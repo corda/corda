@@ -61,7 +61,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
         throw IOException("Unexpected response code ${connection.responseCode} - ${connection.errorMessage}")
     }
 
-    private val HttpURLConnection.charset: String get() = MediaType.parse(getContentType()).charset().or(Charsets.UTF_8).name()
+    private val HttpURLConnection.charset: String get() = MediaType.parse(contentType).charset().or(Charsets.UTF_8).name()
 
     private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream, charset)
 }

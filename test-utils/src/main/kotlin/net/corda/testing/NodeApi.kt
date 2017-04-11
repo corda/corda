@@ -29,7 +29,7 @@ class NodeApi {
         }
 
         private fun waitForNodeStartup(nodeWebserverAddr: HostAndPort) {
-            val url = URL("http://${nodeWebserverAddr.toString()}/api/status")
+            val url = URL("http://$nodeWebserverAddr/api/status")
             var retries = 0
             var respCode: Int
             do {
@@ -45,10 +45,10 @@ class NodeApi {
                     "Node hasn't started"
                 } catch(e: SocketException) {
                     respCode = -1
-                    "Could not connect: ${e.toString()}"
+                    "Could not connect: $e"
                 } catch (e: IOException) {
                     respCode = -1
-                    "IOException: ${e.toString()}"
+                    "IOException: $e"
                 }
 
                 if (retries > NODE_WAIT_RETRY_COUNT) {

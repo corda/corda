@@ -244,7 +244,7 @@ interface LinearState : ContractState {
      * Standard clause to verify the LinearState safety properties.
      */
     @CordaSerializable
-    class ClauseVerifier<S : LinearState, C : CommandData>() : Clause<S, C, Unit>() {
+    class ClauseVerifier<S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<S>,
                             outputs: List<S>,

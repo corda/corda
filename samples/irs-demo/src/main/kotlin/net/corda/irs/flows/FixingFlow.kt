@@ -139,7 +139,7 @@ object FixingFlow {
         constructor(ref: StateRef) : this(ref, tracker())
 
         companion object {
-            class LOADING() : ProgressTracker.Step("Loading state to decide fixing role")
+            class LOADING : ProgressTracker.Step("Loading state to decide fixing role")
 
             fun tracker() = ProgressTracker(LOADING())
         }

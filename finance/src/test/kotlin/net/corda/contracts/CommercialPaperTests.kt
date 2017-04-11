@@ -62,7 +62,7 @@ class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
-class KotlinCommercialPaperLegacyTest() : ICommercialPaperTestTemplate {
+class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaperLegacy.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,

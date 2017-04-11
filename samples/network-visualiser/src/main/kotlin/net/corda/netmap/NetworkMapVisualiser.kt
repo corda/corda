@@ -52,7 +52,7 @@ class NetworkMapVisualiser : Application() {
 
     sealed class RunningPausedState {
         class Running(val tickTimer: TimerTask) : RunningPausedState()
-        class Paused() : RunningPausedState()
+        class Paused : RunningPausedState()
 
         val buttonLabel: RunPauseButtonLabel
             get() {
