@@ -21,7 +21,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
      * common boilerplate code. Exceptions are caught and passed to the provided consumer.  If you just want a simple
-     * acknowledgement response with no content, use [Ack].
+     * acknowledgement response with no content, use [net.corda.core.messaging.Ack].
      *
      * @param topic the topic, without the default session ID postfix (".0).
      * @param handler a function to handle the deserialised request and return an optional response (if return type not Unit)
@@ -49,7 +49,7 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
      * common boilerplate code. Exceptions are propagated to the messaging layer.  If you just want a simple
-     * acknowledgement response with no content, use [Ack].
+     * acknowledgement response with no content, use [net.corda.core.messaging.Ack].
      *
      * @param topic the topic, without the default session ID postfix (".0).
      * @param handler a function to handle the deserialised request and return an optional response (if return type not Unit).

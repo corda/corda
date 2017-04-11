@@ -19,12 +19,12 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
     private val trackingFlowIds: MutableSet<UUID> = Collections.synchronizedSet(HashSet())
 
     init {
-        smm.changes.subscribe { change ->
-            if (change.addOrRemove == AddOrRemove.REMOVE && trackingFlowIds.contains(change.id.uuid)) {
-                log.trace { "${change.addOrRemove} Flow name ${change.logic.javaClass} with id ${change.id}" }
-                unregisterSoftLocks(change.id, change.logic)
+        smm.changes.subscribe { (logic, addOrRemove, id) ->
+            if (addOrRemove == AddOrRemove.REMOVE && trackingFlowIds.contains(id.uuid)) {
+                log.trace { "$addOrRemove Flow name ${logic.javaClass} with id $id" }
+                unregisterSoftLocks(id, logic)
             }
-            trackingFlowIds.remove(change.id.uuid)
+            trackingFlowIds.remove(id.uuid)
         }
 
         // Discussion

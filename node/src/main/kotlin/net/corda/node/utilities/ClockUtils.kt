@@ -34,14 +34,6 @@ abstract class MutableClock : Clock() {
     private val _version = AtomicLong(0L)
 
     /**
-     * This tracks how many direct mutations of "now" have occurred for this [Clock], but not the passage of time.
-     *
-     * It starts at zero, and increments by one per mutation.
-     */
-    val mutationCount: Long
-        get() = _version.get()
-
-    /**
      * This is an observer on the mutation count of this [Clock], which reflects the occurence of mutations.
      */
     val mutations: Observable<Long> by lazy {
@@ -71,7 +63,8 @@ abstract class MutableClock : Clock() {
 
 /**
  * Wait until the given [Future] is complete or the deadline is reached, with support for [MutableClock] implementations
- * used in demos or testing.  This will substitute a Fiber compatible Future so the current [Strand] is not blocked.
+ * used in demos or testing.  This will substitute a Fiber compatible Future so the current
+ * [co.paralleluniverse.strands.Strand] is not blocked.
  *
  * @return true if the [Future] is complete, false if the deadline was reached.
  */

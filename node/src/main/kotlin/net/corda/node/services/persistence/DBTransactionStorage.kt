@@ -37,7 +37,7 @@ class DBTransactionStorage : TransactionStorage {
 
     override fun addTransaction(transaction: SignedTransaction): Boolean {
         val recorded = synchronized(txStorage) {
-            val old = txStorage.get(transaction.id)
+            val old = txStorage[transaction.id]
             if (old == null) {
                 txStorage.put(transaction.id, transaction)
                 updatesPublisher.bufferUntilDatabaseCommit().onNext(transaction)
@@ -54,7 +54,7 @@ class DBTransactionStorage : TransactionStorage {
 
     override fun getTransaction(id: SecureHash): SignedTransaction? {
         synchronized(txStorage) {
-            return txStorage.get(id)
+            return txStorage[id]
         }
     }
 

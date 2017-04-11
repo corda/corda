@@ -66,15 +66,15 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     val configuration = RequeryConfiguration(dataSourceProperties)
     val session = configuration.sessionForModel(Models.VAULT)
 
-    private val mutex = ThreadBox(content = object {
-
-        val _updatesPublisher = PublishSubject.create<Vault.Update>()
-        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
-        val _updatesInDbTx = _updatesPublisher.wrapWithDatabaseTransaction().asObservable()
+    private class InnerState {
+        val _updatesPublisher = PublishSubject.create<Vault.Update>()!!
+        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()!!
+        val _updatesInDbTx = _updatesPublisher.wrapWithDatabaseTransaction().asObservable()!!
 
         // For use during publishing only.
         val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
-    })
+    }
+    private val mutex = ThreadBox(InnerState())
 
     private fun recordUpdate(update: Vault.Update): Vault.Update {
         if (update != Vault.NoUpdate) {
@@ -329,7 +329,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         val issuerKeysStr = onlyFromIssuerParties?.fold("") { left, right -> left + "('${right.owningKey.toBase58String()}')," }?.dropLast(1)
         val issuerRefsStr = withIssuerRefs?.fold("") { left, right -> left + "('${right.bytes.toHexString()}')," }?.dropLast(1)
 
-        var stateAndRefs = mutableListOf<StateAndRef<T>>()
+        val stateAndRefs = mutableListOf<StateAndRef<T>>()
 
         // TODO: Need to provide a database provider independent means of performing this function.
         //       We are using an H2 specific means of selecting a minimum set of rows that match a request amount of coins:
@@ -417,7 +417,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override fun <T : ContractState> softLockedStates(lockId: UUID?): List<StateAndRef<T>> {
         val stateAndRefs =
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                    var query = select(VaultSchema.VaultStates::class)
+                    val query = select(VaultSchema.VaultStates::class)
                             .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
                             .and(VaultSchema.VaultStates::contractStateClassName eq Cash.State::class.java.name)
                     if (lockId != null)
