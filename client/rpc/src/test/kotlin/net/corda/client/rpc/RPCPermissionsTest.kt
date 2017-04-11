@@ -1,12 +1,12 @@
 package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.requirePermission
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import org.junit.After
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertFailsWith
 
 class RPCPermissionsTest : AbstractClientRPC() {
     companion object {
@@ -74,7 +74,7 @@ class RPCPermissionsTest : AbstractClientRPC() {
     }
 
     @Test
-    fun `check ALL is implemented the correct way round` () {
+    fun `check ALL is implemented the correct way round`() {
         val joeUser = userOf("joe", setOf(DUMMY_FLOW))
         proxy = proxyFor(joeUser)
         assertFailsWith(PermissionException::class,

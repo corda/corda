@@ -13,7 +13,7 @@ import java.util.stream.Collectors
  * Utility bindings for the [Amount] type, similar in spirit to [Bindings]
  */
 object AmountBindings {
-    fun <T: Any> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(
+    fun <T : Any> sum(amounts: ObservableList<Amount<T>>, token: T) = EasyBind.map(
             Bindings.createLongBinding({
                 amounts.stream().collect(Collectors.summingLong {
                     require(it.token == token)

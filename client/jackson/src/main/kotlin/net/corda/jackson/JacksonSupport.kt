@@ -39,11 +39,13 @@ object JacksonSupport {
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
         override fun partyFromKey(owningKey: CompositeKey): Party? = rpc.partyFromKey(owningKey)
     }
+
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
         override fun partyFromKey(owningKey: CompositeKey): Party? = identityService.partyFromKey(owningKey)
     }
-    class NoPartyObjectMapper(factory: JsonFactory): PartyObjectMapper, ObjectMapper(factory) {
+
+    class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: CompositeKey): Party? = throw UnsupportedOperationException()
     }

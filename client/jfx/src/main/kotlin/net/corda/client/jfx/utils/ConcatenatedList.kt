@@ -5,7 +5,6 @@ import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
 import java.util.*
-import kotlin.comparisons.compareValues
 
 /**
  * [ConcatenatedList] takes a list of lists and concatenates them. Any change to the underlying lists or the outer list

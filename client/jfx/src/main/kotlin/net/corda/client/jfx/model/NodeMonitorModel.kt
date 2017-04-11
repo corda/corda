@@ -52,7 +52,7 @@ class NodeMonitorModel {
      * TODO provide an unsubscribe mechanism
      */
     fun register(nodeHostAndPort: HostAndPort, username: String, password: String) {
-        val client = CordaRPCClient(nodeHostAndPort){
+        val client = CordaRPCClient(nodeHostAndPort) {
             maxRetryInterval = 10.seconds.toMillis()
         }
         client.start(username, password)

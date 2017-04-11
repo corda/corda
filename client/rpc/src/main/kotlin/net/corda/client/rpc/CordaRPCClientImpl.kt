@@ -318,13 +318,13 @@ class CordaRPCClientImpl(private val session: ClientSession,
          * return observationsSubject
          */
         private fun refCountUp() {
-            if(referenceCount.andIncrement == 0) {
+            if (referenceCount.andIncrement == 0) {
                 hardReferencesToQueuedObservables.add(this)
             }
         }
 
         private fun refCountDown() {
-            if(referenceCount.decrementAndGet() == 0) {
+            if (referenceCount.decrementAndGet() == 0) {
                 hardReferencesToQueuedObservables.remove(this)
             }
         }
@@ -354,7 +354,9 @@ class CordaRPCClientImpl(private val session: ClientSession,
         private fun deliver(msg: ClientMessage) {
             sessionLock.withLock { msg.acknowledge() }
             val kryo = createRPCKryoForDeserialization(this@CordaRPCClientImpl, qName, rpcName, rpcLocation)
-            val received: MarshalledObservation = try { msg.deserialize(kryo) } finally {
+            val received: MarshalledObservation = try {
+                msg.deserialize(kryo)
+            } finally {
                 releaseRPCKryoForDeserialization(kryo)
             }
             rpcLog.debug { "<- Observable [$rpcName] <- Received $received" }

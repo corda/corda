@@ -4,7 +4,6 @@ import javafx.collections.FXCollections
 import javafx.collections.MapChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
-import kotlin.comparisons.compareValues
 
 /**
  * [MapValuesList] takes an [ObservableMap] and returns its values as an [ObservableList].

@@ -25,8 +25,8 @@ import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
-        startFlowPermission<CashIssueFlow>(),
-        startFlowPermission<CashPaymentFlow>()
+            startFlowPermission<CashIssueFlow>(),
+            startFlowPermission<CashPaymentFlow>()
     ))
     private lateinit var node: Node
     private lateinit var client: CordaRPCClient
@@ -100,8 +100,8 @@ class CordaRPCClientTest : NodeBasedTest() {
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
         val flowHandle = proxy.startFlow(::CashIssueFlow,
-            123.DOLLARS, OpaqueBytes.of(0),
-            node.info.legalIdentity, node.info.legalIdentity
+                123.DOLLARS, OpaqueBytes.of(0),
+                node.info.legalIdentity, node.info.legalIdentity
         )
         println("Started issuing cash, waiting on result")
         flowHandle.progress.subscribe {

@@ -4,7 +4,6 @@ import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.transformation.TransformationList
-import kotlin.comparisons.compareValues
 
 /**
  * Given an [ObservableList]<[E]> and a grouping key [K], [AggregatedList] groups the elements by the key into a fresh

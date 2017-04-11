@@ -68,7 +68,7 @@ abstract class AbstractClientRPC {
         serverThread.shutdownNow()
     }
 
-    fun <T: RPCOps> rpcProxyFor(rpcUser: User, rpcImpl: T, type: Class<T>): T {
+    fun <T : RPCOps> rpcProxyFor(rpcUser: User, rpcImpl: T, type: Class<T>): T {
         val userService = object : RPCUserService {
             override fun getUser(username: String): User? = if (username == rpcUser.username) rpcUser else null
             override val users: List<User> get() = listOf(rpcUser)
@@ -93,5 +93,8 @@ abstract class AbstractClientRPC {
         return CordaRPCClientImpl(clientSession, ReentrantLock(), rpcUser.username).proxyFor(type)
     }
 
-    fun safeClose(obj: Any) = try { (obj as AutoCloseable).close() } catch (e: Exception) {}
+    fun safeClose(obj: Any) = try {
+        (obj as AutoCloseable).close()
+    } catch (e: Exception) {
+    }
 }
