@@ -5,7 +5,6 @@ import com.jcraft.jsch.*
 import com.jcraft.jsch.agentproxy.AgentProxy
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
-import kotlin.streams.toList
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.driver.PortAllocation
@@ -13,6 +12,7 @@ import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.util.*
+import kotlin.streams.toList
 
 private val log = LoggerFactory.getLogger(ConnectionManager::class.java)
 

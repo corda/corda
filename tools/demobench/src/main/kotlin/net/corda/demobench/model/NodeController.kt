@@ -1,5 +1,8 @@
 package net.corda.demobench.model
 
+import net.corda.demobench.plugin.PluginController
+import net.corda.demobench.pty.R3Pty
+import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.ServerSocket
@@ -9,9 +12,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
-import net.corda.demobench.plugin.PluginController
-import net.corda.demobench.pty.R3Pty
-import tornadofx.Controller
 
 class NodeController(check: atRuntime = ::checkExists) : Controller() {
     companion object {
@@ -50,14 +50,14 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
      */
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
-            baseDir,
-            nodeData.legalName.value.trim(),
-            nodeData.p2pPort.value,
-            nodeData.rpcPort.value,
-            nodeData.nearestCity.value.trim(),
-            nodeData.webPort.value,
-            nodeData.h2Port.value,
-            nodeData.extraServices.value
+                baseDir,
+                nodeData.legalName.value.trim(),
+                nodeData.p2pPort.value,
+                nodeData.rpcPort.value,
+                nodeData.nearestCity.value.trim(),
+                nodeData.webPort.value,
+                nodeData.h2Port.value,
+                nodeData.extraServices.value
         )
 
         if (nodes.putIfAbsent(config.key, config) != null) {

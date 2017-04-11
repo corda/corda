@@ -1,7 +1,7 @@
 package net.corda.demobench.explorer
 
 import net.corda.demobench.model.JVMConfig
-import tornadofx.Controller
+import tornadofx.*
 
 class ExplorerController : Controller() {
 

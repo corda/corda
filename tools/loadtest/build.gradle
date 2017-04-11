@@ -30,7 +30,7 @@ dependencies {
 }
 
 run {
-   if (project.hasProperty('loadtest-config') ) {
-       args project["loadtest-config"]
-   }
+    if (project.hasProperty('loadtest-config')) {
+        args project["loadtest-config"]
+    }
 }

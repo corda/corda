@@ -214,6 +214,7 @@ fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Comma
         )
     }
 }
+
 val partyGenerator: Generator<Party> = Generator.int().combine(publicKeyGenerator) { n, key -> Party("Party$n", key) }
 
 fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generator<A> {

@@ -90,4 +90,5 @@ fun <A, B> Collection<A>.cross(other: Collection<B>) = this.flatMap { a -> other
 
 // TODO: This is a temporary fix for the UI to show the correct issuer identity, this will break when we start randomizing keys. More work is needed here when the identity work is done.
 fun StateAndRef<Cash.State>.resolveIssuer(): ObservableValue<Party?> = state.data.amount.token.issuer.party.resolveIssuer()
+
 fun AnonymousParty.resolveIssuer(): ObservableValue<Party?> = Models.get(NetworkIdentityModel::class, javaClass.kotlin).lookup(owningKey).map { it?.legalIdentity }

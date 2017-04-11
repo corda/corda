@@ -41,7 +41,7 @@
 
     <Loggers>
         <Root level="${sys:defaultLogLevel}">
-            <AppenderRef ref="RollingFile-Appender" />
+            <AppenderRef ref="RollingFile-Appender"/>
         </Root>
     </Loggers>
 </Configuration>

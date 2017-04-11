@@ -1,15 +1,15 @@
 package net.corda.demobench.model
 
 import net.corda.nodeapi.User
+import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.*
-import org.junit.Test
 
 class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
-    private val controller = NodeController({_,_ ->})
+    private val controller = NodeController({ _, _ -> })
 
     @Test
     fun `test unique nodes after validate`() {

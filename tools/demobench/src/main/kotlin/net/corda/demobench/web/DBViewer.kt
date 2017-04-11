@@ -1,13 +1,13 @@
 package net.corda.demobench.web
 
 import net.corda.core.utilities.loggerFor
-import java.sql.SQLException
-import java.util.concurrent.Executors
-import kotlin.reflect.jvm.jvmName
 import org.h2.Driver
 import org.h2.server.web.LocalWebServer
 import org.h2.tools.Server
 import org.h2.util.JdbcUtils
+import java.sql.SQLException
+import java.util.concurrent.Executors
+import kotlin.reflect.jvm.jvmName
 
 class DBViewer : AutoCloseable {
     private companion object {
@@ -40,10 +40,10 @@ class DBViewer : AutoCloseable {
     @Throws(SQLException::class)
     fun openBrowser(h2Port: Int) {
         val conn = JdbcUtils.getConnection(
-            Driver::class.jvmName,
-            "jdbc:h2:tcp://localhost:$h2Port/node",
-            "sa",
-            ""
+                Driver::class.jvmName,
+                "jdbc:h2:tcp://localhost:$h2Port/node",
+                "sa",
+                ""
         )
 
         val url = (webServer.service as LocalWebServer).addSession(conn)

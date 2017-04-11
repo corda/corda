@@ -24,8 +24,8 @@ evaluationDependsOn(':tools:explorer:capsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
 applicationDefaultJvmArgs = [
-    '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
-    '-Dorg.jboss.logging.provider=slf4j'
+        '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+        '-Dorg.jboss.logging.provider=slf4j'
 ]
 
 repositories {
@@ -76,9 +76,9 @@ dependencies {
 jar {
     manifest {
         attributes(
-            'Corda-Version': corda_version,
-            'Main-Class': mainClassName,
-            'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
+                'Corda-Version': corda_version,
+                'Main-Class': mainClassName,
+                'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
         )
     }
 }
@@ -116,7 +116,7 @@ distributions {
                 rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
                 into 'plugins'
             }
-       }
+        }
     }
 }
 
@@ -164,8 +164,8 @@ task javapackage(dependsOn: 'distZip') {
         }
 
         ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+                resource: 'com/sun/javafx/tools/ant/antlib.xml',
+                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {

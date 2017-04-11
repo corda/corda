@@ -1,9 +1,9 @@
 package net.corda.demobench.model
 
-import tornadofx.observable
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleStringProperty
+import tornadofx.*
 
 class NodeData {
 

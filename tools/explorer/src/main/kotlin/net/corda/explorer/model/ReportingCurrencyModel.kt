@@ -1,16 +1,16 @@
 package net.corda.explorer.model
 
 import javafx.beans.value.ObservableValue
-import net.corda.client.jfx.utils.AmountBindings
 import net.corda.client.jfx.model.ExchangeRate
 import net.corda.client.jfx.model.ExchangeRateModel
 import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.utils.AmountBindings
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.CHF
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
 import org.fxmisc.easybind.EasyBind
-import tornadofx.observable
+import tornadofx.*
 import java.util.*
 
 class ReportingCurrencyModel {

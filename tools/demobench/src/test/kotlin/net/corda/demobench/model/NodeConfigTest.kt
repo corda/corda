@@ -31,19 +31,19 @@ class NodeConfigTest {
     @Test
     fun `test node directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir/"myname", config.nodeDir)
+        assertEquals(baseDir / "myname", config.nodeDir)
     }
 
     @Test
     fun `test explorer directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir/"myname-explorer", config.explorerDir)
+        assertEquals(baseDir / "myname-explorer", config.explorerDir)
     }
 
     @Test
     fun `test plugin directory`() {
         val config = createConfig(legalName = "My Name")
-        assertEquals(baseDir/"myname"/"plugins", config.pluginDir)
+        assertEquals(baseDir / "myname" / "plugins", config.pluginDir)
     }
 
     @Test
@@ -116,71 +116,71 @@ class NodeConfigTest {
     @Test
     fun `test config text`() {
         val config = createConfig(
-            legalName = "My Name",
-            nearestCity = "Stockholm",
-            p2pPort = 10001,
-            rpcPort = 40002,
-            webPort = 20001,
-            h2Port = 30001,
-            services = listOf("my.service"),
-            users = listOf(user("jenny"))
+                legalName = "My Name",
+                nearestCity = "Stockholm",
+                p2pPort = 10001,
+                rpcPort = 40002,
+                webPort = 20001,
+                h2Port = 30001,
+                services = listOf("my.service"),
+                users = listOf(user("jenny"))
         )
         assertEquals("{"
-                +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
-                +     "\"h2port\":30001,"
-                +     "\"myLegalName\":\"MyName\","
-                +     "\"nearestCity\":\"Stockholm\","
-                +     "\"p2pAddress\":\"localhost:10001\","
-                +     "\"rpcAddress\":\"localhost:40002\","
-                +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
-                +     "],"
-                +     "\"useTestClock\":true,"
-                +     "\"webAddress\":\"localhost:20001\""
+                + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
+                + "\"h2port\":30001,"
+                + "\"myLegalName\":\"MyName\","
+                + "\"nearestCity\":\"Stockholm\","
+                + "\"p2pAddress\":\"localhost:10001\","
+                + "\"rpcAddress\":\"localhost:40002\","
+                + "\"rpcUsers\":["
+                + "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
+                + "],"
+                + "\"useTestClock\":true,"
+                + "\"webAddress\":\"localhost:20001\""
                 + "}", config.toText().stripWhitespace())
     }
 
     @Test
     fun `test config text with network map`() {
         val config = createConfig(
-            legalName = "My Name",
-            nearestCity = "Stockholm",
-            p2pPort = 10001,
-            rpcPort = 40002,
-            webPort = 20001,
-            h2Port = 30001,
-            services = listOf("my.service"),
-            users = listOf(user("jenny"))
+                legalName = "My Name",
+                nearestCity = "Stockholm",
+                p2pPort = 10001,
+                rpcPort = 40002,
+                webPort = 20001,
+                h2Port = 30001,
+                services = listOf("my.service"),
+                users = listOf(user("jenny"))
         )
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
         assertEquals("{"
-                +     "\"extraAdvertisedServiceIds\":[\"my.service\"],"
-                +     "\"h2port\":30001,"
-                +     "\"myLegalName\":\"MyName\","
-                +     "\"nearestCity\":\"Stockholm\","
-                +     "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"Notary\"},"
-                +     "\"p2pAddress\":\"localhost:10001\","
-                +     "\"rpcAddress\":\"localhost:40002\","
-                +     "\"rpcUsers\":["
-                +         "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
-                +     "],"
-                +     "\"useTestClock\":true,"
-                +     "\"webAddress\":\"localhost:20001\""
+                + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
+                + "\"h2port\":30001,"
+                + "\"myLegalName\":\"MyName\","
+                + "\"nearestCity\":\"Stockholm\","
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"Notary\"},"
+                + "\"p2pAddress\":\"localhost:10001\","
+                + "\"rpcAddress\":\"localhost:40002\","
+                + "\"rpcUsers\":["
+                + "{\"password\":\"letmein\",\"permissions\":[\"ALL\"],\"username\":\"jenny\"}"
+                + "],"
+                + "\"useTestClock\":true,"
+                + "\"webAddress\":\"localhost:20001\""
                 + "}", config.toText().stripWhitespace())
     }
 
     @Test
     fun `reading node configuration`() {
         val config = createConfig(
-            legalName = "My Name",
-            nearestCity = "Stockholm",
-            p2pPort = 10001,
-            rpcPort = 40002,
-            webPort = 20001,
-            h2Port = 30001,
-            services = listOf("my.service"),
-            users = listOf(user("jenny"))
+                legalName = "My Name",
+                nearestCity = "Stockholm",
+                p2pPort = 10001,
+                rpcPort = 40002,
+                webPort = 20001,
+                h2Port = 30001,
+                services = listOf("my.service"),
+                users = listOf(user("jenny"))
         )
         config.networkMap = NetworkMapConfig("Notary", 12345)
 
@@ -231,11 +231,11 @@ class NodeConfigTest {
     fun `test moving`() {
         val config = createConfig(legalName = "My Name")
 
-        val elsewhere = baseDir/"elsewhere"
+        val elsewhere = baseDir / "elsewhere"
         val moved = config.moveTo(elsewhere)
-        assertEquals(elsewhere/"myname", moved.nodeDir)
-        assertEquals(elsewhere/"myname-explorer", moved.explorerDir)
-        assertEquals(elsewhere/"myname"/"plugins", moved.pluginDir)
+        assertEquals(elsewhere / "myname", moved.nodeDir)
+        assertEquals(elsewhere / "myname-explorer", moved.explorerDir)
+        assertEquals(elsewhere / "myname" / "plugins", moved.pluginDir)
     }
 
     private fun createConfig(

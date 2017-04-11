@@ -1,6 +1,5 @@
 package net.corda.demobench.views
 
-import java.util.*
 import javafx.application.Platform
 import javafx.scene.Parent
 import javafx.scene.control.Button
@@ -13,6 +12,7 @@ import net.corda.demobench.profile.ProfileController
 import net.corda.demobench.ui.CloseableTab
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
+import java.util.*
 
 class DemoBenchView : View("Corda DemoBench") {
 

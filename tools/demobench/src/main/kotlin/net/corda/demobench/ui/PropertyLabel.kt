@@ -8,7 +8,7 @@ class PropertyLabel() : HBox() {
     val nameLabel = Label()
     val valueLabel = Label()
 
-    var name : String
+    var name: String
         get() = nameLabel.text
         set(value) {
             nameLabel.text = value
