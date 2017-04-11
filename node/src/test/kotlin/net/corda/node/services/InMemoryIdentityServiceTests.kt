@@ -4,7 +4,10 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.BOB
+import net.corda.testing.BOB_PUBKEY
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

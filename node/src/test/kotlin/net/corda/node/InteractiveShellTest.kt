@@ -28,6 +28,7 @@ class InteractiveShellTest {
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
         constructor(party: Party) : this(party.name)
+
         override fun call() = a
     }
 

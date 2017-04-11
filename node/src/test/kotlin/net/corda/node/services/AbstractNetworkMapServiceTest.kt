@@ -256,6 +256,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         data class Added(val node: NodeInfo) : Changed() {
             constructor(node: MockNode) : this(node.info)
         }
+
         data class Removed(val node: NodeInfo) : Changed() {
             constructor(node: MockNode) : this(node.info)
         }

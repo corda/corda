@@ -8,7 +8,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -16,7 +15,6 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before

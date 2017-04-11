@@ -303,7 +303,7 @@ class NodeVaultServiceTest {
             val spendableStatesUSD = (services.vaultService as NodeVaultService).unconsumedStatesForSpending<Cash.State>(100.DOLLARS, lockId = UUID.randomUUID())
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
-            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isEqualTo(100L*100)
+            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isEqualTo(100L * 100)
             assertThat(services.vaultService.softLockedStates<Cash.State>()).hasSize(1)
         }
     }
@@ -316,7 +316,7 @@ class NodeVaultServiceTest {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
 
             val spendableStatesUSD = services.vaultService.unconsumedStatesForSpending<Cash.State>(200.DOLLARS, lockId = UUID.randomUUID(),
-                                        onlyFromIssuerParties = setOf(DUMMY_CASH_ISSUER.party, BOC)).toList()
+                    onlyFromIssuerParties = setOf(DUMMY_CASH_ISSUER.party, BOC)).toList()
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(2)
             assertThat(spendableStatesUSD[0].state.data.amount.token.issuer).isEqualTo(DUMMY_CASH_ISSUER)
@@ -373,7 +373,7 @@ class NodeVaultServiceTest {
             val spendableStatesUSD = (services.vaultService as NodeVaultService).unconsumedStatesForSpending<Cash.State>(1.DOLLARS, lockId = UUID.randomUUID())
             spendableStatesUSD.forEach(::println)
             assertThat(spendableStatesUSD).hasSize(1)
-            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(1L*100)
+            assertThat(spendableStatesUSD[0].state.data.amount.quantity).isGreaterThanOrEqualTo(1L * 100)
             assertThat(services.vaultService.softLockedStates<Cash.State>()).hasSize(1)
         }
     }

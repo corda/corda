@@ -9,7 +9,6 @@ import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.MonitoringService
 import net.corda.nodeapi.VerifierApi
@@ -22,15 +21,18 @@ abstract class OutOfProcessTransactionVerifierService(
     companion object {
         val log = loggerFor<OutOfProcessTransactionVerifierService>()
     }
+
     private data class VerificationHandle(
             val transactionId: SecureHash,
             val resultFuture: SettableFuture<Unit>,
             val durationTimerContext: Timer.Context
     )
+
     private val verificationHandles = ConcurrentHashMap<Long, VerificationHandle>()
 
     // Metrics
     private fun metric(name: String) = "OutOfProcessTransactionVerifierService.$name"
+
     private val durationTimer = monitoringService.metrics.timer(metric("Verification.Duration"))
     private val successMeter = monitoringService.metrics.meter(metric("Verification.Success"))
     private val failureMeter = monitoringService.metrics.meter(metric("Verification.Failure"))

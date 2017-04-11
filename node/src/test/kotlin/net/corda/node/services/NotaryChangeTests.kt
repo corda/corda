@@ -8,7 +8,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.NotaryChangeFlow.Instigator
 import net.corda.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode

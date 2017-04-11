@@ -70,7 +70,9 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
             // representing what happened, which is useful for us to send over the wire.
             val subscription = obj.materialize().subscribe { materialised: Notification<out Any> ->
                 val newKryo = createRPCKryoForSerialization(qName, dispatcher)
-                val bits = try { MarshalledObservation(handle, materialised).serialize(newKryo) } finally {
+                val bits = try {
+                    MarshalledObservation(handle, materialised).serialize(newKryo)
+                } finally {
                     releaseRPCKryoForSerialization(newKryo)
                 }
                 rpcLog.debug("RPC sending observation: $materialised")
@@ -91,7 +93,9 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
                 throw RPCException("Received RPC without any destination for observations, but the RPC returns observables")
 
             val kryo = createRPCKryoForSerialization(observationsTo, this)
-            val args = try { argsBytes.deserialize(kryo) } finally {
+            val args = try {
+                argsBytes.deserialize(kryo)
+            } finally {
                 releaseRPCKryoForSerialization(kryo)
             }
 
@@ -173,6 +177,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
 
     // TODO remove this User once webserver doesn't need it
     private val nodeUser = User(NODE_USER, NODE_USER, setOf())
+
     @VisibleForTesting
     protected open fun getUser(message: ClientMessage): User {
         val validatedUser = message.requiredString(Message.HDR_VALIDATED_USER.toString())
