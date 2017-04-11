@@ -29,6 +29,14 @@ class SerializationOutputTests {
         }
     }
 
+    data class Woo(val fred: Int) {
+        val bob = "Bob"
+    }
+
+    data class Woo2(val fred: Int, val bob: String = "Bob") {
+        @CordaConstructor constructor(@CordaParam("fred") foo: Int) : this(foo, "Ginger")
+    }
+
     private fun serdes(obj: Any): Any {
         val factory = SerializerFactory()
         val ser = SerializationOutput(factory)
@@ -107,6 +115,18 @@ class SerializationOutputTests {
     @Test
     fun `test foo list array`() {
         val obj = WrapFooListArray(arrayOf(listOf(Foo("Fred", 1), Foo("Ginger", 2)), listOf(Foo("Rogers", 3), Foo("Hammerstein", 4))))
+        serdes(obj)
+    }
+
+    @Test
+    fun `test not all properties in constructor`() {
+        val obj = Woo(2)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test annotated constructor`() {
+        val obj = Woo2(3)
         serdes(obj)
     }
 }

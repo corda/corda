@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap
 // TODO: Set support?
 // TODO: Do we support specific List, Map implementations or force all to interface
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
-// TODO: Support java constructors via -parameters compiler option and/or an annotation (align with Jackson?)
 // TODO: More generics scrutiny.  What about subclass of List with bound parameters, and/or another generic class?
 // TODO: Write tests for boxed and unboxed primitives.
 // TODO: Inner classes etc
@@ -89,7 +88,6 @@ class SerializerFactory {
 
     private fun processRestrictedType(typeNotation: RestrictedType) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
-            // TODO: This could be GenericArrayType or even a regular Array
             val type = restrictedTypeForName(typeNotation.name)
             get(null, type)
         }
