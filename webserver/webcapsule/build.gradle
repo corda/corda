@@ -40,10 +40,10 @@ task buildWebserverJar(type: FatCapsule) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveName "corda-webserver-${corda_version}.jar"
     applicationSource = files(
-        project.tasks.findByName('jar'),
-        new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet.class'),
-        new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet$1.class'),
-        'config/dev/log4j2.xml'
+            project.tasks.findByName('jar'),
+            new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet.class'),
+            new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet$1.class'),
+            'config/dev/log4j2.xml'
     )
     from 'NOTICE' // Copy CDDL notice
 

@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletResponse
 /**
  * Uploads to the node via the [CordaRPCOps] uploadFile interface.
  */
-class DataUploadServlet: HttpServlet() {
+class DataUploadServlet : HttpServlet() {
     private val log = loggerFor<DataUploadServlet>()
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {

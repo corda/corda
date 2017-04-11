@@ -7,11 +7,11 @@ import javax.ws.rs.ext.Provider
 
 // Provides basic exception logging to all APIs
 @Provider
-class AllExceptionMapper: ExceptionMapper<Exception> {
+class AllExceptionMapper : ExceptionMapper<Exception> {
     companion object {
         val logger = loggerFor<APIServerImpl>()
     }
-    
+
     override fun toResponse(exception: Exception?): Response {
         logger.error("Unhandled exception in API", exception)
         return Response.status(500).build()
