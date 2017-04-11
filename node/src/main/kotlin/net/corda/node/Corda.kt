@@ -59,7 +59,7 @@ fun main(args: Array<String>) {
     fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
     val nodeVersionInfo = NodeVersionInfo(
-            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, 0, false),
             manifestValue("Corda-Revision") ?: "Unknown",
             manifestValue("Corda-Vendor") ?: "Unknown"
     )

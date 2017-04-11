@@ -7,12 +7,12 @@ import org.junit.Test
 class VersionTest {
     @Test
     fun `parse valid non-SNAPSHOT string`() {
-        assertThat(Version.parse("1.2")).isEqualTo(Version(1, 2, false))
+        assertThat(Version.parse("1.2")).isEqualTo(Version(1, 2, null, false))
     }
 
     @Test
     fun `parse valid SNAPSHOT string`() {
-        assertThat(Version.parse("2.23-SNAPSHOT")).isEqualTo(Version(2, 23, true))
+        assertThat(Version.parse("2.23-SNAPSHOT")).isEqualTo(Version(2, 23, null, true))
     }
 
     @Test
@@ -27,5 +27,15 @@ class VersionTest {
         assertThatThrownBy {
             Version.parse("2.3-TEST")
         }.isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `parses patch version`() {
+        assertThat(Version.parse("0.1.2")).isEqualTo(Version(0, 1, 2, false))
+    }
+
+    @Test
+    fun `parses snapshot patch version`() {
+        assertThat(Version.parse("0.1.2-SNAPSHOT")).isEqualTo(Version(0, 1, 2, true))
     }
 }
