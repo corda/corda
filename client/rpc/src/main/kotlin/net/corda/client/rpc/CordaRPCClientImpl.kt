@@ -119,7 +119,7 @@ class CordaRPCClientImpl(private val session: ClientSession,
 
     private var producer: ClientProducer? = null
 
-    class ObservableDeserializer() : Serializer<Observable<Any>>() {
+    class ObservableDeserializer : Serializer<Observable<Any>>() {
         override fun read(kryo: Kryo, input: Input, type: Class<Observable<Any>>): Observable<Any> {
             val qName = kryo.context[RPCKryoQNameKey] as String
             val rpcName = kryo.context[RPCKryoMethodNameKey] as String

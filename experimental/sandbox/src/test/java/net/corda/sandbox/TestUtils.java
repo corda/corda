@@ -62,7 +62,7 @@ public class TestUtils {
         assertEquals(throwCost, RuntimeCostAccounter.getThrowCost());
     }
 
-    public static Class<?> transformClass(final String classFName, final int originalLength, final int newLength) throws IOException, Exception {
+    public static Class<?> transformClass(final String classFName, final int originalLength, final int newLength) throws Exception {
         byte[] basic = getBytes(classFName);
         assertEquals(originalLength, basic.length);
         final byte[] tfmd = instrumentWithCosts(basic, new HashSet<>());

@@ -96,7 +96,7 @@ class AmountGenerator<T : Any>(val tokenGenerator: Generator<T>) : Generator<Amo
     }
 }
 
-class CurrencyGenerator() : Generator<Currency>(Currency::class.java) {
+class CurrencyGenerator : Generator<Currency>(Currency::class.java) {
     companion object {
         val currencies = Currency.getAvailableCurrencies().toList()
     }

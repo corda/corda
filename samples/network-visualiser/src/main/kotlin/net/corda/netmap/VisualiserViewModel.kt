@@ -105,8 +105,8 @@ class VisualiserViewModel {
         val yOffset = -80
         val circleX = view.stageWidth / 2 + xOffset
         val circleY = view.stageHeight / 2 + yOffset
-        val x: Double = radius * Math.cos(tangentRad) + circleX;
-        val y: Double = radius * Math.sin(tangentRad) + circleY;
+        val x: Double = radius * Math.cos(tangentRad) + circleX
+        val y: Double = radius * Math.sin(tangentRad) + circleY
         return Pair(x, y)
     }
 

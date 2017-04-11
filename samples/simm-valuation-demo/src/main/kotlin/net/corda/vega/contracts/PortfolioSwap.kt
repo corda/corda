@@ -33,7 +33,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
         class Group : GroupClauseVerifier<PortfolioState, Commands, UniqueIdentifier>(FirstOf(Agree(), Update())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<PortfolioState, UniqueIdentifier>>
                     // Group by Trade ID for in / out states
-                    = tx.groupStates() { state -> state.linearId }
+                    = tx.groupStates { state -> state.linearId }
         }
 
         class Update : Clause<PortfolioState, Commands, UniqueIdentifier>() {

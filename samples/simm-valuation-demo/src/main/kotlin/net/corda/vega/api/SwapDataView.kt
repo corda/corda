@@ -24,8 +24,7 @@ data class SwapDataView(
         var IM: Double? = null,
         var MTM: Double? = null,
         var margined: Boolean = false,
-        var marginedText: String = "❌️") {
-}
+        var marginedText: String = "❌️")
 
 fun SwapData.toView(viewingParty: Party, portfolio: Portfolio? = null,
                     presentValue: MultiCurrencyAmount? = null,

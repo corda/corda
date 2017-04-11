@@ -37,7 +37,7 @@ class TransactionSerializationTests {
         }
 
         interface Commands : CommandData {
-            class Move() : TypeOnlyCommandData(), Commands
+            class Move : TypeOnlyCommandData(), Commands
         }
     }
 

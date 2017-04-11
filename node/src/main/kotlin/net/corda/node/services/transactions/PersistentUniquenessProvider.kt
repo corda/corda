@@ -16,7 +16,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val TABLE_NAME = "${NODE_DATABASE_PREFIX}notary_commit_log"
         private val log = loggerFor<PersistentUniquenessProvider>()
@@ -66,7 +66,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
                 if (consumingTx != null) conflictingStates[inputState] = consumingTx
             }
             if (conflictingStates.isNotEmpty()) {
-                log.debug("Failure, input states already committed: ${conflictingStates.keys.toString()}")
+                log.debug("Failure, input states already committed: ${conflictingStates.keys}")
                 UniquenessProvider.Conflict(conflictingStates)
             } else {
                 states.forEachIndexed { i, stateRef ->

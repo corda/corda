@@ -16,7 +16,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Simple identity service which caches parties and provides functionality for efficient lookup.
  */
 @ThreadSafe
-class InMemoryIdentityService() : SingletonSerializeAsToken(), IdentityService {
+class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }

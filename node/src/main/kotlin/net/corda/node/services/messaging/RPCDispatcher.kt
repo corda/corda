@@ -52,7 +52,7 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
     //
     // When the observables are deserialised on the client side, the handle is read from the byte stream and
     // the queue is filtered to extract just those observations.
-    class ObservableSerializer() : Serializer<Observable<Any>>() {
+    class ObservableSerializer : Serializer<Observable<Any>>() {
         private fun toQName(kryo: Kryo): String = kryo.context[RPCKryoQNameKey] as String
         private fun toDispatcher(kryo: Kryo): RPCDispatcher = kryo.context[RPCKryoDispatcherKey] as RPCDispatcher
 

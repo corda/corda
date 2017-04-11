@@ -214,8 +214,6 @@ public class CandidacyStatus {
             return false;
         if (!Objects.equals(this.reason, other.reason))
             return false;
-        if (this.recursiveDepth != other.recursiveDepth)
-            return false;
-        return true;
+        return this.recursiveDepth == other.recursiveDepth;
     }
 }

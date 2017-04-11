@@ -6,4 +6,4 @@ import net.corda.core.node.services.Vault
 /**
  * Converter which persists a [Vault.StateStatus] enum using its enum ordinal representation
  */
-class VaultStateStatusConverter() : EnumOrdinalConverter<Vault.StateStatus>(Vault.StateStatus::class.java)
+class VaultStateStatusConverter : EnumOrdinalConverter<Vault.StateStatus>(Vault.StateStatus::class.java)

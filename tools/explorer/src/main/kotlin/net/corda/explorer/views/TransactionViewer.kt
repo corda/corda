@@ -156,7 +156,7 @@ class TransactionViewer : CordaView("Transactions") {
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }
     private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
-    private class TransactionWidget() : BorderPane() {
+    private class TransactionWidget : BorderPane() {
         private val partiallyResolvedTransactions by observableListReadOnly(TransactionDataModel::partiallyResolvedTransactions)
 
         // TODO : Add a scrolling table to show latest transaction.

@@ -69,7 +69,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     @CordaSerializable
-    class ExcessivelyLargeTransactionGraph() : Exception()
+    class ExcessivelyLargeTransactionGraph : Exception()
 
     // Transactions to verify after the dependencies.
     private var stx: SignedTransaction? = null

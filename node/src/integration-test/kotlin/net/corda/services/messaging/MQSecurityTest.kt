@@ -202,12 +202,12 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     fun assertSendAttackFails(address: String) {
         val message = attacker.createMessage()
-        assertEquals(true, attacker.producer.isBlockOnNonDurableSend())
+        assertEquals(true, attacker.producer.isBlockOnNonDurableSend)
         assertAttackFails(address, "SEND") {
             attacker.producer.send(address, message)
         }
-        assertEquals(0, message.getDeliveryCount())
-        assertEquals(0, message.getBodySize())
+        assertEquals(0, message.deliveryCount)
+        assertEquals(0, message.bodySize)
     }
 
     fun assertConsumeAttackFails(queue: String) {
