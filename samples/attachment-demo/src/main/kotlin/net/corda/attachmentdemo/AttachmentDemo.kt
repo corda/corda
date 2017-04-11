@@ -10,16 +10,16 @@ import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.ALICE_KEY
+import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
-import java.io.*
-import net.corda.core.sizedInputStreamAndHash
 
 internal enum class Role {
     SENDER,

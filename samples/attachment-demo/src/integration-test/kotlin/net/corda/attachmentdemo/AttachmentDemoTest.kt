@@ -25,9 +25,9 @@ class AttachmentDemoTest {
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
             val (nodeA, nodeB) = Futures.allAsList(
-                startNode("Bank A", rpcUsers = demoUser),
-                startNode("Bank B", rpcUsers = demoUser),
-                startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
+                    startNode("Bank A", rpcUsers = demoUser),
+                    startNode("Bank B", rpcUsers = demoUser),
+                    startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.Companion.type)))
             ).getOrThrow()
 
             val senderThread = CompletableFuture.supplyAsync {
@@ -36,7 +36,7 @@ class AttachmentDemoTest {
                 }
             }.exceptionally { it.printStackTrace() }
 
-            val recipientThread = CompletableFuture.supplyAsync{
+            val recipientThread = CompletableFuture.supplyAsync {
                 nodeB.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
                     recipient(this)
                 }

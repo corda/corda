@@ -135,7 +135,7 @@ object FixingFlow {
      * TODO: Replace [FixingSession] and [FixingSessionInitiationHandler] with generic session initiation logic once it exists.
      */
     class FixingRoleDecider(val ref: StateRef, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
-        @Suppress("unused")  // Used via reflection.
+        @Suppress("unused") // Used via reflection.
         constructor(ref: StateRef) : this(ref, tracker())
 
         companion object {

@@ -23,7 +23,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
         val moveTx = DummyContract.move(asset, counterPartyKey).apply {
             signWith(myKeyPair)
         }
-            // We don't check signatures because we know that the notary's signature is missing
+        // We don't check signatures because we know that the notary's signature is missing
         return moveTx.toSignedTransaction(checkSufficientSignatures = false)
     }
 }

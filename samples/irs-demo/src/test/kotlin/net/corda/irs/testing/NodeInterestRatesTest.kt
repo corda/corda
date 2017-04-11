@@ -136,6 +136,7 @@ class NodeInterestRatesTest {
                     else -> false
                 }
             }
+
             val ftx1 = wtx1.buildFilteredTransaction(::filterAllOutputs)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
@@ -231,10 +232,10 @@ class NodeInterestRatesTest {
                             rateTolerance: BigDecimal,
                             progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
         override fun filtering(elem: Any): Boolean {
-                return when (elem) {
-                    is Command -> oracle.owningKey in elem.signers && elem.value is Fix
-                    else -> false
-                }
+            return when (elem) {
+                is Command -> oracle.owningKey in elem.signers && elem.value is Fix
+                else -> false
+            }
         }
     }
 

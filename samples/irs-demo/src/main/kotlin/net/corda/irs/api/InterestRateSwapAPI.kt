@@ -1,7 +1,6 @@
 package net.corda.irs.api
 
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps

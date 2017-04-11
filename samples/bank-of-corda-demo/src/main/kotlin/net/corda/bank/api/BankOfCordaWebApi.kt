@@ -20,15 +20,18 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
                                   val issueToPartyName: String, val issueToPartyRefAsString: String,
                                   val issuerBankName: String)
+
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
     }
+
     @GET
     @Path("date")
     @Produces(MediaType.APPLICATION_JSON)
     fun getCurrentDate(): Any {
         return mapOf("date" to LocalDateTime.now().toLocalDate())
     }
+
     /**
      *  Request asset issuance
      */
