@@ -25,7 +25,7 @@ class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
     private val nameToParties = ConcurrentHashMap<String, Party>()
 
     override fun registerIdentity(party: Party) {
-        log.trace { "Registering identity ${party}" }
+        log.trace { "Registering identity $party" }
         keyToParties[party.owningKey] = party
         nameToParties[party.name] = party
     }

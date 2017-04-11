@@ -18,11 +18,11 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class InMemoryStateMachineRecordedTransactionMappingStorage : StateMachineRecordedTransactionMappingStorage {
-
-    private val mutex = ThreadBox(object {
+    private class InnerState {
         val stateMachineTransactionMap = HashMap<StateMachineRunId, HashSet<SecureHash>>()
-        val updates = PublishSubject.create<StateMachineTransactionMapping>()
-    })
+        val updates = PublishSubject.create<StateMachineTransactionMapping>()!!
+    }
+    private val mutex = ThreadBox(InnerState())
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
         mutex.locked {

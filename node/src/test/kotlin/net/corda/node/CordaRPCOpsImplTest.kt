@@ -181,7 +181,7 @@ class CordaRPCOpsImplTest {
             sequence(
                     // ISSUE
                     expect { update ->
-                        require(update.consumed.size == 0) { update.consumed.size }
+                        require(update.consumed.isEmpty()) { update.consumed.size }
                         require(update.produced.size == 1) { update.produced.size }
                     },
                     // MOVE

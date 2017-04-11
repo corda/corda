@@ -43,11 +43,9 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
 
     /** Gets a value for the given [Commands.Get.key] */
     fun get(commit: Commit<Commands.Get<K, V>>): V? {
-        try {
+        commit.use {
             val key = commit.operation().key
             return databaseTransaction(db) { map[key] }
-        } finally {
-            commit.close()
         }
     }
 
@@ -57,7 +55,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
      * @return map containing conflicting entries
      */
     fun put(commit: Commit<Commands.PutAll<K, V>>): Map<K, V> {
-        try {
+        commit.use { commit ->
             val conflicts = LinkedHashMap<K, V>()
             databaseTransaction(db) {
                 val entries = commit.operation().entries
@@ -66,16 +64,12 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
                 if (conflicts.isEmpty()) map.putAll(entries)
             }
             return conflicts
-        } finally {
-            commit.close()
         }
     }
 
     fun size(commit: Commit<Commands.Size>): Int {
-        try {
+        commit.use { commit ->
             return databaseTransaction(db) { map.size }
-        } finally {
-            commit.close()
         }
     }
 

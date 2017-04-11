@@ -59,8 +59,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         if (node != null) {
             return PartyInfo.Node(node)
         }
-        for (entry in registeredNodes) {
-            for (service in entry.value.advertisedServices) {
+        for ((_, value) in registeredNodes) {
+            for (service in value.advertisedServices) {
                 if (service.identity == party) {
                     return PartyInfo.Service(service)
                 }

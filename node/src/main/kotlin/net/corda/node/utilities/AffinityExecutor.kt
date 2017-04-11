@@ -111,8 +111,6 @@ interface AffinityExecutor : Executor {
             runnable.run()
         }
 
-        val taskQueueSize: Int get() = commandQ.size
-
         override fun flush() {
             throw UnsupportedOperationException()
         }

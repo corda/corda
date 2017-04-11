@@ -27,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
- * that also encompasses the [Vault] observer for processing transactions.
+ * that also encompasses the [net.corda.core.node.services.Vault] observer for processing transactions.
  *
  * This will observe transactions as they are stored and schedule and unschedule activities based on the States consumed
  * or produced.
@@ -43,8 +43,7 @@ import javax.annotation.concurrent.ThreadSafe
  * activity.  Only replace this for unit testing purposes.  This is not the executor the [FlowLogic] is launched on.
  */
 @ThreadSafe
-class NodeSchedulerService(private val database: Database,
-                           private val services: ServiceHubInternal,
+class NodeSchedulerService(private val services: ServiceHubInternal,
                            private val flowLogicRefFactory: FlowLogicRefFactory,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch())
@@ -129,11 +128,12 @@ class NodeSchedulerService(private val database: Database,
     }
 
     /**
-     * This method first cancels the [Future] for any pending action so that the [awaitWithDeadline] used below
-     * drops through without running the action.  We then create a new [Future] for the new action (so it too can be
-     * cancelled), and then await the arrival of the scheduled time.  If we reach the scheduled time (the deadline)
-     * without the [Future] being cancelled then we run the scheduled action.  Finally we remove that action from the
-     * scheduled actions and recompute the next scheduled action.
+     * This method first cancels the [java.util.concurrent.Future] for any pending action so that the
+     * [awaitWithDeadline] used below drops through without running the action.  We then create a new
+     * [java.util.concurrent.Future] for the new action (so it too can be cancelled), and then await the arrival of the
+     * scheduled time.  If we reach the scheduled time (the deadline) without the [java.util.concurrent.Future] being
+     * cancelled then we run the scheduled action.  Finally we remove that action from the scheduled actions and
+     * recompute the next scheduled action.
      */
     internal fun rescheduleWakeUp() {
         // Note, we already have the mutex but we need the scope again here

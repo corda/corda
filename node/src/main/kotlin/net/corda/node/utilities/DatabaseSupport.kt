@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
@@ -65,8 +66,8 @@ fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
 }
 
 /**
- * A relatively close copy of the [ThreadLocalTransactionManager] in Exposed but with the following adjustments to suit
- * our environment:
+ * A relatively close copy of the [org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManager]
+ * in Exposed but with the following adjustments to suit our environment:
  *
  * Because the construction of a [Database] instance results in replacing the singleton [TransactionManager] instance,
  * our tests involving two [MockNode]s effectively replace the database instances of each other and continue to trample
@@ -100,7 +101,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
         var database: Database
             get() = threadLocalDb.get() ?: throw IllegalStateException("Was expecting to find database set on current strand: ${Strand.currentStrand()}")
-            set(value: Database) {
+            set(value) {
                 threadLocalDb.set(value)
             }
 
@@ -253,7 +254,7 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null)
         // Add the subscriber to the wrapping subscriber, which will invoke the original subscribers together inside a database transaction.
         wrappingSubscriber.delegates.add(toBeWrappedInDbTx)
         // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
-        if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber<T>(toBeWrappedInDbTx)
+        if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber(toBeWrappedInDbTx)
         // Clean up the shared list of subscribers when they unsubscribe.
     }.doOnUnsubscribe { wrappingSubscriber.cleanUp() }
 }
@@ -287,7 +288,7 @@ object PublicKeyColumnType : ColumnType() {
 
     override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is PublicKey) value.toBase58String() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? PublicKey)?.toBase58String() ?: value
 }
 
 /**
@@ -298,7 +299,7 @@ object SecureHashColumnType : ColumnType() {
 
     override fun valueFromDB(value: Any): Any = SecureHash.parse(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is SecureHash) value.toString() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? SecureHash)?.toString() ?: value
 }
 
 /**
@@ -309,7 +310,7 @@ object UUIDStringColumnType : ColumnType() {
 
     override fun valueFromDB(value: Any): Any = UUID.fromString(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is UUID) value.toString() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? UUID)?.toString() ?: value
 }
 
 /**
