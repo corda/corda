@@ -23,8 +23,8 @@ class TransactionEncumbranceTests {
     )
     val stateWithNewOwner = state.copy(owner = DUMMY_PUBKEY_2)
 
-    val FOUR_PM = Instant.parse("2015-04-17T16:00:00.00Z")
-    val FIVE_PM = FOUR_PM.plus(1, ChronoUnit.HOURS)
+    val FOUR_PM: Instant = Instant.parse("2015-04-17T16:00:00.00Z")
+    val FIVE_PM: Instant = FOUR_PM.plus(1, ChronoUnit.HOURS)
     val timeLock = DummyTimeLock.State(FIVE_PM)
 
     class DummyTimeLock : Contract {

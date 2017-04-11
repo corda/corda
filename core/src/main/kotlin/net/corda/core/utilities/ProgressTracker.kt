@@ -57,20 +57,6 @@ class ProgressTracker(vararg steps: Step) {
         open fun childProgressTracker(): ProgressTracker? = null
     }
 
-    // TODO: There's no actual way to create these steps anymore!
-    /** This class makes it easier to relabel a step on the fly, to provide transient information. */
-    open inner class RelabelableStep(currentLabel: String) : Step(currentLabel) {
-        override val changes: BehaviorSubject<Change> = BehaviorSubject.create()
-
-        var currentLabel: String = currentLabel
-            set(value) {
-                field = value
-                changes.onNext(ProgressTracker.Change.Rendering(this@ProgressTracker, this@RelabelableStep))
-            }
-
-        override val label: String get() = currentLabel
-    }
-
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.
     object UNSTARTED : Step("Unstarted") {
         override fun equals(other: Any?) = other is UNSTARTED

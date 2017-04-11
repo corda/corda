@@ -109,18 +109,6 @@ fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingle
  * @param T the type of the move command.
  */
 @Throws(IllegalArgumentException::class)
-// TODO: Can we have a common Move command for all contracts and avoid the reified type parameter here?
-inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,
-                                                       tx: TransactionForContract)
-        : MoveCommand
-        = verifyMoveCommand<T>(inputs, tx.commands)
-
-/**
- * Simple functionality for verifying a move command. Verifies that each input has a signature from its owning key.
- *
- * @param T the type of the move command.
- */
-@Throws(IllegalArgumentException::class)
 inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState>,
                                                        commands: List<AuthenticatedObject<CommandData>>)
         : MoveCommand {

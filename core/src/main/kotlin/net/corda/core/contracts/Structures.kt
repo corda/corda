@@ -52,7 +52,7 @@ interface MultilateralNettableState<out T : Any> {
     val multilateralNetState: T
 }
 
-interface NettableState<N : BilateralNettableState<N>, T : Any> : BilateralNettableState<N>,
+interface NettableState<N : BilateralNettableState<N>, out T : Any> : BilateralNettableState<N>,
         MultilateralNettableState<T>
 
 /**
@@ -145,25 +145,12 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
          * otherwise the transaction is not valid.
          */
-        val encumbrance: Int? = null) {
-
-    /**
-     * Copies the underlying state, replacing the notary field with the new value.
-     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState].
-     */
-    fun withNotary(newNotary: Party) = TransactionState(this.data, newNotary, encumbrance)
-}
+        val encumbrance: Int? = null)
 
 /** Wraps the [ContractState] in a [TransactionState] object */
 infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
 
 infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
-
-/**
- * Marker interface for data classes that represent the issuance state for a contract. These are intended as templates
- * from which the state object is initialised.
- */
-interface IssuanceDefinition
 
 /**
  * Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
@@ -243,7 +230,7 @@ interface LinearState : ContractState {
      * Standard clause to verify the LinearState safety properties.
      */
     @CordaSerializable
-    class ClauseVerifier<S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
+    class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<S>,
                             outputs: List<S>,
@@ -360,7 +347,7 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
 data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
     constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
 
-    override fun toString() = "${party}$reference"
+    override fun toString() = "$party$reference"
 }
 
 /** Marker interface for classes that represent commands */

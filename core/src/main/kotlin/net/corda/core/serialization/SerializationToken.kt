@@ -103,7 +103,6 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
  */
 @CordaSerializable
 data class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
-
     constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)
 
     override fun fromToken(context: SerializeAsTokenContext): Any = context.tokenToTokenized[this] ?:

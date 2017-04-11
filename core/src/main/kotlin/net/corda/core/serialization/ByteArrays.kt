@@ -35,5 +35,5 @@ open class OpaqueBytes(val bytes: ByteArray) {
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
-fun ByteArray.toHexString() = BaseEncoding.base16().encode(this)
-fun String.parseAsHex() = BaseEncoding.base16().decode(this)
+fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
+fun String.parseAsHex(): ByteArray = BaseEncoding.base16().decode(this)

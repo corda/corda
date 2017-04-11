@@ -95,9 +95,6 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException() {
     override fun toString(): String = "Attachment resolution failure for $hash"
 }
 
-@CordaSerializable
-class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
-
 sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: Throwable?) : FlowException(cause) {
     class ContractRejection(tx: LedgerTransaction, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
     class MoreThanOneNotary(tx: LedgerTransaction) : TransactionVerificationException(tx, null)

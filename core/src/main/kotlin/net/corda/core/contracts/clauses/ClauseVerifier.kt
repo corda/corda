@@ -20,7 +20,7 @@ fun <C : CommandData> verifyClause(tx: TransactionForContract,
                                    commands: List<AuthenticatedObject<C>>) {
     if (Clause.log.isTraceEnabled) {
         clause.getExecutionPath(commands).forEach {
-            Clause.log.trace("Tx ${tx.origHash} clause: ${clause}")
+            Clause.log.trace("Tx ${tx.origHash} clause: $clause")
         }
     }
     val matchedCommands = clause.verify(tx, tx.inputs, tx.outputs, commands, null)

@@ -8,8 +8,8 @@ import net.corda.core.contracts.TransactionForContract
 /**
  * Filter the states that are passed through to the wrapped clause, to restrict them to a specific type.
  */
-class FilterOn<S : ContractState, C : CommandData, K : Any>(val clause: Clause<S, C, K>,
-                                                            val filterStates: (List<ContractState>) -> List<S>) : Clause<ContractState, C, K>() {
+class FilterOn<S : ContractState, C : CommandData, in K : Any>(val clause: Clause<S, C, K>,
+                                                               val filterStates: (List<ContractState>) -> List<S>) : Clause<ContractState, C, K>() {
     override val requiredCommands: Set<Class<out CommandData>>
             = clause.requiredCommands
 

@@ -19,7 +19,7 @@ class FinanceTypesTest {
     @Test
     fun `valid tenor tests`() {
         val exampleTenors = ("ON,1D,2D,3D,4D,5D,6D,7D,1W,2W,3W,1M,3M,6M,1Y,2Y,3Y,5Y,10Y,12Y,20Y").split(",")
-        exampleTenors.all { Tenor(it).name.length > 0 } // Slightly obtuse way of ensuring no exception thrown in construction.
+        exampleTenors.all { Tenor(it).name.isNotEmpty() } // Slightly obtuse way of ensuring no exception thrown in construction.
     }
 
     @Test

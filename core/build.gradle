@@ -80,9 +80,6 @@ dependencies {
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
 
-    // RS API: Response type and codes for ApiUtils.
-    compile "javax.ws.rs:javax.ws.rs-api:2.0.1"
-
     // Requery: SQL based query & persistence for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
 }

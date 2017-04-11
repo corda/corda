@@ -10,6 +10,7 @@ import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.KeyPairGenerator
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
@@ -72,7 +73,7 @@ fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): Digi
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bytesToSign).bytes)
 }
 
-val ed25519Curve = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
 
 // TODO We use for both CompositeKeys and EdDSAPublicKey custom Kryo serializers and deserializers. We need to specify encoding.
 // TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
@@ -106,7 +107,7 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     val verifier = EdDSAEngine()
     verifier.initVerify(pubKey)
     verifier.update(content)
-    if (verifier.verify(signature.bytes) == false)
+    if (!verifier.verify(signature.bytes))
         throw SignatureException("Signature did not match")
 }
 
@@ -138,9 +139,9 @@ fun PublicKey.containsAny(otherKeys: Iterable<PublicKey>): Boolean {
 fun Iterable<DigitalSignature.WithKey>.byKeys() = map { it.by }.toSet()
 
 // Allow Kotlin destructuring:    val (private, public) = keyPair
-operator fun KeyPair.component1() = this.private
+operator fun KeyPair.component1(): PrivateKey = this.private
 
-operator fun KeyPair.component2() = this.public
+operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
 fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()

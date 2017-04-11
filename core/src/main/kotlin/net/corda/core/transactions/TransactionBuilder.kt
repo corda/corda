@@ -147,7 +147,7 @@ open class TransactionBuilder(
     open fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) { "Input state requires notary \"${notary}\" which does not match the transaction notary \"${this.notary}\"." }
+        require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
         inputs.add(stateAndRef.ref)
     }

@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.net.URL
 import java.net.URLClassLoader
 import java.security.PublicKey
 import java.util.jar.JarOutputStream
@@ -33,7 +34,7 @@ val ATTACHMENT_TEST_PROGRAM_ID = AttachmentClassLoaderTests.AttachmentDummyContr
 
 class AttachmentClassLoaderTests {
     companion object {
-        val ISOLATED_CONTRACTS_JAR_PATH = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
     }
 
     class AttachmentDummyContract : Contract {

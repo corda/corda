@@ -267,7 +267,7 @@ fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()
  * @see SourceAndAmount.apply which processes a list of SourceAndAmount objects
  * and calculates the resulting Amount distribution as a new list of SourceAndAmount objects.
  */
-data class SourceAndAmount<T : Any, P : Any>(val source: P, val amount: Amount<T>, val ref: Any? = null)
+data class SourceAndAmount<T : Any, out P : Any>(val source: P, val amount: Amount<T>, val ref: Any? = null)
 
 /**
  * This class represents a possibly negative transfer of tokens from one vault state to another, possibly at a future date.
@@ -516,7 +516,7 @@ data class Tenor(val name: String) {
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
         val daysToMaturity = calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
-        return daysToMaturity.toInt()
+        return daysToMaturity
     }
 
     override fun toString(): String = name
@@ -645,7 +645,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
         }.toMap()
 
         /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
-        fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
+        fun parseDateFromString(it: String): LocalDate = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
         fun getInstance(vararg calname: String) = BusinessCalendar(
