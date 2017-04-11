@@ -39,13 +39,13 @@ import kotlin.test.assertTrue
 
 class VaultSchemaTest {
 
-    var instance : KotlinEntityDataStore<Persistable>? = null
-    val data : KotlinEntityDataStore<Persistable> get() = instance!!
+    var instance: KotlinEntityDataStore<Persistable>? = null
+    val data: KotlinEntityDataStore<Persistable> get() = instance!!
 
-    var oinstance : KotlinRxEntityStore<Persistable>? = null
-    val odata : KotlinRxEntityStore<Persistable> get() = oinstance!!
+    var oinstance: KotlinRxEntityStore<Persistable>? = null
+    val odata: KotlinRxEntityStore<Persistable> get() = oinstance!!
 
-    var transaction : LedgerTransaction? = null
+    var transaction: LedgerTransaction? = null
 
     @Before
     fun setup() {
@@ -62,7 +62,7 @@ class VaultSchemaTest {
         setupDummyData()
     }
 
-    private fun  setupCustomMapping(): Mapping? {
+    private fun setupCustomMapping(): Mapping? {
         val mapping = GenericMapping(Generic())
         val instantConverter = InstantConverter()
         mapping.addConverter(instantConverter, instantConverter.mappedType)
@@ -78,12 +78,15 @@ class VaultSchemaTest {
 
     private class VaultNoopContract() : Contract {
         override val legalContractReference = SecureHash.sha256("")
+
         data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
             override val contract = VaultNoopContract()
             override val participants: List<CompositeKey>
                 get() = listOf(owner)
+
             override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Create(), copy(owner = newOwner))
         }
+
         interface Commands : CommandData {
             class Create : TypeOnlyCommandData(), Commands
         }
@@ -98,14 +101,14 @@ class VaultSchemaTest {
         val notary: Party = DUMMY_NOTARY
         val inState1 = TransactionState(DummyContract.SingleOwnerState(0, DUMMY_PUBKEY_1), notary)
         val inState2 = TransactionState(DummyContract.MultiOwnerState(0,
-                        listOf(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2)), notary)
+                listOf(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2)), notary)
         val inState3 = TransactionState(VaultNoopContract.VaultNoopState(DUMMY_PUBKEY_1), notary)
         val outState1 = inState1.copy()
         val outState2 = inState2.copy()
         val outState3 = inState3.copy()
         val inputs = listOf(StateAndRef(inState1, StateRef(SecureHash.randomSHA256(), 0)),
-                            StateAndRef(inState2, StateRef(SecureHash.randomSHA256(), 0)),
-                            StateAndRef(inState3, StateRef(SecureHash.randomSHA256(), 0)))
+                StateAndRef(inState2, StateRef(SecureHash.randomSHA256(), 0)),
+                StateAndRef(inState3, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState1, outState2, outState3)
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
@@ -160,7 +163,7 @@ class VaultSchemaTest {
     private fun dummyStatesInsert(txn: LedgerTransaction) {
         data.invoke {
             // skip inserting the last txn state (to mimic spend attempt of non existent unconsumed state)
-            txn.inputs.subList(0 , txn.inputs.lastIndex).forEach {
+            txn.inputs.subList(0, txn.inputs.lastIndex).forEach {
                 insert(createStateEntity(it))
                 // create additional state entities with idx >0
                 for (i in 3..4) {
@@ -168,7 +171,8 @@ class VaultSchemaTest {
                         createStateEntity(it, idx = i).apply {
                             insert(this)
                         }
-                    } catch(e: Exception) {}
+                    } catch(e: Exception) {
+                    }
                 }
                 // create additional state entities with different txn id
                 for (i in 1..3) {
@@ -193,7 +197,7 @@ class VaultSchemaTest {
         }
 
         // check total numner of inserted states
-        assertEquals(3+4+9+1+5, data.select(VaultSchema.VaultStates::class).get().count())
+        assertEquals(3 + 4 + 9 + 1 + 5, data.select(VaultSchema.VaultStates::class).get().count())
     }
 
     /**
@@ -228,7 +232,7 @@ class VaultSchemaTest {
             upsert(stateEntity)
         }
         val keys = mapOf(VaultStatesEntity.TX_ID to stateEntity.txId,
-                         VaultStatesEntity.INDEX to stateEntity.index)
+                VaultStatesEntity.INDEX to stateEntity.index)
         val key = io.requery.proxy.CompositeKey(keys)
         data.invoke {
             val state = findByKey(VaultStatesEntity::class, key)
@@ -413,20 +417,20 @@ class VaultSchemaTest {
         assertTrue { stateAndRefs.size == 1 }
     }
 
-    inline fun <reified T: ContractState> unconsumedStates(): List<StateAndRef<T>> {
+    inline fun <reified T : ContractState> unconsumedStates(): List<StateAndRef<T>> {
         val stateAndRefs =
-            data.invoke {
-                val result = select(VaultSchema.VaultStates::class)
-                        .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
-                result.get()
-                        .map { it ->
-                            val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
-                            val state = it.contractState.deserialize<TransactionState<T>>()
-                            StateAndRef(state, stateRef)
-                        }.filter {
-                    T::class.java.isAssignableFrom(it.state.data.javaClass)
-                }.toList()
-            }
+                data.invoke {
+                    val result = select(VaultSchema.VaultStates::class)
+                            .where(VaultSchema.VaultStates::stateStatus eq Vault.StateStatus.UNCONSUMED)
+                    result.get()
+                            .map { it ->
+                                val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
+                                val state = it.contractState.deserialize<TransactionState<T>>()
+                                StateAndRef(state, stateRef)
+                            }.filter {
+                        T::class.java.isAssignableFrom(it.state.data.javaClass)
+                    }.toList()
+                }
         return stateAndRefs
     }
 
@@ -520,8 +524,8 @@ class VaultSchemaTest {
             val update = update(VaultStatesEntity::class)
                     .set(VaultStatesEntity.LOCK_ID, "")
                     .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
-                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
-                    .and (expression.`in`(stateRefs)).get()
+                    .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and(expression.`in`(stateRefs)).get()
             assertEquals(3, update.value())
         }
     }
@@ -550,7 +554,7 @@ class VaultSchemaTest {
         // select unlocked states
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId eq stateEntity.txId)
-                                                                .and (VaultSchema.VaultStates::lockId.isNull())
+                    .and(VaultSchema.VaultStates::lockId.isNull())
             assertEquals(0, result.get().count())
         }
 
@@ -559,15 +563,15 @@ class VaultSchemaTest {
             val update = update(VaultStatesEntity::class)
                     .set(VaultStatesEntity.LOCK_ID, null)
                     .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
-                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
-                    .and (VaultStatesEntity.LOCK_ID eq "LOCK#1").get()
+                    .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and(VaultStatesEntity.LOCK_ID eq "LOCK#1").get()
             assertEquals(1, update.value())
         }
 
         // select unlocked states
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId eq stateEntity.txId)
-                    .and (VaultSchema.VaultStates::lockId.isNull())
+                    .and(VaultSchema.VaultStates::lockId.isNull())
             assertEquals(1, result.get().count())
         }
     }
@@ -601,7 +605,7 @@ class VaultSchemaTest {
         val txnIds = transaction!!.inputs.map { it.ref.txhash.toString() }.toSet()
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
-                    .and (VaultSchema.VaultStates::lockId eq "")
+                    .and(VaultSchema.VaultStates::lockId eq "")
             assertEquals(0, result.get().count())
         }
 
@@ -614,15 +618,15 @@ class VaultSchemaTest {
             val update = update(VaultStatesEntity::class)
                     .set(VaultStatesEntity.LOCK_ID, "")
                     .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
-                    .where (VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
-                    .and (expression.`in`(stateRefs)).get()
+                    .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                    .and(expression.`in`(stateRefs)).get()
             assertEquals(3, update.value())
         }
 
         // select unlocked states
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
-                    .and (VaultSchema.VaultStates::lockId eq "")
+                    .and(VaultSchema.VaultStates::lockId eq "")
             assertEquals(3, result.get().count())
         }
     }
