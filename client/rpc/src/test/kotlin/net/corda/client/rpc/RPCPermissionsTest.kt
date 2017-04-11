@@ -8,7 +8,7 @@ import org.junit.After
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
-class RPCPermissionsTest : AbstractClientRPC() {
+class RPCPermissionsTest : AbstractClientRPCTest() {
     companion object {
         const val DUMMY_FLOW = "StartFlow.net.corda.flows.DummyFlow"
         const val OTHER_FLOW = "StartFlow.net.corda.flows.OtherFlow"

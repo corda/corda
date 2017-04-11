@@ -75,8 +75,6 @@ private class BankOfCordaDriver {
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }
-                    Role.ISSUER -> {
-                    }
                 }
             } catch (e: Exception) {
                 println("Exception occurred: $e \n ${e.printStackTrace()}")

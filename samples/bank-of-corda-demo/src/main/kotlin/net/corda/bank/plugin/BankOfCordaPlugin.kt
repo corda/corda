@@ -12,8 +12,6 @@ class BankOfCordaPlugin : CordaPluginRegistry() {
     // A list of classes that expose web APIs.
     override val webApis = listOf(Function(::BankOfCordaWebApi))
     // A list of flow that are required for this cordapp
-    override val requiredFlows: Map<String, Set<String>> =
-            mapOf(IssuerFlow.IssuanceRequester::class.java.name to setOf(Amount::class.java.name, Party::class.java.name, OpaqueBytes::class.java.name, Party::class.java.name)
-            )
+    override val requiredFlows: Map<String, Set<String>> = mapOf(IssuerFlow.IssuanceRequester::class.java.name to setOf(Amount::class.java.name, Party::class.java.name, OpaqueBytes::class.java.name, Party::class.java.name))
     override val servicePlugins = listOf(Function(IssuerFlow.Issuer::Service))
 }

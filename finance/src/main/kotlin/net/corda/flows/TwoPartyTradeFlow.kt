@@ -144,7 +144,6 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
-
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
         object SENDING_SIGNATURES : ProgressTracker.Step("Sending signatures to the seller")

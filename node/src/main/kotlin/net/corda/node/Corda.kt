@@ -217,8 +217,7 @@ private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
     Emoji.renderIfSupported {
         val (msg1, msg2) = messageOfTheDay()
 
-        println(Ansi.ansi().fgBrightRed().a(
-                """
+        println(Ansi.ansi().fgBrightRed().a("""
    ______               __
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
