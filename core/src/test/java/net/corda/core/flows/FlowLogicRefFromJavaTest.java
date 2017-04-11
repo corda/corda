@@ -6,6 +6,7 @@ import java.util.*;
 
 public class FlowLogicRefFromJavaTest {
 
+    @SuppressWarnings("unused")
     private static class ParamType1 {
         final int value;
 
@@ -14,6 +15,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    @SuppressWarnings("unused")
     private static class ParamType2 {
         final String value;
 
@@ -22,6 +24,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    @SuppressWarnings("unused")
     private static class JavaFlowLogic extends FlowLogic<Void> {
 
         public JavaFlowLogic(ParamType1 A, ParamType2 b) {
@@ -33,6 +36,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
+    @SuppressWarnings("unused")
     private static class JavaNoArgFlowLogic extends FlowLogic<Void> {
 
         public JavaNoArgFlowLogic() {

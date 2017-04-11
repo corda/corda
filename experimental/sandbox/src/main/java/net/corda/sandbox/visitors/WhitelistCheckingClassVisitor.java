@@ -150,11 +150,6 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
                     break;
             }
         }
-
-        // If the initial scan has produced a DISALLOWED code path
-        if (!candidacyStatus.isLoadable()) {
-            return;
-        }
     }
 
     /**

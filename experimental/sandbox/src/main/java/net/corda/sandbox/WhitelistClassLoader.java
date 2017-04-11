@@ -83,7 +83,7 @@ public final class WhitelistClassLoader extends ClassLoader {
         return of(auxiliaryClassPath, false);
     }
 
-    public static WhitelistClassLoader of(final Path auxiliaryJar, final boolean stripNonDeterministic) throws URISyntaxException {
+    public static WhitelistClassLoader of(final Path auxiliaryJar, final boolean stripNonDeterministic) {
         final WhitelistClassLoader out = new WhitelistClassLoader(stripNonDeterministic);
         out.candidacyStatus.setContextLoader(out);
         out.fileSystemSearchPath.add(auxiliaryJar);
@@ -305,7 +305,7 @@ public final class WhitelistClassLoader extends ClassLoader {
      * @throws java.io.IOException
      * @throws java.net.URISyntaxException
      */
-    public boolean createJar() throws IOException, URISyntaxException {
+    public void createJar() throws IOException, URISyntaxException {
         final Map<String, String> env = new HashMap<>();
         env.put("create", String.valueOf(!outputJarPath.toFile().exists()));
 
@@ -324,7 +324,6 @@ public final class WhitelistClassLoader extends ClassLoader {
                 Files.write(outPath, newClassDef);
             }
         }
-        return true;
     }
 
     /**

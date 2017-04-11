@@ -14,8 +14,6 @@ import java.util.*;
 public interface ICommercialPaperState extends ContractState {
     ICommercialPaperState withOwner(CompositeKey newOwner);
 
-    ICommercialPaperState withIssuance(PartyAndReference newIssuance);
-
     ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue);
 
     ICommercialPaperState withMaturityDate(Instant newMaturityDate);

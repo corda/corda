@@ -36,6 +36,7 @@ public class FlowsInJavaTest {
         assertThat(result.get()).isEqualTo("Hello");
     }
 
+    @SuppressWarnings("unused")
     private static class SendInUnwrapFlow extends FlowLogic<String> {
         private final Party otherParty;
 

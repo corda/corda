@@ -4,6 +4,7 @@ import java.util.*;
 
 public class ExplorerCaplet extends Capsule {
 
+    @SuppressWarnings("unused")
     protected ExplorerCaplet(Capsule pred) {
         super(pred);
     }
