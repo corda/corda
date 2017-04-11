@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
@@ -113,6 +114,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
  * The protocol then sends a copy to the other node. We don't require the other party to sign
  * as their approval/rejection is to follow.
  */
+@FlowVersion("1.0")
 class SubmitTradeApprovalFlow(val tradeId: String,
                               val counterparty: Party) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     @Suspendable
@@ -144,6 +146,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
  * Simple flow to complete a proposal submitted by another party and ensure both nodes
  * end up with a fully signed copy of the state either as APPROVED, or REJECTED
  */
+@FlowVersion("1.0")
 class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     init {
         require(verdict in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED)) {
@@ -223,6 +226,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
  * Then after checking to sign it and eventually store the fully notarised
  * transaction to the ledger.
  */
+@FlowVersion("1.0")
 class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call(): Unit {

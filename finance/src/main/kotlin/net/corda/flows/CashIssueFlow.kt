@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowVersion
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -20,6 +21,7 @@ import java.util.*
  * @param recipient the party who should own the currency after it is issued.
  * @param notary the notary to set on the output states.
  */
+@FlowVersion("1.0")
 class CashIssueFlow(val amount: Amount<Currency>,
                     val issueRef: OpaqueBytes,
                     val recipient: Party,

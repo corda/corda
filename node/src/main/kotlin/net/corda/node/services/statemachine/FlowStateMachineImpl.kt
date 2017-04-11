@@ -9,10 +9,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.random63BitValue
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -228,7 +225,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     private fun FlowSession.waitForConfirmation() {
         val (peerParty, sessionInitResponse) = receiveInternal<SessionInitResponse>(this, null)
         if (sessionInitResponse is SessionConfirm) {
+            if (state !is FlowSessionState.Initiating) throw FlowException("Got session confirmation on existing initiated session")
+            val theirFlowName: String = sessionInitResponse.flowName
+            if (theirFlowName != chosenFlowName) throw FlowException("Got session confirmation with other side flow not matching what was expected. Chosen: $chosenFlowName, got: $theirFlowName")
+            val theirFlowVersion: String = sessionInitResponse.version // Other node may be more up-to-date and know about version compatibility with our version that is higher.
+            if (!majorVersionMatch(theirFlowVersion, flowVersion)) // However we assume that if there is major mismatch there is something wrong.
+                throw FlowException("Got session confirmation with flow version that is significantly different (major numbers don't match)")
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
+            flowVersion = theirFlowVersion // We keep their version, as our we know from flow we started. However it's not useful much now, as we assume no upgrades during communication.
         } else {
             sessionInitResponse as SessionReject
             throw FlowSessionException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
@@ -273,6 +277,48 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     /**
+     * Queries NetworkMapCache for flow versions that are advertised by otherParty (note it can be a distributed service).
+     * sessionFlow is flow run on our side, it can communicate with different FlowLogic on other side (which should be
+     * grouped by general flow name this flow is part of. There is inconsistency in our design with getCounterpartyMarker
+     * and the fact that in plugins flows are usually grouped by common name. After talk with Shams I decided to remove getCounterpartyMarker,
+     * but it's easy to get it back. Instead of general flow name in getCommonVersion counterpartyMarker can be taken for communication,
+     * but it's pain in annotation and we have to know how other party registered flow.
+     * For now I assume that flows are compatible in sets say 1.0 -> [1.1, 1.2, 1.5].
+     * Which means that if we run Sender version 1.0 that accepts [1.1, 1.2, 1.5] and we want to communicate with
+     * Party1 and Party2 Receivers on two different nodes - we don't specify versions we expect from Party1 and separately from Party2.
+     * It means that nodes have to have Receivers (maybe different flow logics) that speak in one of [1.0, 1.1, 1.2, 1.5].
+     * Another problem that arises: if node is really outdated and starts communication and doesn't know about newer versions.
+     * Then it's responsibility of other Party to specify if it advertises outdated flows and accepts connections on them.
+     * You can specify flow initiator that accepts new connection to start flow of higher version but compatible with
+     * outdated one. The rule here is that major versions should match.
+     */
+    @Suspendable
+    private fun getCommonVersion(otherParty: Party, sessionFlow: FlowLogic<*>): Pair<String, String> {
+        val flowInfo = FlowVersionInfo.getVersionAnnotation(sessionFlow.javaClass)
+        val flowVersion = flowInfo.version
+        val flowPreference = flowInfo.preference
+        val counterpartyFlow = flowInfo.genericName
+        val otherVersions: AdvertisedFlow? = serviceHub.networkMapCache.getFlowVersionInfo(otherParty.owningKey, counterpartyFlow)
+        if (otherVersions == null) return Pair(counterpartyFlow, flowVersion) // We still assume that party may not advertise this flow, but we can run private communication.
+        val version: String = if (flowVersion in otherVersions.toList())
+            flowVersion
+        else {
+            val ourCompatible = flowPreference.toSet()
+            val common = otherVersions.toList().intersect(ourCompatible).toMutableList()
+            // TODO Not sure about this, but if we assume private communication then yes. I wrote this function when I assumed that
+            //  node may keep only few flowLogics and want to communicate only with certain set. However now I think that
+            //  probably it would be better to base choice on major/range match.
+            if (common.isEmpty()) flowVersion // We will still try to communicate, with our version of flow.
+            else if (otherVersions.preferred in common) otherVersions.preferred
+            else {
+                common.sortByDescending {it.toDouble()}
+                common[0]
+            }
+        }
+        return Pair(counterpartyFlow, version) // We send our choice.
+    }
+
+    /**
      * Creates a new session. The provided [otherParty] can be an identity of any advertised service on the network,
      * and might be advertised by more than one node. Therefore we first choose a single node that advertises it
      * and use its *legal identity* for communication. At the moment a single node can compose its legal identity out of
@@ -280,11 +326,15 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     @Suspendable
     private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
+        // Flows communicate in groups, grouped by flowName. That's because we can register handler on given flow version on other side on whatever we want.
+        // flowVersion - chosen version we want to speak with other party. If we don't find an advertised flow in NMS we still may want to communicate
+        // as we wish to support private communication.
+        val (otherFlowName: String, flowVersion: String) = getCommonVersion(otherParty, sessionFlow)
         logger.trace { "Initiating a new session with $otherParty" }
-        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty))
+        logger.trace { "Flow chosen to communicate with $otherParty: $otherFlowName:$flowVersion" }
+        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), otherFlowName, flowVersion)
         openSessions[Pair(sessionFlow, otherParty)] = session
-        val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
-        val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, otherFlowName, flowVersion, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -359,7 +409,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         var exceptionDuringSuspend: Throwable? = null
         parkAndSerialize { _, _ ->
             logger.trace { "Suspended on $ioRequest" }
-            // restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
+            // Restore the Tx onto the ThreadLocal so that we can commit the ensuing checkpoint to the DB
             try {
                 StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
                 txTrampoline = null

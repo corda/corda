@@ -6,6 +6,8 @@ import net.corda.core.contracts.Timestamp
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
+import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -26,6 +28,7 @@ object NotaryFlow {
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the timestamp is invalid.
      */
+    @FlowVersion("1.0")
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
@@ -90,6 +93,7 @@ object NotaryFlow {
      * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
+    @FlowVersion("1.0")
     abstract class Service(val otherSide: Party,
                            val timestampChecker: TimestampChecker,
                            val uniquenessProvider: UniquenessProvider) : FlowLogic<Void?>() {

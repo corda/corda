@@ -15,6 +15,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.messaging.Ack
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
@@ -51,6 +52,7 @@ object SimmFlow {
      * Initiates with the other party by sending a portfolio to agree on and then comes to consensus over initial
      * margin using SIMM. If there is an existing state it will update and revalue the portfolio agreement.
      */
+    @FlowVersion("1.0")
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
@@ -191,6 +193,7 @@ object SimmFlow {
     /**
      * Receives and validates a portfolio and comes to consensus over the portfolio initial margin using SIMM.
      */
+    @FlowVersion("1.0")
     class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
         lateinit var ownParty: Party
         lateinit var offer: OfferMessage

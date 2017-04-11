@@ -25,7 +25,8 @@ class SimmValuationTest : IntegrationTestCategory {
         val testTradeId = "trade1"
     }
 
-    @Test fun `runs SIMM valuation demo`() {
+    @Test
+    fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode("Controller", setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()

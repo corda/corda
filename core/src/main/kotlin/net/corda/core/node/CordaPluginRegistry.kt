@@ -2,6 +2,8 @@ package net.corda.core.node
 
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomization
+import net.corda.core.node.services.ServiceType
+import net.corda.core.flows.FlowVersionInfo
 import java.util.function.Function
 
 /**
@@ -9,6 +11,9 @@ import java.util.function.Function
  * to extend a Corda node with additional application services.
  */
 abstract class CordaPluginRegistry(
+        open val serviceType: ServiceType = ServiceType.corda.getSubType("peer_node"), // TODO Override it for notaries, oracles...
+        // TODO In config we can specify which services we want to advertise and versions of them.
+
         /**
          * List of lambdas returning JAX-RS objects. They may only depend on the RPC interface, as the webserver should
          * potentially be able to live in a process separate from the node itself.

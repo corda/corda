@@ -40,7 +40,8 @@ interface MessagingService {
      * @param sessionID identifier for the session the message is part of. For services listening before
      * a session is established, use [DEFAULT_SESSION_ID].
      */
-    fun addMessageHandler(topic: String = "", sessionID: Long = DEFAULT_SESSION_ID, callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
+   fun addMessageHandler(topic: String = "", sessionID: Long = DEFAULT_SESSION_ID,
+                          callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
     /**
      * The provided function will be invoked for each received message whose topic and session matches.  The callback
@@ -145,7 +146,8 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): Listenabl
     return messageFuture
 }
 
-fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
+fun MessagingService.send(topic: String, sessionID: Long, payload: Any,
+                          to: MessageRecipients, uuid: UUID = UUID.randomUUID())
         = send(TopicSession(topic, sessionID), payload, to, uuid)
 
 fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
@@ -164,6 +166,7 @@ interface MessageHandlerRegistration
 @CordaSerializable
 data class TopicSession(val topic: String, val sessionID: Long = DEFAULT_SESSION_ID) {
     fun isBlank() = topic.isBlank() && sessionID == DEFAULT_SESSION_ID
+
     override fun toString(): String = "$topic.$sessionID"
 }
 

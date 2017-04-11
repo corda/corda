@@ -3,6 +3,7 @@ package net.corda.vega.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.vega.contracts.PortfolioState
 import java.time.LocalDate
@@ -12,6 +13,7 @@ import java.time.LocalDate
  * requirements
  */
 object SimmRevaluation {
+    @FlowVersion("1.0")
     class Initiator(val curStateRef: StateRef, val valuationDate: LocalDate) : FlowLogic<Unit>() {
         @Suspendable
         override fun call(): Unit {

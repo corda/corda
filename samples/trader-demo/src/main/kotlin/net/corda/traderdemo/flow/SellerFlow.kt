@@ -7,6 +7,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.days
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
@@ -16,6 +17,7 @@ import net.corda.flows.TwoPartyTradeFlow
 import java.time.Instant
 import java.util.*
 
+@FlowVersion("1.0")
 class SellerFlow(val otherParty: Party,
                  val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {

@@ -4,7 +4,6 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.getOrThrow
-import net.corda.core.node.ServiceEntry
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
@@ -41,12 +40,14 @@ class WorkflowTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = net.createPartyNode(notaryNode.info.address)
-        nodeB = net.createPartyNode(notaryNode.info.address)
+        nodeA = net.createPartyNode(notaryNode.info.address, start = false)
+        nodeB = net.createPartyNode(notaryNode.info.address, start = false)
         FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
         FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
         WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
         WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeA.start()
+        nodeB.start()
     }
 
     @After

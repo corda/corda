@@ -9,6 +9,7 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.services.SchedulerService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
@@ -161,6 +162,7 @@ class NodeSchedulerService(private val database: Database,
         services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
     }
 
+    @FlowVersion("1.0")
     class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
         companion object {
             object RUNNING : ProgressTracker.Step("Running scheduled...")

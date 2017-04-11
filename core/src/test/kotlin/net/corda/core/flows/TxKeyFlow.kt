@@ -18,6 +18,7 @@ object TxKeyFlow {
         services.registerFlowInitiator(Requester::class.java, ::Provider)
     }
 
+    @FlowVersion("1.0")
     class Requester(val otherSide: Party,
                     override val progressTracker: ProgressTracker): FlowLogic<Pair<CompositeKey, Certificate?>>() {
         constructor(otherSide: Party) : this(otherSide, tracker())
@@ -39,6 +40,7 @@ object TxKeyFlow {
      * Flow which waits for a key request from a counterparty, generates a new key and then returns it to the
      * counterparty and as the result from the flow.
      */
+    @FlowVersion("1.0")
     class Provider(val otherSide: Party,
                    override val progressTracker: ProgressTracker): FlowLogic<CompositeKey>() {
         constructor(otherSide: Party) : this(otherSide, tracker())

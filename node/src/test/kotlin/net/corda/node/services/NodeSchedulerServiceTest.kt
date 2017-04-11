@@ -7,6 +7,7 @@ import net.corda.core.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -126,6 +127,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             get() = throw UnsupportedOperationException()
     }
 
+    @FlowVersion("1.0")
     class TestFlowLogic(val increment: Int = 1) : FlowLogic<Unit>() {
         override fun call() {
             (serviceHub as TestReference).testReference.calls += increment

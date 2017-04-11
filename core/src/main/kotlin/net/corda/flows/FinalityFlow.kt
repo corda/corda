@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -31,6 +32,7 @@ import net.corda.core.utilities.ProgressTracker
  * @param transactions What to commit.
  * @param extraRecipients A list of additional participants to inform of the transaction.
  */
+@FlowVersion("1.0")
 class FinalityFlow(val transactions: Iterable<SignedTransaction>,
                    val extraRecipients: Set<Party>,
                    override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {

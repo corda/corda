@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.Version
@@ -121,6 +122,9 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
     sockets.forEach(ServerSocket::close)
     return result
 }
+
+@FlowVersion("1.0")
+abstract class DefaultFlowVersion<T>: FlowLogic<T>()
 
 /**
  * Creates and tests a ledger built by the passed in dsl. The provided services can be customised, otherwise a default

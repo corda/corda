@@ -14,10 +14,7 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.messaging.ReceivedMessage
 import net.corda.core.messaging.TopicSession
 import net.corda.core.messaging.send
@@ -79,6 +76,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     companion object {
         private val logger = loggerFor<StateMachineManager>()
         internal val sessionTopic = TopicSession("platform.session")
+
         init {
             Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
                 (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
@@ -101,12 +99,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         var started = false
         val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
         val changesPublisher = PublishSubject.create<Change>()!!
-        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash,  FlowStateMachineImpl<*>>()!!
+        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
             changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
         }
     }
+
     private val mutex = ThreadBox(InnerState())
 
     // True if we're shutting down, so don't resume anything.
@@ -153,6 +152,12 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * We use assignment here so that multiple subscribers share the same wrapped Observable.
      */
     val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
+
+    init {
+        Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
+            (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
+        }
+    }
 
     fun start() {
         restoreFibersFromCheckpoints()
@@ -213,6 +218,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun restoreFibersFromCheckpoints() {
+        //TODO What if fiber is no longer supported -> it would be nice to finish communication with other side(s) in a nice way: VersionNoLongerSupported error msg
+        //  currently there is no easy way of checking for that (as we don't have to register 'out' flows - we can just add them to smm)
+        //  It's more serialization task - we restore openSessions in StateMachineManager from fibers - need graceful communication of changes to other side of communication.
         mutex.locked {
             checkpointStorage.forEach {
                 // If a flow is added before start() then don't attempt to restore it
@@ -226,6 +234,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
+    // TODO From design doc: Message handlers for no longer supported versions shouldn't be registered - in that case session messages shouldn't be deserialized.
     private fun resumeRestoredFibers() {
         mutex.locked {
             started = true
@@ -262,7 +271,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun onSessionMessage(message: ReceivedMessage) {
-        val sessionMessage = message.data.deserialize<SessionMessage>()
+        val sessionMessage = message.data.deserialize<SessionMessage>() // TODO We should before deserialization know if version and sessionID are correct -> move that information to message header.
         // TODO Look up the party with the full X.500 name instead of just the legal name
         val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
         if (sender != null) {
@@ -320,25 +329,30 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val markerClass = try {
-            Class.forName(sessionInit.flowName)
-        } catch (e: Exception) {
-            logger.warn("Received invalid $sessionInit", e)
-            sendSessionReject("Don't know ${sessionInit.flowName}")
-            return
-        }
-
-        val flowFactory = serviceHub.getFlowFactory(markerClass)
+        val flowName = sessionInit.flowName
+        val theirVersion = sessionInit.version
+        val flowFactory = serviceHub.getFlowFactory(flowName)
         if (flowFactory == null) {
-            logger.warn("Unknown flow marker class in $sessionInit")
-            sendSessionReject("Don't know ${markerClass.name}")
+            logger.warn("Unknown flow name in $sessionInit")
+            sendSessionReject("Don't know ${flowName}")
             return
         }
-
+        val flow = flowFactory(theirVersion, sender) // There can be specified special behaviour on given version.
+        if (flow == null) {
+            logger.warn("Unknown flow version in $sessionInit, flow: ${flowName} version: ${theirVersion}")
+            sendSessionReject("Not supported flow version for ${flowName}, version: ${theirVersion}")
+            return
+        }
+        val flowInfo = FlowVersionInfo.getVersionAnnotation(flow.javaClass)
+        // Check minor/major, because mistakes in registration
+        if (!majorVersionMatch(flowInfo.version, theirVersion)) {
+            logger.warn("Couldn't find common version in ${sessionInit}")
+            sendSessionReject("Couldn't find common version, major mismatch, for ${flowName}, version: ${theirVersion}")
+            return
+        }
         val session = try {
-            val flow = flowFactory(sender)
             val fiber = createFiber(flow)
-            val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
+            val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId), flowName, theirVersion) // Their version, because our we know from flow. However, this should be in message header.
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
             }
@@ -352,8 +366,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             return
         }
 
-        sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using marker ${markerClass.name}" }
+        sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId, flowName, flowInfo.version), session.fiber) //TODO flowName
+        session.fiber.logger.debug { "Initiated by $sender using flow name ${flowInfo.genericName}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }
@@ -450,6 +464,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Note that you must be on the [executor] thread.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
+        // Checking that we have annotations and proper version formats on FlowLogic.
+        FlowVersionInfo.getVersionAnnotation(logic.javaClass)
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
