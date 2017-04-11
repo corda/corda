@@ -1,7 +1,6 @@
-import java.io.File;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
 
 public class ExplorerCaplet extends Capsule {
 

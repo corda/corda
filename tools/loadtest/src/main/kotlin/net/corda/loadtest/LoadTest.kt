@@ -1,7 +1,6 @@
 package net.corda.loadtest
 
 import net.corda.client.mock.Generator
-import net.corda.core.div
 import net.corda.node.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService

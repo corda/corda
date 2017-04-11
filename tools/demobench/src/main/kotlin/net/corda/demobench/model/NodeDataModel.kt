@@ -1,6 +1,6 @@
 package net.corda.demobench.model
 
-import tornadofx.ItemViewModel
+import tornadofx.*
 
 class NodeDataModel : ItemViewModel<NodeData>(NodeData()) {
 

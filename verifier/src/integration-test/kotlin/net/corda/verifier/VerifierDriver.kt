@@ -44,17 +44,21 @@ import java.util.concurrent.atomic.AtomicInteger
 interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
     fun startVerificationRequestor(name: String): ListenableFuture<VerificationRequestorHandle>
+
     /** Starts an out of process verifier connected to [address] */
     fun startVerifier(address: HostAndPort): ListenableFuture<VerifierHandle>
+
     /**
      * Waits until [number] verifiers are listening for verification requests coming from the Node. Check
      * [VerificationRequestorHandle.waitUntilNumberOfVerifiers] for an equivalent for requestors.
      */
     fun NodeHandle.waitUntilNumberOfVerifiers(number: Int)
 }
+
 /** Starts a verifier connecting to the specified node */
 fun VerifierExposedDSLInterface.startVerifier(nodeHandle: NodeHandle) =
         startVerifier(nodeHandle.configuration.p2pAddress)
+
 /** Starts a verifier connecting to the specified requestor */
 fun VerifierExposedDSLInterface.startVerifier(verificationRequestorHandle: VerificationRequestorHandle) =
         startVerifier(verificationRequestorHandle.p2pAddress)
@@ -190,6 +194,7 @@ data class VerifierDriverDSL(
         val securityManager = object : ActiveMQSecurityManager {
             // We don't need auth, SSL is good enough
             override fun validateUser(user: String?, password: String?) = true
+
             override fun validateUserAndRole(user: String?, password: String?, roles: MutableSet<Role>?, checkType: CheckType?) = true
         }
 

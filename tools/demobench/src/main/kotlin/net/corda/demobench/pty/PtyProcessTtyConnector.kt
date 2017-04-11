@@ -11,9 +11,9 @@ import java.nio.charset.Charset
  * @author traff
  */
 class PtyProcessTtyConnector(
-    private val name: String,
-    private val process: PtyProcess,
-    charset: Charset
+        private val name: String,
+        private val process: PtyProcess,
+        charset: Charset
 ) : ProcessTtyConnector(process.zeroFiltered(), charset) {
 
     override fun getName() = name
@@ -23,10 +23,10 @@ class PtyProcessTtyConnector(
     override fun resizeImmediately() {
         if (pendingTermSize != null && pendingPixelSize != null) {
             process.winSize = WinSize(
-                pendingTermSize.width,
-                pendingTermSize.height,
-                pendingPixelSize.width,
-                pendingPixelSize.height
+                    pendingTermSize.width,
+                    pendingTermSize.height,
+                    pendingPixelSize.width,
+                    pendingPixelSize.height
             )
         }
     }

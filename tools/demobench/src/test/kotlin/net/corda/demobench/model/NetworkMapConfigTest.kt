@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
-import kotlin.test.*
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class NetworkMapConfigTest {
 

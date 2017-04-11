@@ -1,11 +1,11 @@
 package net.corda.demobench.model
 
-import java.nio.file.Path
-import java.nio.file.Paths
 import javafx.scene.control.Alert
 import javafx.scene.control.Alert.AlertType.ERROR
 import javafx.stage.Stage
-import tornadofx.Controller
+import tornadofx.*
+import java.nio.file.Path
+import java.nio.file.Paths
 
 class JVMConfig : Controller() {
 

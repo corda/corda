@@ -2,9 +2,10 @@ package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import tornadofx.*
 import java.io.IOException
-import java.nio.file.*
-import tornadofx.Controller
+import java.nio.file.Files
+import java.nio.file.Path
 
 class InstallFactory : Controller() {
 
@@ -21,15 +22,15 @@ class InstallFactory : Controller() {
         val tempDir = Files.createTempDirectory(baseDir, ".node")
 
         val nodeConfig = NodeConfig(
-            tempDir,
-            config.getString("myLegalName"),
-            p2pPort,
-            rpcPort,
-            config.getString("nearestCity"),
-            webPort,
-            h2Port,
-            extraServices,
-            config.getObjectList("rpcUsers").map { toUser(it.unwrapped()) }.toList()
+                tempDir,
+                config.getString("myLegalName"),
+                p2pPort,
+                rpcPort,
+                config.getString("nearestCity"),
+                webPort,
+                h2Port,
+                extraServices,
+                config.getObjectList("rpcUsers").map { toUser(it.unwrapped()) }.toList()
         )
 
         if (config.hasPath("networkMapService")) {
@@ -38,7 +39,7 @@ class InstallFactory : Controller() {
         } else {
             log.info("Node '${nodeConfig.legalName}' is the network map")
         }
- 
+
         return InstallConfig(tempDir, nodeConfig)
     }
 
@@ -52,11 +53,11 @@ class InstallFactory : Controller() {
     private fun Config.parseExtraServices(path: String): List<String> {
         val services = serviceController.services.toSortedSet()
         return this.getStringList(path)
-            .filter { !it.isNullOrEmpty() }
-            .map { svc ->
-                require(svc in services, { "Unknown service '$svc'." } )
-                svc
-            }.toList()
+                .filter { !it.isNullOrEmpty() }
+                .map { svc ->
+                    require(svc in services, { "Unknown service '$svc'." })
+                    svc
+                }.toList()
     }
 
 }

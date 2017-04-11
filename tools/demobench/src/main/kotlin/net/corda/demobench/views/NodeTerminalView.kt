@@ -3,9 +3,6 @@ package net.corda.demobench.views
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
-import java.awt.Dimension
-import java.util.logging.Level
-import javax.swing.SwingUtilities
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
@@ -13,13 +10,18 @@ import javafx.scene.control.Label
 import javafx.scene.layout.VBox
 import net.corda.client.rpc.notUsed
 import net.corda.demobench.explorer.ExplorerController
-import net.corda.demobench.model.*
+import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.model.NodeController
+import net.corda.demobench.model.NodeState
 import net.corda.demobench.pty.R3Pty
 import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import tornadofx.Fragment
+import java.awt.Dimension
+import java.util.logging.Level
+import javax.swing.SwingUtilities
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -139,8 +141,8 @@ class NodeTerminalView : Fragment() {
             val verifiedTx = ops.verifiedTransactions()
             val statesInVault = ops.vaultAndUpdates()
             val cashBalances = ops.getCashBalances().entries.joinToString(
-                separator = ", ",
-                transform = { e -> e.value.toString() }
+                    separator = ", ",
+                    transform = { e -> e.value.toString() }
             )
 
             Platform.runLater {

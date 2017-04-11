@@ -1,11 +1,11 @@
 package net.corda.demobench.explorer
 
-import java.io.IOException
-import java.util.concurrent.Executors
 import net.corda.core.utilities.loggerFor
-import net.corda.demobench.readErrorLines
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.forceDirectory
+import net.corda.demobench.readErrorLines
+import java.io.IOException
+import java.util.concurrent.Executors
 
 class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
     private companion object {

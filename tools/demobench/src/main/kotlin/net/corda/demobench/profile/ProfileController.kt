@@ -2,22 +2,27 @@ package net.corda.demobench.profile
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import javafx.stage.FileChooser
+import javafx.stage.FileChooser.ExtensionFilter
+import net.corda.demobench.model.InstallConfig
+import net.corda.demobench.model.InstallFactory
+import net.corda.demobench.model.JVMConfig
+import net.corda.demobench.model.NodeController
+import net.corda.demobench.plugin.PluginController
+import net.corda.demobench.plugin.inPluginsDir
+import net.corda.demobench.plugin.isPlugin
+import tornadofx.*
 import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.function.BiPredicate
 import java.util.logging.Level
 import java.util.stream.StreamSupport
-import javafx.stage.FileChooser
-import javafx.stage.FileChooser.ExtensionFilter
-import net.corda.demobench.model.*
-import net.corda.demobench.plugin.PluginController
-import net.corda.demobench.plugin.inPluginsDir
-import net.corda.demobench.plugin.isPlugin
-import tornadofx.Controller
 
 class ProfileController : Controller() {
 
@@ -93,40 +98,40 @@ class ProfileController : Controller() {
         FileSystems.newFileSystem(chosen.toPath(), null).use { fs ->
             // Identify the nodes first...
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
-                .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() && attr.isRegularFile }) }
-                .map { file ->
-                    try {
-                        val config = installFactory.toInstallConfig(parse(file), baseDir)
-                        log.info("Loaded: $file")
-                        config
-                    } catch (e: Exception) {
-                        log.log(Level.SEVERE, "Failed to parse '$file': ${e.message}", e)
-                        throw e
-                    }
-                // Java seems to "walk" through the ZIP file backwards.
-                // So add new config to the front of the list, so that
-                // our final list is ordered to match the file.
-                }.forEach { configs.addFirst(it) }
+                    .flatMap { Files.find(it, 2, BiPredicate { p, attr -> "node.conf" == p?.fileName.toString() && attr.isRegularFile }) }
+                    .map { file ->
+                        try {
+                            val config = installFactory.toInstallConfig(parse(file), baseDir)
+                            log.info("Loaded: $file")
+                            config
+                        } catch (e: Exception) {
+                            log.log(Level.SEVERE, "Failed to parse '$file': ${e.message}", e)
+                            throw e
+                        }
+                        // Java seems to "walk" through the ZIP file backwards.
+                        // So add new config to the front of the list, so that
+                        // our final list is ordered to match the file.
+                    }.forEach { configs.addFirst(it) }
 
             val nodeIndex = configs.map { it.key to it }.toMap()
 
             // Now extract all of the plugins from the ZIP file,
             // and copy them to a temporary location.
             StreamSupport.stream(fs.rootDirectories.spliterator(), false)
-                .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inPluginsDir() && p.isPlugin() && attr.isRegularFile }) }
-                .forEach { plugin ->
-                    val config = nodeIndex[plugin.getName(0).toString()] ?: return@forEach
+                    .flatMap { Files.find(it, 3, BiPredicate { p, attr -> p.inPluginsDir() && p.isPlugin() && attr.isRegularFile }) }
+                    .forEach { plugin ->
+                        val config = nodeIndex[plugin.getName(0).toString()] ?: return@forEach
 
-                    try {
-                        val pluginDir = Files.createDirectories(config.pluginDir)
-                        Files.copy(plugin, pluginDir.resolve(plugin.fileName.toString()))
-                        log.info("Loaded: $plugin")
-                    } catch (e: Exception) {
-                        log.log(Level.SEVERE, "Failed to extract '$plugin': ${e.message}", e)
-                        configs.forEach { c -> c.deleteBaseDir() }
-                        throw e
+                        try {
+                            val pluginDir = Files.createDirectories(config.pluginDir)
+                            Files.copy(plugin, pluginDir.resolve(plugin.fileName.toString()))
+                            log.info("Loaded: $plugin")
+                        } catch (e: Exception) {
+                            log.log(Level.SEVERE, "Failed to extract '$plugin': ${e.message}", e)
+                            configs.forEach { c -> c.deleteBaseDir() }
+                            throw e
+                        }
                     }
-                }
         }
 
         return configs

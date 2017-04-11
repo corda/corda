@@ -1,11 +1,11 @@
 package net.corda.demobench.model
 
+import tornadofx.*
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
 import java.util.*
 import java.util.logging.Level
-import tornadofx.Controller
 
 class ServiceController(resourceName: String = "/services.conf") : Controller() {
 

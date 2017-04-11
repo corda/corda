@@ -1,8 +1,5 @@
 package net.corda.demobench.views
 
-import java.nio.file.Path
-import java.text.DecimalFormat
-import java.util.*
 import javafx.application.Platform
 import javafx.scene.control.SelectionMode.MULTIPLE
 import javafx.scene.input.KeyCode
@@ -12,6 +9,9 @@ import javafx.util.converter.NumberStringConverter
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
+import java.nio.file.Path
+import java.text.DecimalFormat
+import java.util.*
 
 class NodeTabView : Fragment() {
     override val root = stackpane {}

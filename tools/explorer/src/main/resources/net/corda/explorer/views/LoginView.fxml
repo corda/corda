@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
 <DialogPane styleClass="login" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112-ea"
             xmlns:fx="http://javafx.com/fxml/1">
     <padding>

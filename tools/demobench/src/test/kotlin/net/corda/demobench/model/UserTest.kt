@@ -17,9 +17,9 @@ class UserTest {
     @Test
     fun createFromMap() {
         val map = mapOf(
-            "username" to "MyName",
-            "password" to "MyPassword",
-            "permissions" to listOf("Flow.MyFlow")
+                "username" to "MyName",
+                "password" to "MyPassword",
+                "permissions" to listOf("Flow.MyFlow")
         )
         val user = toUser(map)
         assertEquals("MyName", user.username)

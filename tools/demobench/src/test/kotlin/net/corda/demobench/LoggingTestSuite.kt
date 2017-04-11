@@ -13,9 +13,9 @@ import org.junit.runners.Suite
  */
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
-    ServiceControllerTest::class,
-    NodeControllerTest::class,
-    JVMConfigTest::class
+        ServiceControllerTest::class,
+        NodeControllerTest::class,
+        JVMConfigTest::class
 )
 class LoggingTestSuite {
 

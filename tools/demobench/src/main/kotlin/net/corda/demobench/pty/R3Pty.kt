@@ -1,11 +1,11 @@
 package net.corda.demobench.pty
 
-import com.jediterm.terminal.ui.*
+import com.jediterm.terminal.ui.JediTermWidget
+import com.jediterm.terminal.ui.UIUtil
 import com.jediterm.terminal.ui.settings.SettingsProvider
 import com.pty4j.PtyProcess
 import net.corda.core.utilities.loggerFor
-
-import java.awt.*
+import java.awt.Dimension
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.Executors

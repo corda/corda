@@ -1,14 +1,14 @@
 package net.corda.demobench.rpc
 
 import com.google.common.net.HostAndPort
-import java.util.*
-import java.util.concurrent.TimeUnit.SECONDS
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
+import java.util.*
+import java.util.concurrent.TimeUnit.SECONDS
 
-class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit): AutoCloseable {
+class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
 
     private companion object {
         val log = loggerFor<NodeRPC>()
@@ -33,7 +33,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
                     start()
 
                     // Schedule a new task that will refresh the display once per second.
-                    timer.schedule(object: TimerTask() {
+                    timer.schedule(object : TimerTask() {
                         override fun run() {
                             invoke(ops)
                         }
