@@ -16,7 +16,7 @@ import java.util.*
 abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T : Any> : Clause<S, C, Issued<T>>() {
 
     private companion object {
-        val log = loggerFor<AbstractConserveAmount<*,*,*>>()
+        val log = loggerFor<AbstractConserveAmount<*, *, *>>()
     }
 
     /**

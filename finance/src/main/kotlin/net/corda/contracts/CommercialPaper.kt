@@ -104,9 +104,9 @@ class CommercialPaper : Contract {
     interface Clauses {
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
                 AnyOf(
-                    Redeem(),
-                    Move(),
-                    Issue())) {
+                        Redeem(),
+                        Move(),
+                        Issue())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }

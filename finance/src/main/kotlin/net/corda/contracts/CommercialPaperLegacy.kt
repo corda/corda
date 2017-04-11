@@ -106,7 +106,7 @@ class CommercialPaperLegacy : Contract {
                     }
                 }
 
-                // TODO: Think about how to evolve contracts over time with new commands.
+            // TODO: Think about how to evolve contracts over time with new commands.
                 else -> throw IllegalArgumentException("Unrecognised command")
             }
         }
