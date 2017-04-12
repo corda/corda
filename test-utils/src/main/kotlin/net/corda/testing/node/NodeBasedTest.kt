@@ -18,6 +18,7 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.testing.getFreeLocalPorts
+import org.apache.logging.log4j.Level
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -38,6 +39,10 @@ abstract class NodeBasedTest {
     private var _networkMapNode: Node? = null
 
     val networkMapNode: Node get() = _networkMapNode ?: startNetworkMapNode()
+
+    init {
+        System.setProperty("consoleLogLevel", Level.DEBUG.name().toLowerCase())
+    }
 
     /**
      * Stops the network map node and all the nodes started by [startNode]. This is called automatically after each test

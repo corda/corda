@@ -1,9 +1,13 @@
 package net.corda.traderdemo
 
 import com.google.common.util.concurrent.Futures
+import net.corda.contracts.CommercialPaper
+import net.corda.contracts.asset.Cash
 import net.corda.contracts.testing.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.USD
+import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -23,6 +27,12 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
     private companion object {
         val logger = loggerFor<TraderDemoClientApi>()
     }
+
+    val cashCount: Int get() = rpc.vaultAndUpdates().first.filterStatesOfType<Cash.State>().size
+
+    val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalances()[USD]!!
+
+    val commercialPaperCount: Int get() = rpc.vaultAndUpdates().first.filterStatesOfType<CommercialPaper.State>().size
 
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS) {
         val bankOfCordaParty = rpc.partyFromName(BOC.name)
