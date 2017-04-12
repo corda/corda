@@ -96,7 +96,7 @@ interface DriverDSLExposedInterface {
      *
      * @param handle The handle for the node that this webserver connects to via RPC.
      */
-    fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort>
+    fun startWebserver(handle: NodeHandle): ListenableFuture<WebserverHandle>
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
@@ -121,6 +121,11 @@ data class NodeHandle(
 ) {
     fun rpcClientToNode(): CordaRPCClient = CordaRPCClient(configuration.rpcAddress!!)
 }
+
+data class WebserverHandle(
+        val listenAddress: HostAndPort,
+        val process: Process
+)
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
@@ -228,8 +233,16 @@ fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
+class ListenProcessDeathException(message: String) : Exception(message)
+
+/**
+ * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
+ */
+fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
+        if (!listenProcess.isAlive) {
+            throw ListenProcessDeathException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+        }
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
             Unit
@@ -265,12 +278,17 @@ fun <A> poll(
     }
     var counter = 0
     fun schedulePoll() {
-        executorService.schedule({
+        executorService.schedule(task@ {
             counter++
             if (counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollIntervalMs * warnCount / 1000.0} seconds...")
             }
-            val result = check()
+            val result = try {
+                check()
+            } catch (t: Throwable) {
+                resultFuture.setException(t)
+                return@task
+            }
             if (result == null) {
                 schedulePoll()
             } else {
@@ -482,7 +500,7 @@ class DriverDSL(
         }
     }
 
-    private fun queryWebserver(handle: NodeHandle, process: Process): HostAndPort {
+    private fun queryWebserver(handle: NodeHandle, process: Process): WebserverHandle {
         val protocol = if (handle.configuration.useHTTPS) "https://" else "http://"
         val url = URL("$protocol${handle.webAddress}/api/status")
         val client = OkHttpClient.Builder().connectTimeout(5, SECONDS).readTimeout(60, SECONDS).build()
@@ -490,7 +508,7 @@ class DriverDSL(
         while (process.isAlive) try {
             val response = client.newCall(Request.Builder().url(url).build()).execute()
             if (response.isSuccessful && (response.body().string() == "started")) {
-                return handle.webAddress
+                return WebserverHandle(handle.webAddress, process)
             }
         } catch(e: ConnectException) {
             log.debug("Retrying webserver info at ${handle.webAddress}")
@@ -499,13 +517,11 @@ class DriverDSL(
         throw IllegalStateException("Webserver at ${handle.webAddress} has died")
     }
 
-    override fun startWebserver(handle: NodeHandle): ListenableFuture<HostAndPort> {
+    override fun startWebserver(handle: NodeHandle): ListenableFuture<WebserverHandle> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val process = DriverDSL.startWebserver(executorService, handle, debugPort)
-        registerProcess(process)
-        return process.map {
-            queryWebserver(handle, it)
-        }
+        val processFuture = DriverDSL.startWebserver(executorService, handle, debugPort)
+        registerProcess(processFuture)
+        return processFuture.map { queryWebserver(handle, it) }
     }
 
     override fun start() {
@@ -577,7 +593,7 @@ class DriverDSL(
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
                         workingDirectory = nodeConf.baseDirectory
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.p2pAddress).map { process } }
+            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.p2pAddress, process).map { process } }
         }
 
         private fun startWebserver(
@@ -594,7 +610,7 @@ class DriverDSL(
                         extraJvmArguments = listOf("-Dname=node-${handle.configuration.p2pAddress}-webserver"),
                         errorLogPath = Paths.get("error.$className.log")
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress).map { process } }
+            }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
         }
     }
 }

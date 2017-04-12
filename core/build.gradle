@@ -42,6 +42,7 @@ dependencies {
 
     // SLF4J: commons-logging bindings for a SLF4J back end
     compile "org.slf4j:jcl-over-slf4j:$slf4j_version"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
     compile "org.slf4j:slf4j-api:$slf4j_version"
 
     // AssertJ: for fluent assertions for testing

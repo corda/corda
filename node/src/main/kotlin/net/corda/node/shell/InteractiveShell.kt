@@ -80,8 +80,6 @@ object InteractiveShell {
         this.node = node
         var runSSH = runSSHServer
 
-        Logger.getLogger("").level = Level.OFF   // TODO: Is this really needed?
-
         val config = Properties()
         if (runSSH) {
             // TODO: Finish and enable SSH access.

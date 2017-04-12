@@ -9,6 +9,7 @@ import net.corda.core.*
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.Version
 import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.LogHelper.withLevel
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.shell.InteractiveShell
@@ -17,10 +18,12 @@ import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
+import org.slf4j.bridge.SLF4JBridgeHandler
+import java.io.*
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
-import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Locale
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -34,9 +37,21 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 
 val LOGS_DIRECTORY_NAME = "logs"
 
+private fun initLogging(cmdlineOptions: CmdLineOptions) {
+    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+    if (cmdlineOptions.logToConsole) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        renderBasicInfoToConsole = false
+    }
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
+    SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
+    SLF4JBridgeHandler.install()
+}
+
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
-    checkJavaVersion()
+    assertCanNormalizeEmptyPath()
 
     val argsParser = ArgsParser()
 
@@ -48,13 +63,8 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    // Set up logging. These properties are referenced from the XML config file.
-    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase()
-    System.setProperty("defaultLogLevel", loggingLevel)
-    if (cmdlineOptions.logToConsole) {
-        System.setProperty("consoleLogLevel", loggingLevel)
-        renderBasicInfoToConsole = false
-    }
+    initLogging(cmdlineOptions)
+    disableJavaDeserialization() // Should be after initLogging to avoid TMI.
 
     // Manifest properties are only available if running from the corda jar
     fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
@@ -78,9 +88,6 @@ fun main(args: Array<String>) {
     }
 
     drawBanner(nodeVersionInfo)
-
-    val dir: Path = cmdlineOptions.baseDirectory
-    System.setProperty("log-path", (dir / "logs").toString())
 
     val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
@@ -137,7 +144,7 @@ fun main(args: Array<String>) {
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
             node.startupComplete then {
                 try {
-                    InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
+                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
                     log.error("Shell failed to start", e)
                 }
@@ -155,15 +162,33 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
-private fun checkJavaVersion() {
+private fun assertCanNormalizeEmptyPath() {
     // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
     try {
         Paths.get("").normalize()
     } catch (e: ArrayIndexOutOfBoundsException) {
-        println("""
+        javaIsTooOld()
+    }
+}
+
+private fun javaIsTooOld(): Nothing {
+    println("""
 You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
 Corda will now exit...""")
-        exitProcess(1)
+    exitProcess(1)
+}
+
+private fun disableJavaDeserialization() {
+    // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we use the system property interface for portability:
+    System.setProperty("jdk.serialFilter", "maxbytes=0")
+    // Attempt a deserialization so that ObjectInputFilter (permanently) inits itself:
+    val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
+    try {
+        // Turn down logging so users don't see REJECTED this one time:
+        withLevel("java.io.serialization", "WARN") { ObjectInputStream(data.inputStream()).use { it.readObject() } }
+        javaIsTooOld()
+    } catch (e: InvalidClassException) {
+        // Good, our system property is honoured (assuming ObjectInputFilter wasn't inited earlier).
     }
 }
 

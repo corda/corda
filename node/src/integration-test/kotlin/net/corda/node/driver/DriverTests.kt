@@ -1,9 +1,9 @@
 package net.corda.node.driver
 
+import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.list
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.readLines
 import net.corda.core.utilities.DUMMY_BANK_A
@@ -19,54 +19,51 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class DriverTests {
-    companion object {
-        val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
-        fun nodeMustBeUp(nodeInfo: NodeInfo) {
+    companion object {
+
+        private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
+
+        private fun nodeMustBeUp(handleFuture: ListenableFuture<NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
             // Check that the port is bound
-            addressMustBeBound(executorService, hostAndPort)
+            addressMustBeBound(executorService, hostAndPort, process)
         }
 
-        fun nodeMustBeDown(nodeInfo: NodeInfo) {
-            val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
+        private fun nodeMustBeDown(handle: NodeHandle) {
+            val hostAndPort = ArtemisMessagingComponent.toHostAndPort(handle.nodeInfo.address)
             // Check that the port is bound
             addressMustNotBeBound(executorService, hostAndPort)
         }
+
     }
 
     @Test
     fun `simple node startup and shutdown`() {
-        val (notary, regulator) = driver {
+        val handles = driver {
             val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
             val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
-
-            nodeMustBeUp(notary.getOrThrow().nodeInfo)
-            nodeMustBeUp(regulator.getOrThrow().nodeInfo)
-            Pair(notary.getOrThrow(), regulator.getOrThrow())
+            listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
-        nodeMustBeDown(notary.nodeInfo)
-        nodeMustBeDown(regulator.nodeInfo)
+        handles.map { nodeMustBeDown(it) }
     }
 
     @Test
     fun `starting node with no services`() {
         val noService = driver {
             val noService = startNode(DUMMY_BANK_A.name)
-            nodeMustBeUp(noService.getOrThrow().nodeInfo)
-            noService.getOrThrow()
+            nodeMustBeUp(noService)
         }
-        nodeMustBeDown(noService.nodeInfo)
+        nodeMustBeDown(noService)
     }
 
     @Test
     fun `random free port allocation`() {
         val nodeHandle = driver(portAllocation = PortAllocation.RandomFree) {
             val nodeInfo = startNode(DUMMY_BANK_A.name)
-            nodeMustBeUp(nodeInfo.getOrThrow().nodeInfo)
-            nodeInfo.getOrThrow()
+            nodeMustBeUp(nodeInfo)
         }
-        nodeMustBeDown(nodeHandle.nodeInfo)
+        nodeMustBeDown(nodeHandle)
     }
 
     @Test
@@ -81,4 +78,5 @@ class DriverTests {
             assertThat(debugLinesPresent).isTrue()
         }
     }
+
 }
