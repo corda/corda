@@ -48,6 +48,12 @@ class SerializationOutputTests {
 
     data class GenericFoo<T>(val bar: String, val pub: T)
 
+    data class TreeMapWrapper(val tree: TreeMap<Int, Foo>)
+
+    data class NavigableMapWrapper(val tree: NavigableMap<Int, Foo>)
+
+    data class SortedSetWrapper(val set: SortedSet<Int>)
+
     private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
@@ -161,6 +167,34 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test generic foo`() {
         val obj = GenericFoo("Fred", "Ginger")
+        serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test TreeMap`() {
+        val obj = TreeMap<Int, Foo>()
+        obj[456] = Foo("Fred", 123)
+        serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test TreeMap property`() {
+        val obj = TreeMapWrapper(TreeMap<Int, Foo>())
+        obj.tree[456] = Foo("Fred", 123)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test NavigableMap property`() {
+        val obj = NavigableMapWrapper(TreeMap<Int, Foo>())
+        obj.tree[456] = Foo("Fred", 123)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test SortedSet property`() {
+        val obj = SortedSetWrapper(TreeSet<Int>())
+        obj.set += 456
         serdes(obj)
     }
 }

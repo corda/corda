@@ -333,9 +333,11 @@ fun hashType(type: Type, alreadySeen: MutableSet<Type> = mutableSetOf()): Secure
                 SecureHash.sha256(type.name).hashConcat(INTERFACE_HASH)
             } else if (SerializerFactory.isPrimitive(type)) {
                 SecureHash.sha256(type.name)
+            } else if (List::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) {
+                SecureHash.sha256(type.name)
             } else {
                 // Hash the class + properties
-                propertiesForSerialization(constructorForDeserialization(type)).fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.readMethod.returnType, alreadySeen)).hashConcat(SecureHash.sha256(param.name)).hashConcat(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH) }
+                propertiesForSerialization(constructorForDeserialization(type)).fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(hashType(param.readMethod.genericReturnType, alreadySeen)).hashConcat(SecureHash.sha256(param.name)).hashConcat(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH) }
             }
         } else if (type is ParameterizedType) {
             // Hash the rawType + params

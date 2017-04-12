@@ -5,11 +5,26 @@ import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.LinkedHashMap
 
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = "${hashType(type)}"
+
+    companion object {
+        private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
+                Map::class.java to { map -> map },
+                SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
+                NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
+        )
+    }
+
+    private val concreteBuilder: (Map<*, *>) -> Map<*, *> = findConcreteType(declaredType.rawType as Class<*>)
+
+    private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
+        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
+    }
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 
@@ -42,6 +57,6 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
         // Can we verify the entries in the map?
-        return (obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }.toMap()
+        return concreteBuilder((obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }.toMap())
     }
 }

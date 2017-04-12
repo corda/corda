@@ -29,9 +29,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 val rawType = declaredType.rawType
                 if (rawType is Class<*>) {
                     checkParameterisedTypesConcrete(declaredType.actualTypeArguments)
-                    if (rawType.isAssignableFrom(List::class.java)) {
-                        makeListSerializer(declaredType)
-                    } else if (rawType.isAssignableFrom(Map::class.java)) {
+                    if (Collection::class.java.isAssignableFrom(rawType)) {
+                        makeCollectionSerializer(declaredType)
+                    } else if (Map::class.java.isAssignableFrom(rawType)) {
                         makeMapSerializer(declaredType)
                     } else {
                         throw NotSerializableException("Declared types of $declaredType are not supported.")
@@ -42,9 +42,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
             }
         } else if (declaredType is Class<*>) {
             // Straight classes allowed
-            if (declaredType.isAssignableFrom(List::class.java)) {
-                return makeListSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType)))
-            } else if (declaredType.isAssignableFrom(Map::class.java)) {
+            if (Collection::class.java.isAssignableFrom(declaredType)) {
+                return makeCollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType)))
+            } else if (Map::class.java.isAssignableFrom(declaredType)) {
                 return makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType)))
             } else {
                 return makeClassSerializer(actualType ?: declaredType)
@@ -138,8 +138,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeListSerializer(declaredType: ParameterizedType): Serializer {
-        return ListSerializer(declaredType)
+    private fun makeCollectionSerializer(declaredType: ParameterizedType): Serializer {
+        return CollectionSerializer(declaredType)
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): Serializer {
