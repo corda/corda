@@ -107,7 +107,6 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
-    testCompile "com.nhaarman:mockito-kotlin:1.1.0"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
 
