@@ -5,7 +5,7 @@ import net.corda.core.node.services.UniquenessException
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.generateStateRef
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -39,7 +39,7 @@ class PersistentUniquenessProviderTests {
     }
 
     @Test fun `should commit a transaction with unused inputs without exception`() {
-        databaseTransaction(database) {
+        database.transaction {
             val provider = PersistentUniquenessProvider()
             val inputState = generateStateRef()
 
@@ -48,7 +48,7 @@ class PersistentUniquenessProviderTests {
     }
 
     @Test fun `should report a conflict for a transaction with previously used inputs`() {
-        databaseTransaction(database) {
+        database.transaction {
             val provider = PersistentUniquenessProvider()
             val inputState = generateStateRef()
 

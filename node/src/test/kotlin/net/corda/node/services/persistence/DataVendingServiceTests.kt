@@ -13,7 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.node.services.persistence.DataVending.Service.NotifyTransactionHandler
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -48,7 +48,7 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
-        databaseTransaction(vaultServiceNode.database) {
+        vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
@@ -78,7 +78,7 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
-        databaseTransaction(vaultServiceNode.database) {
+        vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)

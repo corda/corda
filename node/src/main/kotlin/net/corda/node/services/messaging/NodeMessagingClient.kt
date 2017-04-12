@@ -338,7 +338,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // Note that handlers may re-enter this class. We aren't holding any locks and methods like
             // start/run/stop have re-entrancy assertions at the top, so it is OK.
             nodeExecutor.fetchFrom {
-                databaseTransaction(database) {
+                database.transaction {
                     if (msg.uniqueMessageId in processedMessages) {
                         log.trace { "Discard duplicate message ${msg.uniqueMessageId} for ${msg.topicSession}" }
                     } else {

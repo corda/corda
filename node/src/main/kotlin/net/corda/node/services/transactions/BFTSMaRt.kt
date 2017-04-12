@@ -26,7 +26,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Server
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
 import java.util.*
 
@@ -144,7 +144,7 @@ object BFTSMaRt {
 
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        val commitLog = databaseTransaction(db) { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        val commitLog = db.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
 
         init {
             // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
@@ -171,7 +171,7 @@ object BFTSMaRt {
         protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
-            databaseTransaction(db) {
+            db.transaction {
                 states.forEach { state ->
                     commitLog[state]?.let { conflicts[state] = it }
                 }
@@ -197,7 +197,7 @@ object BFTSMaRt {
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            val mySigningKey = databaseTransaction(db) { services.notaryIdentityKey }
+            val mySigningKey = db.transaction { services.notaryIdentityKey }
             return mySigningKey.signWithECDSA(bytes)
         }
 
@@ -207,7 +207,7 @@ object BFTSMaRt {
         override fun getSnapshot(): ByteArray {
             // LinkedHashMap for deterministic serialisation
             val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            databaseTransaction(db) {
+            db.transaction {
                 commitLog.forEach { m[it.key] = it.value }
             }
             return m.serialize().bytes
@@ -215,7 +215,7 @@ object BFTSMaRt {
 
         override fun installSnapshot(bytes: ByteArray) {
             val m = bytes.deserialize<LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>>()
-            databaseTransaction(db) {
+            db.transaction {
                 commitLog.clear()
                 commitLog.putAll(m)
             }

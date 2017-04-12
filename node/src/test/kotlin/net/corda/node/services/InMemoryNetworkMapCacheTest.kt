@@ -3,7 +3,7 @@ package net.corda.node.services
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
 import java.math.BigInteger
@@ -30,7 +30,7 @@ class InMemoryNetworkMapCacheTest {
         // Node A currently knows only about itself, so this returns node A
         assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeA.info)
 
-        databaseTransaction(nodeA.database) {
+        nodeA.database.transaction {
             nodeA.netMapCache.addNode(nodeB.info)
         }
         // The details of node B write over those for node A

@@ -9,7 +9,7 @@ import net.corda.core.serialization.opaque
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.ResolveTransactionsFlow
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP_PUBKEY
@@ -57,7 +57,7 @@ class ResolveTransactionsFlowTest {
         net.runNetwork()
         val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
-        databaseTransaction(b.database) {
+        b.database.transaction {
             assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
             assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
         }
@@ -80,7 +80,7 @@ class ResolveTransactionsFlowTest {
         val future = b.services.startFlow(p).resultFuture
         net.runNetwork()
         future.getOrThrow()
-        databaseTransaction(b.database) {
+        b.database.transaction {
             assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
             // But stx2 wasn't inserted, just stx1.
             assertNull(b.storage.validatedTransactions.getTransaction(stx2.id))
@@ -97,7 +97,7 @@ class ResolveTransactionsFlowTest {
             val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP_PUBKEY)
                     .addSignatureUnchecked(NullSignature)
                     .toSignedTransaction(false)
-            databaseTransaction(a.database) {
+            a.database.transaction {
                 a.services.recordTransactions(stx)
             }
             cursor = stx
@@ -125,7 +125,7 @@ class ResolveTransactionsFlowTest {
             toSignedTransaction()
         }
 
-        databaseTransaction(a.database) {
+        a.database.transaction {
             a.services.recordTransactions(stx2, stx3)
         }
 
@@ -147,7 +147,7 @@ class ResolveTransactionsFlowTest {
             return bs.toByteArray().opaque().open()
         }
         // TODO: this operation should not require an explicit transaction
-        val id = databaseTransaction(a.database) {
+        val id = a.database.transaction {
             a.services.storageService.attachments.importAttachment(makeJar())
         }
         val stx2 = makeTransactions(withAttachment = id).second
@@ -157,7 +157,7 @@ class ResolveTransactionsFlowTest {
         future.getOrThrow()
 
         // TODO: this operation should not require an explicit transaction
-        databaseTransaction(b.database) {
+        b.database.transaction {
             assertNotNull(b.services.storageService.attachments.openAttachment(id))
         }
     }
@@ -178,7 +178,7 @@ class ResolveTransactionsFlowTest {
             it.signWith(DUMMY_NOTARY_KEY)
             it.toSignedTransaction()
         }
-        databaseTransaction(a.database) {
+        a.database.transaction {
             a.services.recordTransactions(dummy1, dummy2)
         }
         return Pair(dummy1, dummy2)

@@ -18,7 +18,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
@@ -68,7 +68,7 @@ class NodeInterestRatesTest {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
+        database.transaction {
             oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
         }
     }
@@ -80,7 +80,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query successfully`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
@@ -91,7 +91,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query with one success and one missing`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
             val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
@@ -101,7 +101,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query successfully with interpolated rate`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
@@ -112,7 +112,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `rate missing and unable to interpolate`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
             assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
         }
@@ -120,14 +120,14 @@ class NodeInterestRatesTest {
 
     @Test
     fun `empty query`() {
-        databaseTransaction(database) {
+        database.transaction {
             assertFailsWith<IllegalArgumentException> { oracle.query(emptyList(), clock.instant()) }
         }
     }
 
     @Test
     fun `refuse to sign with no relevant commands`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val wtx1 = tx.toWireTransaction()
             fun filterAllOutputs(elem: Any): Boolean {
@@ -149,7 +149,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `sign successfully`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             tx.addCommand(fix, oracle.identity.owningKey)
@@ -163,7 +163,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `do not sign with unknown fix`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, "0.6789".bd)
@@ -177,7 +177,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `do not sign too many leaves`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             fun filtering(elem: Any): Boolean {
@@ -207,7 +207,7 @@ class NodeInterestRatesTest {
         val net = MockNetwork()
         val n1 = net.createNotaryNode()
         val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
-        databaseTransaction(n2.database) {
+        n2.database.transaction {
             n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
         }
         val tx = TransactionType.General.Builder(null)

@@ -18,7 +18,7 @@ import net.corda.node.internal.CordaRPCOpsImpl
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.nodeapi.CURRENT_RPC_USER
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
@@ -63,7 +63,7 @@ class CordaRPCOpsImplTest {
                 startFlowPermission<CashPaymentFlow>()
         )))
 
-        databaseTransaction(aliceNode.database) {
+        aliceNode.database.transaction {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
             transactions = rpc.verifiedTransactions().second
             vaultUpdates = rpc.vaultAndUpdates().second
@@ -76,7 +76,7 @@ class CordaRPCOpsImplTest {
         val ref = OpaqueBytes(ByteArray(1) { 1 })
 
         // Check the monitoring service wallet is empty
-        databaseTransaction(aliceNode.database) {
+        aliceNode.database.transaction {
             assertFalse(aliceNode.services.vaultService.unconsumedStates<ContractState>().iterator().hasNext())
         }
 

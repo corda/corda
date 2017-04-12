@@ -13,8 +13,8 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
 import net.corda.testing.MOCK_NODE_VERSION_INFO
+import net.corda.node.utilities.transaction
 import net.corda.testing.freeLocalHostAndPort
 import org.jetbrains.exposed.sql.Database
 import java.io.Closeable
@@ -35,7 +35,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val executor = ServiceAffinityExecutor(config.myLegalName, 1)
     val broker = ArtemisMessagingServer(config, address, rpcAddress, InMemoryNetworkMapCache(), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
-    val net = databaseTransaction(database) {
+    val net = database.transaction {
         NodeMessagingClient(
                 config,
                 MOCK_NODE_VERSION_INFO,

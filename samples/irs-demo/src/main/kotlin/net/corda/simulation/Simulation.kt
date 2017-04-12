@@ -18,7 +18,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -128,7 +128,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                 override fun start(): MockNetwork.MockNode {
                     super.start()
                     javaClass.classLoader.getResourceAsStream("example.rates.txt").use {
-                        databaseTransaction(database) {
+                        database.transaction {
                             findService<NodeInterestRates.Service>().upload(it)
                         }
                     }

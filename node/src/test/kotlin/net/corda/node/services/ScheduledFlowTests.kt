@@ -14,7 +14,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -115,10 +115,10 @@ class ScheduledFlowTests {
     fun `create and run scheduled flow then wait for result`() {
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
         net.waitQuiescent()
-        val stateFromA = databaseTransaction(nodeA.database) {
+        val stateFromA = nodeA.database.transaction {
             nodeA.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
         }
-        val stateFromB = databaseTransaction(nodeB.database) {
+        val stateFromB = nodeB.database.transaction {
             nodeB.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
         }
         assertEquals(stateFromA, stateFromB, "Must be same copy on both nodes")
@@ -133,10 +133,10 @@ class ScheduledFlowTests {
             nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity))
         }
         net.waitQuiescent()
-        val statesFromA = databaseTransaction(nodeA.database) {
+        val statesFromA = nodeA.database.transaction {
             nodeA.services.vaultService.linearHeadsOfType<ScheduledState>()
         }
-        val statesFromB = databaseTransaction(nodeB.database) {
+        val statesFromB = nodeB.database.transaction {
             nodeB.services.vaultService.linearHeadsOfType<ScheduledState>()
         }
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")

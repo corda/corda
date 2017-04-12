@@ -28,7 +28,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.StorageServiceImpl
 import net.corda.node.services.persistence.checkpoints
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
@@ -89,11 +89,11 @@ class TwoPartyTradeFlowTests {
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
 
-            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+            val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
@@ -110,11 +110,11 @@ class TwoPartyTradeFlowTests {
             aliceNode.stop()
             bobNode.stop()
 
-            databaseTransaction(aliceNode.database) {
+            aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
             aliceNode.manuallyCloseDB()
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
             bobNode.manuallyCloseDB()
@@ -137,10 +137,10 @@ class TwoPartyTradeFlowTests {
 
             net.runNetwork() // Clear network map registration messages
 
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
-            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+            val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
@@ -160,12 +160,12 @@ class TwoPartyTradeFlowTests {
             bobNode.pumpReceive()
 
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
             }
 
             val storage = bobNode.storage.validatedTransactions
-            val bobTransactionsBeforeCrash = databaseTransaction(bobNode.database) {
+            val bobTransactionsBeforeCrash = bobNode.database.transaction {
                 (storage as DBTransactionStorage).transactions
             }
             assertThat(bobTransactionsBeforeCrash).isNotEmpty
@@ -197,14 +197,14 @@ class TwoPartyTradeFlowTests {
             assertThat(bobFuture.getOrThrow()).isEqualTo(aliceFuture.getOrThrow())
 
             assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            databaseTransaction(aliceNode.database) {
+            aliceNode.database.transaction {
                 assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
             }
 
-            databaseTransaction(bobNode.database) {
+            bobNode.database.transaction {
                 val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
                 assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
             }
@@ -255,7 +255,7 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = databaseTransaction(aliceNode.database) {
+            val attachmentID = aliceNode.database.transaction {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
@@ -264,7 +264,7 @@ class TwoPartyTradeFlowTests {
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
-            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+            val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
@@ -294,7 +294,7 @@ class TwoPartyTradeFlowTests {
                 }
 
                 // Bob has downloaded the attachment.
-                databaseTransaction(bobNode.database) {
+                bobNode.database.transaction {
                     bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
                         it.nextJarEntry
                         val contents = it.reader().readText()
@@ -356,7 +356,7 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = databaseTransaction(aliceNode.database) {
+            val attachmentID = aliceNode.database.transaction {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
@@ -365,7 +365,7 @@ class TwoPartyTradeFlowTests {
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
 
-            val alicesFakePaper = databaseTransaction(aliceNode.database) {
+            val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
@@ -375,11 +375,7 @@ class TwoPartyTradeFlowTests {
             net.runNetwork() // Clear network map registration messages
 
             val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
-            // TODO: Had to put this temp val here to avoid compiler crash. Put back inside [databaseTransaction] if the compiler stops crashing.
-            val aliceMappingsStorage = aliceNode.storage.stateMachineRecordedTransactionMapping
-            val aliceTxMappings = databaseTransaction(aliceNode.database) {
-                aliceMappingsStorage.track().second
-            }
+            val aliceTxMappings = with(aliceNode) { database.transaction { storage.stateMachineRecordedTransactionMapping.track().second } }
             val aliceSmId = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
                     "alice's paper".outputStateAndRef()).sellerId
 
@@ -463,7 +459,7 @@ class TwoPartyTradeFlowTests {
 
         val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
-        val alicesFakePaper = databaseTransaction(aliceNode.database) {
+        val alicesFakePaper = aliceNode.database.transaction {
             fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
                     1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
         }
@@ -496,13 +492,13 @@ class TwoPartyTradeFlowTests {
             notaryNode: MockNetwork.MockNode,
             vararg extraKeys: KeyPair): Map<SecureHash, SignedTransaction> {
         val signed: List<SignedTransaction> = signAll(wtxToSign, extraKeys.toList() + notaryNode.services.notaryIdentityKey + DUMMY_CASH_ISSUER_KEY)
-        return databaseTransaction(node.database) {
+        return node.database.transaction {
             node.services.recordTransactions(signed)
             val validatedTransactions = node.services.storageService.validatedTransactions
             if (validatedTransactions is RecordingTransactionStorage) {
                 validatedTransactions.records.clear()
             }
-            return@databaseTransaction signed.associateBy { it.id }
+            signed.associateBy { it.id }
         }
     }
 
@@ -581,7 +577,7 @@ class TwoPartyTradeFlowTests {
 
     class RecordingTransactionStorage(val database: Database, val delegate: TransactionStorage) : TransactionStorage {
         override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
-            return databaseTransaction(database) {
+            return database.transaction {
                 delegate.track()
             }
         }
@@ -591,7 +587,7 @@ class TwoPartyTradeFlowTests {
             get() = delegate.updates
 
         override fun addTransaction(transaction: SignedTransaction): Boolean {
-            databaseTransaction(database) {
+            database.transaction {
                 records.add(TxRecord.Add(transaction))
                 delegate.addTransaction(transaction)
             }
@@ -599,7 +595,7 @@ class TwoPartyTradeFlowTests {
         }
 
         override fun getTransaction(id: SecureHash): SignedTransaction? {
-            return databaseTransaction(database) {
+            return database.transaction {
                 records.add(TxRecord.Get(id))
                 delegate.getTransaction(id)
             }

@@ -13,7 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.BOC
 import net.corda.testing.BOC_KEY
 import net.corda.testing.MEGA_CORP
@@ -46,7 +46,7 @@ class NodeVaultServiceTest {
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
+        database.transaction {
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps)
 
@@ -69,7 +69,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `states not local to instance`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
@@ -99,7 +99,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `states for refs`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
@@ -114,7 +114,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `states soft locking reserve and release`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
@@ -161,7 +161,7 @@ class NodeVaultServiceTest {
         val softLockId2 = UUID.randomUUID()
 
         val vaultStates =
-                databaseTransaction(database) {
+                database.transaction {
                     assertNull(vault.cashBalances[USD])
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
@@ -171,7 +171,7 @@ class NodeVaultServiceTest {
         // 1st tx locks states
         backgroundExecutor.submit {
             try {
-                databaseTransaction(database) {
+                database.transaction {
                     vault.softLockReserve(softLockId1, stateRefsToSoftLock)
                     assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
                 }
@@ -187,7 +187,7 @@ class NodeVaultServiceTest {
         backgroundExecutor.submit {
             try {
                 Thread.sleep(100)   // let 1st thread soft lock them 1st
-                databaseTransaction(database) {
+                database.transaction {
                     vault.softLockReserve(softLockId2, stateRefsToSoftLock)
                     assertThat(vault.softLockedStates<Cash.State>(softLockId2)).hasSize(3)
                 }
@@ -200,7 +200,7 @@ class NodeVaultServiceTest {
         }
 
         countDown.await()
-        databaseTransaction(database) {
+        database.transaction {
             val lockStatesId1 = vault.softLockedStates<Cash.State>(softLockId1)
             println("SOFT LOCK #1 final states: $lockStatesId1")
             assertThat(lockStatesId1.size).isIn(0, 3)
@@ -217,7 +217,7 @@ class NodeVaultServiceTest {
         val softLockId2 = UUID.randomUUID()
 
         val vaultStates =
-                databaseTransaction(database) {
+                database.transaction {
                     assertNull(vault.cashBalances[USD])
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
@@ -225,13 +225,13 @@ class NodeVaultServiceTest {
         println("State Refs:: $stateRefsToSoftLock")
 
         // lock 1st state with LockId1
-        databaseTransaction(database) {
+        database.transaction {
             vault.softLockReserve(softLockId1, setOf(stateRefsToSoftLock.first()))
             assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(1)
         }
 
         // attempt to lock all 3 states with LockId2
-        databaseTransaction(database) {
+        database.transaction {
             assertThatExceptionOfType(StatesNotAvailableException::class.java).isThrownBy(
                     { vault.softLockReserve(softLockId2, stateRefsToSoftLock) }
             ).withMessageContaining("only 2 rows available").withNoCause()
@@ -244,7 +244,7 @@ class NodeVaultServiceTest {
         val softLockId1 = UUID.randomUUID()
 
         val vaultStates =
-                databaseTransaction(database) {
+                database.transaction {
                     assertNull(vault.cashBalances[USD])
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
@@ -252,13 +252,13 @@ class NodeVaultServiceTest {
         println("State Refs:: $stateRefsToSoftLock")
 
         // lock states with LockId1
-        databaseTransaction(database) {
+        database.transaction {
             vault.softLockReserve(softLockId1, stateRefsToSoftLock)
             assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
         }
 
         // attempt to relock same states with LockId1
-        databaseTransaction(database) {
+        database.transaction {
             vault.softLockReserve(softLockId1, stateRefsToSoftLock)
             assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
         }
@@ -270,7 +270,7 @@ class NodeVaultServiceTest {
         val softLockId1 = UUID.randomUUID()
 
         val vaultStates =
-                databaseTransaction(database) {
+                database.transaction {
                     assertNull(vault.cashBalances[USD])
                     services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
                 }
@@ -278,13 +278,13 @@ class NodeVaultServiceTest {
         println("State Refs:: $stateRefsToSoftLock")
 
         // lock states with LockId1
-        databaseTransaction(database) {
+        database.transaction {
             vault.softLockReserve(softLockId1, setOf(stateRefsToSoftLock.first()))
             assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(1)
         }
 
         // attempt to lock all states with LockId1 (including previously already locked one)
-        databaseTransaction(database) {
+        database.transaction {
             vault.softLockReserve(softLockId1, stateRefsToSoftLock)
             assertThat(vault.softLockedStates<Cash.State>(softLockId1)).hasSize(3)
         }
@@ -292,7 +292,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `unconsumedStatesForSpending exact amount`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
 
@@ -309,7 +309,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `unconsumedStatesForSpending from two issuer parties`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
@@ -325,7 +325,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `unconsumedStatesForSpending from specific issuer party and refs`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (DUMMY_CASH_ISSUER))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(1))
@@ -346,7 +346,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `unconsumedStatesForSpending insufficient amount`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
 
@@ -362,7 +362,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `unconsumedStatesForSpending small amount`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
 
@@ -379,7 +379,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun `states soft locking query granularity`() {
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 10, 10, Random(0L))
@@ -399,7 +399,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        databaseTransaction(database) {
+        database.transaction {
 
             val freshKey = services.legalIdentityKey
 

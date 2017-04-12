@@ -15,7 +15,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.BOB_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
@@ -49,7 +49,7 @@ class VaultWithCashTest {
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
+        database.transaction {
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps)
 
@@ -72,7 +72,7 @@ class VaultWithCashTest {
 
     @Test
     fun splits() {
-        databaseTransaction(database) {
+        database.transaction {
             // Fix the PRNG so that we get the same splits every time.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
@@ -90,7 +90,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        databaseTransaction(database) {
+        database.transaction {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
             val usefulTX = TransactionType.General.Builder(null).apply {
@@ -131,7 +131,7 @@ class VaultWithCashTest {
     fun `issue and attempt double spend`() {
         val freshKey = services.keyManagementService.freshKey()
 
-        databaseTransaction(database) {
+        database.transaction {
             // A tx that sends us money.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L),
                     issuedBy = MEGA_CORP.ref(1),
@@ -147,7 +147,7 @@ class VaultWithCashTest {
         val countDown = CountDownLatch(2)
         // 1st tx that spends our money.
         backgroundExecutor.submit {
-            databaseTransaction(database) {
+            database.transaction {
                 try {
                     val txn1 =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
@@ -179,7 +179,7 @@ class VaultWithCashTest {
 
         // 2nd tx that attempts to spend same money
         backgroundExecutor.submit {
-            databaseTransaction(database) {
+            database.transaction {
                 try {
                     val txn2 =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
@@ -211,7 +211,7 @@ class VaultWithCashTest {
         }
 
         countDown.await()
-        databaseTransaction(database) {
+        database.transaction {
             println("Cash balance: ${vault.cashBalances[USD]}")
             assertThat(vault.cashBalances[USD]).isIn(DOLLARS(20), DOLLARS(40))
         }
@@ -219,7 +219,7 @@ class VaultWithCashTest {
 
     @Test
     fun `branching LinearStates fails to verify`() {
-        databaseTransaction(database) {
+        database.transaction {
             val freshKey = services.keyManagementService.freshKey()
             val linearId = UniqueIdentifier()
 
@@ -239,7 +239,7 @@ class VaultWithCashTest {
 
     @Test
     fun `sequencing LinearStates works`() {
-        databaseTransaction(database) {
+        database.transaction {
             val freshKey = services.keyManagementService.freshKey()
 
             val linearId = UniqueIdentifier()
@@ -274,7 +274,7 @@ class VaultWithCashTest {
     fun `spending cash in vault of mixed state types works`() {
 
         val freshKey = services.keyManagementService.freshKey()
-        databaseTransaction(database) {
+        database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = freshKey.public)
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 2, 2, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
@@ -286,7 +286,7 @@ class VaultWithCashTest {
             deals.forEach { println(it.state.data.ref) }
         }
 
-        databaseTransaction(database) {
+        database.transaction {
             // A tx that spends our money.
             val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
                 vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
@@ -307,7 +307,7 @@ class VaultWithCashTest {
     fun `consuming multiple contract state types in same transaction`() {
 
         val freshKey = services.keyManagementService.freshKey()
-        databaseTransaction(database) {
+        database.transaction {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
             val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>().toList()
