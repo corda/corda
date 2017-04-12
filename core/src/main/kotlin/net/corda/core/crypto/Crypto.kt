@@ -74,7 +74,7 @@ object Crypto {
             "EDDSA_ED25519_SHA512",
             "EdDSA",
             EdDSAEngine(),
-            EdDSAKeyFactory(),
+            EdDSAKeyFactory,
             net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
             EdDSANamedCurveTable.getByName("ed25519-sha-512"),
             256,

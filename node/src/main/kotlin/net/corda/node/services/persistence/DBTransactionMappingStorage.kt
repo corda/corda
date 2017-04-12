@@ -44,7 +44,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
 
     private class InnerState {
         val stateMachineTransactionMap = TransactionMappingsMap()
-        val updates = PublishSubject.create<StateMachineTransactionMapping>()!!
+        val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
     }
     private val mutex = ThreadBox(InnerState())
 

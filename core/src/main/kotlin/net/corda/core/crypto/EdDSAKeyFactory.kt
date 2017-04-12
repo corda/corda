@@ -7,4 +7,4 @@ import java.security.KeyFactory
  * This is required as a [SignatureScheme] requires a [java.security.KeyFactory] property, but i2p has
  * its own KeyFactory for EdDSA, thus this actually a Proxy Pattern over i2p's KeyFactory.
  */
-class EdDSAKeyFactory : KeyFactory(net.i2p.crypto.eddsa.KeyFactory(), null, "EDDSA_ED25519_SHA512")
+object EdDSAKeyFactory : KeyFactory(net.i2p.crypto.eddsa.KeyFactory(), null, "EDDSA_ED25519_SHA512")

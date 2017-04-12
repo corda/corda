@@ -424,14 +424,12 @@ class CryptoUtilsTest {
         val privKey: EdDSAPrivateKey = keyPair.private as EdDSAPrivateKey
         val pubKey: EdDSAPublicKey = keyPair.public as EdDSAPublicKey
 
-        val kf = EdDSAKeyFactory()
-
         // Encode and decode private key.
-        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = EdDSAKeyFactory.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = EdDSAKeyFactory.generatePublic(X509EncodedKeySpec(pubKey.encoded))
         assertEquals(pubKey2, pubKey)
     }
 
