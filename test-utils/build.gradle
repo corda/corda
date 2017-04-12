@@ -25,6 +25,7 @@ dependencies {
 
     // Unit testing helpers.
     compile "junit:junit:$junit_version"
+    compile "com.nhaarman:mockito-kotlin:1.1.0"
 
     // Guava: Google test library (collections test suite)
     compile "com.google.guava:guava-testlib:$guava_version"
