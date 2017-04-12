@@ -47,10 +47,11 @@ class CompositeKeyTests {
     }
 
     @Test
-    fun `(Alice and Bob) not fulfilled by neither signature alone`() {
+    fun `(Alice and Bob) requires both signatures to fulfil`() {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         assertFalse { aliceAndBob.isFulfilledBy(listOf(aliceSignature).byKeys()) }
         assertFalse { aliceAndBob.isFulfilledBy(listOf(bobSignature).byKeys()) }
+        assertTrue { aliceAndBob.isFulfilledBy(listOf(aliceSignature, bobSignature).byKeys()) }
     }
 
     @Test
