@@ -1,5 +1,7 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.EmptyWhitelist
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
@@ -37,8 +39,12 @@ class SerializationOutputTests {
         @CordaConstructor constructor(@CordaParam("fred") foo: Int) : this(foo, "Ginger")
     }
 
-    private fun serdes(obj: Any): Any {
-        val factory = SerializerFactory()
+    @CordaSerializable
+    data class AnnotatedWoo(val fred: Int) {
+        val bob = "Bob"
+    }
+
+    private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -128,5 +134,17 @@ class SerializationOutputTests {
     fun `test annotated constructor`() {
         val obj = Woo2(3)
         serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test whitelist`() {
+        val obj = Woo2(4)
+        serdes(obj, SerializerFactory(EmptyWhitelist))
+    }
+
+    @Test
+    fun `test annotation whitelisting`() {
+        val obj = AnnotatedWoo(5)
+        serdes(obj, SerializerFactory(EmptyWhitelist))
     }
 }

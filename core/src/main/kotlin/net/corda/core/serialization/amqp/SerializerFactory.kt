@@ -1,6 +1,9 @@
 package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
+import net.corda.core.serialization.AllWhitelist
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.CordaSerializable
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -14,9 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
 // TODO: Do we support specific List, Map implementations or force all to interface
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: More generics scrutiny.  What about subclass of List with bound parameters, and/or another generic class?
-// TODO: Write tests for boxed and unboxed primitives.
 // TODO: Inner classes etc
-class SerializerFactory {
+class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()
 
@@ -116,14 +118,24 @@ class SerializerFactory {
     private fun makeClassSerializer(clazz: Class<*>): Serializer {
         return serializersByType.computeIfAbsent(clazz) {
             if (clazz.isArray) {
+                whitelisted(clazz.componentType)
                 ArraySerializer(clazz)
             } else {
                 if (isPrimitive(clazz)) {
                     PrimitiveSerializer(clazz)
                 } else {
+                    whitelisted(clazz)
                     ClassSerializer(clazz)
                 }
             }
+        }
+    }
+
+    private fun whitelisted(clazz: Class<*>): Boolean {
+        if (whitelist.hasListed(clazz) || clazz.isAnnotationPresent(CordaSerializable::class.java)) {
+            return true
+        } else {
+            throw NotSerializableException("Class $clazz is not on the whitelist or annotated with @CordaSerializable.")
         }
     }
 
