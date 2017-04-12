@@ -2,10 +2,10 @@
 
 package net.corda.core.utilities
 
-import sun.security.x509.X500Name
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
 import java.util.regex.Pattern
+import javax.security.auth.x500.X500Principal
 
 /**
  * The validation function will validate the input string using the following rules:
@@ -92,7 +92,7 @@ private class CapitalLetterRule : Rule<String> {
 private class X500NameRule : Rule<String> {
     override fun validate(legalName: String) {
         // This will throw IllegalArgumentException if the name does not comply with X500 name format.
-        X500Name("CN=$legalName")
+        X500Principal("CN=$legalName")
     }
 }
 
