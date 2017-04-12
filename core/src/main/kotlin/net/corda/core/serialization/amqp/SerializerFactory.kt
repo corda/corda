@@ -13,8 +13,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 // TODO: object references
-// TODO: Set support?
-// TODO: Do we support specific List, Map implementations or force all to interface
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
