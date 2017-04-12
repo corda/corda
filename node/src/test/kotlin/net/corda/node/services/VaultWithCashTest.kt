@@ -6,7 +6,6 @@ import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
-import net.corda.core.crypto.composite
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
 import net.corda.core.node.services.unconsumedStates
@@ -82,7 +81,7 @@ class VaultWithCashTest {
 
             val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public.composite, state.owner)
+            assertEquals(services.key.public, state.owner)
 
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
@@ -95,7 +94,7 @@ class VaultWithCashTest {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
             val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public.composite, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 
@@ -113,7 +112,7 @@ class VaultWithCashTest {
 
             // A tx that doesn't send us anything.
             val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public.composite, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -137,7 +136,7 @@ class VaultWithCashTest {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L),
                     issuedBy = MEGA_CORP.ref(1),
                     issuerKey = MEGA_CORP_KEY,
-                    ownedBy = freshKey.public.composite)
+                    ownedBy = freshKey.public)
             println("Cash balance: ${vault.cashBalances[USD]}")
 
             assertThat(vault.unconsumedStates<Cash.State>()).hasSize(10)
@@ -226,8 +225,8 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.composite)))
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.composite)))
+                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -247,7 +246,7 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.composite)))
+                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -259,7 +258,7 @@ class VaultWithCashTest {
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public.composite)))
+                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 addInputState(dummyIssue.tx.outRef<LinearState>(0))
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -276,7 +275,7 @@ class VaultWithCashTest {
 
         val freshKey = services.keyManagementService.freshKey()
         databaseTransaction(database) {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = freshKey.public.composite)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = freshKey.public)
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 2, 2, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
             val cash = vault.unconsumedStates<Cash.State>()
@@ -320,8 +319,8 @@ class VaultWithCashTest {
 
             // Create a txn consuming different contract types
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(participants = listOf(freshKey.public.composite)))
-                addOutputState(net.corda.contracts.testing.DummyDealContract.State(ref = "999", participants = listOf(freshKey.public.composite)))
+                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(participants = listOf(freshKey.public)))
+                addOutputState(net.corda.contracts.testing.DummyDealContract.State(ref = "999", participants = listOf(freshKey.public)))
                 addInputState(linearStates.first())
                 addInputState(deals.first())
                 signWith(DUMMY_NOTARY_KEY)

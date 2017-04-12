@@ -25,6 +25,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toBase58String
 import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff

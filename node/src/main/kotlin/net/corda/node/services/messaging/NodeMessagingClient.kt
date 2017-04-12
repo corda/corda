@@ -3,7 +3,6 @@ package net.corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.services.PartyInfo
@@ -45,6 +44,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
+import java.security.PublicKey
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
@@ -70,7 +70,7 @@ import javax.annotation.concurrent.ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           nodeVersionInfo: NodeVersionInfo,
                           val serverHostPort: HostAndPort,
-                          val myIdentity: CompositeKey?,
+                          val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,

@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.keys
 import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator

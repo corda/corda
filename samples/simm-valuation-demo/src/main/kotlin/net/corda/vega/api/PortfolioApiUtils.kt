@@ -7,6 +7,7 @@ import com.opengamma.strata.product.swap.SwapLegType
 import net.corda.core.contracts.hash
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.toBase58String
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.portfolio.Portfolio

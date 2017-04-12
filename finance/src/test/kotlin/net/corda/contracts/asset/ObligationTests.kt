@@ -2,13 +2,13 @@ package net.corda.contracts.asset
 
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.NullCompositeKey
+import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.*
 import net.corda.testing.*
 import org.junit.Test
+import java.security.PublicKey
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -506,7 +506,7 @@ class ObligationTests {
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,
-                obligationDef, oneUnitFcoj.quantity, NullCompositeKey)
+                obligationDef, oneUnitFcoj.quantity, NullPublicKey)
         // Try settling a simple commodity obligation
         ledger {
             unverifiedTransaction {
@@ -819,7 +819,7 @@ class ObligationTests {
         val fiveKDollarsFromMegaToMini = Obligation.State(Lifecycle.NORMAL, MEGA_CORP, megaCorpDollarSettlement,
                 5000.DOLLARS.quantity, MINI_CORP_PUBKEY)
         val amount = fiveKDollarsFromMegaToMini.amount
-        val expected = mapOf(Pair(Pair(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY), Amount(amount.quantity, amount.token.product)))
+        val expected: Map<Pair<PublicKey, PublicKey>, Amount<Obligation.Terms<Currency>>> = mapOf(Pair(Pair(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY), Amount(amount.quantity, amount.token.product)))
         val actual = extractAmountsDue(megaCorpDollarSettlement, listOf(fiveKDollarsFromMegaToMini))
         assertEquals(expected, actual)
     }
@@ -827,23 +827,23 @@ class ObligationTests {
     @Test
     fun `netting equal balances due between parties`() {
         // Now try it with two balances, which cancel each other out
-        val balanced = mapOf(
+        val balanced: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
-        val expected: Map<Pair<CompositeKey, CompositeKey>, Amount<Currency>> = emptyMap() // Zero balances are stripped before returning
-        val actual = netAmountsDue(balanced)
+        val expected: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = emptyMap() // Zero balances are stripped before returning
+        val actual: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = netAmountsDue(balanced)
         assertEquals(expected, actual)
     }
 
     @Test
     fun `netting difference balances due between parties`() {
         // Now try it with two balances, which cancel each other out
-        val balanced = mapOf(
+        val balanced: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(200000000, GBP))
         )
-        val expected = mapOf(
+        val expected: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = mapOf(
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
         val actual = netAmountsDue(balanced)
@@ -852,16 +852,16 @@ class ObligationTests {
 
     @Test
     fun `summing empty balances due between parties`() {
-        val empty = emptyMap<Pair<CompositeKey, CompositeKey>, Amount<Currency>>()
-        val expected = emptyMap<CompositeKey, Long>()
+        val empty = emptyMap<Pair<PublicKey, PublicKey>, Amount<Currency>>()
+        val expected = emptyMap<PublicKey, Long>()
         val actual = sumAmountsDue(empty)
         assertEquals(expected, actual)
     }
 
     @Test
     fun `summing balances due between parties`() {
-        val simple = mapOf(Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)))
-        val expected = mapOf(Pair(ALICE_PUBKEY, -100000000L), Pair(BOB_PUBKEY, 100000000L))
+        val simple: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = mapOf(Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)))
+        val expected: Map<PublicKey,  Long> = mapOf(Pair(ALICE_PUBKEY, -100000000L), Pair(BOB_PUBKEY, 100000000L))
         val actual = sumAmountsDue(simple)
         assertEquals(expected, actual)
     }
@@ -869,11 +869,11 @@ class ObligationTests {
     @Test
     fun `summing balances due between parties which net to zero`() {
         // Now try it with two balances, which cancel each other out
-        val balanced = mapOf(
+        val balanced: Map<Pair<PublicKey, PublicKey>, Amount<Currency>> = mapOf(
                 Pair(Pair(ALICE_PUBKEY, BOB_PUBKEY), Amount(100000000, GBP)),
                 Pair(Pair(BOB_PUBKEY, ALICE_PUBKEY), Amount(100000000, GBP))
         )
-        val expected: Map<CompositeKey, Long> = emptyMap() // Zero balances are stripped before returning
+        val expected: Map<PublicKey, Long> = emptyMap() // Zero balances are stripped before returning
         val actual = sumAmountsDue(balanced)
         assertEquals(expected, actual)
     }

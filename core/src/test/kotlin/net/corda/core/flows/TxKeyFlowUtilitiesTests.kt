@@ -1,6 +1,5 @@
 package net.corda.core.flows
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.ALICE
@@ -9,6 +8,7 @@ import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
+import java.security.PublicKey
 import kotlin.test.assertNotNull
 
 class TxKeyFlowUtilitiesTests {
@@ -36,7 +36,7 @@ class TxKeyFlowUtilitiesTests {
         val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bobKey))
 
         // Get the results
-        val actual: CompositeKey = requesterFlow.resultFuture.get().first
+        val actual: PublicKey = requesterFlow.resultFuture.get().first
         assertNotNull(actual)
     }
 }

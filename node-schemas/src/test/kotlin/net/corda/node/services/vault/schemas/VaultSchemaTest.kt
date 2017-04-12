@@ -28,6 +28,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
+import java.security.PublicKey
 import sun.misc.MessageUtils.where
 import java.time.Instant
 import java.util.*
@@ -80,12 +81,12 @@ class VaultSchemaTest {
     private class VaultNoopContract : Contract {
         override val legalContractReference = SecureHash.sha256("")
 
-        data class VaultNoopState(override val owner: CompositeKey) : OwnableState {
+        data class VaultNoopState(override val owner: PublicKey) : OwnableState {
             override val contract = VaultNoopContract()
-            override val participants: List<CompositeKey>
+            override val participants: List<PublicKey>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Create(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Create(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {
@@ -114,7 +115,7 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         transaction = LedgerTransaction(
                 inputs,
@@ -146,7 +147,7 @@ class VaultSchemaTest {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         return LedgerTransaction(
                 inputs,
@@ -634,7 +635,7 @@ class VaultSchemaTest {
 
     @Test
     fun insertWithBigCompositeKey() {
-        val keys = (1..314).map { generateKeyPair().public.composite }
+        val keys = (1..314).map { generateKeyPair().public }
         val bigNotaryKey = CompositeKey.Builder().addKeys(keys).build()
         val vaultStEntity = VaultStatesEntity().apply {
             txId = SecureHash.randomSHA256().toString()

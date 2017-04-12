@@ -40,6 +40,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
@@ -257,7 +258,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val extraKey = bobNode.keyManagement.freshKey()
-            val bobsFakeCash = fillUpForBuyer(false, extraKey.public.composite,
+            val bobsFakeCash = fillUpForBuyer(false, extraKey.public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
@@ -357,7 +358,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public.composite,
+            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
@@ -458,7 +459,7 @@ class TwoPartyTradeFlowTests {
         val bobKey = bobNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public.composite, DUMMY_CASH_ISSUER.party,
+        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
         val alicesFakePaper = databaseTransaction(aliceNode.database) {
             fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
@@ -505,7 +506,7 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: CompositeKey,
+            owner: PublicKey,
             issuer: AnonymousParty,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
@@ -551,7 +552,7 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
-            owner: CompositeKey,
+            owner: PublicKey,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {

@@ -17,6 +17,8 @@ import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
+import net.corda.core.crypto.toBase58String
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
@@ -177,7 +179,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean): Iterable<StateAndRef<T>> {
         val stateAndRefs =
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                    var query = select(VaultSchema.VaultStates::class)
+                    val query = select(VaultSchema.VaultStates::class)
                             .where(VaultSchema.VaultStates::stateStatus `in` statuses)
                     // TODO: temporary fix to continue supporting track() function (until becomes Typed)
                     if (!clazzes.map { it.name }.contains(ContractState::class.java.name))
@@ -442,8 +444,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     @Suspendable
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
-                               to: CompositeKey,
-                               onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<CompositeKey>> {
+                               to: PublicKey,
+                               onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<PublicKey>> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -520,7 +522,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return Pair(tx, keysUsed)
     }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: CompositeKey)
+    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     /**

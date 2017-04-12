@@ -2,13 +2,13 @@ package net.corda.contracts
 
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.NullCompositeKey
+import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -26,19 +26,19 @@ class CommercialPaperLegacy : Contract {
 
     data class State(
             val issuance: PartyAndReference,
-            override val owner: CompositeKey,
+            override val owner: PublicKey,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_LEGACY_PROGRAM_ID
         override val participants = listOf(owner)
 
-        fun withoutOwner() = copy(owner = NullCompositeKey)
-        override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        fun withoutOwner() = copy(owner = NullPublicKey)
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
-        override fun withOwner(newOwner: CompositeKey): ICommercialPaperState = copy(owner = newOwner)
+        override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
@@ -117,7 +117,7 @@ class CommercialPaperLegacy : Contract {
         return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
-    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: CompositeKey) {
+    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper)
         tx.addOutputState(paper.state.data.withOwner(newOwner))
         tx.addCommand(Command(Commands.Move(), paper.state.data.owner))

@@ -8,10 +8,7 @@ import java.security.PublicKey
  * The [AnonymousParty] class contains enough information to uniquely identify a [Party] while excluding private
  * information such as name. It is intended to represent a party on the distributed ledger.
  */
-class AnonymousParty(owningKey: CompositeKey) : AbstractParty(owningKey) {
-    /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
-    constructor(owningKey: PublicKey) : this(owningKey.composite)
-
+class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
     // Use the key as the bulk of the toString(), but include a human readable identifier as well, so that [Party]
     // can put in the key and actual name
     override fun toString() = "${owningKey.toBase58String()} <Anonymous>"

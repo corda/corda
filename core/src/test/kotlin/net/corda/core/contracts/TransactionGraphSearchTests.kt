@@ -1,6 +1,5 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -32,7 +31,7 @@ class TransactionGraphSearchTests {
     fun buildTransactions(command: CommandData, signer: KeyPair): GraphTransactionStorage {
         val originTx = TransactionType.General.Builder(DUMMY_NOTARY).apply {
             addOutputState(DummyState(random31BitValue()))
-            addCommand(command, signer.public.composite)
+            addCommand(command, signer.public)
             signWith(signer)
             signWith(DUMMY_NOTARY_KEY)
         }.toSignedTransaction(false)

@@ -86,35 +86,10 @@ Bank A and Bank B decided to upgrade the contract to ``DummyContractV2``
 
 1. Developer will create a new contract extending the ``UpgradedContract`` class, and a new state object ``DummyContractV2.State`` referencing the new contract.
 
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-   
-      class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
-          override val legacyContract = DummyContract::class.java
-      
-          data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
-              override val contract = DUMMY_V2_PROGRAM_ID
-              override val participants: List<CompositeKey> = owners
-          }
-      
-          interface Commands : CommandData {
-              class Create : TypeOnlyCommandData(), Commands
-              class Move : TypeOnlyCommandData(), Commands
-          }
-      
-          override fun upgrade(state: DummyContract.State): DummyContractV2.State {
-              return DummyContractV2.State(state.magicNumber, state.participants)
-          }
-      
-          override fun verify(tx: TransactionForContract) {
-              if (tx.commands.any { it.value is UpgradeCommand }) ContractUpgradeFlow.verify(tx)
-              // Other verifications.
-          }
-      
-          // The "empty contract"
-          override val legalContractReference: SecureHash = SecureHash.sha256("")
-      }
+.. literalinclude:: /../../core/src/main/kotlin/net/corda/core/contracts/DummyContractV2.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
 2. Bank A will instruct its node to accept the contract upgrade to ``DummyContractV2`` for the contract state.
 

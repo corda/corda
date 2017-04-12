@@ -33,27 +33,22 @@ class PrivateKeyGenerator : Generator<PrivateKey>(PrivateKey::class.java) {
     }
 }
 
+// TODO add CompositeKeyGenerator that actually does something useful.
 class PublicKeyGenerator : Generator<PublicKey>(PublicKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
         return entropyToKeyPair(random.nextBigInteger(32)).public
     }
 }
 
-class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): CompositeKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).public.composite
-    }
-}
-
 class AnonymousPartyGenerator : Generator<AnonymousParty>(AnonymousParty::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): AnonymousParty {
-        return AnonymousParty(CompositeKeyGenerator().generate(random, status))
+        return AnonymousParty(PublicKeyGenerator().generate(random, status))
     }
 }
 
 class PartyGenerator : Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
+        return Party(StringGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
     }
 }
 

@@ -1,9 +1,9 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
+import java.security.PublicKey
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 
@@ -14,12 +14,12 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
         val magicNumber: Int
     }
 
-    data class SingleOwnerState(override val magicNumber: Int = 0, override val owner: CompositeKey) : OwnableState, State {
+    data class SingleOwnerState(override val magicNumber: Int = 0, override val owner: PublicKey) : OwnableState, State {
         override val contract = DUMMY_PROGRAM_ID
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = listOf(owner)
 
-        override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
     /**
@@ -28,9 +28,9 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
      * in a different field, however this is a good example of a contract with multiple states.
      */
     data class MultiOwnerState(override val magicNumber: Int = 0,
-                               val owners: List<CompositeKey>) : ContractState, State {
+                               val owners: List<PublicKey>) : ContractState, State {
         override val contract = DUMMY_PROGRAM_ID
-        override val participants: List<CompositeKey> get() = owners
+        override val participants: List<PublicKey> get() = owners
     }
 
     interface Commands : CommandData {
@@ -55,8 +55,8 @@ data class DummyContract(override val legalContractReference: SecureHash = Secur
             }
         }
 
-        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: CompositeKey) = move(listOf(prior), newOwner)
-        fun move(priors: List<StateAndRef<DummyContract.SingleOwnerState>>, newOwner: CompositeKey): TransactionBuilder {
+        fun move(prior: StateAndRef<DummyContract.SingleOwnerState>, newOwner: PublicKey) = move(listOf(prior), newOwner)
+        fun move(priors: List<StateAndRef<DummyContract.SingleOwnerState>>, newOwner: PublicKey): TransactionBuilder {
             require(priors.isNotEmpty())
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)

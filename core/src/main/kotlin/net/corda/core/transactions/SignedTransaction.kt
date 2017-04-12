@@ -3,21 +3,22 @@ package net.corda.core.transactions
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.node.ServiceHub
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.signWithECDSA
-import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 
 /**
  * SignedTransaction wraps a serialized WireTransaction. It contains one or more signatures, each one for
- * a public key that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
- * and the type most frequently passed around the network and stored. The identity of a transaction is the hash
+ * a public key (including composite keys) that is mentioned inside a transaction command. SignedTransaction is the top level transaction type
+ * and the type most frequently passed around the network and stored. The identity of a transaction is the hash of Merkle root
  * of a WireTransaction, therefore if you are storing data keyed by WT hash be aware that multiple different STs may
  * map to the same key (and they could be different in important ways, like validity!). The signatures on a
  * SignedTransaction might be invalid or missing: the type does not imply validity.
@@ -43,7 +44,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     override val id: SecureHash get() = tx.id
 
     @CordaSerializable
-    class SignaturesMissingException(val missing: Set<CompositeKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
+    class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash) : NamedByHash, SignatureException() {
         override fun toString(): String {
             return "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
         }
@@ -62,13 +63,13 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
     @Throws(SignatureException::class)
-    fun verifySignatures(vararg allowedToBeMissing: CompositeKey): WireTransaction {
+    fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
         val missing = getMissingSignatures()
         if (missing.isNotEmpty()) {
-            val allowed = setOf(*allowedToBeMissing)
+            val allowed = allowedToBeMissing.toSet()
             val needed = missing - allowed
             if (needed.isNotEmpty())
                 throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
@@ -92,8 +93,10 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         }
     }
 
-    private fun getMissingSignatures(): Set<CompositeKey> {
+    private fun getMissingSignatures(): Set<PublicKey> {
         val sigKeys = sigs.map { it.by }.toSet()
+        // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
+        //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
         val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
         return missing
     }
@@ -102,7 +105,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * Get a human readable description of where signatures are required from, and are missing, to assist in debugging
      * the underlying cause.
      */
-    private fun getMissingKeyDescriptions(missing: Set<CompositeKey>): ArrayList<String> {
+    private fun getMissingKeyDescriptions(missing: Set<PublicKey>): ArrayList<String> {
         // TODO: We need a much better way of structuring this data
         val missingElements = ArrayList<String>()
         this.tx.commands.forEach { command ->

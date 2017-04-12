@@ -9,6 +9,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullPublicKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
 import net.corda.core.serialization.storageKryo

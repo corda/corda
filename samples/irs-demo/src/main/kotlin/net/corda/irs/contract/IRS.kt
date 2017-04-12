@@ -679,7 +679,7 @@ class InterestRateSwap : Contract {
 
         override val ref = common.tradeID
 
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {

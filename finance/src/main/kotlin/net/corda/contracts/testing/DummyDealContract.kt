@@ -4,10 +4,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
@@ -18,7 +15,7 @@ class DummyDealContract : Contract {
 
     data class State(
             override val contract: Contract = DummyDealContract(),
-            override val participants: List<CompositeKey> = listOf(),
+            override val participants: List<PublicKey> = listOf(),
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
             override val ref: String,
             override val parties: List<AnonymousParty> = listOf()) : DealState {

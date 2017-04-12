@@ -204,8 +204,8 @@ interface VaultService {
     @Suspendable
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: CompositeKey,
-                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+                      to: PublicKey,
+                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
 
     // DOCSTART VaultStatesQuery
     /**
@@ -288,11 +288,19 @@ interface KeyManagementService {
     /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
+    @Throws(IllegalStateException::class)
     fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key ${publicKey.toStringShort()}")
 
-    fun toKeyPair(publicKey: PublicKey) = KeyPair(publicKey, toPrivate(publicKey))
+    @Throws(IllegalArgumentException::class)
+    fun toKeyPair(publicKey: PublicKey): KeyPair {
+        when (publicKey) {
+            is CompositeKey -> throw IllegalArgumentException("Got CompositeKey when single PublicKey expected.")
+            else -> return KeyPair(publicKey, toPrivate(publicKey))
+        }
+    }
 
     /** Returns the first [KeyPair] matching any of the [publicKeys] */
+    @Throws(IllegalArgumentException::class)
     fun toKeyPair(publicKeys: Iterable<PublicKey>) = publicKeys.first { keys.contains(it) }.let { toKeyPair(it) }
 
     /** Generates a new random key and adds it to the exposed map. */

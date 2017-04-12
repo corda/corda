@@ -2,10 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.ThreadBox
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SignedData
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.*
 import net.corda.core.messaging.MessageHandlerRegistration
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -311,7 +308,7 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bytes, node.legalIdentity.owningKey.singleKey)
+        val regSig = privateKey.signWithECDSA(regSerialized.bytes, node.legalIdentity.owningKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }

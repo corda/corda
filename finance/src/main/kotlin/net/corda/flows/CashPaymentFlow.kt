@@ -5,7 +5,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.keys
+import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.crypto.toStringShort
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -44,7 +44,7 @@ open class CashPaymentFlow(
         }
 
         progressTracker.currentStep = SIGNING_TX
-        keysForSigning.keys.forEach {
+        keysForSigning.expandedCompositeKeys.forEach {
             val key = serviceHub.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
             builder.signWith(KeyPair(it, key))
         }

@@ -330,7 +330,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
             val notary = kryo.readClassAndObject(input) as Party?
-            val signers = kryo.readClassAndObject(input) as List<CompositeKey>
+            val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
 
@@ -367,39 +367,36 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
-/** For serialising composite keys */
+// TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
 @ThreadSafe
-object CompositeKeyLeafSerializer : Serializer<CompositeKey.Leaf>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Leaf) {
-        val key = obj.publicKey
-        kryo.writeClassAndObject(output, key)
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Leaf>): CompositeKey.Leaf {
-        val key = kryo.readClassAndObject(input) as PublicKey
-        return CompositeKey.Leaf(key)
-    }
-}
-
-@ThreadSafe
-object CompositeKeyNodeSerializer : Serializer<CompositeKey.Node>() {
-    override fun write(kryo: Kryo, output: Output, obj: CompositeKey.Node) {
+object CompositeKeySerializer : Serializer<CompositeKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: CompositeKey) {
         output.writeInt(obj.threshold)
         output.writeInt(obj.children.size)
         obj.children.forEach { kryo.writeClassAndObject(output, it) }
-        output.writeInts(obj.weights.toIntArray())
     }
 
-    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey.Node>): CompositeKey.Node {
+    override fun read(kryo: Kryo, input: Input, type: Class<CompositeKey>): CompositeKey {
         val threshold = input.readInt()
-        val childCount = input.readInt()
-        val children = (1..childCount).map { kryo.readClassAndObject(input) as CompositeKey }
-        val weights = input.readInts(childCount)
-
+        val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
         val builder = CompositeKey.Builder()
-        weights.zip(children).forEach { builder.addKey(it.second, it.first) }
-        return builder.build(threshold)
+        children.forEach { builder.addKey(it.node, it.weight)  }
+        return builder.build(threshold) as CompositeKey
     }
+}
+
+/**
+ * Helper function for reading lists with number of elements at the beginning.
+ * @param minLen minimum number of elements we expect for list to include, defaults to 1
+ * @param expectedLen expected length of the list, defaults to null if arbitrary length list read
+  */
+inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 1, expectedLen: Int? = null): List<T> {
+    val elemCount = input.readInt()
+    if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
+    if (expectedLen != null && elemCount != expectedLen)
+        throw KryoException("Cannot deserialize list, expected length: $expectedLen, got: $elemCount.")
+    val list = (1..elemCount).map { kryo.readClassAndObject(input) as T }
+    return list
 }
 
 /** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */

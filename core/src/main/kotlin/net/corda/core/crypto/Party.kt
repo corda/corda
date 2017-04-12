@@ -7,7 +7,7 @@ import java.security.PublicKey
 /**
  * The [Party] class represents an entity on the network, which is typically identified by a legal [name] and public key
  * that it can sign transactions under. As parties may use multiple keys for signing and, for example, have offline backup
- * keys, the "public key" of a party is represented by a composite construct – a [CompositeKey], which combines multiple
+ * keys, the "public key" of a party can be represented by a composite construct – a [CompositeKey], which combines multiple
  * cryptographic public key primitives into a tree structure.
  *
  * For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
@@ -22,10 +22,7 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: String, owningKey: CompositeKey) : AbstractParty(owningKey) {
-    /** A helper constructor that converts the given [PublicKey] in to a [CompositeKey] with a single node */
-    constructor(name: String, owningKey: PublicKey) : this(name, owningKey.composite)
-
+class Party(val name: String, owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} (${name})"
     override fun nameOrNull(): String? = name

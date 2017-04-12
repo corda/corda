@@ -1,8 +1,6 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.composite
 import net.corda.core.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
@@ -113,7 +111,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = throw UnsupportedOperationException()
 
         override val linearId = UniqueIdentifier()
@@ -272,7 +270,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                 val state = TestState(factory.create(TestFlowLogic::class.java, increment), instant)
                 val usefulTX = TransactionType.General.Builder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
-                    addCommand(Command(), freshKey.public.composite)
+                    addCommand(Command(), freshKey.public)
                     signWith(freshKey)
                 }.toSignedTransaction()
                 val txHash = usefulTX.id
