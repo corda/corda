@@ -2,6 +2,7 @@
 
 package net.corda.core.utilities
 
+import sun.security.x509.X500Name
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
 import java.util.regex.Pattern
@@ -34,7 +35,8 @@ private val rules: List<Rule<String>> = listOf(
         LengthRule(maxLength = 255),
         // TODO: Implement confusable character detection if we add more scripts.
         UnicodeRangeRule(LATIN, COMMON, INHERITED),
-        CapitalLetterRule()
+        CapitalLetterRule(),
+        X500NameRule()
 )
 
 private class UnicodeNormalizationRule : Rule<String> {
@@ -84,6 +86,13 @@ private class CapitalLetterRule : Rule<String> {
     override fun validate(legalName: String) {
         val capitalizedLegalName = legalName.split(" ").map(String::capitalize).joinToString(" ")
         require(legalName == capitalizedLegalName) { "Legal name should be capitalized. i.e. '$capitalizedLegalName'" }
+    }
+}
+
+private class X500NameRule : Rule<String> {
+    override fun validate(legalName: String) {
+        // This will throw IllegalArgumentException if the name does not comply with X500 name format.
+        X500Name("CN=$legalName")
     }
 }
 
