@@ -7,54 +7,55 @@ class LegalNameValidatorTest {
     @Test
     fun `no double spaces`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("Test Legal  Name")
+            validateLegalName("Test Legal  Name")
         }
+        validateLegalName(normaliseLegalName("Test Legal  Name"))
     }
 
     @Test
     fun `no trailing white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("Test ")
+            validateLegalName("Test ")
         }
     }
 
     @Test
     fun `no prefixed white space`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate(" Test")
+            validateLegalName(" Test")
         }
     }
 
     @Test
     fun `blacklisted words`() {
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("Test Server")
+            validateLegalName("Test Server")
         }
     }
 
     @Test
     fun `blacklisted characters`() {
-        LegalNameValidator.validate("Test")
+        validateLegalName("Test")
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("\$Test")
+            validateLegalName("\$Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("\"Test")
+            validateLegalName("\"Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("\'Test")
+            validateLegalName("\'Test")
         }
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("=Test")
+            validateLegalName("=Test")
         }
     }
 
     @Test
     fun `unicode range`() {
-        LegalNameValidator.validate("Test A")
+        validateLegalName("Test A")
         assertFailsWith(IllegalArgumentException::class) {
             // Greek letter A.
-            LegalNameValidator.validate("Test Α")
+            validateLegalName("Test Α")
         }
     }
 
@@ -64,26 +65,26 @@ class LegalNameValidatorTest {
         while (longLegalName.length < 255) {
             longLegalName.append("A")
         }
-        LegalNameValidator.validate(longLegalName.toString())
+        validateLegalName(longLegalName.toString())
 
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate(longLegalName.append("A").toString())
+            validateLegalName(longLegalName.append("A").toString())
         }
     }
 
     @Test
     fun `legal name should be capitalized`() {
-        LegalNameValidator.validate("Good Legal Name")
+        validateLegalName("Good Legal Name")
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("bad name")
+            validateLegalName("bad name")
         }
 
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("Bad name")
+            validateLegalName("Bad name")
         }
 
         assertFailsWith(IllegalArgumentException::class) {
-            LegalNameValidator.validate("bad Name")
+            validateLegalName("bad Name")
         }
     }
 }

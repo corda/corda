@@ -85,9 +85,6 @@ dependencies {
 
     // Requery: SQL based query & persistence for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
-
-    // Apache commons-lang
-    compile 'org.apache.commons:commons-lang3:3.5'
 }
 
 configurations {
