@@ -44,6 +44,10 @@ class SerializationOutputTests {
         val bob = "Bob"
     }
 
+    class FooList : ArrayList<Foo>()
+
+    data class GenericFoo<T>(val bar: String, val pub: T)
+
     private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
@@ -146,5 +150,17 @@ class SerializationOutputTests {
     fun `test annotation whitelisting`() {
         val obj = AnnotatedWoo(5)
         serdes(obj, SerializerFactory(EmptyWhitelist))
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test generic list subclass is not supported`() {
+        val obj = FooList()
+        serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test generic foo`() {
+        val obj = GenericFoo("Fred", "Ginger")
+        serdes(obj)
     }
 }
