@@ -58,7 +58,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
          * @return whether the signature is correct for this key.
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun verifyWithECDSABool(content: ByteArray) = by.verifyWithECDSABool(content, this)
+        fun isValidForECDSA(content: ByteArray) = by.isValidForECDSA(content, this)
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
@@ -140,7 +140,7 @@ fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignatur
 // not match.
 @Throws(IllegalStateException::class, SignatureException::class)
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
-    if (!verifyWithECDSABool(content, signature))
+    if (!isValidForECDSA(content, signature))
         throw SignatureException("Signature did not match")
 }
 
@@ -156,7 +156,7 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
  * @return whether the signature is correct for this key.
  */
 @Throws(IllegalStateException::class, SignatureException::class)
-fun PublicKey.verifyWithECDSABool(content: ByteArray, signature: DigitalSignature) : Boolean {
+fun PublicKey.isValidForECDSA(content: ByteArray, signature: DigitalSignature) : Boolean {
     val pubKey = when (this) {
         is CompositeKey -> throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
         else -> this
