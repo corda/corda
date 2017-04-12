@@ -4,6 +4,7 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import java.security.PublicKey
+import org.bouncycastle.asn1.x500.X500Name
 
 /**
  * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
@@ -14,7 +15,7 @@ interface IdentityService {
     fun registerIdentity(party: Party)
 
     /**
-     * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromName] should be
+     * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
      * used in preference where possible.
      */
     fun getAllIdentities(): Iterable<Party>
@@ -25,6 +26,7 @@ interface IdentityService {
 
     fun partyFromKey(key: PublicKey): Party?
     fun partyFromName(name: String): Party?
+    fun partyFromX500Name(principal: X500Name): Party?
 
     fun partyFromAnonymous(party: AnonymousParty): Party?
     fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)

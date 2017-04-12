@@ -16,6 +16,9 @@ import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
+import org.bouncycastle.asn1.ASN1InputStream
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.*
@@ -582,5 +585,19 @@ object LoggerSerializer : Serializer<Logger>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<Logger>): Logger {
         return LoggerFactory.getLogger(input.readString())
+    }
+}
+
+/**
+ * For serialising an [X500Name] without touching Sun internal classes.
+ */
+@ThreadSafe
+object X500NameSerializer : Serializer<X500Name>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<X500Name>): X500Name {
+        return X500Name.getInstance(ASN1InputStream(input.readBytes()).readObject())
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: X500Name) {
+        output.writeBytes(obj.encoded)
     }
 }
