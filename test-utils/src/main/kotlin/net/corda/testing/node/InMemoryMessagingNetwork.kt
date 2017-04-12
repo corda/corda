@@ -16,7 +16,7 @@ import net.corda.node.services.api.MessagingServiceBuilder
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JDBCHashSet
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
@@ -333,7 +333,7 @@ class InMemoryMessagingNetwork(
             val (handler, transfers) = state.locked {
                 val handler = Handler(topicSession, callback).apply { handlers.add(this) }
                 val pending = ArrayList<MessageTransfer>()
-                databaseTransaction(database) {
+                database.transaction {
                     pending.addAll(pendingRedelivery)
                     pendingRedelivery.clear()
                 }
@@ -409,7 +409,7 @@ class InMemoryMessagingNetwork(
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
                         log.warn("Message to ${transfer.message.topicSession} could not be delivered")
-                        databaseTransaction(database) {
+                        database.transaction {
                             pendingRedelivery.add(transfer)
                         }
                         null
@@ -431,7 +431,7 @@ class InMemoryMessagingNetwork(
 
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
-                    databaseTransaction(database) {
+                    database.transaction {
                         for (handler in deliverTo) {
                             try {
                                 handler.callback(transfer.toReceivedMessage(), handler)

@@ -243,7 +243,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val waitingForResponse = fiber.waitingForResponse
         if (waitingForResponse != null) {
             if (waitingForResponse is WaitForLedgerCommit) {
-                val stx = databaseTransaction(database) {
+                val stx = database.transaction {
                     serviceHub.storageService.validatedTransactions.getTransaction(waitingForResponse.hash)
                 }
                 if (stx != null) {
@@ -457,7 +457,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
-        val fiber = isolatedTransaction(database) {
+        val fiber = database.isolatedTransaction {
             val fiber = createFiber(logic)
             updateCheckpoint(fiber)
             fiber
@@ -508,7 +508,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
         } else if (ioRequest is WaitForLedgerCommit) {
             // Is it already committed?
-            val stx = databaseTransaction(database) {
+            val stx = database.transaction {
                 serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
             }
             if (stx != null) {

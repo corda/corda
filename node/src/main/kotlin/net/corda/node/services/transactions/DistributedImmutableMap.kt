@@ -9,7 +9,7 @@ import io.atomix.copycat.server.storage.snapshot.SnapshotReader
 import io.atomix.copycat.server.storage.snapshot.SnapshotWriter
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
 import java.util.*
 
@@ -39,13 +39,13 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
         class Get<out K, V>(val key: K) : Query<V?>
     }
 
-    private val map = databaseTransaction(db) { JDBCHashMap<K, V>(tableName) }
+    private val map = db.transaction { JDBCHashMap<K, V>(tableName) }
 
     /** Gets a value for the given [Commands.Get.key] */
     fun get(commit: Commit<Commands.Get<K, V>>): V? {
         commit.use {
             val key = it.operation().key
-            return databaseTransaction(db) { map[key] }
+            return db.transaction { map[key] }
         }
     }
 
@@ -57,7 +57,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
     fun put(commit: Commit<Commands.PutAll<K, V>>): Map<K, V> {
         commit.use { commit ->
             val conflicts = LinkedHashMap<K, V>()
-            databaseTransaction(db) {
+            db.transaction {
                 val entries = commit.operation().entries
                 log.debug("State machine commit: storing entries with keys (${entries.keys.joinToString()})")
                 for (key in entries.keys) map[key]?.let { conflicts[key] = it }
@@ -69,7 +69,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
 
     fun size(commit: Commit<Commands.Size>): Int {
         commit.use { commit ->
-            return databaseTransaction(db) { map.size }
+            return db.transaction { map.size }
         }
     }
 
@@ -79,7 +79,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
      * fixed number of recently accessed entries to ever be kept in memory.
      */
     override fun snapshot(writer: SnapshotWriter) {
-        databaseTransaction(db) {
+        db.transaction {
             writer.writeInt(map.size)
             map.entries.forEach { writer.writeObject(it.key to it.value) }
         }
@@ -88,7 +88,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
     /** Reads entries from disk and adds them to [map]. */
     override fun install(reader: SnapshotReader) {
         val size = reader.readInt()
-        databaseTransaction(db) {
+        db.transaction {
             map.clear()
             // TODO: read & put entries in batches
             for (i in 1..size) {

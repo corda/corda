@@ -49,7 +49,7 @@ import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
@@ -141,7 +141,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-            databaseTransaction(database) {
+            database.transaction {
                 recordTransactionsInternal(storage, txs)
             }
         }
@@ -339,7 +339,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.info("Connected to ${database.vendor} database.")
             dbCloser = Runnable { toClose.close() }
             runOnStop += dbCloser!!
-            databaseTransaction(database) {
+            database.transaction {
                 insideTransaction()
             }
         } else {

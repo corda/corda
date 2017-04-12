@@ -32,16 +32,19 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
+@Deprecated("Use Database.transaction instead.")
+fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T) = db.transaction(statement)
+
 // TODO: Handle commit failure due to database unavailable.  Better to shutdown and await database reconnect/recovery.
-fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T): T {
+fun <T> Database.transaction(statement: Transaction.() -> T): T {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-    StrandLocalTransactionManager.database = db
+    StrandLocalTransactionManager.database = this
     return org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
 }
 
-fun createDatabaseTransaction(db: Database): Transaction {
+fun Database.createTransaction(): Transaction {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-    StrandLocalTransactionManager.database = db
+    StrandLocalTransactionManager.database = this
     return TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
 }
 
@@ -50,16 +53,16 @@ fun configureDatabase(props: Properties): Pair<Closeable, Database> {
     val dataSource = HikariDataSource(config)
     val database = Database.connect(dataSource) { db -> StrandLocalTransactionManager(db) }
     // Check not in read-only mode.
-    databaseTransaction(database) {
+    database.transaction {
         check(!database.metadata.isReadOnly) { "Database should not be readonly." }
     }
     return Pair(dataSource, database)
 }
 
-fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
+fun <T> Database.isolatedTransaction(block: Transaction.() -> T): T {
     val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
     return try {
-        databaseTransaction(database, block)
+        transaction(block)
     } finally {
         StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
     }
@@ -73,7 +76,7 @@ fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
  * our tests involving two [MockNode]s effectively replace the database instances of each other and continue to trample
  * over each other.  So here we use a companion object to hold them as [ThreadLocal] and [StrandLocalTransactionManager]
  * is otherwise effectively stateless so it's replacement does not matter.  The [ThreadLocal] is then set correctly and
- * explicitly just prior to initiating a transaction in [databaseTransaction] and [createDatabaseTransaction] above.
+ * explicitly just prior to initiating a transaction in [transaction] and [createTransaction] above.
  *
  * The [StrandLocalTransactionManager] instances have an [Observable] of the transaction close [Boundary]s which
  * facilitates the use of [Observable.afterDatabaseCommit] to create event streams that only emit once the database
@@ -121,7 +124,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
     init {
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
-        // databae transaction open.  The [databaseTransaction] helper above handles this in a finally clause for you
+        // databae transaction open.  The [transaction] helper above handles this in a finally clause for you
         // but any manual database transaction management is liable to have this problem.
         if (threadLocalTx.get() != null) {
             throw IllegalStateException("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, ${threadLocalTx.get()}")
@@ -197,7 +200,7 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: Database?) : Subs
     val delegates = CopyOnWriteArrayList<Subscriber<in U>>()
 
     fun forEachSubscriberWithDbTx(block: Subscriber<in U>.() -> Unit) {
-        databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+        (db ?: StrandLocalTransactionManager.database).transaction {
             delegates.filter { !it.isUnsubscribed }.forEach {
                 it.block()
             }

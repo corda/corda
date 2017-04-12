@@ -76,7 +76,7 @@ It doesn't do anything else. This code simply creates a transaction that issues 
 converts the builder to the final ``SignedTransaction``. It then does so again, but this time instead of issuing
 it re-assigns ownership instead. The chain of two transactions is finally committed to node A by sending them
 directly to the ``a.services.recordTransaction`` method (note that this method doesn't check the transactions are
-valid) inside a ``databaseTransaction``.  All node flows run within a database transaction in the nodes themselves,
+valid) inside a ``database.transaction``.  All node flows run within a database transaction in the nodes themselves,
 but any time we need to use the database directly from a unit test, you need to provide a database transaction as shown
 here.
 

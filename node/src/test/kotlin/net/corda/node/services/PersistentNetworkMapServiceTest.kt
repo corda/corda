@@ -6,7 +6,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.PersistentNetworkMapService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import java.math.BigInteger
@@ -24,7 +24,7 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
         get() = (mapServiceNode.inNodeNetworkMapService as SwizzleNetworkMapService).delegate
 
     override fun swizzle() {
-        databaseTransaction(mapServiceNode.database) {
+        mapServiceNode.database.transaction {
             (mapServiceNode.inNodeNetworkMapService as SwizzleNetworkMapService).swizzle()
         }
     }

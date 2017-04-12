@@ -3,6 +3,12 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release.
 
+UNRELEASED
+----------
+
+* API changes:
+    * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
+
 Milestone 10.0
 --------------
 

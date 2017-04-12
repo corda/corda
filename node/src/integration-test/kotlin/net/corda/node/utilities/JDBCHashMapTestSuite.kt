@@ -246,17 +246,17 @@ class JDBCHashMapTestSuite {
 
         @Test
         fun `fill map and check content after reconstruction`() {
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table")
                 // Populate map the first time.
                 applyOpsToMap(persistentMap)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = false)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = true)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }

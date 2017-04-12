@@ -45,7 +45,7 @@ class ObservablesTests {
         observable.first().subscribe { firstEvent.set(it to isInDatabaseTransaction()) }
         observable.skip(1).first().subscribe { secondEvent.set(it to isInDatabaseTransaction()) }
 
-        databaseTransaction(database) {
+        database.transaction {
             val delayedSubject = source.bufferUntilDatabaseCommit()
             assertThat(source).isNotEqualTo(delayedSubject)
             delayedSubject.onNext(0)
@@ -72,7 +72,7 @@ class ObservablesTests {
         observable.first().subscribe { firstEvent.set(it to isInDatabaseTransaction()) }
         observable.skip(1).first().subscribe { secondEvent.set(it to isInDatabaseTransaction()) }
 
-        databaseTransaction(database) {
+        database.transaction {
             val delayedSubject = source.bufferUntilDatabaseCommit()
             assertThat(source).isNotEqualTo(delayedSubject)
             delayedSubject.onNext(0)
@@ -83,7 +83,7 @@ class ObservablesTests {
         assertThat(firstEvent.get()).isEqualTo(0 to false)
         assertThat(secondEvent.isDone).isFalse()
 
-        databaseTransaction(database) {
+        database.transaction {
             val delayedSubject = source.bufferUntilDatabaseCommit()
             assertThat(source).isNotEqualTo(delayedSubject)
             delayedSubject.onNext(1)
@@ -140,7 +140,7 @@ class ObservablesTests {
 
         teed.first().subscribe { teedEvent.set(it to isInDatabaseTransaction()) }
 
-        databaseTransaction(database) {
+        database.transaction {
             val delayedSubject = source.bufferUntilDatabaseCommit().tee(teed)
             assertThat(source).isNotEqualTo(delayedSubject)
             delayedSubject.onNext(0)
@@ -173,7 +173,7 @@ class ObservablesTests {
         observableWithDbTx.skip(1).first().subscribe { observeSecondEvent(it, delayedEventFromSecondObserver) }
         observableWithDbTx.skip(1).first().subscribe { observeSecondEvent(it, delayedEventFromThirdObserver) }
 
-        databaseTransaction(database) {
+        database.transaction {
             val commitDelayedSource = source.bufferUntilDatabaseCommit()
             assertThat(source).isNotEqualTo(commitDelayedSource)
             commitDelayedSource.onNext(0)

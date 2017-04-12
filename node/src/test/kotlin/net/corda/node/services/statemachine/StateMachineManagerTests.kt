@@ -27,7 +27,7 @@ import net.corda.flows.FinalityFlow
 import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.initiateSingleShotFlow
@@ -201,7 +201,7 @@ class StateMachineManagerTests {
 
         // Kick off first send and receive
         node2.services.startFlow(PingPongFlow(node3.info.legalIdentity, payload))
-        databaseTransaction(node2.database) {
+        node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size)
         }
         // Make sure the add() has finished initial processing.
@@ -209,7 +209,7 @@ class StateMachineManagerTests {
         node2.disableDBCloseOnStop()
         // Restart node and thus reload the checkpoint and resend the message with same UUID
         node2.stop()
-        databaseTransaction(node2.database) {
+        node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
         }
         val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
@@ -225,10 +225,10 @@ class StateMachineManagerTests {
         assertEquals(4, receivedCount, "Flow should have exchanged 4 unique messages")// Two messages each way
         // can't give a precise value as every addMessageHandler re-runs the undelivered messages
         assertTrue(sentCount > receivedCount, "Node restart should have retransmitted messages")
-        databaseTransaction(node2b.database) {
+        node2b.database.transaction {
             assertEquals(0, node2b.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
-        databaseTransaction(node3.database) {
+        node3.database.transaction {
             assertEquals(0, node3.checkpointStorage.checkpoints().size, "Checkpoints left after restored flow should have ended")
         }
         assertEquals(payload2, firstAgain.receivedPayload, "Received payload does not match the first value on Node 3")
@@ -429,7 +429,7 @@ class StateMachineManagerTests {
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
                 .withMessage("Nothing useful")
                 .withStackTraceContaining(ReceiveFlow::class.java.name)  // Make sure the stack trace is that of the receiving flow
-        databaseTransaction(node2.database) {
+        node2.database.transaction {
             assertThat(node2.checkpointStorage.checkpoints()).isEmpty()
         }
 

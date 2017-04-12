@@ -17,7 +17,7 @@ import net.corda.core.utilities.ALICE_KEY
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.TestClock
@@ -78,7 +78,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
 
-        databaseTransaction(database) {
+        database.transaction {
             val kms = MockKeyManagementService(ALICE_KEY)
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.PeerHandle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
             services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
@@ -235,7 +235,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         scheduleTX(time, 3)
 
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
-        databaseTransaction(database) {
+        database.transaction {
             scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
         }
         testClock.advanceBy(1.days)
@@ -253,7 +253,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         backgroundExecutor.execute { schedulerGatedExecutor.waitAndRun() }
         assertThat(calls).isEqualTo(0)
 
-        databaseTransaction(database) {
+        database.transaction {
             scheduler.unscheduleStateActivity(scheduledRef1!!.ref)
         }
         testClock.advanceBy(1.days)
@@ -264,7 +264,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     private fun scheduleTX(instant: Instant, increment: Int = 1): ScheduledStateRef? {
         var scheduledRef: ScheduledStateRef? = null
-        databaseTransaction(database) {
+        database.transaction {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(factory.create(TestFlowLogic::class.java, increment), instant)

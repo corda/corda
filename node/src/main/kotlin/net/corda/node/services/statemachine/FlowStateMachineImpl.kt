@@ -21,7 +21,7 @@ import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.StrandLocalTransactionManager
-import net.corda.node.utilities.createDatabaseTransaction
+import net.corda.node.utilities.createTransaction
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -133,7 +133,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun createTransaction() {
         // Make sure we have a database transaction
-        createDatabaseTransaction(database)
+        database.createTransaction()
         logger.trace { "Starting database transaction ${TransactionManager.currentOrNull()} on ${Strand.currentStrand()}" }
     }
 

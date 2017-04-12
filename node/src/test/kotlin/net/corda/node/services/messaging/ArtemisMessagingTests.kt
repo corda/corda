@@ -22,7 +22,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
@@ -220,7 +220,7 @@ class ArtemisMessagingTests {
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
-        return databaseTransaction(database) {
+        return database.transaction {
             NodeMessagingClient(
                     config,
                     MOCK_NODE_VERSION_INFO,

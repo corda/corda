@@ -15,7 +15,7 @@ import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -216,7 +216,7 @@ class CommercialPaperTestsGeneric {
         val dataSourcePropsAlice = makeTestDataSourceProperties()
         val dataSourceAndDatabaseAlice = configureDatabase(dataSourcePropsAlice)
         val databaseAlice = dataSourceAndDatabaseAlice.second
-        databaseTransaction(databaseAlice) {
+        databaseAlice.transaction {
 
             aliceServices = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
@@ -236,7 +236,7 @@ class CommercialPaperTestsGeneric {
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
         val dataSourceAndDatabaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
         val databaseBigCorp = dataSourceAndDatabaseBigCorp.second
-        databaseTransaction(databaseBigCorp) {
+        databaseBigCorp.transaction {
 
             bigCorpServices = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
@@ -267,7 +267,7 @@ class CommercialPaperTestsGeneric {
                     signWith(DUMMY_NOTARY_KEY)
                 }.toSignedTransaction()
 
-        databaseTransaction(databaseAlice) {
+        databaseAlice.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
@@ -280,7 +280,7 @@ class CommercialPaperTestsGeneric {
             }
         }
 
-        databaseTransaction(databaseBigCorp) {
+        databaseBigCorp.transaction {
             // Verify the txns are valid and insert into both sides.
             listOf(issueTX, moveTX).forEach {
                 it.toLedgerTransaction(aliceServices).verify()
@@ -289,7 +289,7 @@ class CommercialPaperTestsGeneric {
             }
         }
 
-        databaseTransaction(databaseBigCorp) {
+        databaseBigCorp.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
                 ptx.setTime(time, 30.seconds)

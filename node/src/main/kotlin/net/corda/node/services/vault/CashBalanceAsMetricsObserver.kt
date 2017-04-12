@@ -3,7 +3,7 @@ package net.corda.node.services.vault
 import com.codahale.metrics.Gauge
 import net.corda.core.node.services.VaultService
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
 import java.util.*
 
@@ -31,7 +31,7 @@ class CashBalanceAsMetricsObserver(val serviceHubInternal: ServiceHubInternal, v
         //
         // Note: exported as pennies.
         val m = serviceHubInternal.monitoringService.metrics
-        databaseTransaction(database) {
+        database.transaction {
             for ((key, value) in vault.cashBalances) {
                 val metric = balanceMetrics.getOrPut(key) {
                     val newMetric = BalanceMetric()

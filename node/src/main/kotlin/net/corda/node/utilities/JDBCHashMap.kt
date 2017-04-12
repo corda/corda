@@ -189,7 +189,7 @@ abstract class AbstractJDBCHashSet<K : Any, out T : JDBCHashedTable>(protected v
  * number of hash "buckets", where one bucket represents all entries with the same hash code.  There is a default value
  * for maximum buckets.
  *
- * All operations require a [databaseTransaction] to be started.
+ * All operations require a [transaction] to be started.
  *
  * The keys/values/entries collections are really designed just for iterating and other uses might turn out to be
  * costly in terms of performance.  Beware when loadOnInit=true, the iterator first sorts the entries which could be

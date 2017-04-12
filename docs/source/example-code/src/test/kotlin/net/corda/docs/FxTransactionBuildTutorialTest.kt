@@ -11,7 +11,7 @@ import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -80,11 +80,11 @@ class FxTransactionBuildTutorialTest {
         doIt.resultFuture.getOrThrow()
         // Get the balances when the vault updates
         nodeAVaultUpdate.get()
-        val balancesA = databaseTransaction(nodeA.database) {
+        val balancesA = nodeA.database.transaction {
             nodeA.services.vaultService.cashBalances
         }
         nodeBVaultUpdate.get()
-        val balancesB = databaseTransaction(nodeB.database) {
+        val balancesB = nodeB.database.transaction {
             nodeB.services.vaultService.cashBalances
         }
         println("BalanceA\n" + balancesA)
@@ -98,10 +98,10 @@ class FxTransactionBuildTutorialTest {
 
     private fun printBalances() {
         // Print out the balances
-        databaseTransaction(nodeA.database) {
+        nodeA.database.transaction {
             println("BalanceA\n" + nodeA.services.vaultService.cashBalances)
         }
-        databaseTransaction(nodeB.database) {
+        nodeB.database.transaction {
             println("BalanceB\n" + nodeB.services.vaultService.cashBalances)
         }
     }

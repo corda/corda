@@ -20,7 +20,7 @@ import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.jackson.JacksonSupport
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
@@ -75,7 +75,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
     }
 
     private fun loadLinearHeads(node: SimulatedNode): Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State<AnonymousParty>>> {
-        return databaseTransaction(node.database) {
+        return node.database.transaction {
             node.services.vaultService.linearHeadsOfType<InterestRateSwap.State<AnonymousParty>>()
         }
     }
