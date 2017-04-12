@@ -7,10 +7,6 @@ import java.text.Normalizer
 import java.util.regex.Pattern
 
 /**
- * This validator is used to enforce rules on Corda's legal names , its intended to be used by the Doorman server and Corda node during the node registration process.
- * It has two functions, a function to normalize legal names, and a function to validate legal names.
- * The normalize function will trim the input string, replace any multiple spaces with a single space, and normalize the string according to NFKC normalization form.
- *
  * The validation function will validate the input string using the following rules:
  * - No blacklisted words like "node", "server".
  * - Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and character confusability attacks.
@@ -18,6 +14,19 @@ import java.util.regex.Pattern
  * - No commas or equals signs.
  * - No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
  */
+fun validateLegalName(normalizedLegalName: String) {
+    rules.forEach { it.validate(normalizedLegalName) }
+}
+
+/**
+ * The normalize function will trim the input string, replace any multiple spaces with a single space,
+ * and normalize the string according to NFKC normalization form.
+ */
+fun normaliseLegalName(legalName: String): String {
+    val trimmedLegalName = legalName.trim().replace(Regex("\\s+"), " ")
+    return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
+}
+
 private val rules: List<Rule<String>> = listOf(
         UnicodeNormalizationRule(),
         CharacterRule(',', '=', '$', '"', '\'', '\\'),
@@ -27,15 +36,6 @@ private val rules: List<Rule<String>> = listOf(
         UnicodeRangeRule(LATIN, COMMON, INHERITED),
         CapitalLetterRule()
 )
-
-fun validateLegalName(normalizedLegalName: String) {
-    rules.forEach { it.validate(normalizedLegalName) }
-}
-
-fun normaliseLegalName(legalName: String): String {
-    val trimmedLegalName = legalName.trim().replace(Regex("\\s+"), " ")
-    return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
-}
 
 private class UnicodeNormalizationRule : Rule<String> {
     override fun validate(legalName: String) {

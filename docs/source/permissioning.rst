@@ -40,12 +40,12 @@ This process only is needed when the node connects to the network for the first 
 
 Legal Name Constraints
 ----------------------
-The legal name is the unique identifier in the Corda network, constraints has been set out to prevent encoding attacks and visual spoofing.
+The legal name is the unique identifier in the Corda network, so constraints have been set out to prevent encoding attacks and visual spoofing.
 
-The legal name validator (see ``LegalNameValidator.kt``) is used to enforce rules on Corda's legal names , its intended to be used by the Doorman server and Corda node during the node registration process.
+The legal name validator (see ``LegalNameValidator.kt``) is used to enforce rules on Corda's legal names , it is intended to be used by the network operator and Corda node during the node registration process.
 It has two functions, a function to normalize legal names, and a function to validate legal names.
 
-The normalize function will trim the input string, replace any multiple spaces with a single space, and normalize the string according to NFKC normalization form.
+The normalize function will trim the input string, replace any multiple spaces with a single space, and normalize the string according to `NFKC normalization form <https://en.wikipedia.org/wiki/Unicode_equivalence#Normalization>`_.
 
 The validation function will validate the input string using the following rules:
 
@@ -57,7 +57,7 @@ The validation function will validate the input string using the following rules
 
 * No commas or equals signs.
 
-* No dollars or quote marks, we might need to relax the quote mark constraint in future to handle Irish company names.
+* No dollars or quote marks, although we may relax the quote mark constraint in future to handle Irish company names.
 
 Starting the Registration
 -------------------------
