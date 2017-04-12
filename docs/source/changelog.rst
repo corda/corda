@@ -9,6 +9,9 @@ UNRELEASED
 * API changes:
     * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
 
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
+      composite keys and signatures.
+
 Milestone 10.0
 --------------
 
@@ -55,9 +58,6 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
         * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between ``node`` and ``client``.
 
     * The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
-
-* Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
-  composite keys and signatures.
 
 * Configuration:
     * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration.

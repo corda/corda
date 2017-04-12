@@ -4,6 +4,14 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Unreleased
+----------
+
+Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
+composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
+formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
+certificates to prove association between transaction keys and identity keys.
+
 Milestone 10
 ------------
 
@@ -28,11 +36,6 @@ Such transactions would result in naturally wasted effort when the notary reject
 Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
 
 The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
-
-Work has contined on confidential identities, introducing code to enable the Java standard libraries to work with
-composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
-formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
-certificates to prove association between transaction keys and identity keys.
 
 We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
 
