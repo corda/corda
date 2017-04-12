@@ -2,15 +2,12 @@ package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.jvm.javaMethod
+import kotlin.reflect.jvm.kotlinFunction
 
 
 abstract class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any?
-
-    //protected val clazz = (readMethod.genericReturnType as? Class<*> ?: (readMethod.genericReturnType as? ParameterizedType)?.rawType as? Class<*>) ?: throw NotSerializableException("Property does return class: ${readMethod.genericReturnType}")
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
@@ -44,12 +41,12 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     private fun generateMandatory(): Boolean {
-        // TODO: support @NotNull
-        return isPrimitive || !readMethod.returnsKotlinNullable()
+        return isPrimitive || !readMethod.returnsNullable()
     }
 
-    private fun Method.returnsKotlinNullable(): Boolean {
-        return (declaringClass.kotlin.memberProperties.firstOrNull { it.getter.javaMethod == this })?.returnType?.isMarkedNullable ?: true
+    private fun Method.returnsNullable(): Boolean {
+        val returnTypeString = this.kotlinFunction?.returnType?.toString() ?: "?"
+        return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
     }
 
     companion object {
@@ -62,10 +59,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
                 return ObjectPropertySerializer(name, readMethod)
             }
         }
-
     }
-
-
 }
 
 class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
@@ -76,7 +70,6 @@ class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySeria
     override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
         output.writeObjectOrNull(readMethod.invoke(obj), data, readMethod.genericReturnType)
     }
-
 }
 
 class PrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
