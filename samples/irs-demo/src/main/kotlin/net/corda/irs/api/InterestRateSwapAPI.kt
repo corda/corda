@@ -8,7 +8,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.loggerFor
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.AutoOfferFlow
-import net.corda.irs.flows.ExitServerFlow
 import net.corda.irs.flows.UpdateBusinessDayFlow
 import java.net.URI
 import java.time.LocalDate
@@ -35,7 +34,6 @@ import javax.ws.rs.core.Response
  *
  * TODO: replace simulated date advancement with business event based implementation
  *
- * PUT /api/irs/restart - (empty payload) cause the node to restart for API user emergency use in case any servers become unresponsive,
  * or if the demodate or population of deals should be reset (will only work while persistence is disabled).
  */
 @Path("irs")
@@ -111,13 +109,5 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
     @Produces(MediaType.APPLICATION_JSON)
     fun fetchDemoDate(): LocalDate {
         return LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
-    }
-
-    @PUT
-    @Path("restart")
-    @Consumes(MediaType.APPLICATION_JSON)
-    fun exitServer(): Response {
-        rpc.startFlow(ExitServerFlow::Broadcast, 83).returnValue.getOrThrow()
-        return Response.ok().build()
     }
 }

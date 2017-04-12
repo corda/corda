@@ -6,14 +6,12 @@ import net.corda.core.crypto.AbstractParty
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TwoPartyDealFlow
 import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
-import java.util.function.Function
 
 /**
  * This whole class is really part of a demo just to initiate the agreement of a deal with a simple
@@ -25,13 +23,8 @@ import java.util.function.Function
 object AutoOfferFlow {
 
     class Plugin : CordaPluginRegistry() {
-        override val servicePlugins = listOf(Function(::Service))
-    }
-
-
-    class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
-        init {
-            services.registerFlowInitiator(Instigator::class.java) { Acceptor(it) }
+        override fun initialise(serviceHub: PluginServiceHub) {
+            serviceHub.registerFlowInitiator(Instigator::class.java) { Acceptor(it) }
         }
     }
 

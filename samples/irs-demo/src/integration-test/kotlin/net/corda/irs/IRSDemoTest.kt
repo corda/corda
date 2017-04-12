@@ -9,7 +9,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.irs.api.NodeInterestRates
+import net.corda.irs.api.NodeInterestRatesPlugin
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.postJson
 import net.corda.irs.utilities.putJson
@@ -34,7 +34,7 @@ class IRSDemoTest : IntegrationTestCategory {
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = Futures.allAsList(
-                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRatesPlugin.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(DUMMY_BANK_B.name)
             ).getOrThrow()

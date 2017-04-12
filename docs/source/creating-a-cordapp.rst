@@ -19,15 +19,6 @@ specific details of the implementation, but you can extend the server in the fol
 5. Whitelisting your additional contract, state and other classes for object serialization.  Any class that forms part
    of a persisted state, that is used in messaging between flows or in RPC needs to be whitelisted.
 
-Services
---------
-
-Services are classes which are constructed after the node has started. It is provided a `PluginServiceHub`_ which
-allows a richer API than the `ServiceHub`_ exposed to contracts. It enables adding flows, registering
-message handlers and more. The service does not run in a separate thread, so the only entry point to the service is during
-construction, where message handlers should be registered and threads started.
-
-
 Starting nodes
 --------------
 

@@ -7,8 +7,6 @@ import net.corda.core.contracts.TransactionGraphSearch
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
@@ -22,18 +20,6 @@ class BuyerFlow(val otherParty: Party,
                 override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : FlowLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
-
-    class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
-        init {
-            // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
-            // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
-            val attachmentsPath = (services.storageService.attachments).let {
-                it.automaticallyExtractAttachments = true
-                it.storePath
-            }
-            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath) }
-        }
-    }
 
     @Suspendable
     override fun call() {

@@ -15,7 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.api.NodeInterestRates
+import net.corda.irs.api.NodeInterestRatesPlugin
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
@@ -36,8 +36,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
-class NodeInterestRatesTest {
-    val TEST_DATA = NodeInterestRates.parseFile("""
+class NodeInterestRatesPluginTest {
+    val TEST_DATA = NodeInterestRatesPlugin.parseFile("""
         LIBOR 2016-03-16 1M = 0.678
         LIBOR 2016-03-16 2M = 0.685
         LIBOR 2016-03-16 1Y = 0.890
@@ -49,8 +49,8 @@ class NodeInterestRatesTest {
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
 
-    val clock = Clock.systemUTC()
-    lateinit var oracle: NodeInterestRates.Oracle
+    val clock: Clock = Clock.systemUTC()
+    lateinit var oracle: NodeInterestRatesPlugin.Oracle
     lateinit var dataSource: Closeable
     lateinit var database: Database
 
@@ -69,7 +69,7 @@ class NodeInterestRatesTest {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         database.transaction {
-            oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
+            oracle = NodeInterestRatesPlugin.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
         }
     }
 
@@ -81,7 +81,7 @@ class NodeInterestRatesTest {
     @Test
     fun `query successfully`() {
         database.transaction {
-            val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
+            val q = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
             assertEquals("0.678".bd, res[0].value)
@@ -92,9 +92,9 @@ class NodeInterestRatesTest {
     @Test
     fun `query with one success and one missing`() {
         database.transaction {
-            val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-            val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
-            val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
+            val q1 = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")
+            val q2 = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-15 1M")
+            val e = assertFailsWith<NodeInterestRatesPlugin.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
             assertEquals(e.fix, q2)
         }
     }
@@ -102,7 +102,7 @@ class NodeInterestRatesTest {
     @Test
     fun `query successfully with interpolated rate`() {
         database.transaction {
-            val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
+            val q = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 5M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
             Assert.assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
@@ -113,8 +113,8 @@ class NodeInterestRatesTest {
     @Test
     fun `rate missing and unable to interpolate`() {
         database.transaction {
-            val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
-            assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
+            val q = NodeInterestRatesPlugin.parseFixOf("EURIBOR 2016-03-15 3M")
+            assertFailsWith<NodeInterestRatesPlugin.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
         }
     }
 
@@ -151,7 +151,7 @@ class NodeInterestRatesTest {
     fun `sign successfully`() {
         database.transaction {
             val tx = makeTX()
-            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
+            val fix = oracle.query(listOf(NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             tx.addCommand(fix, oracle.identity.owningKey)
             // Sign successfully.
             val wtx = tx.toWireTransaction()
@@ -165,12 +165,12 @@ class NodeInterestRatesTest {
     fun `do not sign with unknown fix`() {
         database.transaction {
             val tx = makeTX()
-            val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
+            val fixOf = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, "0.6789".bd)
             tx.addCommand(badFix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction { x -> fixCmdFilter(x) }
-            val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
+            val e1 = assertFailsWith<NodeInterestRatesPlugin.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
         }
     }
@@ -179,7 +179,7 @@ class NodeInterestRatesTest {
     fun `do not sign too many leaves`() {
         database.transaction {
             val tx = makeTX()
-            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
+            val fix = oracle.query(listOf(NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             fun filtering(elem: Any): Boolean {
                 return when (elem) {
                     is Command -> oracle.identity.owningKey in elem.signers && elem.value is Fix
@@ -206,13 +206,13 @@ class NodeInterestRatesTest {
     fun `network tearoff`() {
         val net = MockNetwork()
         val n1 = net.createNotaryNode()
-        val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
+        val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRatesPlugin.type))
         n2.database.transaction {
-            n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
+            n2.pluginRegistries.filterIsInstance<NodeInterestRatesPlugin>().single().oracle.knownFixes = TEST_DATA
         }
         val tx = TransactionType.General.Builder(null)
-        val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val oracle = n2.info.serviceIdentities(NodeInterestRates.type).first()
+        val fixOf = NodeInterestRatesPlugin.parseFixOf("LIBOR 2016-03-16 1M")
+        val oracle = n2.info.serviceIdentities(NodeInterestRatesPlugin.type).first()
         val flow = FilteredRatesFlow(tx, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()
