@@ -44,7 +44,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
     /** Gets a value for the given [Commands.Get.key] */
     fun get(commit: Commit<Commands.Get<K, V>>): V? {
         commit.use {
-            val key = commit.operation().key
+            val key = it.operation().key
             return databaseTransaction(db) { map[key] }
         }
     }
