@@ -13,12 +13,16 @@ class CompositeSignature : Signature(ALGORITHM) {
         val ALGORITHM = "X-Corda-CompositeSig"
     }
 
-    private var buffer: ByteArrayOutputStream = ByteArrayOutputStream(1024)
-    private var verifyKey: CompositeKey? = null
+    private var signatureState: State? = null
 
-    private fun assertInitialised() {
-        if (verifyKey == null)
-            throw SignatureException("Engine has not been initialised with a signing key")
+    /**
+     * Check that the signature state has been initialised, then return it.
+     */
+    @Throws(SignatureException::class)
+    private fun assertInitialised(): State {
+        if (signatureState == null)
+            throw SignatureException("Engine has not been initialised")
+        return signatureState!!
     }
 
     @Throws(InvalidAlgorithmParameterException::class)
@@ -34,8 +38,7 @@ class CompositeSignature : Signature(ALGORITHM) {
     @Throws(InvalidKeyException::class)
     override fun engineInitVerify(publicKey: PublicKey?) {
         if (publicKey is CompositeKey) {
-            buffer = ByteArrayOutputStream(1024)
-            verifyKey = publicKey
+            signatureState = State(ByteArrayOutputStream(1024), publicKey)
         } else {
             throw InvalidKeyException("Key to verify must be a composite key")
         }
@@ -57,23 +60,25 @@ class CompositeSignature : Signature(ALGORITHM) {
     }
 
     override fun engineUpdate(b: Byte) {
-        assertInitialised()
-        buffer.write(b.toInt())
+        assertInitialised().buffer.write(b.toInt())
     }
 
     override fun engineUpdate(b: ByteArray, off: Int, len: Int) {
-        assertInitialised()
-        buffer.write(b, off, len)
+        assertInitialised().buffer.write(b, off, len)
     }
 
     @Throws(SignatureException::class)
-    override fun engineVerify(sigBytes: ByteArray): Boolean {
-        val sig = sigBytes.deserialize<CompositeSignaturesWithKeys>()
-        return if (verifyKey != null && verifyKey!!.isFulfilledBy(sig.sigs.map { it.by })) {
-            val clearData = buffer.toByteArray()
-            sig.sigs.all { it.verifyWithECDSABool(clearData) }
-        } else {
-            false
+    override fun engineVerify(sigBytes: ByteArray): Boolean = assertInitialised().engineVerify(sigBytes)
+
+    data class State(val buffer: ByteArrayOutputStream, val verifyKey: CompositeKey) {
+        fun engineVerify(sigBytes: ByteArray): Boolean {
+            val sig = sigBytes.deserialize<CompositeSignaturesWithKeys>()
+            return if (verifyKey.isFulfilledBy(sig.sigs.map { it.by })) {
+                val clearData = buffer.toByteArray()
+                sig.sigs.all { it.verifyWithECDSABool(clearData) }
+            } else {
+                false
+            }
         }
     }
 }
