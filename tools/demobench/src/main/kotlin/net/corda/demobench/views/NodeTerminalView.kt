@@ -31,7 +31,6 @@ class NodeTerminalView : Fragment() {
     private val webServerController by inject<WebServerController>()
 
     private val nodeName by fxid<Label>()
-    private val p2pPort by fxid<PropertyLabel>()
     private val states by fxid<PropertyLabel>()
     private val transactions by fxid<PropertyLabel>()
     private val balance by fxid<PropertyLabel>()
@@ -49,7 +48,6 @@ class NodeTerminalView : Fragment() {
 
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
-        p2pPort.value = config.p2pPort.toString()
         launchWebButton.text = "Launch\nWeb Server\n(Port ${config.webPort})"
 
         val swingTerminal = SwingNode()
@@ -177,8 +175,8 @@ class NodeTerminalView : Fragment() {
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {
-        override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.BLACK)
-
+        override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.rgb(50, 50, 50))
         override fun emulateX11CopyPaste() = true
+
     }
 }

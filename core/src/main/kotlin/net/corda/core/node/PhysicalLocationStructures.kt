@@ -48,17 +48,20 @@ data class PhysicalLocation(val coordinate: WorldCoordinate, val description: St
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.
  */
 object CityDatabase {
-    private val cityMap = HashMap<String, PhysicalLocation>()
+    private val caseInsensitiveLookups = HashMap<String, PhysicalLocation>()
+    val cityMap = HashMap<String, PhysicalLocation>()
 
     init {
         javaClass.getResourceAsStream("cities.txt").bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.startsWith("#")) continue
                 val (name, lng, lat) = line.split('\t')
-                cityMap[name.toLowerCase()] = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), name)
+                val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), name)
+                caseInsensitiveLookups[name.toLowerCase()] = location
+                cityMap[name] = location
             }
         }
     }
 
-    operator fun get(name: String) = cityMap[name.toLowerCase()]
+    operator fun get(name: String) = caseInsensitiveLookups[name.toLowerCase()]
 }

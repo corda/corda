@@ -4,27 +4,38 @@
  */
 
 .header {
-    -fx-background-color: #505050;
-    -fx-padding: 15px;
+    -fx-background-color: white;
+    -fx-padding: 1.5em;
+    -fx-spacing: 20px;
 }
 
 .property-label .label {
     -fx-font-size: 14pt;
-    -fx-text-fill: white;
-}
-
-.add-node-button {
-    -fx-base: red;
+    -fx-text-fill: black;
 }
 
 .big-button {
-    -fx-base: #009759;
-    -fx-background-radius: 5px;
-    -fx-opacity: 80%;
+    -fx-font-size: 12pt;
+}
+
+.start-button {
+    -fx-base: #26b426;
+    -fx-text-fill: white;
+}
+
+.terminal-gradient-pane {
+    -fx-border-color: black;
+    -fx-border-width: 1 0 0 0;
+    -fx-background-color: linear-gradient(to bottom, black, #323232);
+}
+
+.terminal-vbox {
+    -fx-background-color: #323232;
 }
 
 .node-panel {
-    -fx-spacing: 20px;
+    -fx-spacing: 1em;
+    -fx-background-color: white;
 }
 
 .services-panel {
@@ -39,5 +50,10 @@
 
 .list-cell {
     -fx-control-inner-background: white;
-    -fx-control-inner-background-alt: gainsboro;
+    -fx-control-inner-background-alt: #f7f7f7;
+}
+
+.config-view {
+    -fx-background-color: white;
+    -fx-padding: 1em;
 }
