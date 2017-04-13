@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.exists
+import net.corda.core.utilities.ALICE
 import net.corda.testing.TestNodeConfiguration
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +35,7 @@ class NetworkRegistrationHelperTest {
 
         val config = TestNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
-                myLegalName = "me",
+                myLegalName = ALICE.name,
                 networkMapService = null)
 
         assertFalse(config.keyStoreFile.exists())

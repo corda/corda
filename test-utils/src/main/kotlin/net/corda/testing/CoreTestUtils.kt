@@ -71,7 +71,7 @@ val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
+val BOC: Party get() = Party("CN=BankOfCorda,O=R3,OU=corda,L=New York,C=USA", BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }

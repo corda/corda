@@ -16,10 +16,10 @@ class BankOfCordaHttpAPITest {
         driver(dsl = {
             val (nodeBankOfCorda) = Futures.allAsList(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type))),
-                    startNode("BigCorporation")
+                    startNode(BIGCORP_LEGAL_NAME)
             ).getOrThrow()
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow()
-            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", BOC.name)))
+            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME.toString(), "1", BOC.name.toString())))
         }, isDebug = true)
     }
 }

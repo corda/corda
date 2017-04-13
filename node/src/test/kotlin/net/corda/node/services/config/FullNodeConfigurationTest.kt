@@ -1,5 +1,6 @@
 package net.corda.node.services.config
 
+import net.corda.core.utilities.ALICE
 import net.corda.nodeapi.User
 import net.corda.testing.testConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -10,7 +11,7 @@ class FullNodeConfigurationTest {
     @Test
     fun `Artemis special characters not permitted in RPC usernames`() {
         fun configWithRPCUsername(username: String): FullNodeConfiguration {
-            return testConfiguration(Paths.get("."), "NodeA", 0).copy(
+            return testConfiguration(Paths.get("."), ALICE.name, 0).copy(
                     rpcUsers = listOf(User(username, "pass", emptySet())))
         }
 

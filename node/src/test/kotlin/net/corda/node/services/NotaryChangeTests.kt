@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -74,7 +75,7 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = Party("Evil Notary", generateKeyPair().public)
+        val newEvilNotary = Party("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=UK", generateKeyPair().public)
         val flow = Instigator(state, newEvilNotary)
         val future = clientNodeA.services.startFlow(flow)
 
