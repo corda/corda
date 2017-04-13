@@ -13,18 +13,9 @@ import org.junit.Test
 import java.util.concurrent.CompletableFuture
 
 class AttachmentDemoTest {
-    // run with the default 1K bytes in-memory zip file.
-    @Test fun `attachment demo`() {
-        attachmentDemo()
-    }
-
     // run with a 10,000,000 bytes in-memory zip file. In practice, a slightly bigger file will be used (~10,002,000 bytes).
     @Test fun `attachment demo using a 10MB zip file`() {
-        attachmentDemo(10000000)
-    }
-
-    // An in-memory zip file will be used as InputStream, with a size slightly bigger than numOfExpectedBytes.
-    private fun attachmentDemo(numOfExpectedBytes: Int = 1024) {
+        val numOfExpectedBytes = 10_000_000
         driver(dsl = {
             val demoUser = listOf(User("demo", "demo", setOf("StartFlow.net.corda.flows.FinalityFlow")))
             val (nodeA, nodeB) = Futures.allAsList(
