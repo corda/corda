@@ -8,6 +8,9 @@ import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.serialization.OpaqueBytes
+import org.bouncycastle.asn1.x500.X500Name
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Duration
@@ -119,3 +122,32 @@ class TimestampGenerator : Generator<Timestamp>(Timestamp::class.java) {
     }
 }
 
+class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
+    companion object {
+        private val charset = Charset.forName("US-ASCII")
+        private val asciiA = charset.encode("A")[0]
+        private val asciia = charset.encode("a")[0]
+    }
+
+    /**
+     * Append something that looks a bit like a proper noun to the string builder.
+     */
+    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness, status: GenerationStatus) : StringBuilder {
+        val length = random.nextByte(1, 8)
+        val encoded = ByteBuffer.allocate(length.toInt())
+        encoded.put((random.nextByte(0, 25) + asciiA).toByte())
+        for (charIdx in 1..length - 1) {
+            encoded.put((random.nextByte(0, 25) + asciia).toByte())
+        }
+        return builder.append(charset.decode(encoded))
+    }
+
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): X500Name {
+        val wordCount = random.nextByte(1, 3)
+        val cn = StringBuilder()
+        for (word in 0..wordCount) {
+            appendProperNoun(cn, random, status).append(" ")
+        }
+        return X509Utilities.getDevX509Name(cn.trim().toString())
+    }
+}

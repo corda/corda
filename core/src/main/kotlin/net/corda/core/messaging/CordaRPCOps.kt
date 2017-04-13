@@ -15,6 +15,7 @@ import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
@@ -164,6 +165,11 @@ interface CordaRPCOps : RPCOps {
      * Returns the [Party] with the given name as it's [Party.name]
      */
     fun partyFromName(name: String): Party?
+
+    /**
+     * Returns the [Party] with the X.500 principal as it's [Party.name]
+     */
+    fun partyFromX500Name(x500Name: X500Name): Party?
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>

@@ -8,6 +8,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import java.security.PublicKey
+import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
@@ -35,6 +36,7 @@ class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
 
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
+    override fun partyFromX500Name(principal: X500Name): Party? = nameToParties[principal.toString()]
     override fun partyFromAnonymous(party: AnonymousParty): Party? = partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 }

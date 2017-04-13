@@ -22,6 +22,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.MOCK_VERSION
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream
@@ -94,6 +95,7 @@ class MockIdentityService(val identities: List<Party>) : IdentityService, Single
     override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[name]
+    override fun partyFromX500Name(principal: X500Name): Party? = nameToParties[principal.toString()]
 }
 
 

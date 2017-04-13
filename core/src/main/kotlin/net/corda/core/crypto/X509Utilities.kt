@@ -38,6 +38,7 @@ import java.security.spec.ECGenParameterSpec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import javax.security.auth.x500.X500Principal
 
 object X509Utilities {
 
@@ -239,14 +240,25 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      *
+     * @param commonName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
+     * @param nearestCity The city where your organization is located.
+     * @param email An email address used to contact your organization.
+     * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
+     * @return The generated Certificate signing request.
+     */
+    @Deprecated("Use [createCertificateSigningRequest(X500Name, KeyPair)] instead, specifying full legal name")
+    fun createCertificateSigningRequest(commonName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest = createCertificateSigningRequest(getX509Name(commonName, nearestCity, email), keyPair)
+
+    /**
+     * Create certificate signing request using provided information.
+     *
      * @param myLegalName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
      * @param nearestCity The city where your organization is located.
      * @param email An email address used to contact your organization.
      * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
      * @return The generated Certificate signing request.
      */
-    fun createCertificateSigningRequest(myLegalName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest {
-        val subject = getX509Name(myLegalName, nearestCity, email)
+    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair): PKCS10CertificationRequest {
         val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
                 .setProvider(BouncyCastleProvider.PROVIDER_NAME)
                 .build(keyPair.private)
@@ -261,16 +273,24 @@ object X509Utilities {
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
-     * @param domain The Common (CN) field of the cert Subject will be populated with the domain string
+     * @param commonName The Common (CN) field of the cert Subject will be populated with the domain string
      * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(myLegalName: String): CACertAndKey {
+    @Deprecated("Use [createSelfSignedCACert(X500Name)] instead, specifying full legal name")
+    fun createSelfSignedCACert(commonName: String): CACertAndKey = createSelfSignedCACert(getDevX509Name(commonName))
+
+    /**
+     * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
+     * @param subject the cert Subject will be populated with the domain string
+     * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
+     * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
+     */
+    fun createSelfSignedCACert(subject: X500Name): CACertAndKey {
         val keyPair = generateECDSAKeyPairForSSL()
 
-        val issuer = getDevX509Name(myLegalName)
+        val issuer = subject
         val serial = BigInteger.valueOf(random63BitValue())
-        val subject = issuer
         val pubKey = keyPair.public
 
         // Ten year certificate validity
@@ -305,18 +325,29 @@ object X509Utilities {
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
-     * @param domain The Common (CN) field of the cert Subject will be populated with the domain string
+     * @param commonName The Common (CN) field of the cert Subject will be populated with the domain string
      * @param certificateAuthority The Public certificate and KeyPair of the root CA certificate above this used to sign it
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
      */
-    fun createIntermediateCert(domain: String,
+    @Deprecated("Use [createIntermediateCert(X500Name, CACertAndKey)] instead, specifying full legal name")
+    fun createIntermediateCert(commonName: String,
+                               certificateAuthority: CACertAndKey): CACertAndKey
+            = createIntermediateCert(getDevX509Name(commonName), certificateAuthority)
+
+    /**
+     * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
+     * @param subject subject of the generated certificate.
+     * @param certificateAuthority The Public certificate and KeyPair of the root CA certificate above this used to sign it
+     * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
+     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
+     */
+    fun createIntermediateCert(subject: X500Name,
                                certificateAuthority: CACertAndKey): CACertAndKey {
         val keyPair = generateECDSAKeyPairForSSL()
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue())
-        val subject = getDevX509Name(domain)
         val pubKey = keyPair.public
 
         // Ten year certificate validity
@@ -517,8 +548,8 @@ object X509Utilities {
                                       trustStoreFilePath: Path,
                                       trustStorePassword: String
     ): KeyStore {
-        val rootCA = createSelfSignedCACert("Corda Node Root CA")
-        val intermediateCA = createIntermediateCert("Corda Node Intermediate CA", rootCA)
+        val rootCA = createSelfSignedCACert(getDevX509Name("Corda Node Root CA"))
+        val intermediateCA = createIntermediateCert(getDevX509Name("Corda Node Intermediate CA"), rootCA)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
@@ -574,7 +605,25 @@ object X509Utilities {
                              keyPassword: String,
                              caKeyStore: KeyStore,
                              caKeyPassword: String,
-                             commonName: String): KeyStore {
+                             commonName: String): KeyStore = createKeystoreForSSL(keyStoreFilePath, storePassword, keyPassword,
+            caKeyStore, caKeyPassword, getDevX509Name(commonName))
+
+    /**
+     * An all in wrapper to manufacture a server certificate and keys all stored in a KeyStore suitable for running TLS on the local machine
+     * @param keyStoreFilePath KeyStore path to save output to
+     * @param storePassword access password for KeyStore
+     * @param keyPassword PrivateKey access password for the generated keys.
+     * It is recommended that this is the same as the storePassword as most TLS libraries assume they are the same.
+     * @param caKeyStore KeyStore containing CA keys generated by createCAKeyStoreAndTrustStore
+     * @param caKeyPassword password to unlock private keys in the CA KeyStore
+     * @return The KeyStore created containing a private key, certificate chain and root CA public cert for use in TLS applications
+     */
+    fun createKeystoreForSSL(keyStoreFilePath: Path,
+                             storePassword: String,
+                             keyPassword: String,
+                             caKeyStore: KeyStore,
+                             caKeyPassword: String,
+                             commonName: X500Name): KeyStore {
         val rootCA = X509Utilities.loadCertificateAndKey(
                 caKeyStore,
                 caKeyPassword,
@@ -587,7 +636,7 @@ object X509Utilities {
         val serverKey = generateECDSAKeyPairForSSL()
         val host = InetAddress.getLocalHost()
         val serverCert = createServerCert(
-                getDevX509Name(commonName),
+                commonName,
                 serverKey.public,
                 intermediateCA,
                 listOf(host.hostName),
