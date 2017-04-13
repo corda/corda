@@ -59,7 +59,7 @@ object CityDatabase {
                 if (line.startsWith("#")) continue
                 val (name, lng, lat) = line.split('\t')
                 val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
-                val (city, country) = matchResult!!.destructured
+                val (city, country) = matchResult.destructured
                 val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
                 caseInsensitiveLookups[city.toLowerCase()] = location
                 cityMap[city] = location

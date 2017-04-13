@@ -1,27 +1,30 @@
 package net.corda.demobench.views
 
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
+import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory
 import javafx.application.Platform
+import javafx.geometry.Pos
 import javafx.scene.control.ComboBox
 import javafx.scene.control.SelectionMode.MULTIPLE
-import javafx.scene.control.SelectionMode.values
+import javafx.scene.image.Image
+import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
-import javafx.util.converter.NumberStringConverter
+import javafx.util.StringConverter
 import net.corda.core.node.CityDatabase
+import net.corda.core.node.PhysicalLocation
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
-import org.controlsfx.control.textfield.TextFields
 import tornadofx.*
 import java.nio.file.Path
 import java.text.DecimalFormat
 import java.util.*
 
 class NodeTabView : Fragment() {
-    private val cityList = CityDatabase.cityMap.keys.toList().sorted()
-
     override val root = stackpane {}
 
     private val main by inject<DemoBenchView>()
@@ -29,11 +32,9 @@ class NodeTabView : Fragment() {
 
     private companion object : Component() {
         const val textWidth = 465.0
-        const val numberWidth = 100.0
         const val maxNameLength = 15
 
         val integerFormat = DecimalFormat()
-        val notNumber = "[^\\d]".toRegex()
 
         val jvm by inject<JVMConfig>()
 
@@ -62,13 +63,6 @@ class NodeTabView : Fragment() {
                 field("Legal name") { nodeNameField() }
                 field("Nearest city") { nearestCityField() }
             }
-
-            /*fieldset("Ports") {
-                field("P2P Port", op = { p2pPortField() })
-                field("RPC port", op = { rpcPortField() })
-                field("Web Port", op = { webPortField() })
-                field("Database Port", op = { databasePortField() })
-            }*/
 
             hbox {
                 styleClass.addAll("node-panel")
@@ -105,6 +99,8 @@ class NodeTabView : Fragment() {
                             cordapps.add(app)
                         }
                     }
+
+                    FontAwesomeIconFactory.get().setIcon(this, FontAwesomeIcon.PLUS)
                 }
 
                 // Spacer pane.
@@ -121,6 +117,7 @@ class NodeTabView : Fragment() {
                             main.enableSaveProfile()
                         }
                     }
+                    graphic = FontAwesomeIconView(FontAwesomeIcon.PLAY_CIRCLE).apply { style += "-fx-fill: white" }
                 }
             }
         }
@@ -133,12 +130,13 @@ class NodeTabView : Fragment() {
         nodeTab.setOnCloseRequest {
             nodeTerminalView.destroy()
         }
+        nodeTab.graphic = FontAwesomeIconView(FontAwesomeIcon.BANK)
 
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
         model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name
-        model.nearestCity.value = if (nodeController.hasNetworkMap()) "" else "London"
+        model.nearestCity.value = if (nodeController.hasNetworkMap()) null else CityDatabase["London"]!!
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
@@ -147,6 +145,8 @@ class NodeTabView : Fragment() {
         chooser.title = "CorDapps"
         chooser.initialDirectory = jvm.dataHome.toFile()
         chooser.extensionFilters.add(FileChooser.ExtensionFilter("CorDapps (*.jar)", "*.jar", "*.JAR"))
+
+        model.validate(focusFirstError = true)
     }
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
@@ -169,128 +169,38 @@ class NodeTabView : Fragment() {
         }
     }
 
-//    private fun Pane.nearestCityField() = textfield(model.nearestCity) {
-//        minWidth = textWidth
-//        TextFields.bindAutoCompletion(this, CityDatabase.cityMap.keys)
-//        validator(trigger = ValidationTrigger.OnBlur) {
-//            if (it == null || it.trim().isEmpty()) {
-//                error("Nearest city is required")
-//            } else if (CityDatabase[it] == null) {
-//                error("$it is not in our database, sorry")
-//            } else {
-//                null
-//            }
-//        }
-//    }
-
-    private fun Pane.nearestCityField() = combobox(model.nearestCity, cityList) {
-        minWidth = textWidth
-        isEditable = true
-        TextFields.bindAutoCompletion(editor, cityList)
-        validator(trigger = ValidationTrigger.OnBlur) {
-            if (it == null || it.trim().isEmpty()) {
-                error("Nearest city is required")
-            } else if (CityDatabase[it] == null) {
-                error("$it is not in our database, sorry")
-            } else {
-                null
-            }
-        }
+    private val flags = runAsync {
+        CityDatabase.cityMap.values.map { it.countryCode }.toSet().map { it to Image(resources["/net/corda/demobench/flags/$it.png"]) }.toMap()
     }
 
-    private fun Pane.p2pPortField() = textfield(model.p2pPort, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
+    private fun Pane.nearestCityField(): ComboBox<PhysicalLocation> {
+        return combobox(model.nearestCity, CityDatabase.cityMap.values.toList().sortedBy { it.description }) {
+            minWidth = textWidth
+            styleClass += "city-picker"
+            cellFormat {
+                graphic = hbox(spacing = 10) {
+                    imageview {
+                        image = flags.get()[it.countryCode]
+                    }
+                    label(it.description)
+                    alignment = Pos.CENTER_LEFT
                 }
             }
-        }
-    }
 
-    private fun Pane.rpcPortField() = textfield(model.rpcPort, NumberStringConverter(integerFormat)) {
-        minWidth = 100.0
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
-                }
+            validator {
+                if (it == null) error("Please select a city") else null
             }
-        }
-    }
 
-    private fun Pane.webPortField() = textfield(model.webPort, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
-                }
+            converter = object : StringConverter<PhysicalLocation>() {
+                override fun toString(loc: PhysicalLocation?) = loc?.description ?: ""
+                override fun fromString(string: String): PhysicalLocation? = CityDatabase[string]
             }
-        }
-    }
 
-    private fun Pane.databasePortField() = textfield(model.h2Port, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else {
-                    null
-                }
-            }
+            value = CityDatabase["London"]
+
+            // TODO: Find a way to make the popup the same width as when not auto-completing.
+            isEditable = true
+            makeAutocompletable()
         }
     }
 
@@ -302,6 +212,7 @@ class NodeTabView : Fragment() {
         val config = nodeController.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
+            nodeTab.graphic = ImageView(flags.get()[model.nearestCity.value.countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
             config.install(cordapps)
             launchNode(config)
         }

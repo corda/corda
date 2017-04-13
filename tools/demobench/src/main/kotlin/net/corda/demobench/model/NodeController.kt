@@ -55,7 +55,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 nodeData.legalName.value.trim(),
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,
-                nodeData.nearestCity.value.trim(),
+                nodeData.nearestCity.value.description.trim(),
                 nodeData.webPort.value,
                 nodeData.h2Port.value,
                 nodeData.extraServices.value

@@ -1,5 +1,5 @@
 buildscript {
-    ext.tornadofx_version = '1.6.2'
+    ext.tornadofx_version = '1.7.1'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
     ext.controlsfx_version = '8.40.12'
@@ -33,8 +33,13 @@ repositories {
         dirs 'libs'
     }
     maven {
+        jcenter()
         url 'http://www.sparetimelabs.com/maven2'
     }
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget= "1.8"
 }
 
 dependencies {
@@ -56,6 +61,9 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     compile "com.typesafe:config:$typesafe_config_version"
+
+    // FontAwesomeFX: icons in the form of a font.
+    compile "de.jensd:fontawesomefx-fontawesome:4.7.0-5"
 
     // These libraries don't exist in any Maven repository I can find.
     // See: https://github.com/JetBrains/jediterm
