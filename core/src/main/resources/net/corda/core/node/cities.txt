@@ -484,7 +484,6 @@ San Miguel De Tucuman (AR)	-65.22	-26.82
 Changwat Phra Nakhon Si Ayutthaya (TH)	100.53	14.33
 Selam (IN)	78.17	11.65
 Taroudannt (MA)	-8.87	30.47
-Reunion (RE)	55.52	-20.87
 Tiruchchirappalli (IN)	78.68	10.8
 Hims (SY)	36.72	34.72
 Hohhot (CN)	111.65	40.8

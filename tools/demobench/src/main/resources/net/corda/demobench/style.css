@@ -23,6 +23,11 @@
     -fx-text-fill: white;
 }
 
+.city-picker {
+    -fx-base: white;
+    -fx-background-color: -db-grey, -db-grey, white;
+}
+
 .terminal-gradient-pane {
     -fx-border-color: black;
     -fx-border-width: 1 0 0 0;
