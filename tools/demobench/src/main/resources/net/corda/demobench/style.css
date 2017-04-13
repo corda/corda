@@ -38,6 +38,10 @@
     -fx-background-color: #323232;
 }
 
+.terminal-widget {
+    -fx-opacity: 0.85;
+}
+
 .node-panel {
     -fx-spacing: 1em;
     -fx-background-color: white;

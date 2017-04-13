@@ -7,7 +7,10 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
+import javafx.scene.image.ImageView
+import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
+import javafx.util.Duration
 import net.corda.client.rpc.notUsed
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
@@ -18,7 +21,8 @@ import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
-import tornadofx.Fragment
+import tornadofx.*
+import java.awt.Color
 import java.awt.Dimension
 import java.util.logging.Level
 import javax.swing.SwingUtilities
@@ -45,6 +49,7 @@ class NodeTerminalView : Fragment() {
     private val viewer = DBViewer()
     private var rpc: NodeRPC? = null
     private var pty: R3Pty? = null
+    private lateinit var logo: ImageView
 
     fun open(config: NodeConfig, onExit: () -> Unit) {
         nodeName.text = config.legalName
@@ -55,7 +60,11 @@ class NodeTerminalView : Fragment() {
             swingTerminal.requestFocus()
         }
 
-        root.children.add(swingTerminal)
+        logo = ImageView(resources["corda-logo-square-trans.png"])
+        logo.opacity = 0.0
+        swingTerminal.styleClass += "terminal-widget"
+        val stack = StackPane(logo, swingTerminal)
+        root.children.add(stack)
         root.isVisible = true
 
         SwingUtilities.invokeLater({
@@ -144,6 +153,7 @@ class NodeTerminalView : Fragment() {
             )
 
             Platform.runLater {
+                logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
                 states.value = fetchAndDrop(statesInVault).size.toString()
                 transactions.value = fetchAndDrop(verifiedTx).size.toString()
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
@@ -177,6 +187,5 @@ class NodeTerminalView : Fragment() {
     class TerminalSettingsProvider : DefaultSettingsProvider() {
         override fun getDefaultStyle() = TextStyle(TerminalColor.WHITE, TerminalColor.rgb(50, 50, 50))
         override fun emulateX11CopyPaste() = true
-
     }
 }

@@ -19,9 +19,9 @@
         </Menu>
     </MenuBar>
     <StackPane styleClass="root-pane" VBox.vgrow="ALWAYS">
-        <TabPane fx:id="nodeTabPane" minHeight="444.0" minWidth="800.0" prefHeight="613.0" prefWidth="1231.0" tabClosingPolicy="UNAVAILABLE" tabMinHeight="30.0" />
+        <TabPane fx:id="nodeTabPane" minHeight="600.0" minWidth="800.0" prefHeight="800.0" prefWidth="1231.0" tabClosingPolicy="UNAVAILABLE" tabMinHeight="30.0" />
         <ImageView fitHeight="40.0" preserveRatio="true" StackPane.alignment="TOP_LEFT">
-            <Image url="@cordalogo-full-trans.png"/>
+            <Image url="@corda-logo-full-trans.png"/>
             <StackPane.margin>
                 <Insets left="20" top="15.0"/>
             </StackPane.margin>

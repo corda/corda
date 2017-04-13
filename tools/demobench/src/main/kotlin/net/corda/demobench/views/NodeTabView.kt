@@ -66,12 +66,14 @@ class NodeTabView : Fragment() {
 
             hbox {
                 styleClass.addAll("node-panel")
+                vboxConstraints { vGrow = Priority.ALWAYS }
 
                 fieldset("CorDapps") {
                     hboxConstraints { hGrow = Priority.ALWAYS }
                     styleClass.addAll("cordapps-panel")
 
                     listview(cordapps) {
+                        vboxConstraints { vGrow = Priority.ALWAYS }
                         setOnKeyPressed { key ->
                             if ((key.code == KeyCode.DELETE) && !selectionModel.isEmpty) {
                                 cordapps.remove(selectionModel.selectedItem)
@@ -85,6 +87,7 @@ class NodeTabView : Fragment() {
                     styleClass.addAll("services-panel")
 
                     listview(availableServices.observable()) {
+                        vboxConstraints { vGrow = Priority.ALWAYS }
                         selectionModel.selectionMode = MULTIPLE
                         model.item.extraServices.set(selectionModel.selectedItems)
                     }
@@ -198,7 +201,7 @@ class NodeTabView : Fragment() {
 
             value = CityDatabase["London"]
 
-            // TODO: Find a way to make the popup the same width as when not auto-completing.
+            // TODO: Upgrade to TornadoFX 1.7.3 to fix an issue where the combobox dropdown isn't wide enough.
             isEditable = true
             makeAutocompletable()
         }
