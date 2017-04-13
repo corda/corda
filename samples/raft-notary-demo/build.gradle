@@ -75,9 +75,9 @@ task generateNotaryIdentity(type: JavaExec) {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateNotaryIdentity']) {
     directory deployTo
-    networkMap "Notary 1"
+    networkMap "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Party"
+        name "CN=Party,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10002
@@ -89,7 +89,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         ]]]
     }
     node {
-        name "Counterparty"
+        name "CN=Counterparty,O=R3,OU=corda,L=London,C=UK"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10005
@@ -97,7 +97,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         cordapps = []
     }
     node {
-        name "Notary 1"
+        name "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         p2pPort 10008
@@ -106,7 +106,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         notaryNodePort 11002
     }
     node {
-        name "Notary 2"
+        name "CN=Notary 2,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         p2pPort 10011
@@ -116,7 +116,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         notaryClusterAddresses = ["localhost:11002"]
     }
     node {
-        name "Notary 3"
+        name "CN=Notary 3,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
         p2pPort 10014

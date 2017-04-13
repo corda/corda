@@ -55,9 +55,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.flows.FinalityFlow"]]]
 
     directory "./build/nodes"
-    networkMap "Controller"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Controller"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices["corda.notary.validating"]
         p2pPort 10002
@@ -66,7 +66,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = ext.rpcUsers
     }
     node {
-        name "Bank A"
+        name "CN=Bank A,O=Bank A,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10005
@@ -75,7 +75,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = ext.rpcUsers
     }
     node {
-        name "Bank B"
+        name "CN=Bank B,O=Bank B,L=New York,C=USA"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10008

@@ -12,6 +12,16 @@ composite key signatures. This will form the underlying basis of future work to 
 formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
 certificates to prove association between transaction keys and identity keys.
 
+The identity work is likely to require changes to existing code and configurations, to replace party names with full
+X.500 distinguished names (see RFC 1779 for details on the construction of distinguished names). Generally:
+
+* "myLegalName" in node configurations will need to be replaced, for example "Bank A" is replaced with
+  "CN=Bank A,O=Bank A,L=London,C=UK". Obviously organisation, location and country ("O", "L" and "C" respectively)
+  must be given values which are appropriate to the node, do not just use these example values.
+* If you are constructing ``Party`` objects, be aware that the name must now be a distinguished name.
+* If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided
+  in order to ensure consistency.
+
 We have updated DemoBench so that it is installed as "Corda DemoBench" for both Windows and MacOSX. The original version was installed as just "DemoBench", and so will not be overwritten automatically by the new version.
 
 Milestone 10

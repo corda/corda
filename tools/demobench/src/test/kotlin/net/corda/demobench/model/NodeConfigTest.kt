@@ -160,7 +160,7 @@ class NodeConfigTest {
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"MyName\","
                 + "\"nearestCity\":\"Stockholm\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"NotaryService\"},"
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=NotaryService,O=R3,OU=corda,L=London,C=UK\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["

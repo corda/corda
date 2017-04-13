@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class RaftNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = "RAFT Notary Service"
+    private val notaryName = "CN=RAFT Notary Service,O=R3,OU=corda,L=London,C=UK"
 
     @Test
     fun `detect double spend`() {

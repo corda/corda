@@ -4,6 +4,7 @@ import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
@@ -26,6 +27,8 @@ fun main(args: Array<String>) {
 
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
+
+val BIGCORP_LEGAL_NAME = "CN=BigCorporation,O=R3,OU=corda,L=London,C=UK"
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -57,13 +60,13 @@ private class BankOfCordaDriver {
                 val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
                 startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
                 val bankOfCorda = startNode(BOC.name, rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
-                startNode("BigCorporation", rpcUsers = listOf(bigCorpUser))
+                startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
         } else {
             try {
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), "BigCorporation", "1", "BankOfCorda")
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name)
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")

@@ -3,6 +3,7 @@ package net.corda.docs
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
@@ -11,6 +12,8 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -46,8 +49,8 @@ fun main(args: Array<String>) {
             startFlowPermission<CashExitFlow>()))
 
     driver(driverDirectory = baseDirectory) {
-        startNode("Notary", advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-        val node = startNode("Alice", rpcUsers = listOf(user)).get()
+        startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
+        val node = startNode(ALICE.name, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2

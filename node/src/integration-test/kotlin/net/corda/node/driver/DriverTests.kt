@@ -42,7 +42,7 @@ class DriverTests {
     fun `simple node startup and shutdown`() {
         val handles = driver {
             val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-            val regulator = startNode("Regulator", setOf(ServiceInfo(RegulatorService.type)))
+            val regulator = startNode("CN=Regulator,O=R3,OU=corda,L=London,C=UK", setOf(ServiceInfo(RegulatorService.type)))
             listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
         handles.map { nodeMustBeDown(it) }

@@ -2,6 +2,7 @@ package net.corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -70,7 +71,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     // TODO: Set this back to "Bank of $city" after video day.
-                    myLegalName = "Bank $letter",
+                    myLegalName = "CN=Bank $letter,O=Bank $letter,L=city",
                     nearestCity = city,
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
@@ -121,7 +122,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             require(advertisedServices.containsType(NodeInterestRates.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Rates Service Provider",
+                    // TODO: Make a more realistic legal name
+                    myLegalName = "CN=Rates Service Provider,O=R3,OU=corda,L=London,C=UK",
                     nearestCity = "Madrid",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
@@ -144,7 +146,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Regulator A",
+                    // TODO: Make a more realistic legal name
+                    myLegalName = "Regulator A,O=R3,OU=corda,L=London,C=UK",
                     nearestCity = "Paris",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
