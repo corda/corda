@@ -1,27 +1,34 @@
 package net.corda.demobench.views
 
 import javafx.application.Platform
+import javafx.scene.control.ComboBox
 import javafx.scene.control.SelectionMode.MULTIPLE
+import javafx.scene.control.SelectionMode.values
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.Pane
+import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.converter.NumberStringConverter
+import net.corda.core.node.CityDatabase
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import org.controlsfx.control.textfield.TextFields
 import tornadofx.*
 import java.nio.file.Path
 import java.text.DecimalFormat
 import java.util.*
 
 class NodeTabView : Fragment() {
+    private val cityList = CityDatabase.cityMap.keys.toList().sorted()
+
     override val root = stackpane {}
 
     private val main by inject<DemoBenchView>()
     private val showConfig by param(true)
 
     private companion object : Component() {
-        const val textWidth = 200.0
+        const val textWidth = 465.0
         const val numberWidth = 100.0
         const val maxNameLength = 15
 
@@ -46,32 +53,28 @@ class NodeTabView : Fragment() {
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
         isVisible = showConfig
+        styleClass += "config-view"
 
         form {
             fieldset("Configuration") {
                 isFillWidth = false
 
-                field("Node Name", op = { nodeNameField() })
-                field("Nearest City", op = { nearestCityField() })
+                field("Legal name") { nodeNameField() }
+                field("Nearest city") { nearestCityField() }
+            }
+
+            /*fieldset("Ports") {
                 field("P2P Port", op = { p2pPortField() })
                 field("RPC port", op = { rpcPortField() })
                 field("Web Port", op = { webPortField() })
                 field("Database Port", op = { databasePortField() })
-            }
+            }*/
 
             hbox {
                 styleClass.addAll("node-panel")
 
-                fieldset("Services") {
-                    styleClass.addAll("services-panel")
-
-                    listview(availableServices.observable()) {
-                        selectionModel.selectionMode = MULTIPLE
-                        model.item.extraServices.set(selectionModel.selectedItems)
-                    }
-                }
-
                 fieldset("CorDapps") {
+                    hboxConstraints { hGrow = Priority.ALWAYS }
                     styleClass.addAll("cordapps-panel")
 
                     listview(cordapps) {
@@ -82,23 +85,41 @@ class NodeTabView : Fragment() {
                             key.consume()
                         }
                     }
-                    button("Add CorDapp") {
-                        setOnAction {
-                            val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
-                            if (!cordapps.contains(app)) {
-                                cordapps.add(app)
-                            }
-                        }
+                }
+
+                fieldset("Services") {
+                    styleClass.addAll("services-panel")
+
+                    listview(availableServices.observable()) {
+                        selectionModel.selectionMode = MULTIPLE
+                        model.item.extraServices.set(selectionModel.selectedItems)
                     }
                 }
             }
 
-            button("Create Node") {
-                setOnAction {
-                    if (model.validate()) {
-                        launch()
-                        main.enableAddNodes()
-                        main.enableSaveProfile()
+            hbox {
+                button("Add CorDapp") {
+                    setOnAction {
+                        val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
+                        if (!cordapps.contains(app)) {
+                            cordapps.add(app)
+                        }
+                    }
+                }
+
+                // Spacer pane.
+                pane {
+                    hboxConstraints { hGrow = Priority.ALWAYS }
+                }
+
+                button("Start node") {
+                    styleClass += "start-button"
+                    setOnAction {
+                        if (model.validate()) {
+                            launch()
+                            main.enableAddNodes()
+                            main.enableSaveProfile()
+                        }
                     }
                 }
             }
@@ -117,6 +138,7 @@ class NodeTabView : Fragment() {
         root.add(nodeTerminalView)
 
         model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name
+        model.nearestCity.value = if (nodeController.hasNetworkMap()) "" else "London"
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
@@ -147,13 +169,29 @@ class NodeTabView : Fragment() {
         }
     }
 
-    private fun Pane.nearestCityField() = textfield(model.nearestCity) {
+//    private fun Pane.nearestCityField() = textfield(model.nearestCity) {
+//        minWidth = textWidth
+//        TextFields.bindAutoCompletion(this, CityDatabase.cityMap.keys)
+//        validator(trigger = ValidationTrigger.OnBlur) {
+//            if (it == null || it.trim().isEmpty()) {
+//                error("Nearest city is required")
+//            } else if (CityDatabase[it] == null) {
+//                error("$it is not in our database, sorry")
+//            } else {
+//                null
+//            }
+//        }
+//    }
+
+    private fun Pane.nearestCityField() = combobox(model.nearestCity, cityList) {
         minWidth = textWidth
-        validator {
-            if (it == null) {
+        isEditable = true
+        TextFields.bindAutoCompletion(editor, cityList)
+        validator(trigger = ValidationTrigger.OnBlur) {
+            if (it == null || it.trim().isEmpty()) {
                 error("Nearest city is required")
-            } else if (it.trim().isEmpty()) {
-                error("Nearest city is required")
+            } else if (CityDatabase[it] == null) {
+                error("$it is not in our database, sorry")
             } else {
                 null
             }

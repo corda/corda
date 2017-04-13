@@ -15,7 +15,6 @@ import tornadofx.*
 import java.util.*
 
 class DemoBenchView : View("Corda DemoBench") {
-
     override val root by fxml<Parent>()
 
     private val profileController by inject<ProfileController>()
@@ -26,6 +25,7 @@ class DemoBenchView : View("Corda DemoBench") {
     private val menuSaveAs by fxid<MenuItem>()
 
     init {
+        importStylesheet("/net/corda/demobench/r3-style.css")
         importStylesheet("/net/corda/demobench/style.css")
 
         configureShutdown()
