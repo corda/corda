@@ -333,7 +333,7 @@ object X509Utilities {
     @Deprecated("Use [createIntermediateCert(X500Name, CACertAndKey)] instead, specifying full legal name")
     fun createIntermediateCert(commonName: String,
                                certificateAuthority: CACertAndKey): CACertAndKey
-            = createIntermediateCert(X500Name(commonName), certificateAuthority)
+            = createIntermediateCert(getDevX509Name(commonName), certificateAuthority)
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
@@ -548,8 +548,8 @@ object X509Utilities {
                                       trustStoreFilePath: Path,
                                       trustStorePassword: String
     ): KeyStore {
-        val rootCA = createSelfSignedCACert("Corda Node Root CA")
-        val intermediateCA = createIntermediateCert("Corda Node Intermediate CA", rootCA)
+        val rootCA = createSelfSignedCACert(getDevX509Name("Corda Node Root CA"))
+        val intermediateCA = createIntermediateCert(getDevX509Name("Corda Node Intermediate CA"), rootCA)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
