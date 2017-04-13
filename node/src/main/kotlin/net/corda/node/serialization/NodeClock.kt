@@ -3,6 +3,7 @@ package net.corda.node.serialization
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SingletonSerializationToken
+import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -15,9 +16,9 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class NodeClock(private val delegateClock: Clock = Clock.systemUTC()) : Clock(), SerializeAsToken {
 
-    private val token = SingletonSerializationToken(this)
+    private val token = singletonSerializationToken(javaClass)
 
-    override fun toToken(context: SerializeAsTokenContext) = SingletonSerializationToken.registerWithContext(token, this, context)
+    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
 
     override fun instant(): Instant {
         return delegateClock.instant()

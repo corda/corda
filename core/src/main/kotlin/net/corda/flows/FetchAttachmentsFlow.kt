@@ -1,10 +1,16 @@
 package net.corda.flows
 
+import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
+import net.corda.core.node.services.StorageService
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.InputStream
+import java.util.function.Supplier
 
 /**
  * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
@@ -15,7 +21,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
 
-    override fun convert(wire: ByteArray): Attachment = ByteArrayAttachment(wire)
+    override fun convert(wire: ByteArray): Attachment = ByteArrayAttachment({ wire })
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
@@ -23,11 +29,13 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class ByteArrayAttachment(private val wire: ByteArray) : Attachment {
-        override val id: SecureHash by lazy { wire.sha256() }
-        override fun open(): InputStream = wire.inputStream()
-        override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
-        override fun hashCode(): Int = id.hashCode()
-        override fun toString(): String = "${javaClass.simpleName}(id=$id)"
+    private class ByteArrayAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
+        override val id: SecureHash by lazy { attachmentData.sha256() }
+
+        private class Token(private val id: SecureHash) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = ByteArrayAttachment(context.attachmentDataLoader(id))
+        }
+
+        override fun toToken(context: SerializeAsTokenContext) = Token(id)
     }
 }

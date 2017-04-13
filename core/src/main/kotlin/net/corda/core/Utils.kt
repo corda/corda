@@ -275,11 +275,7 @@ class TransientProperty<out T>(private val initializer: () -> T) {
     @Transient private var v: T? = null
 
     @Synchronized
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        if (v == null)
-            v = initializer()
-        return v!!
-    }
+    operator fun getValue(thisRef: Any?, property: KProperty<*>) = v ?: initializer().also { v = it }
 }
 
 /**
