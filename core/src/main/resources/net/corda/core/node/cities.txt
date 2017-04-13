@@ -777,7 +777,6 @@ Changwat Tak (TH)	99.12	16.87
 Yangzhou (CN)	119.43	32.38
 Novokuznetsk (RU)	87.08	53.75
 Kisangani (CD)	25.18	0.52
-Bor Sa`id (EG)	32.28	31.27
 Warri (NG)	5.75	5.52
 Yongkang (CN)	120.02	28.87
 Tanggu (CN)	117.63	39.02

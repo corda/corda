@@ -40,14 +40,16 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
 /**
  * A labelled [WorldCoordinate], where the label is human meaningful. For example, the name of the nearest city.
  * Labels should not refer to non-landmarks, for example, they should not contain the names of organisations.
+ * The [countryCode] field is a two letter ISO country code.
  */
 @CordaSerializable
-data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String)
+data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
 
 /**
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.
  */
 object CityDatabase {
+    private val matcher = Regex("^([a-zA-Z- ]*) \\((..)\\)$")
     private val caseInsensitiveLookups = HashMap<String, PhysicalLocation>()
     val cityMap = HashMap<String, PhysicalLocation>()
 
@@ -56,9 +58,11 @@ object CityDatabase {
             for (line in lines) {
                 if (line.startsWith("#")) continue
                 val (name, lng, lat) = line.split('\t')
-                val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), name)
-                caseInsensitiveLookups[name.toLowerCase()] = location
-                cityMap[name] = location
+                val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
+                val (city, country) = matchResult!!.destructured
+                val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
+                caseInsensitiveLookups[city.toLowerCase()] = location
+                cityMap[city] = location
             }
         }
     }
