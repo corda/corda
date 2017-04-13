@@ -240,13 +240,14 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      *
-     * @param myLegalName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
+     * @param commonName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
      * @param nearestCity The city where your organization is located.
      * @param email An email address used to contact your organization.
      * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
      * @return The generated Certificate signing request.
      */
-    fun createCertificateSigningRequest(myLegalName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest = createCertificateSigningRequest(getX509Name(myLegalName, nearestCity, email), keyPair)
+    @Deprecated("Use [createCertificateSigningRequest(X500Name, KeyPair)] instead, specifying full legal name")
+    fun createCertificateSigningRequest(commonName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest = createCertificateSigningRequest(getX509Name(commonName, nearestCity, email), keyPair)
 
     /**
      * Create certificate signing request using provided information.
@@ -272,11 +273,12 @@ object X509Utilities {
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
-     * @param myLegalName The Common (CN) field of the cert Subject will be populated with the domain string
+     * @param commonName The Common (CN) field of the cert Subject will be populated with the domain string
      * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(myLegalName: String): CACertAndKey = createSelfSignedCACert(getDevX509Name(myLegalName))
+    @Deprecated("Use [createSelfSignedCACert(X500Name)] instead, specifying full legal name")
+    fun createSelfSignedCACert(commonName: String): CACertAndKey = createSelfSignedCACert(getDevX509Name(commonName))
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
@@ -323,18 +325,29 @@ object X509Utilities {
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
-     * @param domain The Common (CN) field of the cert Subject will be populated with the domain string
+     * @param commonName The Common (CN) field of the cert Subject will be populated with the domain string
      * @param certificateAuthority The Public certificate and KeyPair of the root CA certificate above this used to sign it
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
      */
-    fun createIntermediateCert(domain: String,
+    @Deprecated("Use [createIntermediateCert(X500Name, CACertAndKey)] instead, specifying full legal name")
+    fun createIntermediateCert(commonName: String,
+                               certificateAuthority: CACertAndKey): CACertAndKey
+            = createIntermediateCert(X500Name(commonName), certificateAuthority)
+
+    /**
+     * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
+     * @param subject subject of the generated certificate.
+     * @param certificateAuthority The Public certificate and KeyPair of the root CA certificate above this used to sign it
+     * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
+     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
+     */
+    fun createIntermediateCert(subject: X500Name,
                                certificateAuthority: CACertAndKey): CACertAndKey {
         val keyPair = generateECDSAKeyPairForSSL()
 
         val issuer = X509CertificateHolder(certificateAuthority.certificate.encoded).subject
         val serial = BigInteger.valueOf(random63BitValue())
-        val subject = getDevX509Name(domain)
         val pubKey = keyPair.public
 
         // Ten year certificate validity
