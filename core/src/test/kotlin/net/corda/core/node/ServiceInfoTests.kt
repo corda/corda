@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import org.junit.Test
@@ -8,7 +9,7 @@ import kotlin.test.assertFailsWith
 
 class ServiceInfoTests {
     val serviceType = ServiceType.getServiceType("test", "service").getSubType("subservice")
-    val name = "service.name"
+    val name = "CN=service.name,O=R3,OU=corda,L=London,C=UK"
 
     @Test
     fun `type and name encodes correctly`() {

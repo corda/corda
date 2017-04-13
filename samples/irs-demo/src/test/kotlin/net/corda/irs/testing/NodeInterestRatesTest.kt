@@ -8,6 +8,7 @@ import net.corda.core.bd
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -47,7 +48,7 @@ class NodeInterestRatesTest {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK", DUMMY_CASH_ISSUER_KEY.public)
 
     val clock = Clock.systemUTC()
     lateinit var oracle: NodeInterestRates.Oracle

@@ -8,6 +8,7 @@ import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -73,12 +74,12 @@ class StateMachineManagerTests {
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, "notary-service-2000")
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, "CN=notary-service-2000,O=R3,OU=corda,L=London,C=UK")
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
-        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = "notary-service-2000")
+        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
 
         net.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
         net.runNetwork()

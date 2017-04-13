@@ -42,9 +42,9 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `register with the network map service using a legal name different from the TLS CN`() {
-        startSimpleNode("Attacker").use {
+        startSimpleNode("CN=Attacker,O=R3,OU=corda,L=London,C=UK").use {
             // Register with the network map using a different legal name
-            val response = it.registerWithNetworkMap("Legit Business")
+            val response = it.registerWithNetworkMap("CN=Legit Business,O=R3,OU=corda,L=London,C=UK")
             // We don't expect a response because the network map's host verification will prevent a connection back
             // to the attacker as the TLS CN will not match the legal name it has just provided
             assertThatExceptionOfType(TimeoutException::class.java).isThrownBy {

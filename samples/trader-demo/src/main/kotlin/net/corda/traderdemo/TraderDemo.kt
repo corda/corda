@@ -48,7 +48,7 @@ private class TraderDemo {
         } else {
             val host = HostAndPort.fromString("localhost:10009")
             CordaRPCClient(host).use("demo", "demo") {
-                TraderDemoClientApi(this).runSeller(1000.DOLLARS, "Bank A")
+                TraderDemoClientApi(this).runSeller(1000.DOLLARS, "CN=Bank A,O=Bank A,L=London,C=UK")
             }
         }
     }

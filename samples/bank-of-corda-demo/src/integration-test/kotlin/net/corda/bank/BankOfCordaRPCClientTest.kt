@@ -21,7 +21,7 @@ class BankOfCordaRPCClientTest {
             val bigCorpCFO = User("bigCorpCFO", "password2", permissions = emptySet())
             val (nodeBankOfCorda, nodeBigCorporation) = Futures.allAsList(
                     startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type)), listOf(bocManager)),
-                    startNode("BigCorporation", rpcUsers = listOf(bigCorpCFO))
+                    startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpCFO))
             ).getOrThrow()
 
             // Bank of Corda RPC Client

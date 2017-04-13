@@ -774,9 +774,9 @@ like to deploy for testing. See further details below:
 
   task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['jar']) {
       directory "./kotlin-source/build/nodes"                            // The output directory.
-      networkMap "Controller"                              // The artemis address of the node to be used as the network map.
+      networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node to be used as the network map.
       node {
-          name "Controller"                                // Artemis name of node to be deployed.
+          name "CN=Controller,O=R3,OU=corda,L=London,C=UK" // Distinguished name of node to be deployed.
           nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           p2pPort 10002
@@ -785,7 +785,7 @@ like to deploy for testing. See further details below:
           cordapps = []                                    // Add package names of CordaApps.
       }
       node {                                               // Create an additional node.
-          name "NodeA"
+          name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
           nearestCity "London"
           advertisedServices = []
           p2pPort 10005

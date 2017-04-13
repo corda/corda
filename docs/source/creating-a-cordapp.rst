@@ -194,9 +194,9 @@ is a three node example;
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes" // The output directory
-        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
+        networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node named here will be used as the networkMapService.address on all other nodes.
         node {
-            name "Controller"
+            name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
             nearestCity "London"
             advertisedServices = [ "corda.notary.validating" ]
             p2pPort 10002
@@ -206,7 +206,7 @@ is a three node example;
             cordapps []
         }
         node {
-            name "NodeA"
+            name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
             nearestCity "London"
             advertisedServices = []
             p2pPort 10005
@@ -216,7 +216,7 @@ is a three node example;
             cordapps []
         }
         node {
-            name "NodeB"
+            name "CN=NodeB,O=R3,OU=corda,L=New York,C=USA"
             nearestCity "New York"
             advertisedServices = []
             p2pPort 10008

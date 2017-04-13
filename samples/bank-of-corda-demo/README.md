@@ -44,7 +44,7 @@ The RPC API requires a client to pass in user credentials:
     client.start("bankUser","test")
 which are validated on the Bank of Corda node against those configured at node startup:
     User("bankUser", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
-    startNode("BankOfCorda", rpcUsers = listOf(user))
+    startNode(BOC.name, rpcUsers = listOf(user))
 
 Notary
 We are using a [SimpleNotaryService] in this example, but could easily switch to a [ValidatingNotaryService]
