@@ -60,7 +60,7 @@ class IntegrationTestingTutorial {
             // START 4
             val issueRef = OpaqueBytes.of(0)
             val futures = Stack<ListenableFuture<*>>()
-            for (i in 1 .. 10) {
+            (1..10).map { i ->
                 thread {
                     futures.push(aliceProxy.startFlow(::CashIssueFlow,
                             i.DOLLARS,
@@ -69,14 +69,12 @@ class IntegrationTestingTutorial {
                             notary.nodeInfo.notaryIdentity
                     ).returnValue)
                 }
-            }
-            while (!futures.empty()) {
-                futures.pop().getOrThrow()
-            }
+            }.forEach(Thread::join) // Ensure the stack of futures is populated.
+            futures.forEach { it.getOrThrow() }
 
             bobVaultUpdates.expectEvents {
                 parallel(
-                        (1 .. 10).map { i ->
+                        (1..10).map { i ->
                             expect(
                                     match = { update: Vault.Update ->
                                         (update.produced.first().state.data as Cash.State).amount.quantity == i * 100L
@@ -90,13 +88,13 @@ class IntegrationTestingTutorial {
             // END 4
 
             // START 5
-            for (i in 1 .. 10) {
+            for (i in 1..10) {
                 bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {
                 sequence(
-                        (1 .. 10).map { i ->
+                        (1..10).map { i ->
                             expect { update: Vault.Update ->
                                 println("Alice got vault update of $update")
                                 assertEquals((update.produced.first().state.data as Cash.State).amount.quantity, i * 100L)

@@ -65,7 +65,7 @@ object LogHelper {
     /**
      * May fail to restore the original level due to unavoidable race if called by multiple threads.
      */
-    inline fun <T> withLevel(logName: String, levelName: String, block: () -> T) = let {
+    inline fun <T> withLevel(logName: String, levelName: String, block: () -> T) = run {
         val level = Level.valueOf(levelName)
         val oldLevel = LogManager.getLogger(logName).level
         Configurator.setLevel(logName, level)

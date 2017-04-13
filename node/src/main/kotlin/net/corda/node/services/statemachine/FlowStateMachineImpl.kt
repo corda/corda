@@ -87,13 +87,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
-    override val resultFuture: ListenableFuture<R> get() {
-        return _resultFuture ?: run {
-            val f = SettableFuture.create<R>()
-            _resultFuture = f
-            return f
-        }
-    }
+    override val resultFuture: ListenableFuture<R>
+        get() = _resultFuture ?: SettableFuture.create<R>().also { _resultFuture = it }
 
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
@@ -456,7 +451,7 @@ private data class FlowHandleImpl<A>(
 }
 
 @CordaSerializable
-private data class FlowProgressHandleImpl<A> (
+private data class FlowProgressHandleImpl<A>(
         override val id: StateMachineRunId,
         override val returnValue: ListenableFuture<A>,
         override val progress: Observable<String>) : FlowProgressHandle<A> {
