@@ -4,6 +4,14 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
 the previous milestone release.
 
+Unreleased
+----------
+
+Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
+composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
+formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
+certificates to prove association between transaction keys and identity keys.
+
 Milestone 10
 ------------
 

@@ -9,6 +9,9 @@ UNRELEASED
 * API changes:
     * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
 
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
+      composite keys and signatures.
+
 Milestone 10.0
 --------------
 

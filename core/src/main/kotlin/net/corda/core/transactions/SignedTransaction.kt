@@ -23,6 +23,10 @@ import java.util.*
  * map to the same key (and they could be different in important ways, like validity!). The signatures on a
  * SignedTransaction might be invalid or missing: the type does not imply validity.
  * A transaction ID should be the hash of the [WireTransaction] Merkle tree root. Thus adding or removing a signature does not change it.
+ *
+ * @param sigs a list of signatures from individual (non-composite) public keys. This is passed as a list of signatures
+ * when verifying composite key signatures, but may be used as individual signatures where a single key is expected to
+ * sign.
  */
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                              val sigs: List<DigitalSignature.WithKey>
