@@ -3,10 +3,12 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
+import com.nhaarman.mockito_kotlin.mock
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.stubbing.Answer
 import java.io.ByteArrayOutputStream
 
 class SerializationTokenTest {
@@ -36,10 +38,12 @@ class SerializationTokenTest {
         override fun equals(other: Any?) = other is LargeTokenizable && other.bytes.size == this.bytes.size
     }
 
+    private fun serializeAsTokenContext(toBeTokenized: Any) = SerializeAsTokenContext(toBeTokenized, storageKryo(), mock(Answer<Any> { throw UnsupportedOperationException("Should not be touched.") }))
+
     @Test
     fun `write token and read tokenizable`() {
         val tokenizableBefore = LargeTokenizable()
-        val context = SerializeAsTokenContext(tokenizableBefore, storageKryo())
+        val context = serializeAsTokenContext(tokenizableBefore)
         SerializeAsTokenSerializer.setContext(kryo, context)
         val serializedBytes = tokenizableBefore.serialize(kryo)
         assertThat(serializedBytes.size).isLessThan(tokenizableBefore.numBytes)
@@ -52,7 +56,7 @@ class SerializationTokenTest {
     @Test
     fun `write and read singleton`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        val context = SerializeAsTokenContext(tokenizableBefore, storageKryo())
+        val context = serializeAsTokenContext(tokenizableBefore)
         SerializeAsTokenSerializer.setContext(kryo, context)
         val serializedBytes = tokenizableBefore.serialize(kryo)
         val tokenizableAfter = serializedBytes.deserialize(kryo)
@@ -62,7 +66,7 @@ class SerializationTokenTest {
     @Test(expected = UnsupportedOperationException::class)
     fun `new token encountered after context init`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        val context = SerializeAsTokenContext(emptyList<Any>(), storageKryo())
+        val context = serializeAsTokenContext(emptyList<Any>())
         SerializeAsTokenSerializer.setContext(kryo, context)
         tokenizableBefore.serialize(kryo)
     }
@@ -70,9 +74,9 @@ class SerializationTokenTest {
     @Test(expected = UnsupportedOperationException::class)
     fun `deserialize unregistered token`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        val context = SerializeAsTokenContext(emptyList<Any>(), storageKryo())
+        val context = serializeAsTokenContext(emptyList<Any>())
         SerializeAsTokenSerializer.setContext(kryo, context)
-        val serializedBytes = tokenizableBefore.toToken(SerializeAsTokenContext(emptyList<Any>(), storageKryo())).serialize(kryo)
+        val serializedBytes = tokenizableBefore.toToken(serializeAsTokenContext(emptyList<Any>())).serialize(kryo)
         serializedBytes.deserialize(kryo)
     }
 
@@ -85,7 +89,7 @@ class SerializationTokenTest {
     @Test(expected = KryoException::class)
     fun `deserialize non-token`() {
         val tokenizableBefore = UnitSerializeAsToken()
-        val context = SerializeAsTokenContext(tokenizableBefore, storageKryo())
+        val context = serializeAsTokenContext(tokenizableBefore)
         SerializeAsTokenSerializer.setContext(kryo, context)
         val stream = ByteArrayOutputStream()
         Output(stream).use {
@@ -107,7 +111,7 @@ class SerializationTokenTest {
     @Test(expected = KryoException::class)
     fun `token returns unexpected type`() {
         val tokenizableBefore = WrongTypeSerializeAsToken()
-        val context = SerializeAsTokenContext(tokenizableBefore, storageKryo())
+        val context = serializeAsTokenContext(tokenizableBefore)
         SerializeAsTokenSerializer.setContext(kryo, context)
         val serializedBytes = tokenizableBefore.serialize(kryo)
         serializedBytes.deserialize(kryo)

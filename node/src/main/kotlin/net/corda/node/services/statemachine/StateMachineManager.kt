@@ -131,7 +131,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     // Context for tokenized services in checkpoints
-    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
+    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo(), object : AttachmentReloader {
+        override fun reloadAttachment(id: SecureHash) = database.transaction { serviceHub.storageService.attachments.openAttachment(id) }?.let { it.open().use { it.readBytes() } } ?: throw AttachmentReloader.NoSuchAttachmentException(id)
+    })
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
