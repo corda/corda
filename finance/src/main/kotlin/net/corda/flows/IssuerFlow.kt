@@ -5,7 +5,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
@@ -92,12 +91,6 @@ object IssuerFlow {
             val moveTx = subFlow(moveCashFlow)
             // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
             return moveTx
-        }
-
-        class Service(services: PluginServiceHub) {
-            init {
-                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer)
-            }
         }
     }
 }

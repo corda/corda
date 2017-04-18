@@ -93,12 +93,12 @@ In the Oracle example this step takes place in ``RatesFixFlow`` by overriding ``
         val timestamp: Timestamp? = ftx.filteredLeaves.timestamp
         ...
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRatesPlugin.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-Above code snippet is taken from ``NodeInterestRates.kt`` file and implements a signing part of an Oracle.
+Above code snippet is taken from ``NodeInterestRatesPlugin.kt`` and implements a signing part of an Oracle.
 You can check only leaves using ``leaves.checkWithFun { check(it) }`` and then verify obtained ``FilteredTransaction``
 to see if data from ``PartialMerkleTree`` belongs to ``WireTransaction`` with provided ``id``. All you need is the root hash
 of the full transaction:

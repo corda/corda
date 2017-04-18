@@ -12,7 +12,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.utilities.TestClock
 import net.corda.testing.node.MockNetworkMapCache
 import java.time.LocalDate
-import java.util.function.Function
 
 /**
  * This is a less temporary, demo-oriented way of initiating processing of temporal events.
@@ -25,12 +24,8 @@ object UpdateBusinessDayFlow {
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
     class Plugin : CordaPluginRegistry() {
-        override val servicePlugins = listOf(Function(::Service))
-    }
-
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerFlowInitiator(Broadcast::class.java, ::UpdateBusinessDayHandler)
+        override fun initialise(serviceHub: PluginServiceHub) {
+            serviceHub.registerFlowInitiator(Broadcast::class.java, ::UpdateBusinessDayHandler)
         }
     }
 

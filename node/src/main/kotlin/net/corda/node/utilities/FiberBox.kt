@@ -28,7 +28,7 @@ import kotlin.concurrent.withLock
  * or testing.
  *
  * Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
- * data by running a flow internally to implement the request handler which can then
+ * data by running a flow internally to implement the request handler (see NodeInterestRatesPlugin.Oracle), which can then
  * effectively relinquish control until the data becomes available.  This isn't the most scalable design and is intended
  * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [net.corda.core.flows.FlowLogic]
  * implementations to be able to wait for some condition to become true outside of message send/receive.  At that point

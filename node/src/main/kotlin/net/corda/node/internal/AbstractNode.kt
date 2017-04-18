@@ -164,13 +164,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var scheduler: NodeSchedulerService
     lateinit var flowLogicFactory: FlowLogicRefFactory
     lateinit var schemas: SchemaService
-    val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
     lateinit var database: Database
     protected var dbCloser: Runnable? = null
-
-    /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
-    inline fun <reified T : Any> findService() = customServices.filterIsInstance<T>().single()
 
     var isPreviousCheckpointsPresent = false
         private set
@@ -272,8 +268,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
 
-        customServices.clear()
-        customServices.addAll(makePluginServices(tokenizableServices))
+        pluginRegistries.forEach {
+            it.initialise(services)
+            tokenizableServices += it
+        }
 
         initUploaders(storageServices)
         return tokenizableServices
@@ -281,7 +279,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun initUploaders(storageServices: Pair<TxWritableStorageService, CheckpointStorage>) {
         val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
-                customServices.filterIsInstance(AcceptsFileUpload::class.java)
+                pluginRegistries.filterIsInstance(AcceptsFileUpload::class.java)
         (storage as StorageServiceImpl).initUploaders(uploaders)
     }
 
@@ -360,22 +358,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         for (plugin in pluginRegistries) {
             for ((className, classWhitelist) in plugin.requiredFlows) {
-                flowWhitelist.merge(className, classWhitelist, { x, y -> x + y })
+                flowWhitelist.merge(className, classWhitelist) { x, y -> x + y }
             }
         }
 
         return FlowLogicRefFactory(flowWhitelist)
-    }
-
-    private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {
-        val pluginServices = pluginRegistries.flatMap { x -> x.servicePlugins }
-        val serviceList = mutableListOf<Any>()
-        for (serviceConstructor in pluginServices) {
-            val service = serviceConstructor.apply(services)
-            serviceList.add(service)
-            tokenizableServices.add(service)
-        }
-        return serviceList
     }
 
     /**

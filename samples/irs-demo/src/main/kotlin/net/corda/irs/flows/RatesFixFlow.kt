@@ -17,7 +17,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
 
-// This code is unit tested in NodeInterestRates.kt
+// This code is unit tested in NodeInterestRatesPlugin.kt
 
 /**
  * This flow queries the given oracle for an interest rate fix, and if it is within the given tolerance embeds the

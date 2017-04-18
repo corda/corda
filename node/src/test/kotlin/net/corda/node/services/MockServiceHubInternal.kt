@@ -13,7 +13,7 @@ import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.persistence.DataVending
+import net.corda.node.services.persistence.DataVendingPlugin
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -75,7 +75,7 @@ open class MockServiceHubInternal(
         if (net != null && storage != null) {
             // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
             // on the networking service, so that will keep it from being collected.
-            DataVending.Service(this)
+            DataVendingPlugin().initialise(this)
         }
     }
 

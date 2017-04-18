@@ -316,6 +316,6 @@ which we wish to be hide will be replaced with their secure hash. The
 overall transaction txid is still provable from the 
 ``FilteredTransaction`` preventing change of the private data, but we do 
 not expose that data to the other node directly. A full example of this 
-can be found in the ``NodeInterestRates`` Oracle code from the 
+can be found in the ``NodeInterestRatesPlugin`` Oracle code from the
 ``irs-demo`` project which interacts with the ``RatesFixFlow`` flow. 
 Also, refer to the :doc:`merkle-trees` documentation. 

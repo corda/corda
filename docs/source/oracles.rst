@@ -75,8 +75,8 @@ Here's a quick way to decide which approach makes more sense for your data sourc
 Asserting continuously varying data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Let's look at the interest rates oracle that can be found in the ``NodeInterestRates`` file. This is an example of
-an oracle that uses a command because the current interest rate fix is a constantly changing fact.
+Let's look at the interest rates oracle that can be found in ``NodeInterestRatesPlugin.kt``. This is an example of an
+oracle that uses a command because the current interest rate fix is a constantly changing fact.
 
 The obvious way to implement such a service is like this:
 
@@ -99,7 +99,7 @@ This same technique can be adapted to other types of oracle.
 The oracle consists of a core class that implements the query/sign operations (for easy unit testing), and then a separate
 class that binds it to the network layer.
 
-Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting types:
+Here is an extract from the ``NodeInterestRatesPlugin.Oracle`` class and supporting types:
 
 .. sourcecode:: kotlin
 
@@ -155,12 +155,12 @@ Implementing an oracle with continuously varying data
 Implement the core classes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The key is to implement your oracle in a similar way to the ``NodeInterestRates.Oracle`` outline we gave above with
+The key is to implement your oracle in a similar way to the ``NodeInterestRatesPlugin.Oracle`` outline we gave above with
 both ``query`` and ``sign`` methods.  Typically you would want one class that encapsulates the parameters to the ``query``
 method (``FixOf`` above), and a ``CommandData`` implementation (``Fix`` above) that encapsulates both an instance of
 that parameter class and an instance of whatever the result of the ``query`` is (``BigDecimal`` above).
 
-The ``NodeInterestRates.Oracle`` allows querying for multiple ``Fix``-es but that is not necessary and is
+The ``NodeInterestRatesPlugin.Oracle`` allows querying for multiple ``Fix``-es but that is not necessary and is
 provided for the convenience of callers who might need multiple and can do it all in one query request.  Likewise
 the *deadline* functionality is optional and can be avoided initially.
 
@@ -177,9 +177,9 @@ functionality which we will not discuss further here.
 Assuming you have a data source and can query it, it should be very easy to implement your ``query`` method and the
 parameter and ``CommandData`` classes.
 
-Let's see how the ``sign`` method for ``NodeInterestRates.Oracle`` is written:
+Let's see how the ``sign`` method for ``NodeInterestRatesPlugin.Oracle`` is written:
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRatesPlugin.kt
    :language: kotlin
    :start-after: DOCSTART 1
    :end-before: DOCEND 1
@@ -201,38 +201,29 @@ Binding to the network via a CorDapp plugin
    them. See :doc:`flow-state-machines`.  Likewise some understanding of Cordapps, plugins and services will be helpful.
    See :doc:`creating-a-cordapp`.
 
-The first step is to create a service to host the oracle on the network.  Let's see how that's implemented:
+The first step is to initialise our Corda plugin to host the oracle on the network. Let's see how that's implemented:
 
-.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRatesPlugin.kt
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
 
 This may look complicated, but really it's made up of some relatively simple elements (in the order they appear in the code):
 
-1. Accept a ``PluginServiceHub`` in the constructor.  This is your interface to the Corda node.
-2. Ensure you extend the abstract class ``SingletonSerializeAsToken`` (see :doc:`corda-plugins`).
-3. Create an instance of your core oracle class that has the ``query`` and ``sign`` methods as discussed above.
-4. Register your client sub-flows (in this case both in ``RatesFixFlow``.  See the next section) for querying and
+1. Implement the ``initialise`` method which gives us access to a ``PluginServiceHub``. This is your interface to the Corda
+   node. We capture this into our plugin for later use.
+2. Register your client sub-flows (in this case both in ``RatesFixFlow``.  See the next section) for querying and
    signing as initiating your service flows that actually do the querying and signing using your core oracle class instance.
-5. Implement your service flows that call your core oracle class instance.
-
-The final step is to register your service with the node via the plugin mechanism. Do this by
-implementing a plugin.  Don't forget the resources file to register it with the ``ServiceLoader`` framework
-(see :doc:`corda-plugins`).
-
-.. sourcecode:: kotlin
-
-   class Plugin : CordaPluginRegistry() {
-        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
-   }
+3. Create the instance of your core oracle class that has the ``query`` and ``sign`` methods as discussed above. We use
+   the captured ``PluginServiceHub`` from ``initialise`` to lazily create it.
+5. Implement your service flows that take in the instance of your plugin which holds the oracle.
 
 Providing client sub-flows for querying and signing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We mentioned the client sub-flow briefly above.  They are the mechanism that clients, in the form of other flows, will
 interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at
-those for ``NodeInterestRates.Oracle``.
+those for ``NodeInterestRatesPlugin.Oracle``.
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/flows/RatesFixFlow.kt
    :language: kotlin

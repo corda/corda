@@ -3,7 +3,6 @@ package net.corda.vega.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -42,14 +41,7 @@ object IRSTradeFlow {
         }
     }
 
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerFlowInitiator(Requester::class.java, ::Receiver)
-        }
-    }
-
     class Receiver(private val replyToParty: Party) : FlowLogic<Unit>() {
-
         @Suspendable
         override fun call() {
             logger.info("IRSTradeFlow receiver started")

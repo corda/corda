@@ -15,7 +15,6 @@ import net.corda.core.math.InterpolatorFactory
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
-import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
@@ -36,7 +35,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
-import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -48,79 +46,99 @@ import javax.annotation.concurrent.ThreadSafe
  * transaction you are building, and then (after possibly extra steps) hand the final transaction back to the oracle
  * for signing.
  */
-object NodeInterestRates {
-    val type = ServiceType.corda.getSubType("interest_rates")
+class NodeInterestRatesPlugin : AcceptsFileUpload, CordaPluginRegistry() {
+    companion object {
+        val type = ServiceType.corda.getSubType("interest_rates")
 
-    /**
-     * Register the flow that is used with the Fixing integration tests.
-     */
-    class Plugin : CordaPluginRegistry() {
-        override val requiredFlows = mapOf(Pair(FixingFlow.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
-        override val servicePlugins = listOf(Function(::Service))
+        /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
+        fun parseFixOf(key: String): FixOf {
+            val words = key.split(' ')
+            val tenorString = words.last()
+            val date = words.dropLast(1).last()
+            val name = words.dropLast(2).joinToString(" ")
+            return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
+        }
+
+        /** Parses lines containing fixes */
+        fun parseFile(s: String): FixContainer {
+            val fixes = s.lines().
+                    map(String::trim).
+                    // Filter out comment and empty lines.
+                    filterNot { it.startsWith("#") || it.isBlank() }.
+                    map { parseFix(it) }.
+                    toSet()
+            return FixContainer(fixes)
+        }
+
+        /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [Fix] */
+        fun parseFix(s: String): Fix {
+            val (key, value) = s.split('=').map(String::trim)
+            val of = parseFixOf(key)
+            val rate = BigDecimal(value)
+            return Fix(of, rate)
+        }
     }
 
-    /**
-     * The Service that wraps [Oracle] and handles messages/network interaction/request scrubbing.
-     */
+    override val requiredFlows = mapOf(FixingFlow.FixingRoleDecider::class.java.name to setOf(Duration::class.java.name, StateRef::class.java.name))
+
+    // File upload support
+    override val dataTypePrefix = "interest-rates"
+    override val acceptableFileExtensions = listOf(".rates", ".txt")
+
+    override fun upload(file: InputStream): String {
+        val fixes = parseFile(file.bufferedReader().readText())
+        oracle.knownFixes = fixes
+        val msg = "Interest rates oracle accepted ${fixes.size} new interest rate fixes"
+        println(msg)
+        return msg
+    }
+
     // DOCSTART 2
-    class Service(val services: PluginServiceHub) : AcceptsFileUpload, SingletonSerializeAsToken() {
-        val oracle: Oracle by lazy {
-            val myNodeInfo = services.myInfo
-            val myIdentity = myNodeInfo.serviceIdentities(type).first()
-            val mySigningKey = services.keyManagementService.toKeyPair(myIdentity.owningKey.keys)
-            Oracle(myIdentity, mySigningKey, services.clock)
+    private lateinit var serviceHub: PluginServiceHub
+
+    override fun initialise(serviceHub: PluginServiceHub) {
+        this.serviceHub = serviceHub
+        // The oracle is not serialisable in the flow checkpoints so we give the flows reference to the plugin which holds
+        // the oracle and which is serialised as a singleton.
+        serviceHub.registerFlowInitiator(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
+        serviceHub.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
+    }
+
+    val oracle: Oracle by lazy {
+        val oracleIdentity = serviceHub.myInfo.serviceIdentities(type).first()
+        val oracleSigningKey = serviceHub.keyManagementService.toKeyPair(oracleIdentity.owningKey.keys)
+        Oracle(oracleIdentity, oracleSigningKey, serviceHub.clock)
+    }
+
+    private class FixSignHandler(val otherParty: Party, val plugin: NodeInterestRatesPlugin) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
+            send(otherParty, plugin.oracle.sign(request.ftx))
         }
+    }
+
+    private class FixQueryHandler(val otherParty: Party, val plugin: NodeInterestRatesPlugin) : FlowLogic<Unit>() {
+        companion object {
+            object RECEIVED : ProgressTracker.Step("Received fix request")
+            object SENDING : ProgressTracker.Step("Sending fix response")
+        }
+
+        override val progressTracker = ProgressTracker(RECEIVED, SENDING)
 
         init {
-            // Note: access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
-            // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
-            // the framework Oracle and the flow will crash.
-            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
-            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
+            progressTracker.currentStep = RECEIVED
         }
 
-        private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
-            @Suspendable
-            override fun call() {
-                val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
-                send(otherParty, service.oracle.sign(request.ftx))
-            }
-        }
-
-        private class FixQueryHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
-            companion object {
-                object RECEIVED : ProgressTracker.Step("Received fix request")
-                object SENDING : ProgressTracker.Step("Sending fix response")
-            }
-
-            override val progressTracker = ProgressTracker(RECEIVED, SENDING)
-
-            init {
-                progressTracker.currentStep = RECEIVED
-            }
-
-            @Suspendable
-            override fun call(): Unit {
-                val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
-                val answers = service.oracle.query(request.queries, request.deadline)
-                progressTracker.currentStep = SENDING
-                send(otherParty, answers)
-            }
-        }
-        // DOCEND 2
-
-        // File upload support
-        override val dataTypePrefix = "interest-rates"
-        override val acceptableFileExtensions = listOf(".rates", ".txt")
-
-        override fun upload(file: InputStream): String {
-            val fixes = parseFile(file.bufferedReader().readText())
-            oracle.knownFixes = fixes
-            val msg = "Interest rates oracle accepted ${fixes.size} new interest rate fixes"
-            println(msg)
-            return msg
+        @Suspendable
+        override fun call(): Unit {
+            val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
+            val answers = plugin.oracle.query(request.queries, request.deadline)
+            progressTracker.currentStep = SENDING
+            send(otherParty, answers)
         }
     }
+    // DOCEND 2
 
     /**
      * An implementation of an interest rate fix oracle which is given data in a simple string format.
@@ -172,7 +190,7 @@ object NodeInterestRates {
 
         /**
          * This method will now wait until the given deadline if the fix for the given [FixOf] is not immediately
-         * available.  To implement this, [readWithDeadline] will loop if the deadline is not reached and we throw
+         * available.  To implement this, [FiberBox.readWithDeadline] will loop if the deadline is not reached and we throw
          * [UnknownFix] as it implements [RetryableException] which has special meaning to this function.
          */
         @Suspendable
@@ -276,8 +294,8 @@ object NodeInterestRates {
         private val interpolator: Interpolator? by lazy {
             // Need to convert tenors to doubles for interpolation
             val numericMap = rates.mapKeys { daysToMaturity(it.key) }.toSortedMap()
-            val keys = numericMap.keys.map { it.toDouble() }.toDoubleArray()
-            val values = numericMap.values.map { it.toDouble() }.toDoubleArray()
+            val keys = numericMap.keys.map(Int::toDouble).toDoubleArray()
+            val values = numericMap.values.map(BigDecimal::toDouble).toDoubleArray()
 
             try {
                 factory.create(keys, values)
@@ -305,33 +323,5 @@ object NodeInterestRates {
             val value = interpolator?.interpolate(key) ?: return null
             return BigDecimal(value)
         }
-    }
-
-    /** Parses lines containing fixes */
-    fun parseFile(s: String): FixContainer {
-        val fixes = s.lines().
-                map(String::trim).
-                // Filter out comment and empty lines.
-                filterNot { it.startsWith("#") || it.isBlank() }.
-                map { parseFix(it) }.
-                toSet()
-        return FixContainer(fixes)
-    }
-
-    /** Parses a string of the form "LIBOR 16-March-2016 1M = 0.678" into a [Fix] */
-    fun parseFix(s: String): Fix {
-        val (key, value) = s.split('=').map(String::trim)
-        val of = parseFixOf(key)
-        val rate = BigDecimal(value)
-        return Fix(of, rate)
-    }
-
-    /** Parses a string of the form "LIBOR 16-March-2016 1M" into a [FixOf] */
-    fun parseFixOf(key: String): FixOf {
-        val words = key.split(' ')
-        val tenorString = words.last()
-        val date = words.dropLast(1).last()
-        val name = words.dropLast(2).joinToString(" ")
-        return FixOf(name, LocalDate.parse(date), Tenor(tenorString))
     }
 }

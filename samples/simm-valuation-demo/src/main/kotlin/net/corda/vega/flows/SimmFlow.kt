@@ -16,7 +16,6 @@ import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.Ack
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -176,15 +175,6 @@ object SimmFlow {
             logger.trace("valid is $valid")
             send(otherParty, valid)
             return valid
-        }
-    }
-
-    /**
-     * Service plugin for listening for incoming Simm flow communication
-     */
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerFlowInitiator(Requester::class.java, ::Receiver)
         }
     }
 
