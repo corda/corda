@@ -3,7 +3,7 @@ package net.corda.core.node.services.vault
 import io.requery.kotlin.Logical
 import io.requery.query.Condition
 import io.requery.query.Operator
-import io.requery.query.Order
+import net.corda.core.contracts.Commodity
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -13,6 +13,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.serialization.OpaqueBytes
 import java.time.Instant
+import java.util.Currency
 
 /**
  * Indexing assumptions:
@@ -44,11 +45,15 @@ sealed class QueryCriteria {
 
    /**
     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
+    *
+    * Valid TokenType implementations defined by Amount<T> are
+    *   [Currency] as used in [Cash] contract state
+    *   [Commodity] as used in [CommodityContract] state
     */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
             val owner: Collection<Party>? = null,
             val quantity: Logical<*,Long>? = null,
-            val tokenType: TokenType = TokenType.CURRENCY,
+            val tokenType: Set<Class<out Any>>? = null,
             val tokenValue: Collection<String>? = null,
             val issuerParty: Collection<Party>? = null,
             val issuerRef: Collection<OpaqueBytes>? = null,
@@ -81,14 +86,6 @@ sealed class QueryCriteria {
     enum class TimeInstantType {
         RECORDED,
         CONSUMED
-    }
-
-    // Fungible asset: [Amount<T>]
-    // should this be a free-form string attribute?
-    enum class TokenType {
-        CURRENCY,
-        COMMODITY,
-        OTHER
     }
 
     //

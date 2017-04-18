@@ -539,7 +539,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val criteria = FungibleAssetQueryCriteria() // default TokenType is CURRENCY
+            val criteria = FungibleAssetQueryCriteria(tokenType = setOf(Currency::class.java))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states).hasSize(9)
         }
