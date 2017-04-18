@@ -215,12 +215,12 @@ Java reflection ``Class`` object that describes the flow class to use (in this c
 It also takes a set of arguments to pass to the constructor. Because it's possible for flow invocations to
 be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
 flow are checked against a whitelist, which can be extended by apps themselves at load time.  There are also a series
-of inlined extension functions of the form ``CordaRPCOps.startFlow`` which help with invoking flows in a type
+of inlined Kotlin extension functions of the form ``CordaRPCOps.startFlow`` which help with invoking flows in a type
 safe manner.
 
-The process of starting a flow returns a ``FlowHandle`` that you can use to either observe
-the result, observe its progress and which also contains a permanent identifier for the invoked flow in the form
-of the ``StateMachineRunId``.
+The process of starting a flow returns a ``FlowHandle`` that you can use to observe
+the result, and which also contains a permanent identifier for the invoked flow in the form
+of the ``StateMachineRunId``. Should you also wish to track the progress of your flow (see :ref:`progress-tracking`) then you can invoke your flow instead using ``CordaRPCOps.startFlowWithProgressDynamic`` or any of its corresponding ``CordaRPCOps.startFlowWithProgress`` extension functions. These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` except that it also contains an observable ``progress`` field. 
 
 In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side
 has to be registered by its node to respond to the initiating flow via ``PluginServiceHub.registerFlowInitiator``.
@@ -412,6 +412,8 @@ This code is longer but no more complicated. Here are some things to pay attenti
 
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
+
+.. _progress-tracking:
 
 Progress tracking
 -----------------
