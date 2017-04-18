@@ -1,9 +1,6 @@
 package net.corda.core.crypto
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.Test
-import java.security.Security
 import java.security.SignatureException
 import java.time.Instant
 import kotlin.test.assertTrue
@@ -12,11 +9,6 @@ import kotlin.test.assertTrue
  * Digital signature MetaData tests
  */
 class TransactionSignatureTest {
-
-    init {
-        Security.addProvider(BouncyCastleProvider())
-        Security.addProvider(BouncyCastlePQCProvider())
-    }
 
     val testBytes = "12345678901234567890123456789012".toByteArray()
 

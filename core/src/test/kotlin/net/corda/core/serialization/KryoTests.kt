@@ -7,14 +7,11 @@ import net.corda.core.messaging.Ack
 import net.corda.node.services.persistence.NodeAttachmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.security.Security
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -110,8 +107,6 @@ class KryoTests {
 
     @Test
     fun `serialize - deserialize MetaData`() {
-        Security.addProvider(BouncyCastleProvider())
-        Security.addProvider(BouncyCastlePQCProvider())
         val testString = "Hello World"
         val testBytes = testString.toByteArray()
         val keyPair1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
