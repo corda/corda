@@ -24,7 +24,6 @@ sealed class QueryCriteria {
 
     /**
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
-     * plus simple paging and sorting.
      */
     data class VaultQueryCriteria @JvmOverloads constructor (
             val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
@@ -32,9 +31,7 @@ sealed class QueryCriteria {
             val contractStateTypes: Set<Class<out ContractState>>? = null,
             val notary: Collection<Party>? = null,
             val includeSoftlocks: Boolean? = true,
-            val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null,
-            val paging: PageSpecification? = null,
-            val ordering: Order? = Order.ASC) : QueryCriteria()
+            val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null) : QueryCriteria()
 
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
