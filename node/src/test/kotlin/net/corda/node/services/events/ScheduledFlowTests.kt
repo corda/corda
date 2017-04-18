@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
@@ -13,6 +14,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
+import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -112,6 +114,15 @@ class ScheduledFlowTests {
 
     @Test
     fun `create and run scheduled flow then wait for result`() {
+        val stateMachines = nodeA.smm.track()
+        var countScheduledFlows = 0
+        stateMachines.second.subscribe {
+            if (it.addOrRemove == AddOrRemove.ADD) {
+                val initiator = it.logic.communicationInitiator
+                if (initiator is CommunicationInitiator.Scheduled)
+                    countScheduledFlows += 1
+            }
+        }
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
         net.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
@@ -120,6 +131,7 @@ class ScheduledFlowTests {
         val stateFromB = nodeB.database.transaction {
             nodeB.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
         }
+        assertEquals(1, countScheduledFlows)
         assertEquals(stateFromA, stateFromB, "Must be same copy on both nodes")
         assertTrue("Must be processed", stateFromB.state.data.processed)
     }

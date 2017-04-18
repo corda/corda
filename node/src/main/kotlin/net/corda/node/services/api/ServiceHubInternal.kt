@@ -1,6 +1,7 @@
 package net.corda.node.services.api
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
@@ -68,10 +69,14 @@ abstract class ServiceHubInternal : PluginServiceHub {
      */
     abstract fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T>
 
-    override fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
+    override fun <T : Any> invokeFlowAsync(
+            logicType: Class<out FlowLogic<T>>,
+            communicationInitiator: CommunicationInitiator,
+            vararg args: Any?): FlowStateMachine<T> {
         val logicRef = flowLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
+        logic.communicationInitiator = communicationInitiator
         return startFlow(logic)
     }
 }

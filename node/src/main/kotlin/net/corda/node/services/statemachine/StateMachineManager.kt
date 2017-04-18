@@ -18,6 +18,7 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
@@ -359,6 +360,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val session = try {
             val flow = flowFactory(sender)
+            flow.communicationInitiator = CommunicationInitiator.Peer(sender.name)
             val fiber = createFiber(flow)
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
@@ -472,6 +474,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Note that you must be on the [executor] thread.
      */
     fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
+        if (logic.communicationInitiator is CommunicationInitiator.NotStarted)
+            logic.communicationInitiator = CommunicationInitiator.Manual("Not specified")
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait

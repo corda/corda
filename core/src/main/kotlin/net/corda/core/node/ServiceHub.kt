@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
@@ -92,7 +93,21 @@ interface ServiceHub : ServicesForResolution {
      *
      * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
-    fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T>
+    fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
+        return invokeFlowAsync(logicType, CommunicationInitiator.Manual("Not specified"), *args)
+    }
+
+    /**
+     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
+     * Note that you must be on the server thread to call this method. [communicationInitiator] points how flow was started,
+     * See: [CommunicationInitiator].
+     *
+     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     */
+    fun <T : Any> invokeFlowAsync(
+            logicType: Class<out FlowLogic<T>>,
+            communicationInitiator: CommunicationInitiator,
+            vararg args: Any?): FlowStateMachine<T>
 
     /**
      * Helper property to shorten code for fetching the Node's KeyPair associated with the

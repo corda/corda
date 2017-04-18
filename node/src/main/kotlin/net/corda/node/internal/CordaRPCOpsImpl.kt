@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.*
@@ -20,6 +21,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
 import org.bouncycastle.asn1.x500.X500Name
+import net.corda.nodeapi.CURRENT_RPC_USER
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
@@ -98,13 +100,15 @@ class CordaRPCOpsImpl(
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
+        val currentUser = CommunicationInitiator.Rpc(CURRENT_RPC_USER.get().username)
+        return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = false)
+        val currentUser = CommunicationInitiator.Rpc(CURRENT_RPC_USER.get().username)
+        return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = false)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -148,7 +152,7 @@ class CordaRPCOpsImpl(
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>): StateMachineInfo {
-            return StateMachineInfo(id, flowLogic.javaClass.name, flowLogic.track())
+            return StateMachineInfo(id, flowLogic.javaClass.name, flowLogic.communicationInitiator ,flowLogic.track())
         }
 
         private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {

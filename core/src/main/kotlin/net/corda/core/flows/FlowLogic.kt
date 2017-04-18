@@ -132,6 +132,7 @@ abstract class FlowLogic<out T> {
     @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
         subLogic.stateMachine = stateMachine
+        subLogic.communicationInitiator = communicationInitiator
         maybeWireUpProgressTracking(subLogic)
         if (shareParentSessions) {
             subLogic.sessionFlow = this
@@ -185,7 +186,6 @@ abstract class FlowLogic<out T> {
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction {
         return stateMachine.waitForLedgerCommit(hash, this)
     }
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var _stateMachine: FlowStateMachine<*>? = null
@@ -199,6 +199,8 @@ abstract class FlowLogic<out T> {
         set(value) {
             _stateMachine = value
         }
+
+    var communicationInitiator: CommunicationInitiator = CommunicationInitiator.NotStarted()
 
     // This points to the outermost flow and is changed when a subflow is invoked.
     private var sessionFlow: FlowLogic<*> = this

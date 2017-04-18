@@ -7,6 +7,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.NodeInfo
@@ -26,6 +27,7 @@ import java.util.*
 data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
+        val initiator: CommunicationInitiator,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
 ) {
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"

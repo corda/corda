@@ -7,6 +7,7 @@ import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.SchedulerService
@@ -166,6 +167,10 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
             object RUNNING : ProgressTracker.Step("Running scheduled...")
 
             fun tracker() = ProgressTracker(RUNNING)
+        }
+
+        init {
+            communicationInitiator = CommunicationInitiator.Scheduled()
         }
 
         override val progressTracker = tracker()

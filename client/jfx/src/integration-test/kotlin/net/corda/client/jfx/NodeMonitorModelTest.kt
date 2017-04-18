@@ -8,6 +8,7 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
+import net.corda.core.flows.CommunicationInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -41,11 +42,14 @@ import rx.Observable
 
 class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var aliceNode: NodeInfo
+    lateinit var bobNode: NodeInfo
     lateinit var notaryNode: NodeInfo
 
     lateinit var rpc: CordaRPCOps
+    lateinit var rpcBob: CordaRPCOps
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
+    lateinit var stateMachineUpdatesBob: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
@@ -61,11 +65,18 @@ class NodeMonitorModelTest : DriverBasedTest() {
         val aliceNodeFuture = startNode(ALICE.name, rpcUsers = listOf(cashUser))
         val notaryNodeFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
+        val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         notaryNode = notaryNodeHandle.nodeInfo
+        bobNode = bobNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
+
+        val monitorBob = NodeMonitorModel()
+        stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
+        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+        rpcBob = monitorBob.proxyObservable.value!!
 
         stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
         stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
@@ -114,12 +125,12 @@ class NodeMonitorModelTest : DriverBasedTest() {
             sequence(
                     // SNAPSHOT
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
-                        require(output.produced.size == 0) { output.produced.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
+                        require(output.produced.isEmpty()) { output.produced.size }
                     },
                     // ISSUE
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
                         require(output.produced.size == 1) { output.produced.size }
                     }
             )
@@ -129,7 +140,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.legalIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -140,6 +151,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is CommunicationInitiator.Rpc && initiator.name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -147,9 +160,21 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is CommunicationInitiator.Rpc && initiator.name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == moveSmId)
+                    }
+            )
+        }
+
+        stateMachineUpdatesBob.expectEvents {
+            sequence(
+                    // MOVE
+                    expect { add: StateMachineUpdate.Added ->
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is CommunicationInitiator.Peer && initiator.name == aliceNode.legalIdentity.name)
                     }
             )
         }
@@ -184,18 +209,18 @@ class NodeMonitorModelTest : DriverBasedTest() {
             sequence(
                     // SNAPSHOT
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
-                        require(output.produced.size == 0) { output.produced.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
+                        require(output.produced.isEmpty()) { output.produced.size }
                     },
                     // ISSUE
                     expect { update ->
-                        require(update.consumed.size == 0) { update.consumed.size }
+                        require(update.consumed.isEmpty()) { update.consumed.size }
                         require(update.produced.size == 1) { update.produced.size }
                     },
                     // MOVE
                     expect { update ->
                         require(update.consumed.size == 1) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                        require(update.produced.isEmpty()) { update.produced.size }
                     }
             )
         }
