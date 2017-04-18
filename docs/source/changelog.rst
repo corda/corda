@@ -12,6 +12,8 @@ UNRELEASED
     * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
       composite keys and signatures.
 
+    * DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
+
 Milestone 10.0
 --------------
 
