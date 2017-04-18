@@ -1,12 +1,13 @@
 Summary: Corda DemoBench
-Name: demobench
+Name: corda-demobench
 Version: @pkg_version@
 Release: 1
 License: Unknown
 Vendor: Unknown
 Prefix: /opt
-Provides: demobench
+Provides: corda-demobench
 Requires: ld-linux.so.2 libX11.so.6 libXext.so.6 libXi.so.6 libXrender.so.1 libXtst.so.6 libasound.so.2 libc.so.6 libdl.so.2 libgcc_s.so.1 libm.so.6 libpthread.so.0 libthread_db.so.1
+Obsoletes: demobench
 Autoprov: 0
 Autoreq: 0
 
@@ -30,40 +31,40 @@ Corda DemoBench
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt
-cp -r %{_sourcedir}/Corda\ DemoBench %{buildroot}/opt
-mkdir -p %{buildroot}/opt/Corda\ DemoBench/runtime/bin
-cp %{_javaHome}/bin/java %{buildroot}/opt/Corda\ DemoBench/runtime/bin
+cp -r %{_sourcedir}/CordaDemoBench %{buildroot}/opt
+mkdir -p %{buildroot}/opt/CordaDemoBench/runtime/bin
+cp %{_javaHome}/bin/java %{buildroot}/opt/CordaDemoBench/runtime/bin
 
 %files
 
-/opt/Corda\ DemoBench
+/opt/CordaDemoBench
 
 %post
 
 
-xdg-desktop-menu install --novendor /opt/Corda\ DemoBench/Corda\ DemoBench.desktop
+xdg-desktop-menu install --novendor /opt/CordaDemoBench/CordaDemoBench.desktop
 
 if [ "false" = "true" ]; then
-    cp /opt/Corda\ DemoBench/demobench.init /etc/init.d/demobench
-    if [ -x "/etc/init.d/demobench" ]; then
-        /sbin/chkconfig --add demobench
+    cp /opt/CordaDemoBench/corda-demobench.init /etc/init.d/corda-demobench
+    if [ -x "/etc/init.d/corda-demobench" ]; then
+        /sbin/chkconfig --add corda-demobench
         if [ "false" = "true" ]; then
-            /etc/init.d/demobench start
+            /etc/init.d/corda-demobench start
         fi
     fi
 fi
 
 %preun
 
-xdg-desktop-menu uninstall --novendor /opt/Corda\ DemoBench/Corda\ DemoBench.desktop
+xdg-desktop-menu uninstall --novendor /opt/CordaDemoBench/CordaDemoBench.desktop
 
 if [ "false" = "true" ]; then
-    if [ -x "/etc/init.d/demobench" ]; then
+    if [ -x "/etc/init.d/corda-demobench" ]; then
         if [ "true" = "true" ]; then
-            /etc/init.d/demobench stop
+            /etc/init.d/corda-demobench stop
         fi
-        /sbin/chkconfig --del demobench
-        rm -f /etc/init.d/demobench
+        /sbin/chkconfig --del corda-demobench
+        rm -f /etc/init.d/corda-demobench
     fi
 fi
 
