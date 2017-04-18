@@ -98,5 +98,5 @@ with the annotation ``@CordaSerializable``.  See :doc:`creating-a-cordapp` or :d
 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.
 
-.. _CordaRPCClient: api/kotlin/corda/net.corda.client/-corda-r-p-c-client/index.html
-.. _CordaRPCOps: api/kotlin/corda/net.corda.node.services.messaging/-corda-r-p-c-ops/index.html
+.. _CordaRPCClient: api/kotlin/corda/net.corda.client.rpc/-corda-r-p-c-client/index.html
+.. _CordaRPCOps: api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html
