@@ -44,7 +44,7 @@ The Vault Query API leverages the rich semantics of the underlying Requery_ pers
 
 .. _Requery: https://github.com/requery/requery/wiki
 
-.. note:: Permissioning at the database level enforces read-only access to underlying Corda tables.
+.. note:: Permissioning at the database level will be enforced at a later date to ensure authenticated, role-based, read-only access to underlying Corda tables.
 
 .. note:: API's now provide ease of use calling semantics from both Java and Kotlin.
 
