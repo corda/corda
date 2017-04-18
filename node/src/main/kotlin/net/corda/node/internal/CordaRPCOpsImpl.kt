@@ -36,7 +36,7 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override val protocolVersion: Int get() = 0
+    override val protocolVersion: Int = 0
 
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
         return database.transaction {
@@ -96,7 +96,7 @@ class CordaRPCOpsImpl(
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
-    override fun <T : Any> startFlowWithProgressDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
+    override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         requirePermission(startFlowPermission(logicType))
         return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
     }

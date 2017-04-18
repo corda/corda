@@ -220,7 +220,7 @@ safe manner.
 
 The process of starting a flow returns a ``FlowHandle`` that you can use to observe
 the result, and which also contains a permanent identifier for the invoked flow in the form
-of the ``StateMachineRunId``. Should you also wish to track the progress of your flow (see :ref:`progress-tracking`) then you can invoke your flow instead using ``CordaRPCOps.startFlowWithProgressDynamic`` or any of its corresponding ``CordaRPCOps.startFlowWithProgress`` extension functions. These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` except that it also contains an observable ``progress`` field. 
+of the ``StateMachineRunId``. Should you also wish to track the progress of your flow (see :ref:`progress-tracking`) then you can invoke your flow instead using ``CordaRPCOps.startTrackedFlowDynamic`` or any of its corresponding ``CordaRPCOps.startTrackedFlow`` extension functions. These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` except that it also contains an observable ``progress`` field. 
 
 In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side
 has to be registered by its node to respond to the initiating flow via ``PluginServiceHub.registerFlowInitiator``.

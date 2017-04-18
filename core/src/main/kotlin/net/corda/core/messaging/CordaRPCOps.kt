@@ -92,7 +92,7 @@ interface CordaRPCOps : RPCOps {
      * result of running the flow.
      */
     @RPCReturnsObservables
-    fun <T : Any> startFlowWithProgressDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
+    fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
@@ -229,41 +229,41 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
  * Same again, except this time with progress-tracking enabled.
  */
 @Suppress("unused")
-inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
         @Suppress("unused_parameter")
         flowConstructor: () -> R
-): FlowProgressHandle<T> = startFlowWithProgressDynamic(R::class.java)
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java)
 
 @Suppress("unused")
-inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
         @Suppress("unused_parameter")
         flowConstructor: (A) -> R,
         arg0: A
-): FlowProgressHandle<T> = startFlowWithProgressDynamic(R::class.java, arg0)
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0)
 
 @Suppress("unused")
-inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
         @Suppress("unused_parameter")
         flowConstructor: (A, B) -> R,
         arg0: A,
         arg1: B
-): FlowProgressHandle<T> = startFlowWithProgressDynamic(R::class.java, arg0, arg1)
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1)
 
 @Suppress("unused")
-inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
         @Suppress("unused_parameter")
         flowConstructor: (A, B, C) -> R,
         arg0: A,
         arg1: B,
         arg2: C
-): FlowProgressHandle<T> = startFlowWithProgressDynamic(R::class.java, arg0, arg1, arg2)
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2)
 
 @Suppress("unused")
-inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlowWithProgress(
+inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
         @Suppress("unused_parameter")
         flowConstructor: (A, B, C, D) -> R,
         arg0: A,
         arg1: B,
         arg2: C,
         arg3: D
-): FlowProgressHandle<T> = startFlowWithProgressDynamic(R::class.java, arg0, arg1, arg2, arg3)
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
