@@ -251,8 +251,8 @@ class VaultQueryTests {
 
             // DOCSTART VaultQueryExample7
             val pagingSpec = QueryCriteria.PageSpecification(1, 10)
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, paging = pagingSpec)
-            val states = vaultSvc.queryBy<ContractState>(criteria)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val states = vaultSvc.queryBy<ContractState>(criteria, paging = pagingSpec)
             // DOCEND VaultQueryExample7
             assertThat(states).hasSize(10)
         }
@@ -269,8 +269,8 @@ class VaultQueryTests {
             // and then re-query for a given offset defined by (count - pageSize)
             val pagingSpec = QueryCriteria.PageSpecification(-1, 10)
 
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, paging = pagingSpec)
-            val states = vaultSvc.queryBy<ContractState>(criteria)
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val states = vaultSvc.queryBy<ContractState>(criteria, paging = pagingSpec)
             assertThat(states).hasSize(10) // should retrieve states 90..99
         }
     }
@@ -408,8 +408,8 @@ class VaultQueryTests {
             // should now have 1 UNCONSUMED & 3 CONSUMED state refs for Linear State with UniqueIdentifier("TEST")
             // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(id))
-            val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL, ordering = Order.DESC)
-            val states = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
+            val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val states = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), ordering = Order.DESC)
             // DOCEND VaultQueryExample9
             assertThat(states).hasSize(4)
         }
@@ -671,8 +671,7 @@ class VaultQueryTests {
             val customCriteria = VaultCustomQueryCriteria(expression = statusAllExpression)
 
             val pagingSpec = PageSpecification(1, 10)
-            val vaultCriteria = VaultQueryCriteria(ordering = Order.DESC, paging = pagingSpec)
-            val states = vaultSvc.queryBy<ContractState>(vaultCriteria.and(customCriteria))
+            val states = vaultSvc.queryBy<ContractState>(customCriteria, ordering = Order.DESC, paging = pagingSpec)
             assertThat(states).hasSize(10)
         }
     }

@@ -2,9 +2,11 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import io.requery.query.Order
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.PageSpecification
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
@@ -136,21 +138,26 @@ interface VaultService {
 
     // DOCSTART VaultQueryAPI
     /**
-     * Generic vault query function which takes a [QueryCriteria] object to define filters
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and [Order] modification criteria,
      * and returns an [Iterable] set of [StateAndRef]
      *
      * Note: the iterator is lazy and client driven.
      */
-    fun <T : ContractState> queryBy(criteria: QueryCriteria): Iterable<StateAndRef<T>>
-
+    fun <T : ContractState> queryBy(criteria: QueryCriteria,
+                                    paging: PageSpecification? = null,
+                                    ordering: Order? = Order.ASC): Iterable<StateAndRef<T>>
     /**
-     * Generic vault query function which takes a [QueryCriteria] object to define filters
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and [Order] modification criteria,
      * and returns a snapshot as an [Iterable] set of [StateRef] and streaming updates
      * as an [Observable] of [Vault.Update]
      *
      * Note: the iterator is lazy and client driven.
      */
-    fun <T : ContractState> trackBy(criteria: QueryCriteria): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
+    fun <T : ContractState> trackBy(criteria: QueryCriteria,
+                                    paging: PageSpecification? = null,
+                                    ordering: Order? = Order.ASC): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
     // DOCEND VaultQueryAPI
 
     /**

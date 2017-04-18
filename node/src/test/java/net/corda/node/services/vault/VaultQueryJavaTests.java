@@ -1,5 +1,6 @@
 package net.corda.node.services.vault;
 
+import io.requery.query.*;
 import kotlin.*;
 import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
@@ -95,7 +96,9 @@ public class VaultQueryJavaTests {
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
             VaultQueryCriteria criteria1 = new VaultQueryCriteria(status, contractStateTypes);
-            Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(criteria1);
+            PageSpecification pageSpec  = new VaultQueryCriteria.PageSpecification(1, 100);
+            Order order = Order.ASC;
+            Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(criteria1, pageSpec, order);
             // DOCEND VaultJavaQueryExample1
 
             assertThat(states).hasSize(3);
@@ -125,13 +128,15 @@ public class VaultQueryJavaTests {
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 
-            Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(compositeCriteria);
+            PageSpecification pageSpec  = new VaultQueryCriteria.PageSpecification(1, 100);
+            Order order = Order.ASC;
+            Iterable<StateAndRef<ContractState>> states = vaultSvc.queryBy(compositeCriteria, pageSpec, order);
             // DOCEND VaultJavaQueryExample2
 
             assertThat(states).hasSize(4);
 
             return tx;
-        });
+        })
     }
 
     /**
