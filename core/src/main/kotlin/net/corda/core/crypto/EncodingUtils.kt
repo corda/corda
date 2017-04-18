@@ -1,9 +1,13 @@
+@file:JvmName("EncodingUtils")
+
 package net.corda.core.crypto
 
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import java.nio.charset.Charset
+import java.security.PublicKey
 import java.util.*
 import javax.xml.bind.DatatypeConverter
-
 
 // This file includes useful encoding methods and extension functions for the most common encoding/decoding operations.
 
@@ -56,5 +60,8 @@ fun String.hexToBase58(): String = hexToByteArray().toBase58()
 /** Encoding changer. Hex-[String] to Base64-[String], i.e. "48656C6C6F20576F726C64" -> "SGVsbG8gV29ybGQ=" */
 fun String.hexToBase64(): String = hexToByteArray().toBase64()
 
-// Helper vars.
-private val HEX_ALPHABET = "0123456789ABCDEF".toCharArray()
+// TODO We use for both CompositeKeys and EdDSAPublicKey custom Kryo serializers and deserializers. We need to specify encoding.
+// TODO: follow the crypto-conditions ASN.1 spec, some changes are needed to be compatible with the condition
+//       structure, e.g. mapping a PublicKey to a condition with the specific feature (ED25519).
+fun parsePublicKeyBase58(base58String: String): PublicKey = base58String.base58ToByteArray().deserialize<PublicKey>()
+fun PublicKey.toBase58String(): String = this.serialize().bytes.toBase58()
