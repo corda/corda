@@ -16,7 +16,7 @@ The majority of query requirements can be satified by using the Vault API:
     :start-after: DOCSTART VaultQueryAPI
     :end-before: DOCEND VaultQueryAPI
 
-This API provides both static (snapshot) and dynamic (snaphot with streaming updates) methods for a defined set of filter criteria.
+This API provides both static (snapshot) and dynamic (snapshot with streaming updates) methods for a defined set of filter criteria.
 Simple pagination (page number and size) and ordering (ascending, descending) is also specifiable.
 
 The ``QueryCriteria`` interface provides a flexible mechanism for specifying filtering, and simple pagination and ordering criteria. 
