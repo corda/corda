@@ -14,11 +14,11 @@ import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow
-import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 class BuyerFlow(val otherParty: Party,
-                private val attachmentsPath: Path,
+                private val attachmentsDirectory: String,
                 override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : FlowLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
@@ -31,7 +31,7 @@ class BuyerFlow(val otherParty: Party,
                 it.automaticallyExtractAttachments = true
                 it.storePath
             }
-            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath) }
+            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath.toString()) }
         }
     }
 
@@ -73,7 +73,7 @@ class BuyerFlow(val otherParty: Party,
         val cpIssuance = search.call().single()
 
         cpIssuance.attachments.first().let {
-            val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
+            val p = Paths.get(attachmentsDirectory, "$it.jar")
             println("""
 
 The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:

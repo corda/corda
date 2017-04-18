@@ -3,6 +3,7 @@ package net.corda.node.services.statemachine
 import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.contracts.asset.Cash
 import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
@@ -13,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
@@ -570,6 +572,13 @@ class StateMachineManagerTests {
         }
     }
 
+    @Test
+    fun `lazy db iterator left on stack during checkpointing`() {
+        val result = node2.services.startFlow(VaultAccessFlow(node1.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
@@ -736,6 +745,14 @@ class StateMachineManagerTests {
                 if (throwException != null) throw throwException.invoke()
                 return subFlow(FinalityFlow(stx, setOf(otherParty))).single()
             }
+        }
+    }
+
+    private class VaultAccessFlow(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            serviceHub.vaultService.unconsumedStates<Cash.State>().filter { true }
+            send(otherParty, "Hello")
         }
     }
 

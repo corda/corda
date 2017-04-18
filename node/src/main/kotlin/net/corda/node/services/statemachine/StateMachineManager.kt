@@ -5,9 +5,14 @@ import co.paralleluniverse.fibers.FiberExecutorScheduler
 import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
+import io.requery.util.CloseableIterator
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
@@ -73,7 +78,24 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val quasarKryoPool = KryoPool.Builder {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
         DefaultKryoCustomizer.customize(serializer.kryo)
+        serializer.kryo.addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+        serializer.kryo
     }.build()
+
+    private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
+        override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
+            val message = if (closeable is CloseableIterator<*>) {
+                "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
+                        "to a Vault query - move it into a private method."
+            } else {
+                "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
+                        "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                        "confined to a private method or the reference is nulled out."
+            }
+            throw UnsupportedOperationException(message)
+        }
+        override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
+    }
 
     companion object {
         private val logger = loggerFor<StateMachineManager>()
@@ -84,7 +106,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
             }
         }
-
     }
 
     val scheduler = FiberScheduler()
