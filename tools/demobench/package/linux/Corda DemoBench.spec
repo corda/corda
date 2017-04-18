@@ -1,4 +1,4 @@
-Summary: DemoBench
+Summary: Corda DemoBench
 Name: demobench
 Version: @pkg_version@
 Release: 1
@@ -21,7 +21,7 @@ Autoreq: 0
 %define _javaHome %{getenv:JAVA_HOME}
 
 %description
-DemoBench
+Corda DemoBench
 
 %prep
 
@@ -30,21 +30,21 @@ DemoBench
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt
-cp -r %{_sourcedir}/DemoBench %{buildroot}/opt
-mkdir -p %{buildroot}/opt/DemoBench/runtime/bin
-cp %{_javaHome}/bin/java %{buildroot}/opt/DemoBench/runtime/bin
+cp -r %{_sourcedir}/Corda\ DemoBench %{buildroot}/opt
+mkdir -p %{buildroot}/opt/Corda\ DemoBench/runtime/bin
+cp %{_javaHome}/bin/java %{buildroot}/opt/Corda\ DemoBench/runtime/bin
 
 %files
 
-/opt/DemoBench
+/opt/Corda\ DemoBench
 
 %post
 
 
-xdg-desktop-menu install --novendor /opt/DemoBench/DemoBench.desktop
+xdg-desktop-menu install --novendor /opt/Corda\ DemoBench/Corda\ DemoBench.desktop
 
 if [ "false" = "true" ]; then
-    cp /opt/DemoBench/demobench.init /etc/init.d/demobench
+    cp /opt/Corda\ DemoBench/demobench.init /etc/init.d/demobench
     if [ -x "/etc/init.d/demobench" ]; then
         /sbin/chkconfig --add demobench
         if [ "false" = "true" ]; then
@@ -55,7 +55,7 @@ fi
 
 %preun
 
-xdg-desktop-menu uninstall --novendor /opt/DemoBench/DemoBench.desktop
+xdg-desktop-menu uninstall --novendor /opt/Corda\ DemoBench/Corda\ DemoBench.desktop
 
 if [ "false" = "true" ]; then
     if [ -x "/etc/init.d/demobench" ]; then
