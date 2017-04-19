@@ -15,7 +15,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
-import net.corda.testing.MOCK_VERSION
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
@@ -63,7 +63,7 @@ class P2PSecurityTest : NodeBasedTest() {
     }
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: String): ListenableFuture<NetworkMapService.RegistrationResponse> {
-        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public), MOCK_VERSION)
+        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public), MOCK_VERSION_INFO.platformVersion)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(identity.private), net.myAddress)
         return net.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.net.myAddress)

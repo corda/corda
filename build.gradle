@@ -4,7 +4,10 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_version = "0.11-SNAPSHOT"
+    ext.corda_release_version = "0.11-SNAPSHOT"
+    // Increment this on any release that changes public APIs anywhere in the Corda platform
+    // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
+    ext.corda_platform_version = 1
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     // Dependency versions. Can run 'gradle dependencyUpdates' to find new versions of things.
@@ -105,8 +108,17 @@ allprojects {
         }
     }
 
+    tasks.withType(Jar) { // Includes War and Ear
+        manifest {
+            attributes('Corda-Release-Version': corda_release_version)
+            attributes('Corda-Platform-Version': corda_platform_version)
+            attributes('Corda-Revision': corda_revision)
+            attributes('Corda-Vendor': 'Corda Open Source')
+        }
+    }
+
     group 'net.corda'
-    version "$corda_version"
+    version "$corda_release_version"
 
     repositories {
         mavenLocal()

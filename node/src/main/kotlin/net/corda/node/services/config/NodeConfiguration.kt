@@ -2,7 +2,7 @@ package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
 import net.corda.core.div
-import net.corda.core.node.NodeVersionInfo
+import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.internal.Node
@@ -22,6 +22,7 @@ interface NodeConfiguration : SSLConfiguration {
     override val certificatesDirectory: Path get() = baseDirectory / "certificates"
     val myLegalName: String
     val networkMapService: NetworkMapInfo?
+    val minimumPlatformVersion: Int
     val nearestCity: String
     val emailAddress: String
     val exportJMXto: String
@@ -47,6 +48,7 @@ data class FullNodeConfiguration(
         override val dataSourceProperties: Properties,
         override val certificateSigningService: URL,
         override val networkMapService: NetworkMapInfo?,
+        override val minimumPlatformVersion: Int = 1,
         override val rpcUsers: List<User>,
         override val verifierType: VerifierType,
         val useHTTPS: Boolean,
@@ -78,14 +80,14 @@ data class FullNodeConfiguration(
         }
     }
 
-    fun createNode(nodeVersionInfo: NodeVersionInfo): Node {
+    fun createNode(versionInfo: VersionInfo): Node {
         val advertisedServices = extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
         if (networkMapService == null) advertisedServices += ServiceInfo(NetworkMapService.type)
 
-        return Node(this, advertisedServices, nodeVersionInfo, if (useTestClock) TestClock() else NodeClock())
+        return Node(this, advertisedServices, versionInfo, if (useTestClock) TestClock() else NodeClock())
     }
 }
 

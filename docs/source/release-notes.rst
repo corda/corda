@@ -22,12 +22,21 @@ X.500 distinguished names (see RFC 1779 for details on the construction of disti
 * If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided
   in order to ensure consistency.
 
-We have updated DemoBench so that it is installed as "Corda DemoBench" for both Windows and MacOSX. The original version was installed as just "DemoBench", and so will not be overwritten automatically by the new version.
+We have updated DemoBench so that it is installed as "Corda DemoBench" for both Windows and MacOSX. The original version
+was installed as just "DemoBench", and so will not be overwritten automatically by the new version.
+
+We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
+any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
+serialisation, etc. The node exposes the platform version it's on and we envision CorDapps will use this to be able to
+run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
+API Level.
 
 Milestone 10
 ------------
 
-Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_, `Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions to Corda in M10.
+Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_,
+`Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions
+to Corda in M10.
 
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
@@ -35,25 +44,34 @@ the node. The Corda Shell is based on the popular `CRaSH project <http://www.cra
 be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
 We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
-The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following features:
- #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
+The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be
+bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following
+features:
+ #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most
+    important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
  #. Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
- #. You can launch an Corda Explorer instance for each node at the click of a button. Credentials are handed to the Corda Explorer so it starts out logged in already.
+ #. You can launch an Corda Explorer instance for each node at the click of a button. Credentials are handed to the Corda
+    Explorer so it starts out logged in already.
  #. Some basic statistics are shown about each node, informed via the RPC connection.
  #. Another button launches a database viewer in the system browser.
  #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
 
-Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the same input(s) simultaneously.
-Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
-Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
+Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the
+same input(s) simultaneously. Such transactions would result in naturally wasted effort when the notary rejects them as
+double spend attempts. Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two
+transactions attempt to spend the same fungible states.
 
-The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
+The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with
+currency reference data.
 
-We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
+We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached
+to the node which can handle loadbalanced verification requests.
 
-We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more clean and easy to manage code, which greatly increases our productivity.
+We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more
+clean and easy to manage code, which greatly increases our productivity.
 
-This release contains a large number of improvements, new features, library upgrades and bug fixes. For a full list of changes please see :doc:`changelog`.
+This release contains a large number of improvements, new features, library upgrades and bug fixes. For a full list of
+changes please see :doc:`changelog`.
 
 Milestone 9
 -----------
