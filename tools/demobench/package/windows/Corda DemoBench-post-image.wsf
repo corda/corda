@@ -10,7 +10,7 @@
 
         var oFSO = new ActiveXObject("Scripting.FileSystemObject");
         var oFolder = oFSO.getFolder(".");
-        var to = oFolder.path + "\\DemoBench\\runtime\\bin";
+        var to = oFolder.path + "\\Corda DemoBench\\runtime\\bin";
         if (!oFSO.FolderExists(to)) {
           oFSO.CreateFolder(to);
         }
