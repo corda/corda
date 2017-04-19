@@ -8,7 +8,7 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.ALICE_KEY
+import net.corda.core.utilities.DUMMY_BANK_A_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.persistence.DBCheckpointStorage
@@ -79,7 +79,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database = dataSourceAndDatabase.second
 
         database.transaction {
-            val kms = MockKeyManagementService(ALICE_KEY)
+            val kms = MockKeyManagementService(DUMMY_BANK_A_KEY)
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.PeerHandle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
             services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
                 override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)

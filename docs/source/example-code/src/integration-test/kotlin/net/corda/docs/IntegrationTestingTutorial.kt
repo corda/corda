@@ -9,8 +9,8 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -36,8 +36,8 @@ class IntegrationTestingTutorial {
                     startFlowPermission<CashPaymentFlow>()
             ))
             val (alice, bob, notary) = Futures.allAsList(
-                    startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
-                    startNode(BOB.name, rpcUsers = listOf(bobUser)),
+                    startNode(DUMMY_BANK_A.name, rpcUsers = listOf(aliceUser)),
+                    startNode(DUMMY_BANK_B.name, rpcUsers = listOf(bobUser)),
                     startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
             ).getOrThrow()
             // END 1

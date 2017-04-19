@@ -11,7 +11,7 @@ import org.junit.Test
  */
 class MQSecurityAsRPCTest : MQSecurityTest() {
     override fun createAttacker(): SimpleMQClient {
-        return clientTo(alice.configuration.rpcAddress!!)
+        return clientTo(bankA.configuration.rpcAddress!!)
     }
 
     @Test
@@ -28,7 +28,7 @@ class MQSecurityAsRPCTest : MQSecurityTest() {
 
     @Test
     fun `login to a ssl port as a RPC user`() {
-        val attacker = clientTo(alice.configuration.p2pAddress)
+        val attacker = clientTo(bankA.configuration.p2pAddress)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.loginToRPC(extraRPCUsers[0], enableSSL = true)
         }

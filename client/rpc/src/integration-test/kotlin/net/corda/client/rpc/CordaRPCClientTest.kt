@@ -7,7 +7,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.Node
@@ -34,7 +34,7 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Before
     fun setUp() {
-        node = startNode(ALICE.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
+        node = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser), advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type))).getOrThrow()
         client = CordaRPCClient(node.configuration.rpcAddress!!)
     }
 

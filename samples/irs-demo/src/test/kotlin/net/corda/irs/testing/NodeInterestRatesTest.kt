@@ -8,11 +8,11 @@ import net.corda.core.bd
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.DUMMY_BANK_A_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
@@ -20,7 +20,6 @@ import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockNetwork
@@ -140,7 +139,7 @@ class NodeInterestRatesTest {
 
             val ftx1 = wtx1.buildFilteredTransaction(::filterAllOutputs)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
-            tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
+            tx.addCommand(Cash.Commands.Move(), DUMMY_BANK_A_KEY.public)
             val wtx2 = tx.toWireTransaction()
             val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
             assertFalse(wtx1.id == wtx2.id)
@@ -240,5 +239,5 @@ class NodeInterestRatesTest {
         }
     }
 
-    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
+    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` DUMMY_BANK_A_KEY.public `with notary` DUMMY_NOTARY)
 }

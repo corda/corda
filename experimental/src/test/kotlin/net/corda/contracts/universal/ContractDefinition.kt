@@ -3,14 +3,14 @@ package net.corda.contracts.universal
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import org.junit.Test
 import java.util.*
 
 // Test parties
-val acmeCorp = Party(ALICE.name, generateKeyPair().public)
+val acmeCorp = Party(DUMMY_BANK_A.name, generateKeyPair().public)
 val highStreetBank = Party(MEGA_CORP.name, generateKeyPair().public)
 val momAndPop = Party(MINI_CORP.name, generateKeyPair().public)
 

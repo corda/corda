@@ -545,7 +545,7 @@ class CashTests {
      */
     @Test
     fun generateOwnerWithNoStatesExit() {
-        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, CHARLIE, 1) }
+        assertFailsWith<InsufficientBalanceException> { makeExit(100.POUNDS, DUMMY_BANK_C, 1) }
     }
 
     /**
@@ -555,7 +555,7 @@ class CashTests {
     fun generateExitWithEmptyVault() {
         assertFailsWith<InsufficientBalanceException> {
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            Cash().generateExit(tx, Amount(100, Issued(CHARLIE.ref(1), GBP)), emptyList())
+            Cash().generateExit(tx, Amount(100, Issued(DUMMY_BANK_C.ref(1), GBP)), emptyList())
         }
     }
 
@@ -580,7 +580,7 @@ class CashTests {
         database.transaction {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.toAnonymous()))
+            vault.generateSpend(tx, 80.DOLLARS, DUMMY_BANK_A_KEY.public, setOf(MINI_CORP.toAnonymous()))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -762,7 +762,7 @@ class CashTests {
                 transaction {
                     input("MEGA_CORP cash")
                     // We send it to another pubkey so that the transaction is not identical to the previous one
-                    output("MEGA_CORP cash".output<Cash.State>().copy(owner = ALICE_PUBKEY))
+                    output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_BANK_A_KEY.public))
                     command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                     this.verifies()
                 }

@@ -4,16 +4,12 @@ import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
 import net.corda.core.days
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.*
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
@@ -92,7 +88,7 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS `issued by` issuer
         ledger {
             unverifiedTransaction {
-                output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
+                output("Bank A's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` DUMMY_BANK_A_KEY.public)
                 output("some profits", someProfits.STATE `owned by` MEGA_CORP_PUBKEY)
             }
 
@@ -104,31 +100,31 @@ class CommercialPaperTestsGeneric {
                 this.verifies()
             }
 
-            // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
+            // The CP is sold to Bank A for their $900, $100 less than the face value. At 10% interest after only 7 days,
             // that sounds a bit too good to be true!
             transaction("Trade") {
                 input("paper")
-                input("alice's $900")
+                input("Bank A's $900")
                 output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
-                command(ALICE_PUBKEY) { Cash.Commands.Move() }
+                output("Bank A's paper") { "paper".output<ICommercialPaperState>() `owned by` DUMMY_BANK_A_KEY.public }
+                command(DUMMY_BANK_A_KEY.public) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
             }
 
-            // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
-            // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
+            // Time passes, and Bank A redeems their CP for $1000, netting a $100 profit. MegaCorp has received $1200
+            // as a single payment from somewhere and uses it to pay Bank A off, keeping the remaining $200 as change.
             transaction("Redemption") {
-                input("alice's paper")
+                input("Bank A's paper")
                 input("some profits")
 
-                fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
-                    output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
+                fun TransactionDSL<TransactionDSLInterpreter>.outputs(bankAGetsBack: Amount<Issued<Currency>>) {
+                    output("Bank A's profit") { bankAGetsBack.STATE `owned by` DUMMY_BANK_A_KEY.public }
+                    output("Change") { (someProfits - bankAGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                command(ALICE_PUBKEY) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
+                command(DUMMY_BANK_A_KEY.public) { thisTest.getRedeemCommand(DUMMY_NOTARY) }
 
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
@@ -204,22 +200,22 @@ class CommercialPaperTestsGeneric {
     private lateinit var bigCorpVault: Vault<ContractState>
     private lateinit var bigCorpVaultService: VaultService
 
-    private lateinit var aliceServices: MockServices
-    private lateinit var aliceVaultService: VaultService
-    private lateinit var alicesVault: Vault<ContractState>
+    private lateinit var bankAServices: MockServices
+    private lateinit var bankAVaultService: VaultService
+    private lateinit var bankAVault: Vault<ContractState>
 
     private lateinit var moveTX: SignedTransaction
 
     @Test
     fun `issue move and then redeem`() {
 
-        val dataSourcePropsAlice = makeTestDataSourceProperties()
-        val dataSourceAndDatabaseAlice = configureDatabase(dataSourcePropsAlice)
-        val databaseAlice = dataSourceAndDatabaseAlice.second
-        databaseAlice.transaction {
+        val dataSourcePropsBankA = makeTestDataSourceProperties()
+        val dataSourceAndDatabaseBankA = configureDatabase(dataSourcePropsBankA)
+        val databaseBankA = dataSourceAndDatabaseBankA.second
+        databaseBankA.transaction {
 
-            aliceServices = object : MockServices() {
-                override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
+            bankAServices = object : MockServices() {
+                override val vaultService: VaultService = makeVaultService(dataSourcePropsBankA)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -229,8 +225,8 @@ class CommercialPaperTestsGeneric {
                     vaultService.notifyAll(txs.map { it.tx })
                 }
             }
-            alicesVault = aliceServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
-            aliceVaultService = aliceServices.vaultService
+            bankAVault = bankAServices.fillWithSomeTestCash(9000.DOLLARS, atLeastThisManyStates = 1, atMostThisManyStates = 1)
+            bankAVaultService = bankAServices.vaultService
         }
 
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
@@ -254,8 +250,8 @@ class CommercialPaperTestsGeneric {
         }
 
         // Propagate the cash transactions to each side.
-        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
-        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        bankAServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        bigCorpServices.recordTransactions(bankAVault.states.map { bankAServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
 
         // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
@@ -267,14 +263,14 @@ class CommercialPaperTestsGeneric {
                     signWith(DUMMY_NOTARY_KEY)
                 }.toSignedTransaction()
 
-        databaseAlice.transaction {
-            // Alice pays $9000 to BigCorp to own some of their debt.
+        databaseBankA.transaction {
+            // Bank A pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
-                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
+                bankAVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
+                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), bankAServices.key.public)
                 ptx.signWith(bigCorpServices.key)
-                ptx.signWith(aliceServices.key)
+                ptx.signWith(bankAServices.key)
                 ptx.signWith(DUMMY_NOTARY_KEY)
                 ptx.toSignedTransaction()
             }
@@ -283,8 +279,8 @@ class CommercialPaperTestsGeneric {
         databaseBigCorp.transaction {
             // Verify the txns are valid and insert into both sides.
             listOf(issueTX, moveTX).forEach {
-                it.toLedgerTransaction(aliceServices).verify()
-                aliceServices.recordTransactions(it)
+                it.toLedgerTransaction(bankAServices).verify()
+                bankAServices.recordTransactions(it)
                 bigCorpServices.recordTransactions(it)
             }
         }
@@ -294,7 +290,7 @@ class CommercialPaperTestsGeneric {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
                 ptx.setTime(time, 30.seconds)
                 CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
-                ptx.signWith(aliceServices.key)
+                ptx.signWith(bankAServices.key)
                 ptx.signWith(bigCorpServices.key)
                 ptx.signWith(DUMMY_NOTARY_KEY)
                 return Pair(ptx.toSignedTransaction(), ptx.lockId)
@@ -304,14 +300,14 @@ class CommercialPaperTestsGeneric {
             val tooEarlyRedemption = redeemTX.first
             val tooEarlyRedemptionLockId = redeemTX.second
             val e = assertFailsWith(TransactionVerificationException::class) {
-                tooEarlyRedemption.toLedgerTransaction(aliceServices).verify()
+                tooEarlyRedemption.toLedgerTransaction(bankAServices).verify()
             }
             // manually release locks held by this failing transaction
-            aliceServices.vaultService.softLockRelease(tooEarlyRedemptionLockId)
+            bankAServices.vaultService.softLockRelease(tooEarlyRedemptionLockId)
             assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
             val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days).first
-            validRedemption.toLedgerTransaction(aliceServices).verify()
+            validRedemption.toLedgerTransaction(bankAServices).verify()
             // soft lock not released after success either!!! (as transaction not recorded)
         }
     }

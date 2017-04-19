@@ -11,8 +11,8 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
@@ -41,17 +41,17 @@ import kotlin.test.assertEquals
 
 /**
  * Runs a series of MQ-related attacks against a node. Subclasses need to call [startAttacker] to connect
- * the attacker to [alice].
+ * the attacker to [bankA].
  */
 abstract class MQSecurityTest : NodeBasedTest() {
     val rpcUser = User("user1", "pass", permissions = emptySet())
-    lateinit var alice: Node
+    lateinit var bankA: Node
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
     @Before
     fun start() {
-        alice = startNode(ALICE.name, rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
+        bankA = startNode(DUMMY_BANK_A.name, rpcUsers = extraRPCUsers + rpcUser).getOrThrow()
         attacker = createAttacker()
         startAttacker(attacker)
     }
@@ -74,20 +74,20 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `consume message from peer queue`() {
-        val bobParty = startBobAndCommunicateWithAlice()
-        assertConsumeAttackFails("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        val bankB = startBankBAndCommunicateWithBankA()
+        assertConsumeAttackFails("$PEERS_PREFIX${bankB.owningKey.toBase58String()}")
     }
 
     @Test
     fun `send message to address of peer which has been communicated with`() {
-        val bobParty = startBobAndCommunicateWithAlice()
-        assertSendAttackFails("$PEERS_PREFIX${bobParty.owningKey.toBase58String()}")
+        val bankB = startBankBAndCommunicateWithBankA()
+        assertSendAttackFails("$PEERS_PREFIX${bankB.owningKey.toBase58String()}")
     }
 
     @Test
     fun `create queue for peer which has not been communicated with`() {
-        val bob = startNode(BOB.name).getOrThrow()
-        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bob.info.legalIdentity.owningKey.toBase58String()}")
+        val bankB = startNode(DUMMY_BANK_B.name).getOrThrow()
+        assertAllQueueCreationAttacksFail("$PEERS_PREFIX${bankB.info.legalIdentity.owningKey.toBase58String()}")
     }
 
     @Test
@@ -170,7 +170,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        val rpcClient = loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
+        val rpcClient = loginToRPC(bankA.configuration.rpcAddress!!, rpcUser)
         val clientQueueQuery = SimpleString("$CLIENTS_PREFIX${rpcUser.username}.rpc.*")
         return rpcClient.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
@@ -228,13 +228,13 @@ abstract class MQSecurityTest : NodeBasedTest() {
                 .withMessageContaining(permission)
     }
 
-    private fun startBobAndCommunicateWithAlice(): Party {
-        val bob = startNode(BOB.name).getOrThrow()
-        bob.services.registerFlowInitiator(SendFlow::class.java, ::ReceiveFlow)
-        val bobParty = bob.info.legalIdentity
+    private fun startBankBAndCommunicateWithBankA(): Party {
+        val bankBNode = startNode(DUMMY_BANK_B.name).getOrThrow()
+        bankBNode.services.registerFlowInitiator(SendFlow::class.java, ::ReceiveFlow)
+        val bankB = bankBNode.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
-        alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
-        return bobParty
+        bankA.services.startFlow(SendFlow(bankB, 0)).resultFuture.getOrThrow()
+        return bankB
     }
 
     private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
