@@ -8,7 +8,7 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
-import net.corda.core.flows.CommunicationInitiator
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -65,19 +65,11 @@ class NodeMonitorModelTest : DriverBasedTest() {
         val aliceNodeFuture = startNode(ALICE.name, rpcUsers = listOf(cashUser))
         val notaryNodeFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
-        val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         notaryNode = notaryNodeHandle.nodeInfo
-        bobNode = bobNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
-
-        val monitorBob = NodeMonitorModel()
-        stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
-        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
-        rpcBob = monitorBob.proxyObservable.value!!
-
         stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
         stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
         progressTracking = monitor.progressTracking.bufferUntilSubscribed()
@@ -87,12 +79,18 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
+
+        val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+        bobNode = bobNodeHandle.nodeInfo
+        val monitorBob = NodeMonitorModel()
+        stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
+        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+        rpcBob = monitorBob.proxyObservable.value!!
         runTest()
     }
 
     @Test
     fun `network map update`() {
-        newNode(BOB.name)
         newNode(CHARLIE.name)
         networkMapUpdates.filter { !it.node.advertisedServices.any { it.info.type.isNotary() } }
                 .filter { !it.node.advertisedServices.any { it.info.type == NetworkMapService.type } }
@@ -152,7 +150,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is CommunicationInitiator.Rpc && initiator.name == "user1")
+                        require(initiator is FlowInitiator.Rpc && initiator.name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -161,7 +159,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     expect { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is CommunicationInitiator.Rpc && initiator.name == "user1")
+                        require(initiator is FlowInitiator.Rpc && initiator.name == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == moveSmId)
@@ -174,7 +172,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is CommunicationInitiator.Peer && initiator.name == aliceNode.legalIdentity.name)
+                        require(initiator is FlowInitiator.Peer && initiator.name == aliceNode.legalIdentity.name)
                     }
             )
         }

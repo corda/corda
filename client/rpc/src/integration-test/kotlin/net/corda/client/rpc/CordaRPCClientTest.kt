@@ -1,7 +1,7 @@
 package net.corda.client.rpc
 
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.flows.CommunicationInitiator
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.FlowHandle
@@ -130,9 +130,9 @@ class CordaRPCClientTest : NodeBasedTest() {
         smUpdates.second.subscribe {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
-                if (initiator is CommunicationInitiator.Rpc)
+                if (initiator is FlowInitiator.Rpc)
                     countRpcFlows += 1
-                if (initiator is CommunicationInitiator.Manual)
+                if (initiator is FlowInitiator.Manual)
                     countManualFlows += 1
             }
         }

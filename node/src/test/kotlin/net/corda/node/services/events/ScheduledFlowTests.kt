@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.containsAny
-import net.corda.core.flows.CommunicationInitiator
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.CordaPluginRegistry
@@ -118,8 +118,8 @@ class ScheduledFlowTests {
         var countScheduledFlows = 0
         stateMachines.second.subscribe {
             if (it.addOrRemove == AddOrRemove.ADD) {
-                val initiator = it.logic.communicationInitiator
-                if (initiator is CommunicationInitiator.Scheduled)
+                val initiator = it.logic.flowInitiator
+                if (initiator is FlowInitiator.Scheduled)
                     countScheduledFlows += 1
             }
         }

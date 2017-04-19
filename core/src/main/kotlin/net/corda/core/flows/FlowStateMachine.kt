@@ -13,27 +13,21 @@ import org.slf4j.Logger
 import java.util.*
 
 /**
- * CommunicationInitiator holds information on who started the flow. We have different ways of doing that: via RPC [CommunicationInitiator.Rpc],
- * communication started by peer node [CommunicationInitiator.Peer], scheduled flows [CommunicationInitiator.Scheduled]
- * or manual [CommunicationInitiator.Manual]. The last case is for all flows started in tests, shell etc. It was added
- * added because we can start flow directly using [StateMachineManager.add] or [ServiceHubInternal.startFlow].
+ * FlowInitiator holds information on who started the flow. We have different ways of doing that: via RPC [FlowInitiator.Rpc],
+ * communication started by peer node [FlowInitiator.Peer], scheduled flows [FlowInitiator.Scheduled]
+ * or manual [FlowInitiator.Manual]. The last case is for all flows started in tests, shell etc. It was added
+ * because we can start flow directly using [StateMachineManager.add] or [ServiceHubInternal.startFlow].
  */
 @CordaSerializable
-sealed class CommunicationInitiator {
-    override fun toString(): String = javaClass.simpleName
-
-    abstract class WithName(open val name: String): CommunicationInitiator() {
-        override fun toString() = javaClass.simpleName + ": $name"
-    }
-
-    class Manual(override val name: String): CommunicationInitiator.WithName(name) // TODO Think of name here. What with shell access?
+sealed class FlowInitiator {
+    data class Manual(val name: String) : FlowInitiator() // TODO Think of name here. What with shell access?
     /** Started using [CordaRPCOps.startFlowDynamic]. Name is RPC username. */
-    class Rpc(override val name: String): CommunicationInitiator.WithName(name)
+    data class Rpc(val name: String) : FlowInitiator()
     /** Started when we get new session initiation request. Name is peer legal name. */
-    class Peer(override val name: String): CommunicationInitiator.WithName(name)
-    class Scheduled: CommunicationInitiator()
+    data class Peer(val name: String) : FlowInitiator()
+    object Scheduled : FlowInitiator()
     /** When constructing [FlowLogic] communication initiator defaults to [NotStarted]*/
-    class NotStarted: CommunicationInitiator()
+    object NotStarted : FlowInitiator()
 }
 
 /**
