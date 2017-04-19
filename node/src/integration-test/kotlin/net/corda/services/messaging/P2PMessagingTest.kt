@@ -42,11 +42,11 @@ class P2PMessagingTest : NodeBasedTest() {
     fun `communicating with a service running on the network map node`() {
         startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         networkMapNode.respondWith("Hello")
-        val alice = startNode(ALICE.name).getOrThrow()
-        val serviceAddress = alice.services.networkMapCache.run {
-            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+        val bankA = startNode(DUMMY_BANK_A.name).getOrThrow()
+        val serviceAddress = bankA.services.networkMapCache.run {
+            bankA.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
-        val received = alice.receiveFrom(serviceAddress).getOrThrow(10.seconds)
+        val received = bankA.receiveFrom(serviceAddress).getOrThrow(10.seconds)
         assertThat(received).isEqualTo("Hello")
     }
 
@@ -67,17 +67,17 @@ class P2PMessagingTest : NodeBasedTest() {
                 DUMMY_MAP.name,
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val (serviceNode2, alice) = Futures.allAsList(
+        val (serviceNode2, bankA) = Futures.allAsList(
                 startNode(
                         "Service Node 2",
                         advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
-                startNode(ALICE.name)
+                startNode(DUMMY_BANK_A.name)
         ).getOrThrow()
 
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)
+        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, bankA)
     }
 
     @Test

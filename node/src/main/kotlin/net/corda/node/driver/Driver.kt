@@ -538,9 +538,9 @@ class DriverDSL(
 
     companion object {
         val name = arrayOf(
-                ALICE.name,
-                BOB.name,
-                DUMMY_BANK_A.name
+                DUMMY_BANK_A.name,
+                DUMMY_BANK_B.name,
+                DUMMY_BANK_C.name
         )
 
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]

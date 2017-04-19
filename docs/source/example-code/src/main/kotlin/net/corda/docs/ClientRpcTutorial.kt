@@ -12,7 +12,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
@@ -50,7 +50,7 @@ fun main(args: Array<String>) {
 
     driver(driverDirectory = baseDirectory) {
         startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-        val node = startNode(ALICE.name, rpcUsers = listOf(user)).get()
+        val node = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(user)).get()
         // END 1
 
         // START 2

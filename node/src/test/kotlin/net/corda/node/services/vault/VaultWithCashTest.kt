@@ -8,13 +8,12 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.BOB_KEY
+import net.corda.core.utilities.DUMMY_BANK_B_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.BOB_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
@@ -101,7 +100,7 @@ class VaultWithCashTest {
 
             // A tx that spends our money.
             val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
+                vault.generateSpend(this, 80.DOLLARS, DUMMY_BANK_B_KEY.public)
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -110,7 +109,7 @@ class VaultWithCashTest {
 
             // A tx that doesn't send us anything.
             val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), DUMMY_BANK_B_KEY.public, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -149,7 +148,7 @@ class VaultWithCashTest {
                 try {
                     val txn1 =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 60.DOLLARS, BOB_PUBKEY)
+                                vault.generateSpend(this, 60.DOLLARS, DUMMY_BANK_B_KEY.public)
                                 signWith(freshKey)
                                 signWith(DUMMY_NOTARY_KEY)
                             }.toSignedTransaction()
@@ -181,7 +180,7 @@ class VaultWithCashTest {
                 try {
                     val txn2 =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
+                                vault.generateSpend(this, 80.DOLLARS, DUMMY_BANK_B_KEY.public)
                                 signWith(freshKey)
                                 signWith(DUMMY_NOTARY_KEY)
                             }.toSignedTransaction()
@@ -287,7 +286,7 @@ class VaultWithCashTest {
         database.transaction {
             // A tx that spends our money.
             val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
+                vault.generateSpend(this, 80.DOLLARS, DUMMY_BANK_B_KEY.public)
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()

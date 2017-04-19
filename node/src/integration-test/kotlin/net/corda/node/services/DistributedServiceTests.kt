@@ -10,7 +10,7 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -28,9 +28,9 @@ import java.util.*
 import kotlin.test.assertEquals
 
 class DistributedServiceTests : DriverBasedTest() {
-    lateinit var alice: NodeHandle
+    lateinit var bankA: NodeHandle
     lateinit var notaries: List<NodeHandle>
-    lateinit var aliceProxy: CordaRPCOps
+    lateinit var bankAProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
 
@@ -41,7 +41,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>())
         )
-        val aliceFuture = startNode(ALICE.name, rpcUsers = listOf(testUser))
+        val bankAFuture = startNode(DUMMY_BANK_A.name, rpcUsers = listOf(testUser))
         val notariesFuture = startNotaryCluster(
                 DUMMY_NOTARY.name,
                 rpcUsers = listOf(testUser),
@@ -49,7 +49,7 @@ class DistributedServiceTests : DriverBasedTest() {
                 type = RaftValidatingNotaryService.type
         )
 
-        alice = aliceFuture.get()
+        bankA = bankAFuture.get()
         val (notaryIdentity, notaryNodes) = notariesFuture.get()
         raftNotaryIdentity = notaryIdentity
         notaries = notaryNodes
@@ -57,13 +57,13 @@ class DistributedServiceTests : DriverBasedTest() {
         assertEquals(notaries.size, clusterSize)
         assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)
 
-        // Connect to Alice and the notaries
+        // Connect to Bank A and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()
             client.start("test", "test")
             return client.proxy()
         }
-        aliceProxy = connectRpc(alice)
+        bankAProxy = connectRpc(bankA)
         val rpcClientsToNotaries = notaries.map(::connectRpc)
         notaryStateMachines = Observable.from(rpcClientsToNotaries.map { proxy ->
             proxy.stateMachinesAndUpdates().second.map { Pair(proxy.nodeIdentity(), it) }
@@ -139,14 +139,14 @@ class DistributedServiceTests : DriverBasedTest() {
     }
 
     private fun issueCash(amount: Amount<Currency>) {
-        val issueHandle = aliceProxy.startFlow(
+        val issueHandle = bankAProxy.startFlow(
                 ::CashIssueFlow,
-                amount, OpaqueBytes.of(0), alice.nodeInfo.legalIdentity, raftNotaryIdentity)
+                amount, OpaqueBytes.of(0), bankA.nodeInfo.legalIdentity, raftNotaryIdentity)
         issueHandle.returnValue.getOrThrow()
     }
 
     private fun paySelf(amount: Amount<Currency>) {
-        val payHandle = aliceProxy.startFlow(::CashPaymentFlow, amount, alice.nodeInfo.legalIdentity)
+        val payHandle = bankAProxy.startFlow(::CashPaymentFlow, amount, bankA.nodeInfo.legalIdentity)
         payHandle.returnValue.getOrThrow()
     }
 }

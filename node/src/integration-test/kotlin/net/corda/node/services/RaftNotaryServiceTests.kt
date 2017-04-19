@@ -8,12 +8,12 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.map
-import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.utilities.transaction
+import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.NodeBasedTest
 import org.junit.Test
 import java.security.KeyPair
@@ -26,31 +26,31 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val (masterNode, alice) = Futures.allAsList(
+        val (masterNode, megaCorp) = Futures.allAsList(
                 startNotaryCluster(notaryName, 3).map { it.first() },
-                startNode(DUMMY_BANK_A.name)
+                startNode(MEGA_CORP.name)
         ).getOrThrow()
 
-        val notaryParty = alice.netMapCache.getNotary(notaryName)!!
+        val notaryParty = megaCorp.netMapCache.getNotary(notaryName)!!
         val notaryNodeKeyPair = with(masterNode) { database.transaction { services.notaryIdentityKey } }
-        val aliceKey = with(alice) { database.transaction { services.legalIdentityKey } }
+        val megaCorpKey = with(megaCorp) { database.transaction { services.legalIdentityKey } }
 
-        val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
+        val inputState = issueState(megaCorp, notaryParty, notaryNodeKeyPair)
 
         val firstSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            signWith(aliceKey)
+            signWith(megaCorpKey)
             toSignedTransaction(false)
         }
-        val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
+        val firstSpend = megaCorp.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
         val secondSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity.owningKey)
+            val dummyState = DummyContract.SingleOwnerState(0, megaCorp.info.legalIdentity.owningKey)
             addOutputState(dummyState)
-            signWith(aliceKey)
+            signWith(megaCorpKey)
             toSignedTransaction(false)
         }
-        val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
+        val secondSpend = megaCorp.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
         val error = ex.error as NotaryError.Conflict

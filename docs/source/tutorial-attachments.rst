@@ -110,7 +110,7 @@ transaction and send it to the recipient node:
        // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.
 
        // Despite not having any states, we have to have at least one signature on the transaction
-       ptx.signWith(ALICE_KEY)
+       ptx.signWith(DUMMY_BANK_A_KEY)
 
        // Send the transaction to the other recipient
        val stx = ptx.toSignedTransaction()

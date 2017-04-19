@@ -4,7 +4,9 @@ import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.AnonymousParty
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.days
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
@@ -16,8 +18,6 @@ import net.corda.core.rootCause
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.TEST_TX_TIME
@@ -52,10 +52,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do
- * it on the ledger atomically. Therefore they must work together to build a transaction.
+ * In this example, Mega Corp wishes to sell their commercial paper to Mini Corp in return for $1,000,000 and they wish
+ * to do it on the ledger atomically. Therefore they must work together to build a transaction.
  *
- * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
+ * We assume that Mega Corp and Mini Corp already found each other via some market, and have agreed the details already.
  */
 class TwoPartyTradeFlowTests {
     lateinit var net: MockNetwork
@@ -81,43 +81,43 @@ class TwoPartyTradeFlowTests {
 
         ledger {
             val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
-            val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
-            val aliceKey = aliceNode.services.legalIdentityKey
+            val megaCorpNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+            val miniCorpNode = net.createPartyNode(notaryNode.info.address, MINI_CORP.name)
+            val megaCorpKey = megaCorpNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
-            aliceNode.disableDBCloseOnStop()
-            bobNode.disableDBCloseOnStop()
+            megaCorpNode.disableDBCloseOnStop()
+            miniCorpNode.disableDBCloseOnStop()
 
-            bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
+            miniCorpNode.database.transaction {
+                miniCorpNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
 
-            val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+            val megaCorpFakePaper = megaCorpNode.database.transaction {
+                fillUpForSeller(false, megaCorpNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
 
-            insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
+            insertFakeTransactions(megaCorpFakePaper, megaCorpNode, notaryNode, megaCorpKey, notaryKey)
 
-            val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
-                    "alice's paper".outputStateAndRef())
+            val (bankBStateMachine, megaCorpResult) = runBuyerAndSeller(notaryNode, megaCorpNode, miniCorpNode,
+                    "Mega Corp's paper".outputStateAndRef())
 
             // TODO: Verify that the result was inserted into the transaction database.
-            // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
-            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
+            // assertEquals(bobResult.get(), megaCorpNode.storage.validatedTransactions[megaCorpResult.get().id])
+            assertEquals(megaCorpResult.getOrThrow(), bankBStateMachine.getOrThrow().resultFuture.getOrThrow())
 
-            aliceNode.stop()
-            bobNode.stop()
+            megaCorpNode.stop()
+            miniCorpNode.stop()
 
-            aliceNode.database.transaction {
-                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+            megaCorpNode.database.transaction {
+                assertThat(megaCorpNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.manuallyCloseDB()
-            bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            megaCorpNode.manuallyCloseDB()
+            miniCorpNode.database.transaction {
+                assertThat(miniCorpNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            bobNode.manuallyCloseDB()
+            miniCorpNode.manuallyCloseDB()
         }
     }
 
@@ -125,92 +125,92 @@ class TwoPartyTradeFlowTests {
     fun `shutdown and restore`() {
         ledger {
             val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
-            var bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
-            aliceNode.disableDBCloseOnStop()
-            bobNode.disableDBCloseOnStop()
-            val aliceKey = aliceNode.services.legalIdentityKey
+            val megaCorpNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+            var miniCorpNode = net.createPartyNode(notaryNode.info.address, MINI_CORP.name)
+            megaCorpNode.disableDBCloseOnStop()
+            miniCorpNode.disableDBCloseOnStop()
+            val megaCorpKey = megaCorpNode.services.legalIdentityKey
             val notaryKey = notaryNode.services.notaryIdentityKey
 
-            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
+            val miniCorpAddr = miniCorpNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
 
-            bobNode.database.transaction {
-                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
+            miniCorpNode.database.transaction {
+                miniCorpNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
-            val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+            val megaCorpsFakePaper = megaCorpNode.database.transaction {
+                fillUpForSeller(false, megaCorpNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
-            insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
-            val aliceFuture = runBuyerAndSeller(notaryNode, aliceNode, bobNode, "alice's paper".outputStateAndRef()).sellerResult
+            insertFakeTransactions(megaCorpsFakePaper, megaCorpNode, notaryNode, megaCorpKey, notaryKey)
+            val megaCorpFuture = runBuyerAndSeller(notaryNode, megaCorpNode, miniCorpNode, "Mega Corp's paper".outputStateAndRef()).sellerResult
 
             // Everything is on this thread so we can now step through the flow one step at a time.
-            // Seller Alice already sent a message to Buyer Bob. Pump once:
-            bobNode.pumpReceive()
+            // Seller Mega Corp already sent a message to Buyer Mini Corp. Pump once:
+            miniCorpNode.pumpReceive()
 
-            // Bob sends a couple of queries for the dependencies back to Alice. Alice reponds.
-            aliceNode.pumpReceive()
-            bobNode.pumpReceive()
-            aliceNode.pumpReceive()
-            bobNode.pumpReceive()
-            aliceNode.pumpReceive()
-            bobNode.pumpReceive()
+            // Mini Corp sends a couple of queries for the dependencies back to Mega Corp. Mega Corp reponds.
+            megaCorpNode.pumpReceive()
+            miniCorpNode.pumpReceive()
+            megaCorpNode.pumpReceive()
+            miniCorpNode.pumpReceive()
+            megaCorpNode.pumpReceive()
+            miniCorpNode.pumpReceive()
 
-            // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).hasSize(1)
+            // OK, now Mini Corp has sent the partial transaction back to Mega Corp and is waiting for Mega Corp's signature.
+            miniCorpNode.database.transaction {
+                assertThat(miniCorpNode.checkpointStorage.checkpoints()).hasSize(1)
             }
 
-            val storage = bobNode.storage.validatedTransactions
-            val bobTransactionsBeforeCrash = bobNode.database.transaction {
+            val storage = miniCorpNode.storage.validatedTransactions
+            val bankBTransactionsBeforeCrash = miniCorpNode.database.transaction {
                 (storage as DBTransactionStorage).transactions
             }
-            assertThat(bobTransactionsBeforeCrash).isNotEmpty
+            assertThat(bankBTransactionsBeforeCrash).isNotEmpty
 
-            // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
-            bobNode.stop()
+            // .. and let's imagine that Mini Corp's suffers a power cut. Mini Corp now has nothing now beyond what was on disk.
+            miniCorpNode.stop()
 
-            // Alice doesn't know that and carries on: she wants to know about the cash transactions he's trying to use.
-            // She will wait around until Bob comes back.
-            assertThat(aliceNode.pumpReceive()).isNotNull()
+            // Mega Corp doesn't know that and carries on: Mega Corp wants to know about the cash transactions Mini Corp's trying to use.
+            // Mega Corp will wait around until Mini Corp comes back.
+            assertThat(megaCorpNode.pumpReceive()).isNotNull()
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
-            // that Bob was waiting on before the reboot occurred.
-            bobNode = net.createNode(networkMapAddr, bobAddr.id, object : MockNetwork.Factory {
+            // that Mini Corp was waiting on before the reboot occurred.
+            miniCorpNode = net.createNode(networkMapAddr, miniCorpAddr.id, object : MockNetwork.Factory {
                 override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                     advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                                     entropyRoot: BigInteger): MockNetwork.MockNode {
-                    return MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, bobAddr.id, overrideServices, entropyRoot)
+                    return MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, miniCorpAddr.id, overrideServices, entropyRoot)
                 }
-            }, true, BOB.name)
+            }, true, MINI_CORP.name)
 
             // Find the future representing the result of this state machine again.
-            val bobFuture = bobNode.smm.findStateMachines(Buyer::class.java).single().second
+            val miniCorpFuture = miniCorpNode.smm.findStateMachines(Buyer::class.java).single().second
 
             // And off we go again.
             net.runNetwork()
 
-            // Bob is now finished and has the same transaction as Alice.
-            assertThat(bobFuture.getOrThrow()).isEqualTo(aliceFuture.getOrThrow())
+            // Mini Corp is now finished and has the same transaction as Mega Corp.
+            assertThat(miniCorpFuture.getOrThrow()).isEqualTo(megaCorpFuture.getOrThrow())
 
-            assertThat(bobNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
-            bobNode.database.transaction {
-                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            assertThat(miniCorpNode.smm.findStateMachines(Buyer::class.java)).isEmpty()
+            miniCorpNode.database.transaction {
+                assertThat(miniCorpNode.checkpointStorage.checkpoints()).isEmpty()
             }
-            aliceNode.database.transaction {
-                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
-            }
-
-            bobNode.database.transaction {
-                val restoredBobTransactions = bobTransactionsBeforeCrash.filter { bobNode.storage.validatedTransactions.getTransaction(it.id) != null }
-                assertThat(restoredBobTransactions).containsAll(bobTransactionsBeforeCrash)
+            megaCorpNode.database.transaction {
+                assertThat(megaCorpNode.checkpointStorage.checkpoints()).isEmpty()
             }
 
-            aliceNode.manuallyCloseDB()
-            bobNode.manuallyCloseDB()
+            miniCorpNode.database.transaction {
+                val restoredBankBTransactions = bankBTransactionsBeforeCrash.filter { miniCorpNode.storage.validatedTransactions.getTransaction(it.id) != null }
+                assertThat(restoredBankBTransactions).containsAll(bankBTransactionsBeforeCrash)
+            }
+
+            megaCorpNode.manuallyCloseDB()
+            miniCorpNode.manuallyCloseDB()
         }
     }
 
@@ -242,11 +242,11 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
-        val aliceKey = aliceNode.services.legalIdentityKey
+        val megaCorpNode = makeNodeWithTracking(notaryNode.info.address, MEGA_CORP.name)
+        val miniCorpNode = makeNodeWithTracking(notaryNode.info.address, MINI_CORP.name)
+        val megaCorpKey = megaCorpNode.services.legalIdentityKey
 
-        ledger(aliceNode.services) {
+        ledger(megaCorpNode.services) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -255,47 +255,47 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = aliceNode.database.transaction {
+            val attachmentID = megaCorpNode.database.transaction {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val extraKey = bobNode.keyManagement.freshKey()
-            val bobsFakeCash = fillUpForBuyer(false, extraKey.public,
+            val extraKey = miniCorpNode.keyManagement.freshKey()
+            val bankBFakeCash = fillUpForBuyer(false, extraKey.public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
-            val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
-            val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+            val bankBSignedTxns = insertFakeTransactions(bankBFakeCash, miniCorpNode, notaryNode, miniCorpNode.services.legalIdentityKey, extraKey)
+            val megaCorpFakePaper = megaCorpNode.database.transaction {
+                fillUpForSeller(false, megaCorpNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
-            val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
+            val megaCorpSignedTxns = insertFakeTransactions(megaCorpFakePaper, megaCorpNode, notaryNode, megaCorpKey)
 
             net.runNetwork() // Clear network map registration messages
 
-            runBuyerAndSeller(notaryNode, aliceNode, bobNode, "alice's paper".outputStateAndRef())
+            runBuyerAndSeller(notaryNode, megaCorpNode, miniCorpNode, "Mega Corp's paper".outputStateAndRef())
 
             net.runNetwork()
 
             run {
-                val records = (bobNode.storage.validatedTransactions as RecordingTransactionStorage).records
-                // Check Bobs's database accesses as Bob's cash transactions are downloaded by Alice.
+                val records = (miniCorpNode.storage.validatedTransactions as RecordingTransactionStorage).records
+                // Check Mini Corps's database accesses as Mini Corp's cash transactions are downloaded by Mega Corp.
                 records.expectEvents(isStrict = false) {
                     sequence(
-                            // Buyer Bob is told about Alice's commercial paper, but doesn't know it ..
-                            expect(TxRecord.Get(alicesFakePaper[0].id)),
+                            // Buyer Mini Corp is told about Mega Corp's commercial paper, but doesn't know it ..
+                            expect(TxRecord.Get(megaCorpFakePaper[0].id)),
                             // He asks and gets the tx, validates it, sees it's a self issue with no dependencies, stores.
-                            expect(TxRecord.Add(alicesSignedTxns.values.first())),
-                            // Alice gets Bob's proposed transaction and doesn't know his two cash states. She asks, Bob answers.
-                            expect(TxRecord.Get(bobsFakeCash[1].id)),
-                            expect(TxRecord.Get(bobsFakeCash[2].id)),
-                            // Alice notices that Bob's cash txns depend on a third tx she also doesn't know. She asks, Bob answers.
-                            expect(TxRecord.Get(bobsFakeCash[0].id))
+                            expect(TxRecord.Add(megaCorpSignedTxns.values.first())),
+                            // Mega Corp gets Mini Corp's proposed transaction and doesn't know Mini Corp's two cash states. Mega Corp asks, Mini Corp answers.
+                            expect(TxRecord.Get(bankBFakeCash[1].id)),
+                            expect(TxRecord.Get(bankBFakeCash[2].id)),
+                            // Mega Corp notices that Mini Corp's cash txns depend on a third tx she also doesn't know. Mega Corp asks, Mini Corp answers.
+                            expect(TxRecord.Get(bankBFakeCash[0].id))
                     )
                 }
 
-                // Bob has downloaded the attachment.
-                bobNode.database.transaction {
-                    bobNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
+                // Mini Corp has downloaded the attachment.
+                miniCorpNode.database.transaction {
+                    miniCorpNode.storage.attachments.openAttachment(attachmentID)!!.openAsJAR().use {
                         it.nextJarEntry
                         val contents = it.reader().readText()
                         assertTrue(contents.contains("Our commercial paper is top notch stuff"))
@@ -303,36 +303,36 @@ class TwoPartyTradeFlowTests {
                 }
             }
 
-            // And from Alice's perspective ...
+            // And from Mega Corp's perspective ...
             run {
-                val records = (aliceNode.storage.validatedTransactions as RecordingTransactionStorage).records
+                val records = (megaCorpNode.storage.validatedTransactions as RecordingTransactionStorage).records
                 records.expectEvents(isStrict = false) {
                     sequence(
-                            // Seller Alice sends her seller info to Bob, who wants to check the asset for sale.
-                            // He requests, Alice looks up in her DB to send the tx to Bob
-                            expect(TxRecord.Get(alicesFakePaper[0].id)),
-                            // Seller Alice gets a proposed tx which depends on Bob's two cash txns and her own tx.
-                            expect(TxRecord.Get(bobsFakeCash[1].id)),
-                            expect(TxRecord.Get(bobsFakeCash[2].id)),
-                            expect(TxRecord.Get(alicesFakePaper[0].id)),
-                            // Alice notices that Bob's cash txns depend on a third tx she also doesn't know.
-                            expect(TxRecord.Get(bobsFakeCash[0].id)),
-                            // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
-                            // Bob's transactions are valid, so she commits to the database
-                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)),
-                            expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
-                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!)),
-                            expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
-                            expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[1].id]!!)),
+                            // Seller Mega Corp sends their seller info to Mini Corp, who wants to check the asset for sale.
+                            // He requests, Mega Corp looks up in their DB to send the tx to Mini Corp
+                            expect(TxRecord.Get(megaCorpFakePaper[0].id)),
+                            // Seller Mega Corp gets a proposed tx which depends on Mini Corp's two cash txns and their own tx.
+                            expect(TxRecord.Get(bankBFakeCash[1].id)),
+                            expect(TxRecord.Get(bankBFakeCash[2].id)),
+                            expect(TxRecord.Get(megaCorpFakePaper[0].id)),
+                            // Mega Corp notices that Mini Corp's cash txns depend on a third tx she also doesn't know.
+                            expect(TxRecord.Get(bankBFakeCash[0].id)),
+                            // Mini Corp answers with the transactions that are now all verifiable, as Mega Corp bottomed out.
+                            // Mini Corp's transactions are valid, so she commits to the database
+                            expect(TxRecord.Add(bankBSignedTxns[bankBFakeCash[0].id]!!)),
+                            expect(TxRecord.Get(bankBFakeCash[0].id)), // Verify
+                            expect(TxRecord.Add(bankBSignedTxns[bankBFakeCash[2].id]!!)),
+                            expect(TxRecord.Get(bankBFakeCash[0].id)), // Verify
+                            expect(TxRecord.Add(bankBSignedTxns[bankBFakeCash[1].id]!!)),
                             // Now she verifies the transaction is contract-valid (not signature valid) which means
                             // looking up the states again.
-                            expect(TxRecord.Get(bobsFakeCash[1].id)),
-                            expect(TxRecord.Get(bobsFakeCash[2].id)),
-                            expect(TxRecord.Get(alicesFakePaper[0].id)),
-                            // Alice needs to look up the input states to find out which Notary they point to
-                            expect(TxRecord.Get(bobsFakeCash[1].id)),
-                            expect(TxRecord.Get(bobsFakeCash[2].id)),
-                            expect(TxRecord.Get(alicesFakePaper[0].id))
+                            expect(TxRecord.Get(bankBFakeCash[1].id)),
+                            expect(TxRecord.Get(bankBFakeCash[2].id)),
+                            expect(TxRecord.Get(megaCorpFakePaper[0].id)),
+                            // Mega Corp needs to look up the input states to find out which Notary they point to
+                            expect(TxRecord.Get(bankBFakeCash[1].id)),
+                            expect(TxRecord.Get(bankBFakeCash[2].id)),
+                            expect(TxRecord.Get(megaCorpFakePaper[0].id))
                     )
                 }
             }
@@ -343,11 +343,11 @@ class TwoPartyTradeFlowTests {
     fun `track works`() {
 
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
-        val aliceKey = aliceNode.services.legalIdentityKey
+        val megaCorpNode = makeNodeWithTracking(notaryNode.info.address, MEGA_CORP.name)
+        val miniCorpNode = makeNodeWithTracking(notaryNode.info.address, MINI_CORP.name)
+        val megaCorpKey = megaCorpNode.services.legalIdentityKey
 
-        ledger(aliceNode.services) {
+        ledger(megaCorpNode.services) {
 
             // Insert a prospectus type attachment into the commercial paper transaction.
             val stream = ByteArrayOutputStream()
@@ -356,59 +356,59 @@ class TwoPartyTradeFlowTests {
                 it.write("Our commercial paper is top notch stuff".toByteArray())
                 it.closeEntry()
             }
-            val attachmentID = aliceNode.database.transaction {
+            val attachmentID = megaCorpNode.database.transaction {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public,
+            val bankBFakeCash = fillUpForBuyer(false, miniCorpNode.keyManagement.freshKey().public,
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
-            insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
+            insertFakeTransactions(bankBFakeCash, miniCorpNode, notaryNode)
 
-            val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+            val megaCorpFakePaper = megaCorpNode.database.transaction {
+                fillUpForSeller(false, megaCorpNode.info.legalIdentity.owningKey,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
 
-            insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
+            insertFakeTransactions(megaCorpFakePaper, megaCorpNode, notaryNode, megaCorpKey)
 
             net.runNetwork() // Clear network map registration messages
 
-            val aliceTxStream = aliceNode.storage.validatedTransactions.track().second
-            val aliceTxMappings = with(aliceNode) { database.transaction { storage.stateMachineRecordedTransactionMapping.track().second } }
-            val aliceSmId = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
-                    "alice's paper".outputStateAndRef()).sellerId
+            val megaCorpTxStream = megaCorpNode.storage.validatedTransactions.track().second
+            val megaCorpTxMappings = with(megaCorpNode) { database.transaction { storage.stateMachineRecordedTransactionMapping.track().second } }
+            val megaCorpSmId = runBuyerAndSeller(notaryNode, megaCorpNode, miniCorpNode,
+                    "Mega Corp's paper".outputStateAndRef()).sellerId
 
             net.runNetwork()
 
             // We need to declare this here, if we do it inside [expectEvents] kotlin throws an internal compiler error(!).
-            val aliceTxExpectations = sequence(
+            val megaCorpTxExpectations = sequence(
                     expect { tx: SignedTransaction ->
-                        require(tx.id == bobsFakeCash[0].id)
+                        require(tx.id == bankBFakeCash[0].id)
                     },
                     expect { tx: SignedTransaction ->
-                        require(tx.id == bobsFakeCash[2].id)
+                        require(tx.id == bankBFakeCash[2].id)
                     },
                     expect { tx: SignedTransaction ->
-                        require(tx.id == bobsFakeCash[1].id)
+                        require(tx.id == bankBFakeCash[1].id)
                     }
             )
-            aliceTxStream.expectEvents { aliceTxExpectations }
-            val aliceMappingExpectations = sequence(
+            megaCorpTxStream.expectEvents { megaCorpTxExpectations }
+            val megaCorpMappingExpectations = sequence(
                     expect { mapping: StateMachineTransactionMapping ->
-                        require(mapping.stateMachineRunId == aliceSmId)
-                        require(mapping.transactionId == bobsFakeCash[0].id)
+                        require(mapping.stateMachineRunId == megaCorpSmId)
+                        require(mapping.transactionId == bankBFakeCash[0].id)
                     },
                     expect { mapping: StateMachineTransactionMapping ->
-                        require(mapping.stateMachineRunId == aliceSmId)
-                        require(mapping.transactionId == bobsFakeCash[2].id)
+                        require(mapping.stateMachineRunId == megaCorpSmId)
+                        require(mapping.transactionId == bankBFakeCash[2].id)
                     },
                     expect { mapping: StateMachineTransactionMapping ->
-                        require(mapping.stateMachineRunId == aliceSmId)
-                        require(mapping.transactionId == bobsFakeCash[1].id)
+                        require(mapping.stateMachineRunId == megaCorpSmId)
+                        require(mapping.transactionId == bankBFakeCash[1].id)
                     }
             )
-            aliceTxMappings.expectEvents { aliceMappingExpectations }
+            megaCorpTxMappings.expectEvents { megaCorpMappingExpectations }
         }
     }
 
@@ -446,38 +446,38 @@ class TwoPartyTradeFlowTests {
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(
-            bobError: Boolean,
-            aliceError: Boolean,
+            miniCorpError: Boolean,
+            megaCorpError: Boolean,
             expectedMessageSubstring: String
     ) {
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
-        val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
-        val aliceKey = aliceNode.services.legalIdentityKey
-        val bobKey = bobNode.services.legalIdentityKey
+        val megaCorpNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+        val miniCorpNode = net.createPartyNode(notaryNode.info.address, MINI_CORP.name)
+        val megaCorpKey = megaCorpNode.services.legalIdentityKey
+        val miniCorpKey = miniCorpNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, DUMMY_CASH_ISSUER.party,
+        val miniCorpBadCash = fillUpForBuyer(miniCorpError, miniCorpKey.public, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
-        val alicesFakePaper = aliceNode.database.transaction {
-            fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
+        val megaCorpFakePaper = megaCorpNode.database.transaction {
+            fillUpForSeller(megaCorpError, megaCorpNode.info.legalIdentity.owningKey,
                     1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
         }
 
-        insertFakeTransactions(bobsBadCash, bobNode, notaryNode, bobKey)
-        insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
+        insertFakeTransactions(miniCorpBadCash, miniCorpNode, notaryNode, miniCorpKey)
+        insertFakeTransactions(megaCorpFakePaper, megaCorpNode, notaryNode, megaCorpKey)
 
         net.runNetwork() // Clear network map registration messages
 
-        val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode, "alice's paper".outputStateAndRef())
+        val (miniCorpStateMachine, megaCorpResult) = runBuyerAndSeller(notaryNode, megaCorpNode, miniCorpNode, "Mega Corp's paper".outputStateAndRef())
 
         net.runNetwork()
 
         val e = assertFailsWith<TransactionVerificationException> {
-            if (bobError)
-                aliceResult.getOrThrow()
+            if (miniCorpError)
+                megaCorpResult.getOrThrow()
             else
-                bobStateMachine.getOrThrow().resultFuture.getOrThrow()
+                miniCorpStateMachine.getOrThrow().resultFuture.getOrThrow()
         }
         val underlyingMessage = e.rootCause.message!!
         if (expectedMessageSubstring !in underlyingMessage) {
@@ -508,8 +508,8 @@ class TwoPartyTradeFlowTests {
             issuer: AnonymousParty,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val interimOwnerKey = MEGA_CORP_PUBKEY
-        // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
-        // wants to sell to Bob.
+        // Mini Corp (Buyer) has some cash he got from the Bank of Elbonia, Mega Corp (Seller) has some commercial paper she
+        // wants to sell to Mini Corp.
         val eb1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             // Issued money to itself.
             output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }
@@ -528,23 +528,23 @@ class TwoPartyTradeFlowTests {
             }
         }
 
-        // Bob gets some cash onto the ledger from BoE
+        // Mini Corp gets some cash onto the ledger from BoE
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
-            output("bob cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
+            output("Bank B cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
             command(interimOwnerKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
         val bc2 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 2")
-            output("bob cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
+            output("Bank B cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
             output(notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }   // Change output.
             command(interimOwnerKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
-        val vault = Vault<ContractState>(listOf("bob cash 1".outputStateAndRef(), "bob cash 2".outputStateAndRef()))
+        val vault = Vault<ContractState>(listOf("Bank B cash 1".outputStateAndRef(), "Bank B cash 2".outputStateAndRef()))
         return Pair(vault, listOf(eb1, bc1, bc2))
     }
 
@@ -555,7 +555,7 @@ class TwoPartyTradeFlowTests {
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
         val ap = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
-            output("alice's paper", notary = notary) {
+            output("Mega Corp's paper", notary = notary) {
                 CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), owner, amount, TEST_TX_TIME + 7.days)
             }
             command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
@@ -570,7 +570,7 @@ class TwoPartyTradeFlowTests {
             }
         }
 
-        val vault = Vault<ContractState>(listOf("alice's paper".outputStateAndRef()))
+        val vault = Vault<ContractState>(listOf("Mega Corp's paper".outputStateAndRef()))
         return Pair(vault, listOf(ap))
     }
 

@@ -2,7 +2,7 @@ package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.RPCDispatcher
@@ -74,7 +74,7 @@ abstract class AbstractClientRPCTest {
             override val users: List<User> get() = listOf(rpcUser)
         }
 
-        val dispatcher = object : RPCDispatcher(rpcImpl, userService, ALICE.name) {
+        val dispatcher = object : RPCDispatcher(rpcImpl, userService, DUMMY_BANK_A.name) {
             override fun send(data: SerializedBytes<*>, toAddress: String) {
                 val msg = serverSession.createMessage(false).apply {
                     writeBodyBufferBytes(data.bytes)
