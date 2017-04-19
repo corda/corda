@@ -46,6 +46,7 @@ Documentation Contents:
    getting-set-up-fault-finding
    running-the-demos
    CLI-vs-IDE
+   cheat-sheet
 
 .. toctree::
    :maxdepth: 2
