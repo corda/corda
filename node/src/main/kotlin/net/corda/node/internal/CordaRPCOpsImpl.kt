@@ -4,14 +4,10 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.StateMachineInfo
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
@@ -20,7 +16,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
-import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
@@ -41,7 +36,7 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override val protocolVersion: Int get() = 0
+    override val protocolVersion: Int = 0
 
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
         return database.transaction {
@@ -101,14 +96,15 @@ class CordaRPCOpsImpl(
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
+    override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
+        requirePermission(startFlowPermission(logicType))
+        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
+    }
+
+    // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        val stateMachine = services.invokeFlowAsync(logicType, *args) as FlowStateMachineImpl<T>
-        return FlowHandle(
-                id = stateMachine.id,
-                progress = stateMachine.logic.track()?.second ?: Observable.empty(),
-                returnValue = stateMachine.resultFuture
-        )
+        return services.invokeFlowAsync(logicType, *args).createHandle(hasProgress = false)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {

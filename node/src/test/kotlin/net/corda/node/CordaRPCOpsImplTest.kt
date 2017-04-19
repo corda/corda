@@ -29,13 +29,12 @@ import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.*
 
 class CordaRPCOpsImplTest {
 
@@ -210,7 +209,7 @@ class CordaRPCOpsImplTest {
     fun `can upload an attachment`() {
         val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
         val secureHash = rpc.uploadAttachment(inputJar)
-        assert(rpc.attachmentExists(secureHash))
+        assertTrue(rpc.attachmentExists(secureHash))
     }
 
     @Test
@@ -223,6 +222,6 @@ class CordaRPCOpsImplTest {
         IOUtils.copy(Thread.currentThread().contextClassLoader.getResourceAsStream(testJar), bufferFile)
         IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
 
-        assert(Arrays.equals(bufferFile.toByteArray(), bufferRpc.toByteArray()))
+        assertArrayEquals(bufferFile.toByteArray(), bufferRpc.toByteArray())
     }
 }

@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_PUBKEY_1
@@ -83,6 +84,8 @@ class InteractiveShellTest {
         override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
             throw UnsupportedOperationException("not implemented")
         }
+
+        override fun createHandle(hasProgress: Boolean): FlowProgressHandle<Any?> = throw UnsupportedOperationException("not implemented")
 
         override val serviceHub: ServiceHub
             get() = throw UnsupportedOperationException()

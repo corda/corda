@@ -14,6 +14,8 @@ UNRELEASED
 
     * DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
 
+    * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable`` field has been moved to the ``FlowProgressHandle`` child interface. Hence developers no longer need to invoke ``notUsed`` on their flows' unwanted progress-tracking observables.
+
 Milestone 10.0
 --------------
 
