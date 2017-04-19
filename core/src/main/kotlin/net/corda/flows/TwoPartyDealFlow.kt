@@ -47,15 +47,8 @@ object TwoPartyDealFlow {
     abstract class Primary(override val progressTracker: ProgressTracker = Primary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
-            object AWAITING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal")
-            object VERIFYING : ProgressTracker.Step("Verifying proposed transaction")
-            object SIGNING : ProgressTracker.Step("Signing transaction")
-            object NOTARY : ProgressTracker.Step("Getting notary signature")
-            object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to other party")
-            object RECORDING : ProgressTracker.Step("Recording completed transaction")
-            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator")
-
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR)
+            object SENDING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal.")
+            fun tracker() = ProgressTracker(SENDING_PROPOSAL)
         }
 
         abstract val payload: Any
@@ -73,7 +66,7 @@ object TwoPartyDealFlow {
 
         @Suspendable
         override fun call(): SignedTransaction {
-            progressTracker.currentStep = AWAITING_PROPOSAL
+            progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, serviceHub.myInfo.legalIdentity.owningKey)
             // Wait for the FinalityFlow to finish on the other side and return the tx when it's available.
@@ -87,14 +80,15 @@ object TwoPartyDealFlow {
     abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
-            object RECEIVING : ProgressTracker.Step("Waiting for deal info")
-            object VERIFYING : ProgressTracker.Step("Verifying deal info")
-            object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
+            object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
+            object VERIFYING : ProgressTracker.Step("Verifying deal info.")
+            object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal.")
             object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
-            object RECORDING : ProgressTracker.Step("Recording completed transaction")
-            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator")
+            object RECORDING : ProgressTracker.Step("Recording completed transaction.")
+            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator.")
+            object COPYING_TO_COUNTERPARTY : ProgressTracker.Step("Copying counterparty.")
 
-            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR)
+            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR, COPYING_TO_COUNTERPARTY)
         }
 
         abstract val otherParty: Party
@@ -127,6 +121,7 @@ object TwoPartyDealFlow {
                 regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
             }
 
+            progressTracker.currentStep = COPYING_TO_COUNTERPARTY
             // Send the final transaction hash back to the other party.
             // We need this so we don't break the IRS demo and the SIMM Demo.
             send(otherParty, ftx.id)
