@@ -14,8 +14,6 @@ certificates to prove association between transaction keys and identity keys.
 
 We have updated DemoBench so that it is installed as "Corda DemoBench" for both Windows and MacOSX. The original version was installed as just "DemoBench", and so will not be overwritten automatically by the new version.
 
-We have modified Corda's RPC API so that starting a flow no longer automatically enables progress-tracking. So developers no longer need to mark an unwanted flow progress tracker as "not used" in order to avoid a memory leak.
-
 Milestone 10
 ------------
 
