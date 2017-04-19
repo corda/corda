@@ -42,14 +42,20 @@ import javax.annotation.concurrent.ThreadSafe
  * @param config SSL configuration
  */
 @ThreadSafe
-class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterAddresses: List<HostAndPort>,
-                             db: Database, config: SSLConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(
+        val storagePath: Path,
+        val myAddress: HostAndPort,
+        val clusterAddresses: List<HostAndPort>,
+        val db: Database,
+        val config: SSLConfiguration
+) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
         private val DB_TABLE_NAME = "notary_committed_states"
     }
 
-    private val _clientFuture: CompletableFuture<CopycatClient>
+    private lateinit var _clientFuture: CompletableFuture<CopycatClient>
+    private lateinit var server: CopycatServer
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
      * on the cluster's replicated state machine.
@@ -57,7 +63,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
     private val client: CopycatClient
         get() = _clientFuture.get()
 
-    init {
+    fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
         val address = Address(myAddress.host, myAddress.port)
@@ -65,7 +71,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         val transport = buildTransport(config)
         val serializer = Serializer()
 
-        val server = CopycatServer.builder(address)
+        server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
                 .withServerTransport(transport)
@@ -87,6 +93,10 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .withSerializer(serializer)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
+    }
+
+    fun stop() {
+        server.shutdown()
     }
 
     private fun buildStorage(storagePath: Path): Storage? {

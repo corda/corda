@@ -196,7 +196,10 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
         return when (type) {
             RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
-                RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+                val provider = RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
+                provider.start()
+                runOnStop += Runnable { provider.stop() }
+                provider
             }
             else -> PersistentUniquenessProvider()
         }
@@ -224,6 +227,7 @@ class Node(override val configuration: FullNodeConfiguration,
                         "-tcpAllowOthers",
                         "-tcpDaemon",
                         "-key", "node", databaseName)
+                runOnStop += Runnable { server.stop() }
                 val url = server.start().url
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
