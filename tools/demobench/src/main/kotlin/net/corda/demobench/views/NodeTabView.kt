@@ -21,7 +21,6 @@ import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
 import tornadofx.*
 import java.nio.file.Path
-import java.text.DecimalFormat
 import java.util.*
 
 class NodeTabView : Fragment() {
@@ -34,13 +33,7 @@ class NodeTabView : Fragment() {
         const val textWidth = 465.0
         const val maxNameLength = 15
 
-        val integerFormat = DecimalFormat()
-
         val jvm by inject<JVMConfig>()
-
-        init {
-            integerFormat.isGroupingUsed = false
-        }
     }
 
     private val nodeController by inject<NodeController>()
@@ -215,7 +208,6 @@ class NodeTabView : Fragment() {
         val config = nodeController.validate(model.item)
         if (config != null) {
             nodeConfigView.isVisible = false
-            nodeTab.graphic = ImageView(flags.get()[model.nearestCity.value.countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
             config.install(cordapps)
             launchNode(config)
         }
@@ -230,22 +222,24 @@ class NodeTabView : Fragment() {
     }
 
     private fun launchNode(config: NodeConfig) {
+        val countryCode = CityDatabase.cityMap[config.nearestCity]?.countryCode
+        if (countryCode != null) {
+            nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
+        }
         nodeTab.text = config.legalName
-        nodeTerminalView.open(config, onExit = { onTerminalExit(config) })
+        nodeTerminalView.open(config) { exitCode ->
+            Platform.runLater {
+                if (exitCode == 0)
+                    nodeTab.requestClose()
+                nodeController.dispose(config)
+                main.forceAtLeastOneTab()
+            }
+        }
 
         nodeTab.setOnSelectionChanged {
             if (nodeTab.isSelected) {
-                // Doesn't work yet
-                nodeTerminalView.refreshTerminal()
+                nodeTerminalView.takeFocus()
             }
-        }
-    }
-
-    private fun onTerminalExit(config: NodeConfig) {
-        Platform.runLater {
-            nodeTab.requestClose()
-            nodeController.dispose(config)
-            main.forceAtLeastOneTab()
         }
     }
 }

@@ -25,7 +25,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     private var baseDir: Path = baseDirFor(ManagementFactory.getRuntimeMXBean().startTime)
     private val cordaPath: Path = jvm.applicationDir.resolve("corda").resolve("corda.jar")
-    //private val command = arrayOf("/usr/local/bin/fish")
     private val command = jvm.commandFor(cordaPath).toTypedArray()
 
     private val nodes = LinkedHashMap<String, NodeConfig>()

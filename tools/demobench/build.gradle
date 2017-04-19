@@ -38,10 +38,6 @@ repositories {
     }
 }
 
-compileKotlin {
-    kotlinOptions.jvmTarget= "1.8"
-}
-
 dependencies {
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"

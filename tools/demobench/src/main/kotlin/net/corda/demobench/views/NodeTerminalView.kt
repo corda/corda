@@ -22,7 +22,6 @@ import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import tornadofx.*
-import java.awt.Color
 import java.awt.Dimension
 import java.util.logging.Level
 import javax.swing.SwingUtilities
@@ -50,12 +49,12 @@ class NodeTerminalView : Fragment() {
     private var rpc: NodeRPC? = null
     private var pty: R3Pty? = null
     private lateinit var logo: ImageView
+    private lateinit var swingTerminal: SwingNode
 
-    fun open(config: NodeConfig, onExit: () -> Unit) {
+    fun open(config: NodeConfig, onExit: (Int) -> Unit) {
         nodeName.text = config.legalName
-        launchWebButton.text = "Launch\nWeb Server\n(Port ${config.webPort})"
 
-        val swingTerminal = SwingNode()
+        swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {
             swingTerminal.requestFocus()
         }
@@ -139,6 +138,7 @@ class NodeTerminalView : Fragment() {
 
             webServer.open(config, onExit = {
                 launchWebButton.isDisable = false
+                app.hostServices.showDocument("http://localhost:${config.webPort}/")
             })
         }
     }
@@ -174,8 +174,12 @@ class NodeTerminalView : Fragment() {
         }
     }
 
-    fun refreshTerminal() {
-        // TODO - Force a repaint somehow? My naive attempts have not worked.
+    fun takeFocus() {
+        // Request focus. This also forces a repaint, without this, for some reason the terminal has gone to sleep
+        // and is no longer updating in response to new data from the pty.
+        Platform.runLater {
+            swingTerminal.requestFocus()
+        }
     }
 
     // TODO - Will change when we modify RPC Observables handling.
