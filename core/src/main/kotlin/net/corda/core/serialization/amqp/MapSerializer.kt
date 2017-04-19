@@ -6,7 +6,17 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import kotlin.collections.LinkedHashMap
+import kotlin.collections.Map
+import kotlin.collections.emptyList
+import kotlin.collections.get
+import kotlin.collections.iterator
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.toMap
 
+/**
+ * Serialization / deserialization of certain supported [Map] types.
+ */
 class MapSerializer(val declaredType: ParameterizedType) : Serializer() {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()

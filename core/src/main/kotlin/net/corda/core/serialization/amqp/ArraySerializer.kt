@@ -6,6 +6,9 @@ import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
+/**
+ * Serialization / deserialization of arrays.
+ */
 class ArraySerializer(override val type: Type) : Serializer() {
     private val typeName = type.typeName
 

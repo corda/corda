@@ -11,11 +11,17 @@ import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
+// TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_MSW: Long = 0xc0da0000
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
 
+/**
+ * This class wraps all serialized data, so that the schema can be carried along with it.  We will provide various internal utilities
+ * to decompose and recompose with/without schema etc so that e.g. we can store objects with a (relationally) normalised out schema to
+ * avoid excessive duplication.
+ */
 // TODO: make the schema parsing lazy since mostly schemas will have been seen before and we only need it if we don't recognise a type descriptor.
 data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
     companion object {
@@ -45,6 +51,10 @@ data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
     }
 }
 
+/**
+ * This and the classes below are OO representations of the AMQP XML schema described in the specification. Their
+ * [toString] representations generate the associated XML form.
+ */
 data class Schema(val types: List<TypeNotation>) : DescribedType {
     companion object {
         val DESCRIPTOR = UnsignedLong(0x0002L or DESCRIPTOR_MSW)
@@ -311,6 +321,14 @@ data class Choice(val name: String, val value: String) : DescribedType {
     }
 }
 
+/**
+ * The method below generates a SHA256 [SecureHash] for a given JVM [Type] that should be unique to the schema representation.
+ * Thus it only takes into account properties and types and only supports the same object graph subset as the overall
+ * serialization code.
+ *
+ * The idea being that it is shorter than the fully qualified class name in most cases and should be suitable for use as
+ * a key for caching of types and schemas.
+ */
 private val ARRAY_HASH: SecureHash = SecureHash.sha256("Array = true")
 private val INTERFACE_HASH: SecureHash = SecureHash.sha256("Interface = true")
 private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen = true")

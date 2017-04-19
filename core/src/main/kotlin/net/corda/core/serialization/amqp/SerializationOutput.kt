@@ -7,6 +7,9 @@ import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
 
+/**
+ * Main entry point for serializing an object to AMQP.
+ */
 class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()

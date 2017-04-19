@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
-// TODO: support for custom serialisation of core types (of e.g. PublicKey)
+// TODO: support for custom serialisation of core types (of e.g. PublicKey, Throwables)
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general

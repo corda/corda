@@ -3,20 +3,29 @@ package net.corda.core.serialization.amqp
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
+import java.lang.reflect.Constructor
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
-
+/**
+ * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
+ */
 class ClassSerializer(val clazz: Class<*>) : Serializer() {
     override val type: Type get() = clazz
-    private val konstructor = if (isConcrete()) constructorForDeserialization(clazz) else null
-    private val javaConstructor = if (konstructor != null) konstructor.javaConstructor!! else null
-    private val propertySerializers = if (konstructor != null) propertiesForSerialization(konstructor) else emptyList()
+    private val javaConstructor: Constructor<Any>?
+    private val propertySerializers: Collection<PropertySerializer>
+
+    init {
+        val konstructor = if (isConcrete()) constructorForDeserialization(clazz) else null
+        javaConstructor = konstructor?.javaConstructor
+        propertySerializers = if (konstructor != null) propertiesForSerialization(konstructor) else emptyList()
+
+    }
     private val typeName = clazz.name
     override val typeDescriptor = "${hashType(type)}"
-    private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations.
+    private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 
@@ -81,7 +90,7 @@ class ClassSerializer(val clazz: Class<*>) : Serializer() {
         }
     }
 
-    fun isConcrete(): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
+    private fun isConcrete(): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {

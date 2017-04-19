@@ -9,7 +9,9 @@ import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
 
-
+/**
+ * Main entry point for deserializing an AMQP encoded object.
+ */
 class DeserializationInput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()

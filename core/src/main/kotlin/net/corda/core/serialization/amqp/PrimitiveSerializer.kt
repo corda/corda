@@ -4,6 +4,9 @@ import com.google.common.primitives.Primitives
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
+/**
+ * Serializer / deserializer for native AMQP types (Int, Float, String etc).
+ */
 class PrimitiveSerializer(clazz: Class<*>) : Serializer() {
     override val typeDescriptor: String = SerializerFactory.primitiveTypeName(Primitives.wrap(clazz))!!
     override val type: Type = clazz

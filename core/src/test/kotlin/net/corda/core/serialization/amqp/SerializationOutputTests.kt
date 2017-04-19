@@ -8,6 +8,7 @@ import org.junit.Test
 import java.io.NotSerializableException
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 
@@ -29,9 +30,14 @@ class SerializationOutputTests {
         override fun equals(other: Any?): Boolean {
             return other is WrapFooListArray && Objects.deepEquals(listArray, other.listArray)
         }
+
+        override fun hashCode(): Int {
+            return 1 // This isn't used, but without overriding we get a warning.
+        }
     }
 
     data class Woo(val fred: Int) {
+        @Suppress("unused")
         val bob = "Bob"
     }
 
@@ -41,11 +47,13 @@ class SerializationOutputTests {
 
     @CordaSerializable
     data class AnnotatedWoo(val fred: Int) {
+        @Suppress("unused")
         val bob = "Bob"
     }
 
     class FooList : ArrayList<Foo>()
 
+    @Suppress("AddVarianceModifier")
     data class GenericFoo<T>(val bar: String, val pub: T)
 
     data class TreeMapWrapper(val tree: TreeMap<Int, Foo>)
@@ -69,12 +77,12 @@ class SerializationOutputTests {
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))
+        // Check that a vanilla AMQP decoder can deserialize without schema.
         val result = decoder.readObject()
-        println(result)
+        assertNotNull(result)
 
         val des = DeserializationInput()
         val desObj = des.deserialize(bytes)
-        println(desObj)
         assertTrue(Objects.deepEquals(obj, desObj))
 
         // Now repeat with a re-used factory
@@ -82,6 +90,8 @@ class SerializationOutputTests {
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj))
         assertTrue(Objects.deepEquals(obj, desObj2))
+
+        // TODO: add some schema assertions to check correctly formed.
         return desObj2
     }
 
@@ -90,7 +100,6 @@ class SerializationOutputTests {
         val obj = Foo("Hello World!", 123)
         serdes(obj)
     }
-
 
     @Test
     fun `test foo implements`() {
