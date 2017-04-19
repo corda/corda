@@ -66,7 +66,6 @@ ext {
     corda_revision = org.ajoberstar.grgit.Grgit.open(file('.')).head().id
 }
 
-apply plugin: 'kotlin'
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -83,6 +82,7 @@ targetCompatibility = 1.8
 
 
 allprojects {
+    apply plugin: 'kotlin'
     apply plugin: 'java'
     apply plugin: 'jacoco'
 
@@ -91,6 +91,15 @@ allprojects {
 
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options"
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.1"
+            apiVersion = "1.1"
+            jvmTarget = "1.8"
+            javaParameters = true   // Useful for reflection.
+        }
     }
 
     group 'net.corda'
