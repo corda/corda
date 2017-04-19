@@ -16,15 +16,12 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
         val log = loggerFor<VaultSoftLockManager>()
     }
 
-    private val trackingFlowIds: MutableSet<UUID> = Collections.synchronizedSet(HashSet())
-
     init {
         smm.changes.subscribe { (logic, addOrRemove, id) ->
-            if (addOrRemove == AddOrRemove.REMOVE && id.uuid in trackingFlowIds) {
+            if (addOrRemove == AddOrRemove.REMOVE) {
                 log.trace { "$addOrRemove Flow name ${logic.javaClass} with id $id" }
                 unregisterSoftLocks(id, logic)
             }
-            trackingFlowIds.remove(id.uuid)
         }
 
         // Discussion
@@ -43,7 +40,6 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
             update.flowId?.let {
                 if (update.produced.isNotEmpty()) {
                     registerSoftLocks(update.flowId as UUID, update.produced.map { it.ref })
-                    trackingFlowIds.add(update.flowId as UUID)
                 }
             }
         }
