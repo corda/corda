@@ -14,6 +14,7 @@ import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.SecureRandom
+import java.security.Signature
 import java.security.cert.X509Certificate
 import java.util.*
 import javax.net.ssl.*
@@ -93,8 +94,14 @@ class X509UtilitiesTest {
 
         // Now sign something with private key and verify against certificate public key
         val testData = "12345".toByteArray()
-        val caSignature = Crypto.doSign(rootCaPrivateKey, testData)
-        assertTrue { Crypto.doVerify(rootCaCert.publicKey, caSignature, testData) }
+        val caSigner = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        caSigner.initSign(rootCaPrivateKey)
+        caSigner.update(testData)
+        val caSignature = caSigner.sign()
+        val caVerifier = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        caVerifier.initVerify(rootCaCert.publicKey)
+        caVerifier.update(testData)
+        assertTrue { caVerifier.verify(caSignature) }
 
         // Load back generated intermediate CA Cert and private key
         val intermediateCaCert = keyStore.getCertificate(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY) as X509Certificate
@@ -103,8 +110,14 @@ class X509UtilitiesTest {
         intermediateCaCert.verify(rootCaCert.publicKey)
 
         // Now sign something with private key and verify against certificate public key
-        val intermediateSignature = Crypto.doSign(intermediateCaCertPrivateKey, testData)
-        assertTrue { Crypto.doVerify(intermediateCaCert.publicKey, intermediateSignature, testData) }
+        val intermediateSigner = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        intermediateSigner.initSign(intermediateCaCertPrivateKey)
+        intermediateSigner.update(testData)
+        val intermediateSignature = intermediateSigner.sign()
+        val intermediateVerifier = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        intermediateVerifier.initVerify(intermediateCaCert.publicKey)
+        intermediateVerifier.update(testData)
+        assertTrue { intermediateVerifier.verify(intermediateSignature) }
     }
 
     @Test
@@ -138,8 +151,14 @@ class X509UtilitiesTest {
 
         // Now sign something with private key and verify against certificate public key
         val testData = "123456".toByteArray()
-        val signature = Crypto.doSign(serverCertAndKey.keyPair.private, testData)
-        assertTrue { Crypto.doVerify(serverCertAndKey.certificate.publicKey, signature, testData) }
+        val signer = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        signer.initSign(serverCertAndKey.keyPair.private)
+        signer.update(testData)
+        val signature = signer.sign()
+        val verifier = Signature.getInstance(X509Utilities.SIGNATURE_ALGORITHM)
+        verifier.initVerify(serverCertAndKey.certificate.publicKey)
+        verifier.update(testData)
+        assertTrue { verifier.verify(signature) }
     }
 
     @Test
