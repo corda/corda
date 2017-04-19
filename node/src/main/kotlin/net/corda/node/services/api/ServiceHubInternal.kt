@@ -65,9 +65,16 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     /**
-     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
+     * defaults to [FlowInitiator.Manual].
      */
-    abstract fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T>
+    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.Manual)
+
+    /**
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
+     */
+    abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T>
 
     override fun <T : Any> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
@@ -76,7 +83,6 @@ abstract class ServiceHubInternal : PluginServiceHub {
         val logicRef = flowLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
-        logic.flowInitiator = flowInitiator
-        return startFlow(logic)
+        return startFlow(logic, flowInitiator)
     }
 }

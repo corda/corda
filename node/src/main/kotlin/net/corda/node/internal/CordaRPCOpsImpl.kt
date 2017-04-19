@@ -63,7 +63,7 @@ class CordaRPCOpsImpl(
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
             Pair(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic) },
+                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic, it.flowInitiator) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
@@ -151,13 +151,13 @@ class CordaRPCOpsImpl(
     override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
 
     companion object {
-        private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>): StateMachineInfo {
-            return StateMachineInfo(id, flowLogic.javaClass.name, flowLogic.flowInitiator,flowLogic.track())
+        private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>, flowInitiator: FlowInitiator): StateMachineInfo {
+            return StateMachineInfo(id, flowLogic.javaClass.name, flowInitiator, flowLogic.track())
         }
 
         private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
             return when (change.addOrRemove) {
-                AddOrRemove.ADD -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic))
+                AddOrRemove.ADD -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic, change.flowInitiator))
                 AddOrRemove.REMOVE -> StateMachineUpdate.Removed(change.id)
             }
         }

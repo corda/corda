@@ -118,7 +118,7 @@ class ScheduledFlowTests {
         var countScheduledFlows = 0
         stateMachines.second.subscribe {
             if (it.addOrRemove == AddOrRemove.ADD) {
-                val initiator = it.logic.flowInitiator
+                val initiator = it.flowInitiator
                 if (initiator is FlowInitiator.Scheduled)
                     countScheduledFlows += 1
             }

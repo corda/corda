@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.crypto.Party
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
@@ -81,8 +82,8 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
-    override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> {
-        return smm.executor.fetchFrom { smm.add(logic) }
+    override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T> {
+        return smm.executor.fetchFrom { smm.add(logic, flowInitiator) }
     }
 
     override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {

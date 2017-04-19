@@ -10,6 +10,7 @@ import com.google.common.io.Closeables
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
@@ -221,8 +222,9 @@ object InteractiveShell {
         if (!FlowLogic::class.java.isAssignableFrom(clazz))
             throw IllegalStateException("Found a non-FlowLogic class in the whitelist? $clazz")
         try {
+            // TODO Now FlowInitiator.Rpc is set to ArtemisMessagingComponent.NODE_USER. Flow invocation should use startFlowDynamic.
             @Suppress("UNCHECKED_CAST")
-            val fsm = runFlowFromString({ node.services.startFlow(it) }, inputData, clazz as Class<FlowLogic<*>>)
+            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Rpc(CURRENT_RPC_USER.get().username)) }, inputData, clazz as Class<FlowLogic<*>>)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val latch = CountDownLatch(1)

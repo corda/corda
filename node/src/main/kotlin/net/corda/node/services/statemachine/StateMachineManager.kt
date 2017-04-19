@@ -114,7 +114,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     data class Change(
             val logic: FlowLogic<*>,
             val addOrRemove: AddOrRemove,
-            val id: StateMachineRunId
+            val id: StateMachineRunId,
+            val flowInitiator: FlowInitiator
     )
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -126,7 +127,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
         fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
+            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id, fiber.flowInitiator))
         }
     }
 
@@ -360,8 +361,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val session = try {
             val flow = flowFactory(sender)
-            flow.flowInitiator = FlowInitiator.Peer(sender.name)
-            val fiber = createFiber(flow)
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender.name))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
@@ -400,9 +400,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun quasarKryo(): KryoPool = quasarKryoPool
 
-    private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
+        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator).apply { initFiber(this) }
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
@@ -473,9 +473,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
-        if (logic.flowInitiator is FlowInitiator.NotStarted)
-            logic.flowInitiator = FlowInitiator.Manual("Not specified")
+    @JvmOverloads
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator = FlowInitiator.Manual): FlowStateMachine<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
@@ -483,7 +482,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
         val fiber = database.isolatedTransaction {
-            val fiber = createFiber(logic)
+            val fiber = createFiber(logic, flowInitiator)
             updateCheckpoint(fiber)
             fiber
         }

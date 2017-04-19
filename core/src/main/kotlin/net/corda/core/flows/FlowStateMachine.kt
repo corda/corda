@@ -20,14 +20,12 @@ import java.util.*
  */
 @CordaSerializable
 sealed class FlowInitiator {
-    data class Manual(val name: String) : FlowInitiator() // TODO Think of name here. What with shell access?
     /** Started using [CordaRPCOps.startFlowDynamic]. Name is RPC username. */
     data class Rpc(val name: String) : FlowInitiator()
     /** Started when we get new session initiation request. Name is peer legal name. */
     data class Peer(val name: String) : FlowInitiator()
+    object Manual : FlowInitiator() // TODO Think of name here. What with shell access?
     object Scheduled : FlowInitiator()
-    /** When constructing [FlowLogic] communication initiator defaults to [NotStarted]*/
-    object NotStarted : FlowInitiator()
 }
 
 /**
@@ -66,4 +64,5 @@ interface FlowStateMachine<R> {
     val logger: Logger
     val id: StateMachineRunId
     val resultFuture: ListenableFuture<R>
+    val flowInitiator: FlowInitiator
 }

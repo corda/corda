@@ -94,7 +94,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
     fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
-        return invokeFlowAsync(logicType, FlowInitiator.Manual("Not specified"), *args)
+        return invokeFlowAsync(logicType, FlowInitiator.Manual, *args)
     }
 
     /**

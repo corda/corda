@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
@@ -96,6 +97,8 @@ class InteractiveShellTest {
         override val id: StateMachineRunId
             get() = throw UnsupportedOperationException()
         override val resultFuture: ListenableFuture<Any?>
+            get() = throw UnsupportedOperationException()
+        override val flowInitiator: FlowInitiator
             get() = throw UnsupportedOperationException()
     }
 }

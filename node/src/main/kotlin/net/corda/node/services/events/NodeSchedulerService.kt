@@ -159,7 +159,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
+        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService), FlowInitiator.Scheduled)
     }
 
     class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
@@ -168,11 +168,6 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
             fun tracker() = ProgressTracker(RUNNING)
         }
-
-        init {
-            flowInitiator = FlowInitiator.Scheduled
-        }
-
         override val progressTracker = tracker()
 
         @Suspendable

@@ -132,7 +132,6 @@ abstract class FlowLogic<out T> {
     @Throws(FlowException::class)
     open fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
         subLogic.stateMachine = stateMachine
-        subLogic.flowInitiator = flowInitiator
         maybeWireUpProgressTracking(subLogic)
         if (shareParentSessions) {
             subLogic.sessionFlow = this
@@ -199,8 +198,6 @@ abstract class FlowLogic<out T> {
         set(value) {
             _stateMachine = value
         }
-
-    var flowInitiator: FlowInitiator = FlowInitiator.NotStarted
 
     // This points to the outermost flow and is changed when a subflow is invoked.
     private var sessionFlow: FlowLogic<*> = this
