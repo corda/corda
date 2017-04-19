@@ -39,7 +39,8 @@ import java.util.concurrent.TimeUnit
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              scheduler: FiberScheduler,
+                              override var hasSoftLockedStates: Boolean = false) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = run {

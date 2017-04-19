@@ -19,6 +19,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
@@ -263,6 +264,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
                     if (updatedRows > 0 && updatedRows == stateRefs.size) {
                         log.trace("Reserving soft lock states for $lockId: $stateRefs")
+                        (Strand.currentStrand() as? FlowStateMachine<*>)?.hasSoftLockedStates = true
                     } else {
                         // revert partial soft locks
                         val revertUpdatedRows = update(VaultStatesEntity::class)
