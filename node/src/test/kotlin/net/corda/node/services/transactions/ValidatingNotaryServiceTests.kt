@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.transactions
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
@@ -12,8 +12,8 @@ import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
+import net.corda.node.services.issueInvalidState
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat

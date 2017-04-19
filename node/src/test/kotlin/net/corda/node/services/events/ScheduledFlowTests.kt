@@ -1,8 +1,7 @@
-package net.corda.node.services
+package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogic
@@ -85,7 +84,7 @@ class ScheduledFlowTests {
         }
     }
 
-    class ScheduledFlowTestPlugin : CordaPluginRegistry() {
+    object ScheduledFlowTestPlugin : CordaPluginRegistry() {
         override val requiredFlows: Map<String, Set<String>> = mapOf(
                 InsertInitialStateFlow::class.java.name to setOf(Party::class.java.name),
                 ScheduledFlow::class.java.name to setOf(StateRef::class.java.name)
@@ -101,8 +100,8 @@ class ScheduledFlowTests {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = net.createNode(notaryNode.info.address, start = false)
         nodeB = net.createNode(notaryNode.info.address, start = false)
-        nodeA.testPluginRegistries.add(ScheduledFlowTestPlugin())
-        nodeB.testPluginRegistries.add(ScheduledFlowTestPlugin())
+        nodeA.testPluginRegistries.add(ScheduledFlowTestPlugin)
+        nodeB.testPluginRegistries.add(ScheduledFlowTestPlugin)
         net.startNodes()
     }
 

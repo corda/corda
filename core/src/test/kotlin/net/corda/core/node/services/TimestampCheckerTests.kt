@@ -1,7 +1,6 @@
-package net.corda.node.services
+package net.corda.core.node.services
 
 import net.corda.core.contracts.Timestamp
-import net.corda.core.node.services.TimestampChecker
 import net.corda.core.seconds
 import org.junit.Test
 import java.time.Clock

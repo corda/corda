@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.network
 
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair

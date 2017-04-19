@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException

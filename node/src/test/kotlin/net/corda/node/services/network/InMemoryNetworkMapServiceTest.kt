@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.network
 
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.testing.node.MockNetwork

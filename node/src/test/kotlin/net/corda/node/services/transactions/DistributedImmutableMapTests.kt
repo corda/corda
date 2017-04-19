@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
 import io.atomix.catalyst.transport.Address

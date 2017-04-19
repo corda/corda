@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.events
 
 import net.corda.core.contracts.*
 import net.corda.core.days
@@ -8,12 +8,12 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.ALICE_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.node.services.events.NodeSchedulerService
+import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.core.utilities.ALICE_KEY
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
 
 class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     val realClock: Clock = Clock.systemUTC()
-    val stoppedClock = Clock.fixed(realClock.instant(), realClock.zone)
+    val stoppedClock: Clock = Clock.fixed(realClock.instant(), realClock.zone)
     val testClock = TestClock(stoppedClock)
 
     val schedulerGatedExecutor = AffinityExecutor.Gate(true)

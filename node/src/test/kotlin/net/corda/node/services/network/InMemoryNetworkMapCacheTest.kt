@@ -1,8 +1,7 @@
-package net.corda.node.services
+package net.corda.node.services.network
 
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.Test

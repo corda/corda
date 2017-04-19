@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.network
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.getOrThrow
@@ -8,12 +8,12 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.flows.sendRequest
-import net.corda.node.services.AbstractNetworkMapServiceTest.Changed.Added
-import net.corda.node.services.AbstractNetworkMapServiceTest.Changed.Removed
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.network.AbstractNetworkMapService
-import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Added
+import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Removed
 import net.corda.node.services.network.NetworkMapService.*
 import net.corda.node.services.network.NetworkMapService.Companion.FETCH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.PUSH_ACK_TOPIC
@@ -21,9 +21,6 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.services.network.NodeRegistration
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE

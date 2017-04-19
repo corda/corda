@@ -1,10 +1,8 @@
-package net.corda.node.services
+package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.fillWithSomeTestCash
-import net.corda.contracts.testing.fillWithSomeTestDeals
-import net.corda.contracts.testing.fillWithSomeTestLinearStates
+import net.corda.contracts.testing.*
 import net.corda.core.contracts.*
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
@@ -225,8 +223,8 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -246,7 +244,7 @@ class VaultWithCashTest {
 
             // Issue a linear state
             val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 signWith(freshKey)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -254,11 +252,11 @@ class VaultWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyIssue)
-            assertThat(vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>()).hasSize(1)
+            assertThat(vault.unconsumedStates<DummyLinearContract.State>()).hasSize(1)
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
                 addInputState(dummyIssue.tx.outRef<LinearState>(0))
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -266,7 +264,7 @@ class VaultWithCashTest {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyMove)
-            assertThat(vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>()).hasSize(1)
+            assertThat(vault.unconsumedStates<DummyLinearContract.State>()).hasSize(1)
         }
     }
 
@@ -282,7 +280,7 @@ class VaultWithCashTest {
             cash.forEach { println(it.state.data.amount) }
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-            val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>()
+            val deals = vault.unconsumedStates<DummyDealContract.State>()
             deals.forEach { println(it.state.data.ref) }
         }
 
@@ -310,17 +308,17 @@ class VaultWithCashTest {
         database.transaction {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-            val deals = vault.unconsumedStates<net.corda.contracts.testing.DummyDealContract.State>().toList()
+            val deals = vault.unconsumedStates<DummyDealContract.State>().toList()
             deals.forEach { println(it.state.data.ref) }
 
             services.fillWithSomeTestLinearStates(3)
-            val linearStates = vault.unconsumedStates<net.corda.contracts.testing.DummyLinearContract.State>().toList()
+            val linearStates = vault.unconsumedStates<DummyLinearContract.State>().toList()
             linearStates.forEach { println(it.state.data.linearId) }
 
             // Create a txn consuming different contract types
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(net.corda.contracts.testing.DummyLinearContract.State(participants = listOf(freshKey.public)))
-                addOutputState(net.corda.contracts.testing.DummyDealContract.State(ref = "999", participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(participants = listOf(freshKey.public)))
+                addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshKey.public)))
                 addInputState(linearStates.first())
                 addInputState(deals.first())
                 signWith(DUMMY_NOTARY_KEY)

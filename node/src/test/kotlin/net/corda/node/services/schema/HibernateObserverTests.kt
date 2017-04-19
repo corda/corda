@@ -1,4 +1,4 @@
-package net.corda.node.services
+package net.corda.node.services.schema
 
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.StateAndRef

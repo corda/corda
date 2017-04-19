@@ -1,15 +1,14 @@
-package net.corda.node.services
+package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
-import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.generateStateRef
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class UniquenessProviderTests {
+class InMemoryUniquenessProviderTests {
     val identity = MEGA_CORP
     val txID = SecureHash.randomSHA256()
 
