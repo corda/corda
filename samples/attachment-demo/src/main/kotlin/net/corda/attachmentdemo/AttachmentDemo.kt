@@ -3,21 +3,22 @@ package net.corda.attachmentdemo
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.sizedInputStreamAndHash
-import net.corda.core.utilities.ALICE_KEY
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
-import net.corda.nodeapi.config.SSLConfiguration
 import java.io.InputStream
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.security.PublicKey
 import kotlin.system.exitProcess
 import kotlin.test.assertEquals
 
@@ -57,8 +58,6 @@ fun main(args: Array<String>) {
     }
 }
 
-var EXPECTED_HASH = SecureHash.zeroHash // Note: We could use another random default value to initialize it.
-
 /** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
 fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
     val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
@@ -66,7 +65,6 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 }
 
 fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
-    EXPECTED_HASH = hash
     // Get the identity key of the other side (the recipient).
     val otherSide: Party = rpc.partyFromName("Bank B")!!
 
@@ -78,15 +76,14 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
         }
     }
 
-    // Create a trivial transaction that just passes across the attachment - in normal cases there would be
-    // inputs, outputs and commands that refer to this attachment.
-    val ptx = TransactionType.General.Builder(notary = null)
+    // Create a trivial transaction with an output that describes the attachment, and the attachment itself
+    val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
     require(rpc.attachmentExists(hash))
+    ptx.addOutputState(AttachmentContract.State(hash))
     ptx.addAttachment(hash)
-    // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.
 
-    // Despite not having any states, we have to have at least one signature on the transaction
-    ptx.signWith(ALICE_KEY)
+    // Sign with the notary key
+    ptx.signWith(DUMMY_NOTARY_KEY)
 
     // Send the transaction to the other recipient
     val stx = ptx.toSignedTransaction()
@@ -101,9 +98,13 @@ fun recipient(rpc: CordaRPCOps) {
     val stx = rpc.verifiedTransactions().second.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
-        assertEquals(EXPECTED_HASH, wtx.attachments.first())
-        require(rpc.attachmentExists(EXPECTED_HASH))
-        println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
+        if (wtx.outputs.isNotEmpty()) {
+            val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
+            require(rpc.attachmentExists(state.hash))
+            println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
+        } else {
+            println("Error: no output state found in ${wtx.id}")
+        }
     } else {
         println("Error: no attachments found in ${wtx.id}")
     }
@@ -118,11 +119,18 @@ private fun printHelp(parser: OptionParser) {
     parser.printHelpOn(System.out)
 }
 
-// TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
-    return object : SSLConfiguration {
-        override val keyStorePassword: String = "cordacadevpass"
-        override val trustStorePassword: String = "trustpass"
-        override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
+class AttachmentContract : Contract {
+    override val legalContractReference: SecureHash
+        get() = TODO("not implemented")
+
+    override fun verify(tx: TransactionForContract) {
+        val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()
+        val attachment = tx.attachments.single()
+        require(state.hash == attachment.id)
+    }
+
+    data class State(val hash: SecureHash.SHA256) : ContractState {
+        override val contract: Contract = AttachmentContract()
+        override val participants: List<PublicKey> = emptyList()
     }
 }
