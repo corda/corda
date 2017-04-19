@@ -3,12 +3,20 @@ package net.corda.core.crypto
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import org.bouncycastle.pkcs.PKCS10CertificationRequest
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.security.*
+import java.security.cert.X509Certificate
+import java.security.spec.ECGenParameterSpec
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -82,7 +90,7 @@ object Crypto {
             EdDSAEngine(),
             EdDSAKeyFactory,
             net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
-            EdDSANamedCurveTable.getByName("ed25519-sha-512"),
+            EdDSANamedCurveTable.getByName("Ed25519"),
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
@@ -104,6 +112,22 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
+    /**
+     *  ECDSA signature scheme using the secp256r1 (NIST P-256) implementation from Sun's [Provider].
+     *  TODO: This is used for backwards compatibility to handle non-BC keys already stored in the keystore. Remove it when no longer required.
+     */
+    private val ECDSA_SECP256R1_SHA256_SUN = SignatureScheme(
+            3,
+            "ECDSA_SECP256R1_SHA256_SUN",
+            "EC",
+            Signature.getInstance("SHA256withECDSA"),
+            KeyFactory.getInstance("ECDSA"),
+            KeyPairGenerator.getInstance("EC"),
+            ECGenParameterSpec("secp256r1"),
+            256,
+            "ECDSA signature scheme using the secp256r1 (NIST P-256) curve and JCE."
+    )
+
     /** Our default signature scheme if no algorithm is specified (e.g. for key generation). */
     private val DEFAULT_SIGNATURE_SCHEME = EDDSA_ED25519_SHA512
 
@@ -117,7 +141,8 @@ object Crypto {
             ECDSA_SECP256K1_SHA256.schemeCodeName to ECDSA_SECP256K1_SHA256,
             ECDSA_SECP256R1_SHA256.schemeCodeName to ECDSA_SECP256R1_SHA256,
             EDDSA_ED25519_SHA512.schemeCodeName to EDDSA_ED25519_SHA512,
-            SPHINCS256_SHA256.schemeCodeName to SPHINCS256_SHA256
+            SPHINCS256_SHA256.schemeCodeName to SPHINCS256_SHA256,
+            ECDSA_SECP256R1_SHA256_SUN.schemeCodeName to ECDSA_SECP256R1_SHA256_SUN
     )
 
     /**
@@ -164,7 +189,7 @@ object Crypto {
                     if ((key as ECKey).parameters == sig.algSpec) {
                         return sig
                     } else continue
-                } else return sig // it's either RSA_SHA256 or SPHINCS-256.
+                } else return sig // it's either RSA_SHA256 or SPHINCS-256 (or SUN_SECP256R1 - backwards compatible with keys in keystore).
             }
         }
         throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${key.encoded.toBase58()}")
@@ -424,4 +449,28 @@ object Crypto {
 
     /** @return a [List] of Strings with the scheme code names defined in [SignatureScheme] for all of our supported signature schemes, see [Crypto]. */
     fun listSupportedSignatureSchemes(): List<String> = supportedSignatureSchemes.keys.toList()
+
+    /**
+     * Sign completed X509 certificate with CA cert private key
+     * @throws IllegalArgumentException if the requested key type and the signature scheme is not supported.
+     */
+    fun signCertificate(certificateBuilder: X509v3CertificateBuilder, signedWithPrivateKey: PrivateKey): X509Certificate {
+        val signature = findSignatureScheme(signedWithPrivateKey).sig
+        val signer = JcaContentSignerBuilder(signature.algorithm).setProvider(signature.provider).build(signedWithPrivateKey)
+        return JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certificateBuilder.build(signer))
+    }
+
+    /**
+     * Create certificate signing request using provided information.
+     * @param subject The legal [X500Name] of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
+     * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
+     * @return The generated Certificate signing request.
+     */
+    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair): PKCS10CertificationRequest {
+        val signature = findSignatureScheme(keyPair).sig
+        val signer = JcaContentSignerBuilder(signature.algorithm)
+                .setProvider(signature.provider)
+                .build(keyPair.private)
+        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
+    }
 }

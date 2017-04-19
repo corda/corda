@@ -7,7 +7,6 @@ import net.corda.core.serialization.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.KeyPairGenerator
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
@@ -53,7 +52,7 @@ fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): Digi
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bytesToSign).bytes)
 }
 
-val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName("Ed25519")
 
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
@@ -143,14 +142,14 @@ operator fun KeyPair.component1(): PrivateKey = this.private
 operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
+fun generateKeyPair(): KeyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
 
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair {
-    val params = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+    val params = EdDSANamedCurveTable.getByName("Ed25519")
     val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
     val priv = EdDSAPrivateKeySpec(bytes, params)
     val pub = EdDSAPublicKeySpec(priv.a, params)

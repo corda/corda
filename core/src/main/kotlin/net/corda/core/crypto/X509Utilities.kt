@@ -12,15 +12,10 @@ import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
-import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.util.IPAddress
 import org.bouncycastle.util.io.pem.PemReader
 import java.io.FileReader
@@ -34,18 +29,15 @@ import java.security.*
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.security.spec.ECGenParameterSpec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
 object X509Utilities {
 
-    val SIGNATURE_ALGORITHM = "SHA256withECDSA"
-    val KEY_GENERATION_ALGORITHM = "ECDSA"
     // TLS implementations only support standard SEC2 curves, although internally Corda uses newer EDDSA keys.
     // Also browsers like Chrome don't seem to support the secp256k1, only the secp256r1 curve.
-    val ECDSA_CURVE = "secp256r1"
+    val SIGNATURE_SCHEME = "ECDSA_SECP256R1_SHA256"
 
     val KEYSTORE_TYPE = "JKS"
 
@@ -56,10 +48,6 @@ object X509Utilities {
     val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
     val CORDA_CLIENT_CA_PRIVATE_KEY = "cordaclientcaprivatekey"
     val CORDA_CLIENT_CA = "cordaclientca"
-
-    init {
-        Security.addProvider(BouncyCastleProvider()) // register Bouncy Castle Crypto Provider required to sign certificates
-    }
 
     /**
      * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range
@@ -96,14 +84,6 @@ object X509Utilities {
     private fun createSubjectKeyIdentifier(key: Key): SubjectKeyIdentifier {
         val info = SubjectPublicKeyInfo.getInstance(key.encoded)
         return BcX509ExtensionUtils().createSubjectKeyIdentifier(info)
-    }
-
-    /**
-     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key
-     */
-    private fun signCertificate(certificateBuilder: X509v3CertificateBuilder, signedWithPrivateKey: PrivateKey): X509Certificate {
-        val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM).setProvider(BouncyCastleProvider.PROVIDER_NAME).build(signedWithPrivateKey)
-        return JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certificateBuilder.build(signer))
     }
 
     /**
@@ -224,17 +204,11 @@ object X509Utilities {
         this.setCertificateEntry(alias, cert)
     }
 
-
     /**
      * Generate a standard curve ECDSA KeyPair suitable for TLS, although the rest of Corda uses newer curves.
      * @return The generated Public/Private KeyPair
      */
-    fun generateECDSAKeyPairForSSL(): KeyPair {
-        val keyGen = KeyPairGenerator.getInstance(KEY_GENERATION_ALGORITHM, BouncyCastleProvider.PROVIDER_NAME)
-        val ecSpec = ECGenParameterSpec(ECDSA_CURVE) // Force named curve, because TLS implementations don't support many curves
-        keyGen.initialize(ecSpec, newSecureRandom())
-        return keyGen.generateKeyPair()
-    }
+    fun generateECDSAKeyPairForSSL() = Crypto.generateKeyPair(SIGNATURE_SCHEME)
 
     /**
      * Create certificate signing request using provided information.
@@ -246,29 +220,12 @@ object X509Utilities {
      * @return The generated Certificate signing request.
      */
     @Deprecated("Use [createCertificateSigningRequest(X500Name, KeyPair)] instead, specifying full legal name")
-    fun createCertificateSigningRequest(commonName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest = createCertificateSigningRequest(getX509Name(commonName, nearestCity, email), keyPair)
-
-    /**
-     * Create certificate signing request using provided information.
-     *
-     * @param myLegalName The legal name of your organization. This should not be abbreviated and should include suffixes such as Inc, Corp, or LLC.
-     * @param nearestCity The city where your organization is located.
-     * @param email An email address used to contact your organization.
-     * @param keyPair Standard curve ECDSA KeyPair generated for TLS.
-     * @return The generated Certificate signing request.
-     */
-    fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair): PKCS10CertificationRequest {
-        val signer = JcaContentSignerBuilder(SIGNATURE_ALGORITHM)
-                .setProvider(BouncyCastleProvider.PROVIDER_NAME)
-                .build(keyPair.private)
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public).build(signer)
-    }
+    fun createCertificateSigningRequest(commonName: String, nearestCity: String, email: String, keyPair: KeyPair): PKCS10CertificationRequest = Crypto.createCertificateSigningRequest(getX509Name(commonName, nearestCity, email), keyPair)
 
     /**
      * Helper data class to pass around public certificate and [KeyPair] entities when using CA certs.
      */
     data class CACertAndKey(val certificate: X509Certificate, val keyPair: KeyPair)
-
 
     /**
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
@@ -314,7 +271,7 @@ object X509Utilities {
         builder.addExtension(Extension.extendedKeyUsage, false,
                 DERSequence(purposes))
 
-        val cert = signCertificate(builder, keyPair.private)
+        val cert = Crypto.signCertificate(builder, keyPair.private)
 
         cert.checkValidity(Date())
         cert.verify(pubKey)
@@ -371,7 +328,7 @@ object X509Utilities {
         builder.addExtension(Extension.extendedKeyUsage, false,
                 DERSequence(purposes))
 
-        val cert = signCertificate(builder, certificateAuthority.keyPair.private)
+        val cert = Crypto.signCertificate(builder, certificateAuthority.keyPair.private)
 
         cert.checkValidity(Date())
         cert.verify(certificateAuthority.keyPair.public)
@@ -433,7 +390,7 @@ object X509Utilities {
         val subjectAlternativeNamesExtension = DERSequence(subjectAlternativeNames.toTypedArray())
         builder.addExtension(Extension.subjectAlternativeName, false, subjectAlternativeNamesExtension)
 
-        val cert = signCertificate(builder, certificateAuthority.keyPair.private)
+        val cert = Crypto.signCertificate(builder, certificateAuthority.keyPair.private)
 
         cert.checkValidity(Date())
         cert.verify(certificateAuthority.keyPair.public)

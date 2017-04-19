@@ -14,8 +14,7 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.security.KeyFactory
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
+import java.security.spec.*
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -238,6 +237,62 @@ class CryptoUtilsTest {
     }
 
     @Test
+    fun `ECDSA secp256r1 SUN full process keygen-sign-verify`() {
+
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256_SUN")
+
+        // test for some data
+        val signedData = keyPair.sign(testBytes)
+        val verification = keyPair.verify(signedData, testBytes)
+        assertTrue(verification)
+
+        // test for empty data signing
+        try {
+            keyPair.sign(ByteArray(0))
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for empty source data when verifying
+        try {
+            keyPair.verify(testBytes, ByteArray(0))
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for empty signed data when verifying
+        try {
+            keyPair.verify(ByteArray(0), testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for zero bytes data
+        val signedDataZeros = keyPair.sign(ByteArray(100))
+        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
+        assertTrue(verificationZeros)
+
+        // test for 1MB of data (I successfully tested it locally for 1GB as well)
+        val MBbyte = ByteArray(1000000) // 1.000.000
+        Random().nextBytes(MBbyte)
+        val signedDataBig = keyPair.sign(MBbyte)
+        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
+        assertTrue(verificationBig)
+
+        // test on malformed signatures (even if they change for 1 bit)
+        signedData[0] = signedData[0].inc()
+        try {
+            keyPair.verify(signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+    }
+
+    @Test
     fun `EDDSA ed25519 full process keygen-sign-verify`() {
 
         val keyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
@@ -353,7 +408,7 @@ class CryptoUtilsTest {
     @Test
     fun `Check supported algorithms`() {
         val algList: List<String> = Crypto.listSupportedSignatureSchemes()
-        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512")
+        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512", "ECDSA_SECP256R1_SHA256_SUN")
         assertTrue { Sets.symmetricDifference(expectedAlgSet, algList.toSet()).isEmpty(); }
     }
 
@@ -399,6 +454,23 @@ class CryptoUtilsTest {
         val (privKey, pubKey) = keyPair
 
         val kf = KeyFactory.getInstance("ECDSA", "BC")
+
+        // Encode and decode private key.
+        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        assertEquals(privKey2, privKey)
+
+        // Encode and decode public key.
+        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        assertEquals(pubKey2, pubKey)
+    }
+
+    @Test
+    fun `ECDSA secp256r1 SUN encode decode keys - required for serialization`() {
+        // Generate key pair.
+        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256_SUN")
+        val (privKey, pubKey) = keyPair
+
+        val kf = KeyFactory.getInstance("EC")
 
         // Encode and decode private key.
         val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
@@ -499,9 +571,9 @@ class CryptoUtilsTest {
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ed25519-sha-512"))
+        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("Ed25519"))
         assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ed25519-sha-512"))
+        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("Ed25519"))
     }
 
     @Test
