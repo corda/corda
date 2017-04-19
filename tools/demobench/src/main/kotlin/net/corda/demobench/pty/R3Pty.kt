@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, val onExit: () -> Unit) : AutoCloseable {
+class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, val onExit: (Int) -> Unit) : AutoCloseable {
     private companion object {
         val log = loggerFor<R3Pty>()
     }
@@ -57,7 +57,7 @@ class R3Pty(val name: String, settings: SettingsProvider, dimension: Dimension, 
         executor.submit {
             val exitValue = connector.waitFor()
             log.info("Terminal has exited (value={})", exitValue)
-            onExit()
+            onExit(exitValue)
         }
 
         val session = terminal.createTerminalSession(connector)

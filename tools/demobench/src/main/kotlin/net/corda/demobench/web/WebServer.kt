@@ -68,5 +68,4 @@ class WebServer internal constructor(private val webServerController: WebServerC
             log.error("Failed to close stream: '{}'", e.message)
         }
     }
-
 }
