@@ -160,8 +160,8 @@ class Obligation<P : Any> : Contract {
                         .filter { it.amount.token in template.acceptableIssuedProducts }
                 // Catch that there's nothing useful here, so we can dump out a useful error
                 requireThat {
-                    "there are fungible asset state outputs" using (assetStates.size > 0)
-                    "there are defined acceptable fungible asset states" using (acceptableAssetStates.size > 0)
+                    "there are fungible asset state outputs" using (assetStates.isNotEmpty())
+                    "there are defined acceptable fungible asset states" using (acceptableAssetStates.isNotEmpty())
                 }
 
                 val amountReceivedByOwner = acceptableAssetStates.groupBy { it.owner }
