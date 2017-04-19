@@ -42,12 +42,12 @@ val DUMMY_BANK_C: Party get() = Party("CN=Bank C,O=Bank C,L=Tokyo,C=Japan", DUMM
 
 val ALICE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(70)) }
 /** Dummy individual identity for tests and simulations */
-val ALICE: Party get() = Party("CN=Alice,O=SmallCorp,OU=Accounts,L=London,C=UK", ALICE_KEY.public)
+val ALICE: Party get() = Party("CN=Alice Corp,O=Alice Corp,L=London,C=UK", ALICE_KEY.public)
 
 val BOB_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(80)) }
 /** Dummy individual identity for tests and simulations */
-val BOB: Party get() = Party("CN=Bob,O=SmallCorp,OU=Accounts,L=London,C=UK", BOB_KEY.public)
+val BOB: Party get() = Party("CN=Bob Plc,O=Bob Plc,L=London,C=UK", BOB_KEY.public)
 
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
-val CHARLIE: Party get() = Party("CN=Charlie,O=SmallCorp,OU=Accounts,L=London,C=UK", BOB_KEY.public)
+val CHARLIE: Party get() = Party("CN=Charlie Ltd,O=Charlie Ltd,L=London,C=UK", BOB_KEY.public)
