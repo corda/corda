@@ -28,21 +28,22 @@ There are four implementations of this interface which can be chained together t
 
 	2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). 
 	   
-	   .. note:: Contract states that extend the *FungibleAsset* interface now automatically persist associated state attributes. 
+	   .. note:: Contract states that extend the ``FungibleAsset`` interface now automatically persist associated state attributes. 
 
 	3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo)
 	   
-	   .. note:: Contract states that extend the *LinearState* or *DealState* interfaces now automatically persist associated state attributes. 
+	   .. note:: Contract states that extend the ``LinearState`` or ``DealState`` interfaces now automatically persist associated state attributes. 
 
-	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema. That is, any custom contract state that implements the ``QueryableState`` interface and defines an associated ``MappedSchema`` (using JPA or Requery annotations). See the Corda finance module ``CommercialPaper`` contract for example.
+	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the Persistence_ documentation and associated examples.
 	
-		.. note:: Custom contract states that implement the *Queryable* interface may now extend the *FungiblePersistentState*, *LinearPersistentState* or *DealPersistentState* classes when implementing their *MappedSchema*. Previously, all custom contracts extended the root *PersistentState* class and defined repeated mappings of `FungibleAsset` and `LinearState` attributes.
+		.. note:: Custom contract states that implement the ``Queryable`` interface may now extend the ``FungiblePersistentState``, ``LinearPersistentState`` or ``DealPersistentState`` classes when implementing their ``MappedSchema``. Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset`` and ``LinearState`` attributes.
 
 Examples of these ``QueryCriteria`` objects are presented below for Kotlin and Java.
 
 The Vault Query API leverages the rich semantics of the underlying Requery_ persistence framework adopted by Corda.
 
 .. _Requery: https://github.com/requery/requery/wiki
+.. _Persistence: https://docs.corda.net/persistence.html
 
 .. note:: Permissioning at the database level will be enforced at a later date to ensure authenticated, role-based, read-only access to underlying Corda tables.
 

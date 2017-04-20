@@ -39,7 +39,7 @@ sealed class QueryCriteria {
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(
             val linearId: List<UniqueIdentifier>? = null,
-            val latestOnly: Boolean? = false,
+            val latestOnly: Boolean? = true,
             val dealRef: Collection<String>? = null,
             val dealParties: Collection<Party>? = null) : QueryCriteria()
 
