@@ -2,6 +2,7 @@ package net.corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ErrorOr
+import io.requery.query.Order
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
@@ -15,6 +16,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -66,9 +68,23 @@ interface CordaRPCOps : RPCOps {
     fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
 
     /**
+     * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
+     */
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria,
+                                    paging: QueryCriteria.PageSpecification? = null,
+                                    ordering: Order? = Order.ASC): Iterable<StateAndRef<T>>
+    /**
+     * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
+     */
+    @RPCReturnsObservables
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria,
+                                    paging: QueryCriteria.PageSpecification? = null,
+                                    ordering: Order? = Order.ASC): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
+    /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultServiceTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**
