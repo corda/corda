@@ -2,8 +2,6 @@ package net.corda.core.crypto
 
 import com.google.common.collect.Sets
 import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
@@ -413,15 +411,16 @@ class CryptoUtilsTest {
     fun `EdDSA encode decode keys - required for serialization`() {
         // Generate key pair.
         val keyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
-        val privKey: EdDSAPrivateKey = keyPair.private as EdDSAPrivateKey
-        val pubKey: EdDSAPublicKey = keyPair.public as EdDSAPublicKey
+        val (privKey, pubKey) = keyPair
+
+        val kf = KeyFactory.getInstance("EDDSA", "I2P")
 
         // Encode and decode private key.
-        val privKey2 = EdDSAKeyFactory.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = EdDSAKeyFactory.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
         assertEquals(pubKey2, pubKey)
     }
 
@@ -499,9 +498,9 @@ class CryptoUtilsTest {
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
-        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ed25519-sha-512"))
+        assertEquals((privEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
         assertEquals(pubEd.algorithm, "EdDSA")
-        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ed25519-sha-512"))
+        assertEquals((pubEd as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
     }
 
     @Test

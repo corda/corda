@@ -53,7 +53,7 @@ fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): Digi
     return DigitalSignature.WithKey(publicKey, signWithECDSA(bytesToSign).bytes)
 }
 
-val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName("ED25519")
 
 fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
 fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
@@ -150,7 +150,7 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * you want hard-coded private keys.
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair {
-    val params = EdDSANamedCurveTable.getByName(EdDSANamedCurveTable.CURVE_ED25519_SHA512)
+    val params = ed25519Curve
     val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
     val priv = EdDSAPrivateKeySpec(bytes, params)
     val pub = EdDSAPublicKeySpec(priv.a, params)
