@@ -15,7 +15,7 @@
         </VBox>
         <Button fx:id="viewDatabaseButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
                 styleClass="big-button" text="View&#10;Database" textAlignment="CENTER"/>
-        <Button fx:id="launchWebButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
+        <Button fx:id="launchWebButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="125.0"
                 styleClass="big-button" text="Launch&#10;Web Server" textAlignment="CENTER"/>
         <Button fx:id="launchExplorerButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
                 styleClass="big-button" text="Launch&#10;Explorer" textAlignment="CENTER"/>
