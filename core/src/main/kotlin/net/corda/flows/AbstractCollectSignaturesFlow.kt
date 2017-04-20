@@ -33,15 +33,20 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     }
 
     @Suspendable override fun call(): SignedTransaction {
+        check(partiallySignedTx.sigs.size == 1) {
+            "There should be only one signature present when calling CollectSignaturesFlow."
+        }
+
+        // TODO: Revisit when key management is properly fleshed out.
+        // This will break if a party uses anything other than their legalIdentityKey.
         val myKey = serviceHub.myInfo.legalIdentity.owningKey
         val allButMe = partiallySignedTx.tx.mustSign - myKey
-        val notaryKey = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity.owningKey
+        val notaryKey = partiallySignedTx.tx.notary?.owningKey
 
         // If the counter-parties list is empty then we don't need to collect any signatures.
         check(allButMe.isNotEmpty()) { return partiallySignedTx }
 
         // Check the Initiator has already signed and that the transaction is valid.
-        check(partiallySignedTx.sigs.size == 1) { "There should only be the Initiators signature present." }
         partiallySignedTx.verifySignatures(*allButMe.toTypedArray())
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
@@ -50,9 +55,10 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         val counterpartySignatures = collectSignatures(allButMe)
         val stx = partiallySignedTx + counterpartySignatures
 
-        // Verify all but the notary's signature as we haven't collected it yet.
+        // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
         progressTracker.currentStep = VERIFYING
-        stx.verifySignatures(notaryKey)
+        if (notaryKey != null) stx.verifySignatures(notaryKey) else stx.verifySignatures()
+
         return stx
     }
 
@@ -60,6 +66,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
      * Lookup the [Party] object for each [PublicKey] using the [serviceHub.networkMapCache].
      */
     @Suspendable private fun collectSignatures(keys: List<PublicKey>): List<DigitalSignature.WithKey> {
+        // TODO: Revisit when IdentityService supports resolution of a (possibly random) public key to a legal identity key.
         val parties =  keys.map {
             val partyNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it)
                     ?: throw IllegalStateException("Party $it not found on the network.")
@@ -97,11 +104,11 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
             progressTracker.currentStep = VERIFYING
             // Check that the Responder actually needs to sign.
             checkMySignatureRequired(proposal)
-            // Perform some custom verification over the transaction.
-            checkTransaction(proposal)
             // Resolve dependencies and verify, pass in the WireTransaction as we don't have all signatures.
             subFlow(ResolveTransactionsFlow(proposal.tx, otherParty))
             proposal.tx.toLedgerTransaction(serviceHub).verify()
+            // Perform some custom verification over the transaction.
+            checkTransaction(proposal)
             // Check the Initiators signature. There should only be one signature in the list.
             proposal.sigs.single().verifyWithECDSA(proposal.id)
             // All good. Unwrap the proposal.
@@ -118,6 +125,7 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
     @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction) {
+        // TODO: Revisit when key management is properly fleshed out.
         val myKey = serviceHub.myInfo.legalIdentity.owningKey
         require(myKey in stx.tx.mustSign) {
             "Party is not a participant for any of the input states of transaction ${stx.id}"
