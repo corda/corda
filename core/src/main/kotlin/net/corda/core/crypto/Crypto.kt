@@ -1,6 +1,5 @@
 package net.corda.core.crypto
 
-import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import org.bouncycastle.jce.ECNamedCurveTable
