@@ -136,7 +136,7 @@ public class VaultQueryJavaTests {
             assertThat(states).hasSize(4);
 
             return tx;
-        })
+        });
     }
 
     /**
