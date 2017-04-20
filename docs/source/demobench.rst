@@ -27,8 +27,6 @@ Configuring a Node
 Running Nodes
   DemoBench launches each new node in a terminal emulator. The ``View Database``, ``Launch Explorer`` and ``Launch WebServer`` buttons will all be disabled until the node has finished booting. DemoBench will then display simple statistics about the node such as its cash balance.
 
-.. warning:: After switching tabs, it may currently be necessary to click on the new tab panel before its contents update correctly. This is a BUG and we're working on it.
-
 ..
 
 It is currently impossible from DemoBench to restart a node that has terminated, e.g. because the user typed "bye" at the node's shell prompt. However, that node's data and logs still remain in its directory.
