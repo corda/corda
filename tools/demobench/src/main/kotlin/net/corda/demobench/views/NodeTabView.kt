@@ -194,7 +194,6 @@ class NodeTabView : Fragment() {
 
             value = CityDatabase["London"]
 
-            // TODO: Upgrade to TornadoFX 1.7.3 to fix an issue where the combobox dropdown isn't wide enough.
             isEditable = true
             makeAutocompletable()
         }
