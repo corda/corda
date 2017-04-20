@@ -1,5 +1,6 @@
 package net.corda.demobench.views
 
+import com.google.common.util.concurrent.RateLimiter
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
@@ -23,8 +24,12 @@ import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import tornadofx.*
 import java.awt.Dimension
+import java.io.IOException
+import java.net.SocketException
+import java.net.URL
 import java.util.logging.Level
 import javax.swing.SwingUtilities
+import kotlin.concurrent.thread
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -138,8 +143,30 @@ class NodeTerminalView : Fragment() {
 
             webServer.open(config, onExit = {
                 launchWebButton.isDisable = false
-                app.hostServices.showDocument("http://localhost:${config.webPort}/")
             })
+
+            openBrowserWhenWebServerHasStarted(config)
+        }
+    }
+
+    private fun openBrowserWhenWebServerHasStarted(config: NodeConfig) {
+        thread {
+            log.info("Waiting for web server to start ...")
+            val url = URL("http://localhost:${config.webPort}/")
+            val rateLimiter = RateLimiter.create(1.0)
+            while (true) {
+                try {
+                    rateLimiter.acquire()
+                    val conn = url.openConnection()
+                    conn.connectTimeout = 1000  // msec
+                    conn.connect()
+                    log.info("Web server started")
+                    app.hostServices.showDocument(url.toString())
+                    break
+                } catch(e: SocketException) {
+                } catch(e: IOException) {
+                }
+            }
         }
     }
 
