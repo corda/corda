@@ -5,6 +5,8 @@ import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.security.*
 import java.security.spec.InvalidKeySpecException
@@ -26,6 +28,10 @@ import java.security.spec.X509EncodedKeySpec
  */
 object Crypto {
 
+    init {
+        Security.addProvider(BouncyCastleProvider()) // register Bouncy Castle Crypto Provider (for RSA, ECDSA).
+        Security.addProvider(BouncyCastlePQCProvider()) // register Bouncy Castle Post-Quantum Crypto Provider (for SPHINCS-256).
+    }
     /**
      * RSA_SHA256 signature scheme using SHA256 as hash algorithm and MGF1 (with SHA256) as mask generation function.
      * Note: Recommended key size >= 3072 bits.

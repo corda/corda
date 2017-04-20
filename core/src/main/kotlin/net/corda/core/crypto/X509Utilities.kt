@@ -38,7 +38,6 @@ import java.security.spec.ECGenParameterSpec
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
-import javax.security.auth.x500.X500Principal
 
 object X509Utilities {
 

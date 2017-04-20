@@ -143,7 +143,7 @@ operator fun KeyPair.component1(): PrivateKey = this.private
 operator fun KeyPair.component2(): PublicKey = this.public
 
 /** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
-fun generateKeyPair(): KeyPair = KeyPairGenerator().generateKeyPair()
+fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where

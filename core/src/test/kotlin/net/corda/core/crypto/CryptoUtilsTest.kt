@@ -9,14 +9,11 @@ import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.security.KeyFactory
-import java.security.Security
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
@@ -29,11 +26,6 @@ import kotlin.test.fail
  * Run tests for cryptographic algorithms
  */
 class CryptoUtilsTest {
-
-    init {
-        Security.addProvider(BouncyCastleProvider())
-        Security.addProvider(BouncyCastlePQCProvider())
-    }
 
     val testString = "Hello World"
     val testBytes = testString.toByteArray()
