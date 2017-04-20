@@ -73,16 +73,17 @@ class RaftUniquenessProvider(
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
         val serializer = Serializer().apply {
+            // Add serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
             register(DistributedImmutableMap.Commands.PutAll::class.java) {
                 object : TypeSerializer<DistributedImmutableMap.Commands.PutAll<*, *>> {
-                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>?, buffer: BufferOutput<out BufferOutput<*>>?, serializer: Serializer?) = writeMap(obj!!.entries, buffer!!, serializer!!)
-                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>?, buffer: BufferInput<out BufferInput<*>>?, serializer: Serializer?) = DistributedImmutableMap.Commands.PutAll(readMap(buffer!!, serializer!!))
+                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj.entries, buffer, serializer)
+                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
                 }
             }
             register(LinkedHashMap::class.java) {
                 object : TypeSerializer<LinkedHashMap<*, *>> {
-                    override fun write(obj: LinkedHashMap<*, *>?, buffer: BufferOutput<out BufferOutput<*>>?, serializer: Serializer?) = writeMap(obj!!, buffer!!, serializer!!)
-                    override fun read(type: Class<LinkedHashMap<*, *>>?, buffer: BufferInput<out BufferInput<*>>?, serializer: Serializer?) = readMap(buffer!!, serializer!!)
+                    override fun write(obj: LinkedHashMap<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj, buffer, serializer)
+                    override fun read(type: Class<LinkedHashMap<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = readMap(buffer, serializer)
                 }
             }
         }

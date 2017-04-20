@@ -54,8 +54,6 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-import java.util.logging.Level
-import java.util.logging.Logger
 import kotlin.concurrent.thread
 
 // TODO: Add command history.

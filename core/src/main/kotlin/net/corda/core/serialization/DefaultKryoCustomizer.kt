@@ -80,7 +80,6 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
             register(MetaData::class.java, MetaDataSerializer)
-            register(BitSet::class.java, ReferencesAwareJavaSerializer)
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
 
