@@ -7,6 +7,7 @@ object AddressUtils {
     /** Returns the first public IP address found on any of the network interfaces, or `null` if none found. */
     fun tryDetectPublicIP(): InetAddress? {
         for (int in NetworkInterface.getNetworkInterfaces()) {
+            if (int.name.startsWith("utun")) continue
             for (address in int.inetAddresses) {
                 if (isPublic(address)) return address
             }
