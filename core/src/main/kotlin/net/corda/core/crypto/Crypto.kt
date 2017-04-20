@@ -29,6 +29,7 @@ import java.security.spec.X509EncodedKeySpec
 object Crypto {
 
     init {
+        Security.addProvider(I2PProvider()) // register I2P Crypto Provider, required for EdDSA.
         Security.addProvider(BouncyCastleProvider()) // register Bouncy Castle Crypto Provider (for RSA, ECDSA).
         Security.addProvider(BouncyCastlePQCProvider()) // register Bouncy Castle Post-Quantum Crypto Provider (for SPHINCS-256).
     }
@@ -79,10 +80,10 @@ object Crypto {
             4,
             "EDDSA_ED25519_SHA512",
             "EdDSA",
-            EdDSAEngine(),
-            EdDSAKeyFactory,
-            net.i2p.crypto.eddsa.KeyPairGenerator(), // EdDSA engine uses a custom KeyPairGenerator Vs BouncyCastle.
-            EdDSANamedCurveTable.getByName("ed25519-sha-512"),
+            Signature.getInstance("SHA512withEdDSA", "I2P"),
+            KeyFactory.getInstance("EdDSA", "I2P"),
+            KeyPairGenerator.getInstance("EdDSA", "I2P"),
+            EdDSANamedCurveTable.getByName("ED25519"),
             256,
             "EdDSA signature scheme using the ed25519 twisted Edwards curve."
     )
