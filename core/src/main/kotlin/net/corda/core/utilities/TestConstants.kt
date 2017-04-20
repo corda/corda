@@ -49,4 +49,4 @@ val BOB: Party get() = Party("Bob", BOB_KEY.public)
 
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
-val CHARLIE: Party get() = Party("Charlie", BOB_KEY.public)
+val CHARLIE: Party get() = Party("Charlie", CHARLIE_KEY.public)
