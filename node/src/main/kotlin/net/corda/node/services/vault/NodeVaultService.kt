@@ -264,7 +264,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
                     if (updatedRows > 0 && updatedRows == stateRefs.size) {
                         log.trace("Reserving soft lock states for $lockId: $stateRefs")
-                        (Strand.currentStrand() as? FlowStateMachine<*>)?.hasSoftLockedStates = true
+                        FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
                     } else {
                         // revert partial soft locks
                         val revertUpdatedRows = update(VaultStatesEntity::class)

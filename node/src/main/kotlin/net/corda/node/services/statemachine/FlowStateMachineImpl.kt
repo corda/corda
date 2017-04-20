@@ -39,8 +39,7 @@ import java.util.concurrent.TimeUnit
 
 class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               val logic: FlowLogic<R>,
-                              scheduler: FiberScheduler,
-                              override var hasSoftLockedStates: Boolean = false) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
+                              scheduler: FiberScheduler) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
         private val QUASAR_UNBLOCKER = run {
@@ -99,6 +98,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
     internal var waitingForResponse: WaitingRequest? = null
+    internal var hasSoftLockedStates: Boolean = false
+        set(value) {
+            if (value) hasSoftLockedStates = value else throw IllegalArgumentException("Can only set to true")
+        }
 
     init {
         logic.stateMachine = this

@@ -1,13 +1,12 @@
 package net.corda.node.services.vault
 
-import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.node.services.VaultService
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.AddOrRemove
 import java.util.*
@@ -20,7 +19,7 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
 
     init {
         smm.changes.subscribe { (logic, addOrRemove, id) ->
-            if (addOrRemove == AddOrRemove.REMOVE && (Strand.currentStrand() as? FlowStateMachine<*>)?.hasSoftLockedStates == true) {
+            if (addOrRemove == AddOrRemove.REMOVE && (FlowStateMachineImpl.currentStateMachine())?.hasSoftLockedStates == true) {
                 log.trace { "$addOrRemove Flow name ${logic.javaClass} with id $id" }
                 unregisterSoftLocks(id, logic)
             }
