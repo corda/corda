@@ -11,9 +11,10 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import javax.annotation.concurrent.ThreadSafe
 
 /**
- * Factory of serializers designed to be shared across threads and invocations
+ * Factory of serializers designed to be shared across threads and invocations.
  */
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
@@ -22,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
+// TODO: use guava caches etc so not unbounded
+@ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()

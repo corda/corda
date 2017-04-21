@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-class ArraySerializer(override val type: Type) : Serializer() {
+class ArraySerializer(override val type: Type) : Serializer {
     private val typeName = type.typeName
 
     override val typeDescriptor = "${hashType(type)}"
