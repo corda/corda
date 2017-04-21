@@ -130,7 +130,7 @@ class CordaRPCClientTest : NodeBasedTest() {
         smUpdates.second.subscribe {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
-                if (initiator is FlowInitiator.Rpc)
+                if (initiator is FlowInitiator.RPC)
                     countRpcFlows += 1
                 if (initiator is FlowInitiator.Manual)
                     countManualFlows += 1

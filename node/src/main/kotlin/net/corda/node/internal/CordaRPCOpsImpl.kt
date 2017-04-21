@@ -100,14 +100,14 @@ class CordaRPCOpsImpl(
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.Rpc(CURRENT_RPC_USER.get().username)
+        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
         return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
     }
 
     // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
         requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.Rpc(CURRENT_RPC_USER.get().username)
+        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
         return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = false)
     }
 

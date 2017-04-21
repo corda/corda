@@ -222,9 +222,9 @@ object InteractiveShell {
         if (!FlowLogic::class.java.isAssignableFrom(clazz))
             throw IllegalStateException("Found a non-FlowLogic class in the whitelist? $clazz")
         try {
-            // TODO Now FlowInitiator.Rpc is set to ArtemisMessagingComponent.NODE_USER. Flow invocation should use startFlowDynamic.
+            // TODO Now FlowInitiator.RPC is set to ArtemisMessagingComponent.NODE_USER. Flow invocation should use startFlowDynamic.
             @Suppress("UNCHECKED_CAST")
-            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Rpc(CURRENT_RPC_USER.get().username)) }, inputData, clazz as Class<FlowLogic<*>>)
+            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.RPC(CURRENT_RPC_USER.get().username)) }, inputData, clazz as Class<FlowLogic<*>>)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val latch = CountDownLatch(1)

@@ -150,7 +150,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Rpc && initiator.name == "user1")
+                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -159,7 +159,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     expect { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Rpc && initiator.name == "user1")
+                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == moveSmId)
@@ -172,7 +172,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && initiator.name == aliceNode.legalIdentity.name)
+                        require(initiator is FlowInitiator.Peer && initiator.legalName == aliceNode.legalIdentity.name)
                     }
             )
         }

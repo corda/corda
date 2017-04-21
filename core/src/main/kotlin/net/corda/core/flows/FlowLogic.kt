@@ -185,6 +185,7 @@ abstract class FlowLogic<out T> {
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction {
         return stateMachine.waitForLedgerCommit(hash, this)
     }
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var _stateMachine: FlowStateMachine<*>? = null

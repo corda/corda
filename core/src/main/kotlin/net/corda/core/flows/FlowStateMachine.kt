@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.FlowHandle
@@ -13,7 +14,7 @@ import org.slf4j.Logger
 import java.util.*
 
 /**
- * FlowInitiator holds information on who started the flow. We have different ways of doing that: via RPC [FlowInitiator.Rpc],
+ * FlowInitiator holds information on who started the flow. We have different ways of doing that: via RPC [FlowInitiator.RPC],
  * communication started by peer node [FlowInitiator.Peer], scheduled flows [FlowInitiator.Scheduled]
  * or manual [FlowInitiator.Manual]. The last case is for all flows started in tests, shell etc. It was added
  * because we can start flow directly using [StateMachineManager.add] or [ServiceHubInternal.startFlow].
@@ -21,11 +22,12 @@ import java.util.*
 @CordaSerializable
 sealed class FlowInitiator {
     /** Started using [CordaRPCOps.startFlowDynamic]. Name is RPC username. */
-    data class Rpc(val name: String) : FlowInitiator()
+    data class RPC(val username: String) : FlowInitiator()
     /** Started when we get new session initiation request. Name is peer legal name. */
-    data class Peer(val name: String) : FlowInitiator()
-    object Manual : FlowInitiator() // TODO Think of name here. What with shell access?
-    object Scheduled : FlowInitiator()
+    data class Peer(val legalName: String) : FlowInitiator()
+    /** Started as scheduled activity. */
+    class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator()
+    object Manual : FlowInitiator()
 }
 
 /**
