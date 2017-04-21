@@ -98,6 +98,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()
     internal var waitingForResponse: WaitingRequest? = null
+    internal var hasSoftLockedStates: Boolean = false
+        set(value) {
+            if (value) field = value else throw IllegalArgumentException("Can only set to true")
+        }
 
     init {
         logic.stateMachine = this
