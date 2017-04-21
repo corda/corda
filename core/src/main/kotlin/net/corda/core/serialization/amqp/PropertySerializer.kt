@@ -4,7 +4,9 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
 import kotlin.reflect.jvm.kotlinFunction
 
-
+/**
+ * Base class for serialization of a property of an object.
+ */
 abstract class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any?
@@ -62,6 +64,9 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 }
 
+/**
+ * A property serializer for a complex type (another object).
+ */
 class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
     override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
         return input.readObjectOrNull(obj, envelope, readMethod.genericReturnType)
@@ -72,6 +77,9 @@ class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySeria
     }
 }
 
+/**
+ * A property serializer for an AMQP primitive type (Int, String, etc).
+ */
 class PrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
     override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
         return obj
@@ -80,5 +88,4 @@ class PrimitivePropertySerializer(name: String, readMethod: Method) : PropertySe
     override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
         data.putObject(readMethod.invoke(obj))
     }
-
 }

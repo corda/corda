@@ -12,6 +12,9 @@ import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Factory of serializers designed to be shared across threads and invocations
+ */
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
@@ -74,9 +77,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun processSchemaEntry(typeNotation: TypeNotation) {
         when (typeNotation) {
-            // java.lang.Class (whether a class or interface)
+        // java.lang.Class (whether a class or interface)
             is CompositeType -> processCompositeType(typeNotation)
-            // List / Map, possibly with generics
+        // List / Map, possibly with generics
             is RestrictedType -> processRestrictedType(typeNotation)
         }
     }
