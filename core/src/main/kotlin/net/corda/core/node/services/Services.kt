@@ -2,12 +2,12 @@ package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
-import io.requery.query.Order
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.QueryCriteria.PageSpecification
 import net.corda.core.flows.FlowException
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
@@ -19,6 +19,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Instant
 import java.util.*
 
 /**
@@ -93,6 +94,24 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     enum class StateStatus {
         UNCONSUMED, CONSUMED, ALL
     }
+
+    @CordaSerializable
+    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
+                                           val statesMetadata: List<Vault.StateMetadata>, val pageable: PageSpecification, val total: Long)
+
+    @CordaSerializable
+    data class StateMetadata(val ref: StateRef,
+                             val contractStateClassName: String,
+                             val recordedTime: Instant,
+                             val consumedTime: Instant?,
+                             val stateStatus: Vault.StateStatus,
+                             val notaryName: String,
+                             val notaryKey: String,
+                             val lockId: String?,
+                             val lockUpdateTime: Instant?)
+
+    @CordaSerializable
+    data class QueryResults<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>? = null)
 }
 
 /**
@@ -139,25 +158,29 @@ interface VaultService {
     // DOCSTART VaultQueryAPI
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
-     * optional [PageSpecification] and [Order] modification criteria,
-     * and returns an [Iterable] set of [StateAndRef]
+     * optional [PageSpecification] and [Sort] modification criteria,
+     * and returns a [Vault.QueryResults] object containing a [Vault.Page] of [StateAndRef]
      *
-     * Note: the iterator is lazy and client driven.
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page of up to 200 rows.
+     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
      */
     fun <T : ContractState> queryBy(criteria: QueryCriteria,
-                                    paging: PageSpecification? = null,
-                                    ordering: Order? = Order.ASC): Iterable<StateAndRef<T>>
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort? = null): Vault.Page<T>
+
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
-     * optional [PageSpecification] and [Order] modification criteria,
-     * and returns a snapshot as an [Iterable] set of [StateRef] and streaming updates
-     * as an [Observable] of [Vault.Update]
+     * optional [PageSpecification] and [Sort] modification criteria,
+     * and returns a [Vault.QueryResults] object containing
+     * 1) a snapshot as a [Vault.Page] of [StateAndRef]
+     * 2) an [Observable] of [Vault.Update]
      *
-     * Note: the iterator is lazy and client driven.
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
      */
     fun <T : ContractState> trackBy(criteria: QueryCriteria,
-                                    paging: PageSpecification? = null,
-                                    ordering: Order? = Order.ASC): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort? = null): Vault.QueryResults<T>
     // DOCEND VaultQueryAPI
 
     /**

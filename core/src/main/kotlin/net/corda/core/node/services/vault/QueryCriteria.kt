@@ -3,15 +3,13 @@ package net.corda.core.node.services.vault
 import io.requery.kotlin.Logical
 import io.requery.query.Condition
 import io.requery.query.Operator
-import net.corda.core.contracts.Commodity
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.serialization.OpaqueBytes
+import java.security.PublicKey
 import java.time.Instant
 import java.util.Currency
 
@@ -57,7 +55,7 @@ sealed class QueryCriteria {
             val tokenValue: Collection<String>? = null,
             val issuerParty: Collection<Party>? = null,
             val issuerRef: Collection<OpaqueBytes>? = null,
-            val exitKeys: Collection<CompositeKey>? = null) : QueryCriteria()
+            val exitKeys: Collection<PublicKey>? = null) : QueryCriteria()
 
     /**
      * Specify any query criteria by leveraging the Requery Query DSL:
@@ -68,19 +66,6 @@ sealed class QueryCriteria {
     // enable composition of [QueryCriteria]
     data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
     data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
-
-    /**
-     *  Provide simple ability to specify an offset within a result set and the number of results to
-     *  return from that offset (eg. page size)
-     *
-     *  Note: it is the responsibility of the calling client to manage page windows.
-     *
-     *  For advanced pagination it is recommended you utilise standard JPA query frameworks such as
-     *  Spring Data's JPARepository which extends the [PagingAndSortingRepository] interface to provide
-     *  paging and sorting capability:
-     *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
-     */
-    data class PageSpecification(val pageNumber: Int, val pageSize: Int)
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
     enum class TimeInstantType {
@@ -106,3 +91,34 @@ sealed class QueryCriteria {
 
 infix fun QueryCriteria.and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
 infix fun QueryCriteria.or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
+
+/**
+ *  Provide simple ability to specify an offset within a result set and the number of results to
+ *  return from that offset (eg. page size)
+ *
+ *  Note: it is the responsibility of the calling client to manage page windows.
+ *
+ *  For advanced pagination it is recommended you utilise standard JPA query frameworks such as
+ *  Spring Data's JPARepository which extends the [PagingAndSortingRepository] interface to provide
+ *  paging and sorting capability:
+ *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
+ */
+internal val DEFAULT_PAGE_NUM = 1
+internal val DEFAULT_PAGE_SIZE = 200
+
+data class PageSpecification(val pageNumber: Int = DEFAULT_PAGE_NUM, val pageSize: Int = DEFAULT_PAGE_SIZE)
+
+
+data class Sort(val direction: Sort.Direction = Sort.Direction.ASC,
+                val nullHandling: Sort.NullHandling = Sort.NullHandling.NULLS_LAST,
+                val order: Sort.Order? = null) {
+    enum class Direction {
+        ASC,
+        DESC
+    }
+    enum class NullHandling {
+        NULLS_FIRST,
+        NULLS_LAST
+    }
+    data class Order (val direction: Sort.Direction, val property: String)
+}

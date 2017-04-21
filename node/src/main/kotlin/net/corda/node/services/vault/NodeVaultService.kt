@@ -8,7 +8,6 @@ import io.requery.kotlin.`in`
 import io.requery.kotlin.eq
 import io.requery.kotlin.isNull
 import io.requery.kotlin.notNull
-import io.requery.query.Order
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.OnLedgerAsset
@@ -22,8 +21,9 @@ import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.QueryCriteria.PageSpecification
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
@@ -191,6 +191,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             .map { it ->
                                 val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
                                 val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime)
                                 StateAndRef(state, stateRef)
                             }
                 }
@@ -218,9 +219,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return stateAndRefs.associateBy({ it.ref }, { it.state })
     }
 
-    override fun <T : ContractState> queryBy(criteria: QueryCriteria,
-                                             paging: PageSpecification?,
-                                             ordering: Order?): Iterable<StateAndRef<T>> {
+    override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.Page<T> {
+
         TODO("not implemented")
 
         // If [VaultQueryCriteria.PageSpecification] specified
@@ -230,14 +230,12 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         //  take = pageSize
     }
 
-    override fun <T : ContractState> trackBy(criteria: QueryCriteria,
-                                             paging: PageSpecification?,
-                                             ordering: Order?): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>> {
+    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.QueryResults<T> {
         TODO("not implemented")
 
         return mutex.locked {
-            Pair(queryBy(criteria),
-                 _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            Vault.QueryResults(queryBy(criteria),
+                              _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

@@ -16,7 +16,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -70,16 +72,14 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      */
-    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria,
-                                    paging: QueryCriteria.PageSpecification? = null,
-                                    ordering: Order? = Order.ASC): Iterable<StateAndRef<T>>
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.Page<T>
+
     /**
      * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
      */
     @RPCReturnsObservables
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria,
-                                    paging: QueryCriteria.PageSpecification? = null,
-                                    ordering: Order? = Order.ASC): Pair<Iterable<StateAndRef<T>>, Observable<Vault.Update>>
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.QueryResults<T>
+
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
