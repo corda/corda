@@ -12,6 +12,7 @@ import net.corda.webserver.servlets.ObjectMapperConfig
 import net.corda.webserver.servlets.ResponseFilter
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
+import org.eclipse.jetty.server.handler.ErrorHandler
 import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
@@ -22,13 +23,17 @@ import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
 import org.slf4j.LoggerFactory
+import java.io.IOException
+import java.io.Writer
 import java.lang.reflect.InvocationTargetException
-import java.util.*
+import java.util.ServiceLoader
+import javax.servlet.http.HttpServletRequest
+import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
         val log = loggerFor<NodeWebServer>()
-        val retryDelay = 1000L // Milliseconds
+        const val retryDelay = 1000L // Milliseconds
     }
 
     val address = config.webAddress
@@ -58,7 +63,7 @@ class NodeWebServer(val config: WebServerConfig) {
                 handlerCollection.addHandler(WebAppContext().apply {
                     // Find the jolokia WAR file on the classpath.
                     contextPath = "/monitoring/json"
-                    setInitParameter("mimeType", "application/json")
+                    setInitParameter("mimeType", MediaType.APPLICATION_JSON)
                     war = warpath
                 })
             } else {
@@ -106,14 +111,27 @@ class NodeWebServer(val config: WebServerConfig) {
     private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
         return ServletContextHandler().apply {
             contextPath = "/"
+            errorHandler = object : ErrorHandler() {
+                @Throws(IOException::class)
+                override fun writeErrorPageHead(request: HttpServletRequest, writer: Writer, code: Int, message: String) {
+                    writer.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n")
+                    writer.write("<title>Corda ${config.myLegalName} : Error $code</title>\n")
+                }
+
+                @Throws(IOException::class)
+                override fun writeErrorPageMessage(request: HttpServletRequest, writer: Writer, code: Int, message: String , uri: String) {
+                    writer.write("<h1>Corda ${config.myLegalName}</h1>\n")
+                    super.writeErrorPageMessage(request, writer, code, message, uri)
+                }
+            }
             setAttribute("rpc", localRpc)
             addServlet(DataUploadServlet::class.java, "/upload/*")
             addServlet(AttachmentDownloadServlet::class.java, "/attachments/*")
 
             val resourceConfig = ResourceConfig()
-            resourceConfig.register(ObjectMapperConfig(localRpc))
-            resourceConfig.register(ResponseFilter())
-            resourceConfig.register(APIServerImpl(localRpc))
+                .register(ObjectMapperConfig(localRpc))
+                .register(ResponseFilter())
+                .register(APIServerImpl(localRpc))
 
             val webAPIsOnClasspath = pluginRegistries.flatMap { x -> x.webApis }
             for (webapi in webAPIsOnClasspath) {

@@ -16,6 +16,7 @@ class WebServerConfig(val baseDirectory: Path, val config: Config) : SSLConfigur
     override val trustStorePassword: String by config
     val exportJMXto: String get() = "http"
     val useHTTPS: Boolean by config
+    val myLegalName: String by config
     val p2pAddress: HostAndPort by config // TODO: Use RPC port instead of P2P port (RPC requires authentication, P2P does not)
     val webAddress: HostAndPort by config
 }
