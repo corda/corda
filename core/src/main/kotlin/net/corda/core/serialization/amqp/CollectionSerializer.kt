@@ -7,16 +7,10 @@ import java.lang.reflect.Type
 import java.util.*
 import kotlin.collections.Collection
 import kotlin.collections.LinkedHashSet
-import kotlin.collections.List
-import kotlin.collections.Map
 import kotlin.collections.Set
-import kotlin.collections.emptyList
-import kotlin.collections.get
-import kotlin.collections.map
-import kotlin.collections.mapOf
 
 /**
- * Serialization / deserialization of predefined set of support [Collection] types covering mostly [List]s and [Set]s.
+ * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
 class CollectionSerializer(val declaredType: ParameterizedType) : Serializer() {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())

@@ -62,6 +62,27 @@ class SerializationOutputTests {
 
     data class SortedSetWrapper(val set: SortedSet<Int>)
 
+    class Mismatch(fred: Int) {
+        val ginger: Int = fred
+
+        override fun equals(other: Any?): Boolean = (other as? Mismatch)?.ginger == ginger
+        override fun hashCode(): Int = ginger
+    }
+
+    class MismatchType(fred: Long) {
+        val ginger: Int = fred.toInt()
+
+        override fun equals(other: Any?): Boolean = (other as? MismatchType)?.ginger == ginger
+        override fun hashCode(): Int = ginger
+    }
+
+    class MismatchRename(@CordaParam("ginger") fred: Int) {
+        val ginger: Int = fred
+
+        override fun equals(other: Any?): Boolean = (other as? MismatchRename)?.ginger == ginger
+        override fun hashCode(): Int = ginger
+    }
+
     private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
@@ -204,6 +225,24 @@ class SerializationOutputTests {
     fun `test SortedSet property`() {
         val obj = SortedSetWrapper(TreeSet<Int>())
         obj.set += 456
+        serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test mismatched property and constructor naming`() {
+        val obj = Mismatch(456)
+        serdes(obj)
+    }
+
+    @Test(expected = NotSerializableException::class)
+    fun `test mismatched property and constructor type`() {
+        val obj = MismatchType(456)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test mismatched property and constructor renamed`() {
+        val obj = MismatchRename(456)
         serdes(obj)
     }
 }
