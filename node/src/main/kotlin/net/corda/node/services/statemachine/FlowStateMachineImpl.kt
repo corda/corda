@@ -100,7 +100,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     internal var waitingForResponse: WaitingRequest? = null
     internal var hasSoftLockedStates: Boolean = false
         set(value) {
-            if (value) hasSoftLockedStates = value else throw IllegalArgumentException("Can only set to true")
+            if (value) field = value else throw IllegalArgumentException("Can only set to true")
         }
 
     init {
