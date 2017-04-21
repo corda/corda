@@ -13,6 +13,7 @@ import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.image.ImageView
 import javafx.scene.layout.StackPane
+import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.core.success
@@ -27,6 +28,7 @@ import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
+import rx.Subscription
 import tornadofx.*
 
 class NodeTerminalView : Fragment() {
@@ -41,10 +43,12 @@ class NodeTerminalView : Fragment() {
     private val transactions by fxid<PropertyLabel>()
     private val balance by fxid<PropertyLabel>()
 
+    private val header by fxid<HBox>()
     private val viewDatabaseButton by fxid<Button>()
     private val launchWebButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
+    private val subscriptions: MutableList<Subscription> = mutableListOf()
     private var txCount: Int = 0
     private var stateCount: Int = 0
     private var isDestroyed: Boolean = false
@@ -171,17 +175,17 @@ class NodeTerminalView : Fragment() {
                 states.value = stateCount.toString()
             }
 
-            txNext.subscribe {
+            subscriptions.add(txNext.subscribe {
                 Platform.runLater {
                     transactions.value = (++txCount).toString()
                 }
-            }
-            stateNext.subscribe {
+            })
+            subscriptions.add(stateNext.subscribe {
                 Platform.runLater {
                     stateCount += (it.produced.size - it.consumed.size)
                     states.value = stateCount.toString()
                 }
-            }
+            })
         } catch (e: Exception) {
             log.log(Level.WARNING, "RPC failed: ${e.message}", e)
         }
@@ -189,9 +193,7 @@ class NodeTerminalView : Fragment() {
         config.state = NodeState.RUNNING
         log.info("Node '${config.legalName}' is now ready.")
 
-        launchExplorerButton.isDisable = false
-        viewDatabaseButton.isDisable = false
-        launchWebButton.isDisable = false
+        header.isDisable = false
     }
 
     private fun pollCashBalances(ops: CordaRPCOps) {
@@ -211,6 +213,7 @@ class NodeTerminalView : Fragment() {
 
     fun destroy() {
         if (!isDestroyed) {
+            subscriptions.forEach { it.unsubscribe() }
             webServer.close()
             explorer.close()
             viewer.close()

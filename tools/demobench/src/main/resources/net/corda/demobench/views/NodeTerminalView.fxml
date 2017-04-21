@@ -4,7 +4,7 @@
 <?import javafx.scene.layout.*?>
 <?import net.corda.demobench.ui.*?>
 <VBox visible="false" prefHeight="953.0" prefWidth="1363.0" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" styleClass="terminal-vbox">
-    <HBox prefHeight="95.0" prefWidth="800.0" styleClass="header">
+    <HBox fx:id="header" disable="true" prefHeight="95.0" prefWidth="800.0" styleClass="header">
         <VBox prefHeight="66.0" HBox.hgrow="ALWAYS">
             <Label fx:id="nodeName" style="-fx-font-size: 40; -fx-text-fill: red;"/>
         </VBox>
@@ -13,11 +13,11 @@
             <PropertyLabel fx:id="transactions" name="Known transactions: "/>
             <PropertyLabel fx:id="balance" name="Balance: "/>
         </VBox>
-        <Button fx:id="viewDatabaseButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
+        <Button fx:id="viewDatabaseButton" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
                 styleClass="big-button" text="View&#10;Database" textAlignment="CENTER"/>
-        <Button fx:id="launchWebButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="125.0"
+        <Button fx:id="launchWebButton" mnemonicParsing="false" prefHeight="92.0" prefWidth="125.0"
                 styleClass="big-button" text="Launch&#10;Web Server" textAlignment="CENTER"/>
-        <Button fx:id="launchExplorerButton" disable="true" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
+        <Button fx:id="launchExplorerButton" mnemonicParsing="false" prefHeight="92.0" prefWidth="115.0"
                 styleClass="big-button" text="Launch&#10;Explorer" textAlignment="CENTER"/>
     </HBox>
     <Pane minHeight="8" mouseTransparent="true" styleClass="terminal-gradient-pane"/>
