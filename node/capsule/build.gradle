@@ -48,8 +48,7 @@ task buildCordaJAR(type: FatCapsule) {
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
         minJavaVersion = '1.8.0'
-        // This version is known to work and avoids earlier 8u versions that have bugs.
-        minUpdateVersion['1.8'] = '102'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']
 
         // JVM configuration:

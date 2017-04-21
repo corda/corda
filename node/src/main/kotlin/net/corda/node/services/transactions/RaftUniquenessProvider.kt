@@ -1,7 +1,10 @@
 package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
+import io.atomix.catalyst.buffer.BufferInput
+import io.atomix.catalyst.buffer.BufferOutput
 import io.atomix.catalyst.serializer.Serializer
+import io.atomix.catalyst.serializer.TypeSerializer
 import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
@@ -69,7 +72,21 @@ class RaftUniquenessProvider(
         val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
-        val serializer = Serializer()
+        val serializer = Serializer().apply {
+            // Add serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
+            register(DistributedImmutableMap.Commands.PutAll::class.java) {
+                object : TypeSerializer<DistributedImmutableMap.Commands.PutAll<*, *>> {
+                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj.entries, buffer, serializer)
+                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
+                }
+            }
+            register(LinkedHashMap::class.java) {
+                object : TypeSerializer<LinkedHashMap<*, *>> {
+                    override fun write(obj: LinkedHashMap<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj, buffer, serializer)
+                    override fun read(type: Class<LinkedHashMap<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = readMap(buffer, serializer)
+                }
+            }
+        }
 
         server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
@@ -142,3 +159,15 @@ class RaftUniquenessProvider(
         return items.map { it.key.toStateRef() to it.value.deserialize<UniquenessProvider.ConsumingTx>() }.toMap()
     }
 }
+
+private fun writeMap(map: Map<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = with(map) {
+    buffer.writeInt(size)
+    forEach {
+        with(serializer) {
+            writeObject(it.key, buffer)
+            writeObject(it.value, buffer)
+        }
+    }
+}
+
+private fun readMap(buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = LinkedHashMap<Any, Any>().apply { repeat(buffer.readInt()) { put(serializer.readObject(buffer), serializer.readObject(buffer)) } }

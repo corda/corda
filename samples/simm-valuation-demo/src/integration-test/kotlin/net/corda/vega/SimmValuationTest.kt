@@ -36,7 +36,7 @@ class SimmValuationTest : IntegrationTestCategory {
             val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
             val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
                     .getOrThrow()
-                    .map { HttpApi.fromHostAndPort(it, "api/simmvaluationdemo") }
+                    .map { HttpApi.fromHostAndPort(it.listenAddress, "api/simmvaluationdemo") }
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
             val nodeAParty = getPartyWithName(nodeBApi, nodeALegalName)
 

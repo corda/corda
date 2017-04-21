@@ -44,7 +44,7 @@ class IRSDemoTest : IntegrationTestCategory {
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
-            ).getOrThrow()
+            ).getOrThrow().map { it.listenAddress }
 
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
             val numADeals = getTradeCount(nodeAAddr)

@@ -509,29 +509,6 @@ fun <T> Kryo.withoutReferences(block: () -> T): T {
     }
 }
 
-/**
- * Improvement to the builtin JavaSerializer by honouring the [Kryo.getReferences] setting.
- */
-object ReferencesAwareJavaSerializer : JavaSerializer() {
-    override fun write(kryo: Kryo, output: Output, obj: Any) {
-        if (kryo.references) {
-            super.write(kryo, output, obj)
-        } else {
-            ObjectOutputStream(output).use {
-                it.writeObject(obj)
-            }
-        }
-    }
-
-    override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any {
-        return if (kryo.references) {
-            super.read(kryo, input, type)
-        } else {
-            ObjectInputStream(input).use(ObjectInputStream::readObject)
-        }
-    }
-}
-
 val ATTACHMENT_STORAGE = "ATTACHMENT_STORAGE"
 
 val Kryo.attachmentStorage: AttachmentStorage?

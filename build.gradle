@@ -38,6 +38,9 @@ buildscript {
     ext.requery_version = '1.2.1'
     ext.dokka_version = '0.9.13'
 
+    // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
+    ext.java8_minUpdateVersion = '131'
+
     repositories {
         mavenLocal()
         mavenCentral()
@@ -129,7 +132,7 @@ allprojects {
 // We recommend a specific minor version (unfortunately, not checkable directly) because JavaFX adds APIs in
 // minor releases, so we can't work with just any Java 8, it has to be a recent one.
 if (!JavaVersion.current().java8Compatible)
-    throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_112")
+    throw new GradleException("Corda requires Java 8, please upgrade to at least 1.8.0_$java8_minUpdateVersion")
 
 repositories {
     mavenCentral()

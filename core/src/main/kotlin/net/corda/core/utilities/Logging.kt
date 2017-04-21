@@ -3,6 +3,7 @@ package net.corda.core.utilities
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
+import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.LoggerConfig
 import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
@@ -60,4 +61,19 @@ object LogHelper {
         config.addLogger(name, loggerConfig)
         loggerContext.updateLoggers(config)
     }
+
+    /**
+     * May fail to restore the original level due to unavoidable race if called by multiple threads.
+     */
+    inline fun <T> withLevel(logName: String, levelName: String, block: () -> T) = let {
+        val level = Level.valueOf(levelName)
+        val oldLevel = LogManager.getLogger(logName).level
+        Configurator.setLevel(logName, level)
+        try {
+            block()
+        } finally {
+            Configurator.setLevel(logName, oldLevel)
+        }
+    }
+
 }

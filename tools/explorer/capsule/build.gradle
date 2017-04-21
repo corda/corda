@@ -39,8 +39,7 @@ task buildExplorerJAR(type: FatCapsule) {
         applicationVersion = corda_version
         systemProperties['visualvm.display.name'] = 'Node Explorer'
         minJavaVersion = '1.8.0'
-        // This version is known to work and avoids earlier 8u versions that have bugs.
-        minUpdateVersion['1.8'] = '102'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['ExplorerCaplet']
 
         // JVM configuration:

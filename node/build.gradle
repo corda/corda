@@ -34,6 +34,9 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
     }
     test {
         resources {
@@ -61,6 +64,7 @@ dependencies {
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
+    compile "org.slf4j:jul-to-slf4j:$slf4j_version"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
