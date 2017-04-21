@@ -3,6 +3,10 @@ package net.corda.demobench.views
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
+import java.awt.Dimension
+import java.net.URI
+import java.util.logging.Level
+import javax.swing.SwingUtilities
 import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
@@ -11,9 +15,9 @@ import javafx.scene.image.ImageView
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
-import net.corda.client.rpc.notUsed
 import net.corda.core.success
 import net.corda.core.then
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
@@ -24,10 +28,6 @@ import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import tornadofx.*
-import java.awt.Dimension
-import java.net.URI
-import java.util.logging.Level
-import javax.swing.SwingUtilities
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -45,6 +45,8 @@ class NodeTerminalView : Fragment() {
     private val launchWebButton by fxid<Button>()
     private val launchExplorerButton by fxid<Button>()
 
+    private var txCount: Int = 0
+    private var stateCount: Int = 0
     private var isDestroyed: Boolean = false
     private val explorer = explorerController.explorer()
     private val webServer = webServerController.webServer()
@@ -98,22 +100,13 @@ class NodeTerminalView : Fragment() {
         })
     }
 
-    fun enable(config: NodeConfig) {
-        config.state = NodeState.RUNNING
-        log.info("Node '${config.legalName}' is now ready.")
-
-        launchExplorerButton.isDisable = false
-        viewDatabaseButton.isDisable = false
-        launchWebButton.isDisable = false
-    }
-
     /*
      * We only want to run one explorer for each node.
      * So disable the "launch" button when we have
      * launched the explorer and only reenable it when
      * the explorer has exited.
      */
-    fun configureExplorerButton(config: NodeConfig) {
+    private fun configureExplorerButton(config: NodeConfig) {
         launchExplorerButton.setOnAction {
             launchExplorerButton.isDisable = true
 
@@ -123,7 +116,7 @@ class NodeTerminalView : Fragment() {
         }
     }
 
-    fun configureDatabaseButton(config: NodeConfig) {
+    private fun configureDatabaseButton(config: NodeConfig) {
         viewDatabaseButton.setOnAction {
             viewer.openBrowser(config.h2Port)
         }
@@ -137,7 +130,7 @@ class NodeTerminalView : Fragment() {
      * launched the web server and only reenable it when
      * the web server has exited.
      */
-    fun configureWebButton(config: NodeConfig) {
+    private fun configureWebButton(config: NodeConfig) {
         launchWebButton.setOnAction {
             if (webURL != null) {
                 app.hostServices.showDocument(webURL.toString())
@@ -158,25 +151,63 @@ class NodeTerminalView : Fragment() {
         }
     }
 
-    fun launchRPC(config: NodeConfig) = NodeRPC(config, start = { enable(config) }, invoke = { ops ->
+    private fun launchRPC(config: NodeConfig) = NodeRPC(
+        config = config,
+        start = this::initialise,
+        invoke = this::pollCashBalances
+    )
+
+    private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
         try {
-            val verifiedTx = ops.verifiedTransactions()
-            val statesInVault = ops.vaultAndUpdates()
+            val (txInit, txNext) = ops.verifiedTransactions()
+            val (stateInit, stateNext) = ops.vaultAndUpdates()
+
+            txCount = txInit.size
+            stateCount = stateInit.size
+
+            Platform.runLater {
+                logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
+                transactions.value = txCount.toString()
+                states.value = stateCount.toString()
+            }
+
+            txNext.subscribe {
+                Platform.runLater {
+                    transactions.value = (++txCount).toString()
+                }
+            }
+            stateNext.subscribe {
+                Platform.runLater {
+                    stateCount += (it.produced.size - it.consumed.size)
+                    states.value = stateCount.toString()
+                }
+            }
+        } catch (e: Exception) {
+            log.log(Level.WARNING, "RPC failed: ${e.message}", e)
+        }
+
+        config.state = NodeState.RUNNING
+        log.info("Node '${config.legalName}' is now ready.")
+
+        launchExplorerButton.isDisable = false
+        viewDatabaseButton.isDisable = false
+        launchWebButton.isDisable = false
+    }
+
+    private fun pollCashBalances(ops: CordaRPCOps) {
+        try {
             val cashBalances = ops.getCashBalances().entries.joinToString(
                     separator = ", ",
                     transform = { e -> e.value.toString() }
             )
 
             Platform.runLater {
-                logo.opacityProperty().animate(1.0, Duration.seconds(2.5))
-                states.value = fetchAndDrop(statesInVault).size.toString()
-                transactions.value = fetchAndDrop(verifiedTx).size.toString()
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
         } catch (e: Exception) {
-            log.log(Level.WARNING, "RPC failed: ${e.message}", e)
+            log.log(Level.WARNING, "Cash balance RPC failed: ${e.message}", e)
         }
-    })
+    }
 
     fun destroy() {
         if (!isDestroyed) {
@@ -195,12 +226,6 @@ class NodeTerminalView : Fragment() {
         Platform.runLater {
             swingTerminal.requestFocus()
         }
-    }
-
-    // TODO - Will change when we modify RPC Observables handling.
-    private fun <T> fetchAndDrop(pair: Pair<T, rx.Observable<*>>): T {
-        pair.second.notUsed()
-        return pair.first
     }
 
     class TerminalSettingsProvider : DefaultSettingsProvider() {
