@@ -48,9 +48,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else if (declaredType is Class<*>) {
             // Straight classes allowed
             if (Collection::class.java.isAssignableFrom(declaredType)) {
-                return makeCollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType)))
+                return serializersByType.computeIfAbsent(declaredType) { makeCollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType))) }
             } else if (Map::class.java.isAssignableFrom(declaredType)) {
-                return makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType)))
+                return serializersByType.computeIfAbsent(declaredType) { makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType))) }
             } else {
                 return makeClassSerializer(actualType ?: declaredType)
             }
