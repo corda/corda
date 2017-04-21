@@ -95,6 +95,5 @@ class InteractiveShellTest {
             get() = throw UnsupportedOperationException()
         override val resultFuture: ListenableFuture<Any?>
             get() = throw UnsupportedOperationException()
-        override var hasSoftLockedStates: Boolean = false
     }
 }
