@@ -18,7 +18,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
 import org.bouncycastle.asn1.x500.X500Name
 import net.corda.nodeapi.CURRENT_RPC_USER
@@ -156,9 +155,9 @@ class CordaRPCOpsImpl(
         }
 
         private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
-            return when (change.addOrRemove) {
-                AddOrRemove.ADD -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic, change.flowInitiator))
-                AddOrRemove.REMOVE -> StateMachineUpdate.Removed(change.id)
+            return when (change) {
+                is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic, change.flowInitiator))
+                is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.id, change.result)
             }
         }
     }

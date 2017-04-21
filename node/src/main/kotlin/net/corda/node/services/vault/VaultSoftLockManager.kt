@@ -8,7 +8,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.AddOrRemove
 import java.util.*
 
 class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
@@ -18,10 +17,10 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
     }
 
     init {
-        smm.changes.subscribe { (logic, addOrRemove, id) ->
-            if (addOrRemove == AddOrRemove.REMOVE && (FlowStateMachineImpl.currentStateMachine())?.hasSoftLockedStates == true) {
-                log.trace { "$addOrRemove Flow name ${logic.javaClass} with id $id" }
-                unregisterSoftLocks(id, logic)
+        smm.changes.subscribe { change ->
+            if (change is StateMachineManager.Change.Removed && (FlowStateMachineImpl.currentStateMachine())?.hasSoftLockedStates == true) {
+                log.trace { "Remove flow name ${change.logic.javaClass} with id $change.id" }
+                unregisterSoftLocks(change.id, change.logic)
             }
         }
 

@@ -1,6 +1,7 @@
 package net.corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.ErrorOr
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
@@ -41,7 +42,7 @@ sealed class StateMachineUpdate {
         override val id: StateMachineRunId get() = stateMachineInfo.id
     }
 
-    data class Removed(override val id: StateMachineRunId) : StateMachineUpdate()
+    data class Removed(override val id: StateMachineRunId, val result: ErrorOr<*>) : StateMachineUpdate()
 }
 
 /**

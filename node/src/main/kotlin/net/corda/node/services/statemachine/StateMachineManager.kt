@@ -13,6 +13,7 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
+import net.corda.core.ErrorOr
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
@@ -111,12 +112,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     val scheduler = FiberScheduler()
 
-    data class Change(
-            val logic: FlowLogic<*>,
-            val addOrRemove: AddOrRemove,
-            val id: StateMachineRunId,
-            val flowInitiator: FlowInitiator
-    )
+    sealed class Change {
+        abstract val logic: FlowLogic<*>
+        abstract val id: StateMachineRunId
+        abstract val flowInitiator: FlowInitiator
+
+        data class Add(override val logic: FlowLogic<*>, override val id: StateMachineRunId, override val flowInitiator: FlowInitiator): Change()
+        data class Removed(override val logic: FlowLogic<*>, override val id: StateMachineRunId, val result: ErrorOr<*>, override val flowInitiator: FlowInitiator): Change()
+    }
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
@@ -126,8 +129,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val changesPublisher = PublishSubject.create<Change>()!!
         val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
-        fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id, fiber.flowInitiator))
+        fun notifyChangeObservers(change: Change) {
+            changesPublisher.bufferUntilDatabaseCommit().onNext(change)
         }
     }
 
@@ -416,13 +419,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             processIORequest(ioRequest)
             decrementLiveFibers()
         }
-        fiber.actionOnEnd = { exception, propagated ->
+        fiber.actionOnEnd = { resultOrError, propagated ->
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(fiber, AddOrRemove.REMOVE)
+                    notifyChangeObservers(Change.Removed(fiber.logic, fiber.id, resultOrError))
                 }
-                endAllFiberSessions(fiber, exception, propagated)
+                endAllFiberSessions(fiber, resultOrError.error, propagated)
             } finally {
                 fiber.commitTransaction()
                 decrementLiveFibers()
@@ -433,7 +436,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
-            notifyChangeObservers(fiber, AddOrRemove.ADD)
+            notifyChangeObservers(Change.Add(fiber.logic, fiber.id))
         }
     }
 

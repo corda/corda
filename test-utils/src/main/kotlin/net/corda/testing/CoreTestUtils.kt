@@ -20,7 +20,7 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.*
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
@@ -146,7 +146,7 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         markerClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
-    val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
+    val future = smm.changes.filter { it is StateMachineManager.Change.Add && it.logic is P }.map { it.logic as P }.toFuture()
     services.registerFlowInitiator(markerClass.java, flowFactory)
     return future
 }

@@ -7,6 +7,7 @@ import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.client.rpc.notUsed
+import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -77,7 +78,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (Throwable?, Boolean) -> Unit
+    @Transient internal lateinit var actionOnEnd: (ErrorOr<R>, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -145,7 +146,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(null, false)
+        actionOnEnd(ErrorOr(result), false)
         _resultFuture?.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result $result" }
@@ -158,7 +159,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun processException(exception: Throwable, propagated: Boolean) {
-        actionOnEnd(exception, propagated)
+        actionOnEnd(ErrorOr.of(exception), propagated)
         _resultFuture?.setException(exception)
         logic.progressTracker?.endWithError(exception)
     }
