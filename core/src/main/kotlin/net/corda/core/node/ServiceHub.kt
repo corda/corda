@@ -88,18 +88,6 @@ interface ServiceHub : ServicesForResolution {
     }
 
     /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
-     * See: [FlowInitiator].
-     *
-     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
-     */
-    fun <T : Any> invokeFlowAsync(
-            logicType: Class<out FlowLogic<T>>,
-            flowInitiator: FlowInitiator,
-            vararg args: Any?): FlowStateMachine<T>
-
-    /**
      * Helper property to shorten code for fetching the Node's KeyPair associated with the
      * public legalIdentity Party from the key management service.
      * Typical use is during signing in flows and for unit test signing.

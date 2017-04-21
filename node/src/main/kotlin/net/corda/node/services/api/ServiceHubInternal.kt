@@ -79,7 +79,15 @@ abstract class ServiceHubInternal : PluginServiceHub {
      */
     abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T>
 
-    override fun <T : Any> invokeFlowAsync(
+
+    /**
+     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
+     * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
+     * See: [FlowInitiator].
+     *
+     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     */
+    fun <T : Any> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
             vararg args: Any?): FlowStateMachine<T> {
