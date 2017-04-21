@@ -184,8 +184,9 @@ private fun disableJavaDeserialization() {
     // Attempt a deserialization so that ObjectInputFilter (permanently) inits itself:
     val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
     try {
-        // Turn down logging so users don't see REJECTED this one time:
-        withLevel("java.io.serialization", "WARN") { ObjectInputStream(data.inputStream()).use { it.readObject() } }
+        withLevel("java.io.serialization", "WARN") {
+            ObjectInputStream(data.inputStream()).use { it.readObject() } // Logs REJECTED at INFO, which we don't want users to see.
+        }
         javaIsTooOld()
     } catch (e: InvalidClassException) {
         // Good, our system property is honoured (assuming ObjectInputFilter wasn't inited earlier).

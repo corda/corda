@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.CompositeKey
@@ -80,6 +81,7 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
             register(MetaData::class.java, MetaDataSerializer)
+            register(BitSet::class.java, BitSetSerializer())
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
 
