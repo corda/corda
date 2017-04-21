@@ -1,5 +1,6 @@
 package net.corda.node.services.api
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -66,9 +67,11 @@ abstract class ServiceHubInternal : PluginServiceHub {
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
-     * defaults to [FlowInitiator.Manual].
+     * defaults to [FlowInitiator.RPC] with username "Only For Testing".
      */
-    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.Manual)
+    // TODO Move it to test utils.
+    @VisibleForTesting
+    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
 
     /**
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.

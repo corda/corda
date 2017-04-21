@@ -89,16 +89,6 @@ interface ServiceHub : ServicesForResolution {
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method.
-     *
-     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
-     */
-    fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
-        return invokeFlowAsync(logicType, FlowInitiator.Manual, *args)
-    }
-
-    /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
      * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
      * See: [FlowInitiator].
      *

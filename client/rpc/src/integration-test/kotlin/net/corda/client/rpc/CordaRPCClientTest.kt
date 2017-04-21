@@ -126,18 +126,18 @@ class CordaRPCClientTest : NodeBasedTest() {
         val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
         val smUpdates = proxy.stateMachinesAndUpdates()
         var countRpcFlows = 0
-        var countManualFlows = 0
+        var countShellFlows = 0
         smUpdates.second.subscribe {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
                 if (initiator is FlowInitiator.RPC)
                     countRpcFlows += 1
-                if (initiator is FlowInitiator.Manual)
-                    countManualFlows += 1
+                if (initiator is FlowInitiator.Shell)
+                    countShellFlows += 1
             }
         }
         val nodeIdentity = node.info.legalIdentity
-        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity, nodeIdentity)).resultFuture.getOrThrow()
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity, nodeIdentity), FlowInitiator.Shell).resultFuture.getOrThrow()
         proxy.startFlow(::CashIssueFlow,
                 123.DOLLARS, OpaqueBytes.of(0),
                 nodeIdentity, nodeIdentity
@@ -146,7 +146,7 @@ class CordaRPCClientTest : NodeBasedTest() {
                 1000.DOLLARS, OpaqueBytes.of(0),
                 nodeIdentity, nodeIdentity).returnValue.getOrThrow()
         assertEquals(2, countRpcFlows)
-        assertEquals(1, countManualFlows)
+        assertEquals(1, countShellFlows)
     }
 
     private fun createRpcProxy(username: String, password: String): CordaRPCOps {
