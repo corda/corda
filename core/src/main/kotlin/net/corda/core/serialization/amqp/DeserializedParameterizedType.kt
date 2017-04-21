@@ -5,7 +5,10 @@ import java.lang.UnsupportedOperationException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
-
+/**
+ * Implementation of [ParameterizedType] that we can actually construct, and a parser from the string representation
+ * of the JDK implementation which we use as the textual format in the AMQP schema.
+ */
 class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>) : ParameterizedType {
     init {
         if (params.isEmpty()) {

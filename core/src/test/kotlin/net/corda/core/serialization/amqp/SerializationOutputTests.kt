@@ -11,9 +11,7 @@ import java.util.*
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-
 class SerializationOutputTests {
-
     data class Foo(val bar: String, val pub: Int)
 
     interface FooInterface {

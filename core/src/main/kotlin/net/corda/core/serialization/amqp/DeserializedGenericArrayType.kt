@@ -3,6 +3,9 @@ package net.corda.core.serialization.amqp
 import java.lang.reflect.GenericArrayType
 import java.lang.reflect.Type
 
+/**
+ * Implementation of [GenericArrayType] that we can actually construct.
+ */
 class DeserializedGenericArrayType(private val componentType: Type) : GenericArrayType {
     override fun getGenericComponentType(): Type = componentType
     override fun getTypeName(): String = "${componentType.typeName}[]"

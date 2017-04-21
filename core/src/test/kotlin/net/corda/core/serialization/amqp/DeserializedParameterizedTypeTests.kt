@@ -4,9 +4,7 @@ import org.junit.Test
 import java.io.NotSerializableException
 import kotlin.test.assertEquals
 
-
 class DeserializedParameterizedTypeTests {
-
     private fun normalise(string: String): String {
         return string.replace(" ", "")
     }

@@ -4,7 +4,7 @@ import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
 /**
- * Implemented to serialize and deserialize different types of objects.
+ * Implemented to serialize and deserialize different types of objects to/from AMQP.
  */
 interface Serializer {
     /**
