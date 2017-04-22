@@ -1,5 +1,6 @@
 package net.corda.webserver.internal
 
+import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
@@ -109,18 +110,19 @@ class NodeWebServer(val config: WebServerConfig) {
     }
 
     private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {
+        val safeLegalName = htmlEscaper().escape(config.myLegalName)
         return ServletContextHandler().apply {
             contextPath = "/"
             errorHandler = object : ErrorHandler() {
                 @Throws(IOException::class)
                 override fun writeErrorPageHead(request: HttpServletRequest, writer: Writer, code: Int, message: String) {
                     writer.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"/>\n")
-                    writer.write("<title>Corda ${config.myLegalName} : Error $code</title>\n")
+                    writer.write("<title>Corda $safeLegalName : Error $code</title>\n")
                 }
 
                 @Throws(IOException::class)
                 override fun writeErrorPageMessage(request: HttpServletRequest, writer: Writer, code: Int, message: String , uri: String) {
-                    writer.write("<h1>Corda ${config.myLegalName}</h1>\n")
+                    writer.write("<h1>Corda $safeLegalName</h1>\n")
                     super.writeErrorPageMessage(request, writer, code, message, uri)
                 }
             }
