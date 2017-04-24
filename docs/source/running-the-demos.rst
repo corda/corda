@@ -104,7 +104,7 @@ To run from IntelliJ:
    The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.
 
 This demo also has a web app. To use this, run nodes and upload rates, then navigate to
-http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see each node's view of the ledger.
+http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
