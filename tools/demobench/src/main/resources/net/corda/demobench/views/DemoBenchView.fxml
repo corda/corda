@@ -26,7 +26,7 @@
                 <Insets left="20" top="15.0"/>
             </StackPane.margin>
         </ImageView>
-        <Button fx:id="addNodeButton" mnemonicParsing="false" styleClass="info-button" text="Add Node" StackPane.alignment="TOP_RIGHT">
+        <Button fx:id="addNodeButton" styleClass="info-button" text="_Add Node" StackPane.alignment="TOP_RIGHT">
             <StackPane.margin>
                 <Insets right="25.0" top="10.0" />
             </StackPane.margin>
