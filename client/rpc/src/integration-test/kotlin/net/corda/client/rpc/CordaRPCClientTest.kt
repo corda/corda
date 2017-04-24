@@ -131,9 +131,9 @@ class CordaRPCClientTest : NodeBasedTest() {
             if (it is StateMachineUpdate.Added) {
                 val initiator = it.stateMachineInfo.initiator
                 if (initiator is FlowInitiator.RPC)
-                    countRpcFlows += 1
+                    countRpcFlows++
                 if (initiator is FlowInitiator.Shell)
-                    countShellFlows += 1
+                    countShellFlows++
             }
         }
         val nodeIdentity = node.info.legalIdentity

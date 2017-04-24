@@ -361,7 +361,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         val session = try {
             val flow = flowFactory(sender)
-            val fiber = createFiber(flow, FlowInitiator.Peer(sender.name))
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))

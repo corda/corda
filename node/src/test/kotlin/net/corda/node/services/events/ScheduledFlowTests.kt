@@ -120,7 +120,7 @@ class ScheduledFlowTests {
             if (it.addOrRemove == AddOrRemove.ADD) {
                 val initiator = it.flowInitiator
                 if (initiator is FlowInitiator.Scheduled)
-                    countScheduledFlows += 1
+                    countScheduledFlows++
             }
         }
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))

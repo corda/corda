@@ -21,10 +21,10 @@ import java.util.*
  */
 @CordaSerializable
 sealed class FlowInitiator {
-    /** Started using [CordaRPCOps.startFlowDynamic]. Name is RPC username. */
+    /** Started using [CordaRPCOps.startFlowDynamic]. */
     data class RPC(val username: String) : FlowInitiator()
-    /** Started when we get new session initiation request. Name is peer legal name. */
-    data class Peer(val legalName: String) : FlowInitiator()
+    /** Started when we get new session initiation request. */
+    data class Peer(val party: Party) : FlowInitiator()
     /** Started as scheduled activity. */
     class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator()
     object Shell : FlowInitiator() // TODO When proper ssh access enabled, add username/use RPC?

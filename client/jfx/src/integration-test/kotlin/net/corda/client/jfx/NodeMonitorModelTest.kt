@@ -172,7 +172,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         val initiator = add.stateMachineInfo.initiator
-                        require(initiator is FlowInitiator.Peer && initiator.legalName == aliceNode.legalIdentity.name)
+                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.legalIdentity.name)
                     }
             )
         }
