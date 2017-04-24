@@ -78,6 +78,23 @@ abstract class FlowLogic<out T> {
         return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
     }
 
+    /** @see sendAndReceiveWithRetry */
+    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any) = sendAndReceiveWithRetry(R::class.java, otherParty, payload)
+
+    /**
+     * Similar to [sendAndReceive] but also instructs the `payload` to be redelivered until the expected message is received.
+     *
+     * Note that this method should NOT be used for regular party-to-party communication, use [sendAndReceive] instead.
+     * It is only intended for the case where the [otherParty] is running a distributed service with an idempotent
+     * flow which only accepts a single request and sends back a single response – e.g. a notary or certain types of
+     * oracle services. If one or more nodes in the service cluster go down mid-session, the message will be redelivered
+     * to a different one, so there is no need to wait until the initial node comes back up to obtain a response.
+     */
+    @Suspendable
+    internal open fun <R : Any> sendAndReceiveWithRetry(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow, true)
+    }
+
     /**
      * Suspends until the specified [otherParty] sends us a message of type [R].
      *

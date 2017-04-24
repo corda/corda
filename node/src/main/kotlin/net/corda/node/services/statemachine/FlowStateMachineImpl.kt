@@ -174,11 +174,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <T : Any> sendAndReceive(receiveType: Class<T>,
                                           otherParty: Party,
                                           payload: Any,
-                                          sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
+                                          sessionFlow: FlowLogic<*>,
+                                          retrySend: Boolean): UntrustworthyData<T> {
         logger.debug { "sendAndReceive(${receiveType.name}, $otherParty, ${payload.toString().abbreviate(300)}) ..." }
         val session = getConfirmedSession(otherParty, sessionFlow)
         val sessionData = if (session == null) {
-            val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true)
+            val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true, retryable = retrySend)
             // Only do a receive here as the session init has carried the payload
             receiveInternal<SessionData>(newSession, receiveType)
         } else {
@@ -292,9 +293,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * multiple public keys, but we **don't support multiple nodes advertising the same legal identity**.
      */
     @Suspendable
-    private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
+    private fun startNewSession(otherParty: Party,
+                                sessionFlow: FlowLogic<*>,
+                                firstPayload: Any?,
+                                waitForConfirmation: Boolean,
+                                retryable: Boolean = false): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
-        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty))
+        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         // We get the top-most concrete class object to cater for the case where the client flow is customised via a sub-class
         val clientFlowClass = sessionFlow.topConcreteFlowClass

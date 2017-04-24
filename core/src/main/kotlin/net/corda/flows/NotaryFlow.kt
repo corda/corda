@@ -61,7 +61,7 @@ object NotaryFlow {
             }
 
             val response = try {
-                sendAndReceive<List<DigitalSignature.WithKey>>(notaryParty, payload)
+                sendAndReceiveWithRetry<List<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()

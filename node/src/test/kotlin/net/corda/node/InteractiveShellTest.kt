@@ -72,7 +72,7 @@ class InteractiveShellTest {
     fun party() = check("party: \"${someCorpLegalName}\"", someCorpLegalName.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> {
-        override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
+        override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, retrySend: Boolean): UntrustworthyData<T> {
             throw UnsupportedOperationException("not implemented")
         }
 
