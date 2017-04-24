@@ -1,6 +1,5 @@
 package net.corda.demobench.views
 
-import com.google.common.util.concurrent.RateLimiter
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.ui.settings.DefaultSettingsProvider
@@ -13,6 +12,8 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.client.rpc.notUsed
+import net.corda.core.success
+import net.corda.core.then
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.NodeController
@@ -24,12 +25,9 @@ import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import tornadofx.*
 import java.awt.Dimension
-import java.io.IOException
-import java.net.SocketException
-import java.net.URL
+import java.net.URI
 import java.util.logging.Level
 import javax.swing.SwingUtilities
-import kotlin.concurrent.thread
 
 class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
@@ -131,6 +129,8 @@ class NodeTerminalView : Fragment() {
         }
     }
 
+    private var webURL: URI? = null
+
     /*
      * We only want to run one web server for each node.
      * So disable the "launch" button when we have
@@ -139,32 +139,20 @@ class NodeTerminalView : Fragment() {
      */
     fun configureWebButton(config: NodeConfig) {
         launchWebButton.setOnAction {
+            if (webURL != null) {
+                app.hostServices.showDocument(webURL.toString())
+                return@setOnAction
+            }
             launchWebButton.isDisable = true
 
-            webServer.open(config, onExit = {
-                launchWebButton.isDisable = false
-            })
-
-            openBrowserWhenWebServerHasStarted(config)
-        }
-    }
-
-    private fun openBrowserWhenWebServerHasStarted(config: NodeConfig) {
-        thread {
-            log.info("Waiting for web server to start ...")
-            val url = URL("http://localhost:${config.webPort}/")
-            val rateLimiter = RateLimiter.create(1.0)
-            while (true) {
-                try {
-                    rateLimiter.acquire()
-                    val conn = url.openConnection()
-                    conn.connectTimeout = 1000  // msec
-                    conn.connect()
-                    log.info("Web server started")
-                    app.hostServices.showDocument(url.toString())
-                    break
-                } catch(e: SocketException) {
-                } catch(e: IOException) {
+            log.info("Starting web server for ${config.legalName}")
+            webServer.open(config) then {
+                Platform.runLater { launchWebButton.isDisable = false }
+            } success {
+                log.info("Web server for ${config.legalName} started on $it")
+                Platform.runLater {
+                    webURL = it
+                    app.hostServices.showDocument(it.toString())
                 }
             }
         }
