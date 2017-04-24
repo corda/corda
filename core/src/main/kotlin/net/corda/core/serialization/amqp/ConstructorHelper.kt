@@ -3,6 +3,7 @@ package net.corda.core.serialization.amqp
 import java.beans.Introspector
 import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
+import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
@@ -30,38 +31,48 @@ annotation class CordaParam(val value: String)
  * Otherwise it starts with the primary constructor in kotlin, if there is one, and then will override this with any that is
  * annotated with [@CordaConstructor].  It will report an error if more than one constructor is annotated.
  */
-fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction<T> {
-    var preferredCandidate: KFunction<T>? = clazz.kotlin.primaryConstructor
-    var annotatedCount = 0
-    val ctrctrs = clazz.kotlin.constructors
-    var hasDefault = false
-    for (ctrctr in ctrctrs) {
-        if (ctrctr.parameters.isEmpty()) {
-            hasDefault = true
-        }
-    }
-    for (ctrctr in ctrctrs) {
-        if (preferredCandidate == null && ctrctrs.size == 1) {
-            preferredCandidate = ctrctr
-        } else if (preferredCandidate == null && ctrctrs.size == 2 && hasDefault && ctrctr.parameters.isNotEmpty()) {
-            preferredCandidate = ctrctr
-        } else if (ctrctr.findAnnotation<CordaConstructor>() != null) {
-            if (annotatedCount++ > 0) {
-                throw NotSerializableException("More than one constructor for $clazz is annotated with @CordaConstructor.")
+fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction<T>? {
+    if (isConcrete(clazz)) {
+        var preferredCandidate: KFunction<T>? = clazz.kotlin.primaryConstructor
+        var annotatedCount = 0
+        val ctrctrs = clazz.kotlin.constructors
+        var hasDefault = false
+        for (ctrctr in ctrctrs) {
+            if (ctrctr.parameters.isEmpty()) {
+                hasDefault = true
             }
-            preferredCandidate = ctrctr
         }
+        for (ctrctr in ctrctrs) {
+            if (preferredCandidate == null && ctrctrs.size == 1) {
+                preferredCandidate = ctrctr
+            } else if (preferredCandidate == null && ctrctrs.size == 2 && hasDefault && ctrctr.parameters.isNotEmpty()) {
+                preferredCandidate = ctrctr
+            } else if (ctrctr.findAnnotation<CordaConstructor>() != null) {
+                if (annotatedCount++ > 0) {
+                    throw NotSerializableException("More than one constructor for $clazz is annotated with @CordaConstructor.")
+                }
+                preferredCandidate = ctrctr
+            }
+        }
+        return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
+    } else {
+        return null
     }
-    return preferredCandidate ?: throw NotSerializableException("No constructor for deserialization found for $clazz.")
 }
 
 /**
  * Identifies the properties to be used during serialization by attempting to find those that match the parameters to the
- * deserialization constructor.
+ * deserialization constructor, if the class is concrete.  If it is abstract, or an interface, then use all the properties.
  *
  * It's possible to effectively rename a constructor parameter so it matches a property using the [@CordaParam] annotation.
  */
-fun <T : Any> propertiesForSerialization(ctrctr: KFunction<T>): Collection<PropertySerializer> {
+fun <T : Any> propertiesForSerialization(ctrctr: KFunction<T>?, clazz: Class<*>): Collection<PropertySerializer> {
+    return if (ctrctr != null) propertiesForSerialization(ctrctr) else propertiesForSerialization(clazz)
+}
+
+private fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
+
+private fun <T : Any> propertiesForSerialization(ctrctr: KFunction<T>): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
     val properties: Map<String, PropertyDescriptor> = Introspector.getBeanInfo((ctrctr.returnType.classifier as KClass<T>).javaObjectType).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
     val rc: MutableList<PropertySerializer> = mutableListOf()
@@ -76,6 +87,20 @@ fun <T : Any> propertiesForSerialization(ctrctr: KFunction<T>): Collection<Prope
                 throw NotSerializableException("Property type ${this.genericReturnType} for $name differs from constructor parameter type ${param.type.javaType}")
             }
         } ?: throw NotSerializableException("Property has no getter method for $name")
+
+    }
+    return rc
+}
+
+private fun propertiesForSerialization(clazz: Class<*>): Collection<PropertySerializer> {
+    // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
+    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }
+    val rc: MutableList<PropertySerializer> = mutableListOf()
+    for (property in properties) {
+        // Check that the method has a getter in java.
+        property.readMethod?.apply {
+            rc += PropertySerializer.make(property.name, this)
+        } ?: throw NotSerializableException("Property has no getter method for ${property.name}")
 
     }
     return rc

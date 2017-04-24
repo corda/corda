@@ -15,7 +15,7 @@ import kotlin.collections.Set
 class CollectionSerializer(val declaredType: ParameterizedType) : Serializer {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
-    override val typeDescriptor = "${hashType(type)}"
+    override val typeDescriptor = "net.corda:${hashType(type)}"
 
     companion object {
         private val supportedTypes: Map<Class<out Collection<*>>, (Collection<*>) -> Collection<*>> = mapOf(

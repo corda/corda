@@ -2,7 +2,8 @@ package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
-import kotlin.reflect.jvm.kotlinFunction
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaGetter
 
 /**
  * Base class for serialization of a property of an object.
@@ -47,7 +48,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     private fun Method.returnsNullable(): Boolean {
-        val returnTypeString = this.kotlinFunction?.returnType?.toString() ?: "?"
+        val returnTypeString = this.declaringClass.kotlin.memberProperties.firstOrNull { it.javaGetter == this }?.returnType?.toString() ?: "?"
         return returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
     }
 

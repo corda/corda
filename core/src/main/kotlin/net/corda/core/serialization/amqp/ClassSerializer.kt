@@ -4,7 +4,6 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Constructor
-import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
@@ -18,13 +17,12 @@ class ClassSerializer(val clazz: Class<*>) : Serializer {
     private val propertySerializers: Collection<PropertySerializer>
 
     init {
-        val konstructor = if (isConcrete()) constructorForDeserialization(clazz) else null
+        val konstructor = constructorForDeserialization(clazz)
         javaConstructor = konstructor?.javaConstructor
-        propertySerializers = if (konstructor != null) propertiesForSerialization(konstructor) else emptyList()
-
+        propertySerializers = propertiesForSerialization(konstructor, clazz)
     }
     private val typeName = clazz.name
-    override val typeDescriptor = "${hashType(type)}"
+    override val typeDescriptor = "net.corda:${hashType(type)}"
     private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
@@ -89,8 +87,6 @@ class ClassSerializer(val clazz: Class<*>) : Serializer {
             exploreType(clazz.genericSuperclass, interfaces)
         }
     }
-
-    private fun isConcrete(): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {

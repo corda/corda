@@ -12,7 +12,7 @@ import java.lang.reflect.Type
 class ArraySerializer(override val type: Type) : Serializer {
     private val typeName = type.typeName
 
-    override val typeDescriptor = "${hashType(type)}"
+    override val typeDescriptor = "net.corda:${hashType(type)}"
 
     private val elementType: Type = makeElementType()
 

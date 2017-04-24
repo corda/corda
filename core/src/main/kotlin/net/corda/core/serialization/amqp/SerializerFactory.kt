@@ -24,6 +24,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
+// TODO: do we need to support a transient annotation to exclude certain properties?
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
