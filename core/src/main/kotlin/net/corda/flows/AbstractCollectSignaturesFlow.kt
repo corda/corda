@@ -63,8 +63,10 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures.
         check(unsigned.isNotEmpty()) { return partiallySignedTx }
 
+        logger.info(serviceHub.networkMapCache.partyNodes.toString())
+
         // Collect signatures from all counter-parties.
-        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
+         val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
@@ -80,7 +82,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     @Suspendable private fun keysToParties(keys: List<PublicKey>): List<Party> = keys.map {
         // TODO: Revisit when IdentityService supports resolution of a (possibly random) public key to a legal identity key.
         val partyNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it)
-                ?: throw IllegalStateException("Party $it not found on the network.")
+                ?: throw IllegalStateException("Party ${it.toBase58String()} not found on the network.")
         partyNode.legalIdentity
     }
 
