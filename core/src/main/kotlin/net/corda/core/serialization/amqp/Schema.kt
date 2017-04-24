@@ -330,7 +330,6 @@ data class Choice(val name: String, val value: String) : DescribedType {
  * a key for caching of types and schemas.
  */
 private val ARRAY_HASH: SecureHash = SecureHash.sha256("Array = true")
-private val INTERFACE_HASH: SecureHash = SecureHash.sha256("Interface = true")
 private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen = true")
 private val NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = true")
 private val NOT_NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = false")
