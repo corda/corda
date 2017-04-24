@@ -78,7 +78,7 @@ private class WordRule(vararg val bannedWords: String) : Rule<String> {
 
 private class LengthRule(val maxLength: Int) : Rule<String> {
     override fun validate(legalName: String) {
-        require(legalName.length <= maxLength) { "Legal name longer then 255 characters." }
+        require(legalName.length <= maxLength) { "Legal name longer then $maxLength characters." }
     }
 }
 

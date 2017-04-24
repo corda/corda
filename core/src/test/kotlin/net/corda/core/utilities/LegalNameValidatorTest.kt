@@ -1,6 +1,7 @@
 package net.corda.core.utilities
 
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class LegalNameValidatorTest {
@@ -85,6 +86,22 @@ class LegalNameValidatorTest {
 
         assertFailsWith(IllegalArgumentException::class) {
             validateLegalName("bad Name")
+        }
+    }
+
+    @Test
+    fun `correctly handle whitespaces`() {
+        assertEquals("Legal Name With Tab", normaliseLegalName("Legal Name With\tTab"))
+        assertEquals("Legal Name With Unicode Whitespaces", normaliseLegalName("Legal Name\u2004With\u0009Unicode\u0020Whitespaces"))
+        assertEquals("Legal Name With Line Breaks", normaliseLegalName("Legal Name With\n\rLine\nBreaks"))
+        assertFailsWith(IllegalArgumentException::class) {
+            validateLegalName("Legal Name With\tTab")
+        }
+        assertFailsWith(IllegalArgumentException::class) {
+            validateLegalName("Legal Name\u2004With\u0009Unicode\u0020Whitespaces")
+        }
+        assertFailsWith(IllegalArgumentException::class) {
+            validateLegalName("Legal Name With\n\rLine\nBreaks")
         }
     }
 }
