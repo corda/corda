@@ -29,6 +29,7 @@ import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
 import rx.Subscription
+import rx.schedulers.Schedulers
 import tornadofx.*
 
 class NodeTerminalView : Fragment() {
@@ -175,16 +176,13 @@ class NodeTerminalView : Fragment() {
                 states.value = stateCount.toString()
             }
 
-            subscriptions.add(txNext.subscribe {
-                Platform.runLater {
-                    transactions.value = (++txCount).toString()
-                }
+            val fxScheduler = Schedulers.from({ Platform.runLater(it) })
+            subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
+                transactions.value = (++txCount).toString()
             })
-            subscriptions.add(stateNext.subscribe {
-                Platform.runLater {
-                    stateCount += (it.produced.size - it.consumed.size)
-                    states.value = stateCount.toString()
-                }
+            subscriptions.add(stateNext.observeOn(fxScheduler).subscribe {
+                stateCount += (it.produced.size - it.consumed.size)
+                states.value = stateCount.toString()
             })
         } catch (e: Exception) {
             log.log(Level.WARNING, "RPC failed: ${e.message}", e)
