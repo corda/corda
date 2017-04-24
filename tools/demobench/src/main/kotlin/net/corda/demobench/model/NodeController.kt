@@ -81,19 +81,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
     val nextPort: Int get() = port.andIncrement
 
-    fun isPortAvailable(port: Int): Boolean {
-        if (isPortValid(port)) {
-            try {
-                ServerSocket(port).close()
-                return true
-            } catch (e: IOException) {
-                return false
-            }
-        } else {
-            return false
-        }
-    }
-
     fun isPortValid(port: Int) = (port >= minPort) && (port <= maxPort)
 
     fun keyExists(key: String) = nodes.keys.contains(key)

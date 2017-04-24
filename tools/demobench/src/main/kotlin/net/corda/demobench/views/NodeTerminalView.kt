@@ -11,6 +11,7 @@ import javafx.application.Platform
 import javafx.embed.swing.SwingNode
 import javafx.scene.control.Button
 import javafx.scene.control.Label
+import javafx.scene.control.ProgressIndicator
 import javafx.scene.image.ImageView
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
@@ -142,10 +143,17 @@ class NodeTerminalView : Fragment() {
                 return@setOnAction
             }
             launchWebButton.isDisable = true
+            val oldLabel = launchWebButton.text
+            launchWebButton.text = ""
+            launchWebButton.graphic = ProgressIndicator()
 
             log.info("Starting web server for ${config.legalName}")
             webServer.open(config) then {
-                Platform.runLater { launchWebButton.isDisable = false }
+                Platform.runLater {
+                    launchWebButton.isDisable = false
+                    launchWebButton.text = oldLabel
+                    launchWebButton.graphic = null
+                }
             } success {
                 log.info("Web server for ${config.legalName} started on $it")
                 Platform.runLater {
@@ -204,6 +212,8 @@ class NodeTerminalView : Fragment() {
             Platform.runLater {
                 balance.value = if (cashBalances.isNullOrEmpty()) "0" else cashBalances
             }
+        } catch (e: ClassNotFoundException) {
+            // TODO: Remove this special case once Rick's serialisation work means we can deserialise states that weren't on our own classpath.
         } catch (e: Exception) {
             log.log(Level.WARNING, "Cash balance RPC failed: ${e.message}", e)
         }

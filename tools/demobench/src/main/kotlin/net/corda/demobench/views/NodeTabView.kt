@@ -4,9 +4,9 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory
 import javafx.application.Platform
+import javafx.beans.InvalidationListener
 import javafx.geometry.Pos
 import javafx.scene.control.ComboBox
-import javafx.scene.control.SelectionMode.MULTIPLE
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
@@ -14,13 +14,20 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
+import net.corda.core.div
+import net.corda.core.exists
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.PhysicalLocation
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.readAllLines
+import net.corda.core.utilities.normaliseLegalName
+import net.corda.core.utilities.validateLegalName
+import net.corda.core.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 class NodeTabView : Fragment() {
@@ -31,9 +38,27 @@ class NodeTabView : Fragment() {
 
     private companion object : Component() {
         const val textWidth = 465.0
-        const val maxNameLength = 15
 
         val jvm by inject<JVMConfig>()
+        val cordappPathsFile = jvm.dataHome / "cordapp-paths.txt"
+
+        fun loadDefaultCordappPaths(): MutableList<Path> {
+            if (cordappPathsFile.exists())
+                return cordappPathsFile.readAllLines().map { Paths.get(it) }.filter { it.exists() }.toMutableList()
+            else
+                return ArrayList()
+        }
+
+        // This is shared between tabs.
+        private val cordapps = loadDefaultCordappPaths().observable()
+
+        init {
+            // Save when the list is changed.
+            cordapps.addListener(InvalidationListener {
+                log.info("Writing cordapp paths to $cordappPathsFile")
+                cordappPathsFile.writeLines(cordapps.map { it.toAbsolutePath().toString() })
+            })
+        }
     }
 
     private val nodeController by inject<NodeController>()
@@ -41,7 +66,6 @@ class NodeTabView : Fragment() {
     private val chooser = FileChooser()
 
     private val model = NodeDataModel()
-    private val cordapps = LinkedList<Path>().observable()
     private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
 
     private val nodeTerminalView = find<NodeTerminalView>()
@@ -73,17 +97,34 @@ class NodeTabView : Fragment() {
                             }
                             key.consume()
                         }
+                        cellCache { item ->
+                            hbox {
+                                label(item.fileName.toString())
+                                pane {
+                                    hboxConstraints { hgrow = Priority.ALWAYS }
+                                }
+                                val delete = FontAwesomeIconView(FontAwesomeIcon.MINUS_CIRCLE)
+                                delete.setOnMouseClicked {
+                                    cordapps.remove(selectionModel.selectedItem)
+                                }
+                                delete.style += "; -fx-cursor: hand"
+                                addChildIfPossible(delete)
+                            }
+                        }
                     }
                 }
 
                 fieldset("Services") {
                     styleClass.addAll("services-panel")
 
-                    listview(availableServices.observable()) {
+                    val servicesList = CheckListView(availableServices.observable()).apply {
                         vboxConstraints { vGrow = Priority.ALWAYS }
-                        selectionModel.selectionMode = MULTIPLE
-                        model.item.extraServices.set(selectionModel.selectedItems)
+                        model.item.extraServices.set(checkModel.checkedItems)
+                        if (!nodeController.hasNetworkMap()) {
+                            checkModel.check(0)
+                        }
                     }
+                    add(servicesList)
                 }
             }
 
@@ -131,12 +172,14 @@ class NodeTabView : Fragment() {
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.legalName.value = if (nodeController.hasNetworkMap()) "" else DUMMY_NOTARY.name
-        model.nearestCity.value = if (nodeController.hasNetworkMap()) null else CityDatabase["London"]!!
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
+
+        val defaults = SuggestedDetails.nextBank
+        model.legalName.value = defaults.first
+        model.nearestCity.value = CityDatabase[defaults.second]
 
         chooser.title = "CorDapps"
         chooser.initialDirectory = jvm.dataHome.toFile()
@@ -151,15 +194,11 @@ class NodeTabView : Fragment() {
             if (it == null) {
                 error("Node name is required")
             } else {
-                val name = it.trim()
-                if (name.isEmpty()) {
-                    error("Node name is required")
-                } else if (nodeController.nameExists(name)) {
-                    error("Node with this name already exists")
-                } else if (name.length > maxNameLength) {
-                    error("Name is too long")
-                } else {
+                try {
+                    validateLegalName(normaliseLegalName(it))
                     null
+                } catch (e: IllegalArgumentException) {
+                    error(e.message)
                 }
             }
         }

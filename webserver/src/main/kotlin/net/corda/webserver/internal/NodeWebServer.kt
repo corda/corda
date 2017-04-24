@@ -28,7 +28,9 @@ import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
 import java.util.ServiceLoader
+import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
 import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
@@ -157,6 +159,8 @@ class NodeWebServer(val config: WebServerConfig) {
                 addServlet(staticDir, "/web/${it.first}/*")
             }
 
+            addServlet(ServletHolder(HelpServlet("/web/${staticDirs.first().first}")), "/")
+
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
                     ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
@@ -165,6 +169,12 @@ class NodeWebServer(val config: WebServerConfig) {
             val jerseyServlet = ServletHolder(container)
             addServlet(jerseyServlet, "/api/*")
             jerseyServlet.initOrder = 0 // Initialise at server start
+        }
+    }
+
+    private inner class HelpServlet(private val redirectTo: String) : HttpServlet() {
+        override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+            resp.sendRedirect(resp.encodeRedirectURL(redirectTo))
         }
     }
 
