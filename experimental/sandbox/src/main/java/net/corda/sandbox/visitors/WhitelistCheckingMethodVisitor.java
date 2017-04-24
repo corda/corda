@@ -2,13 +2,11 @@ package net.corda.sandbox.visitors;
 
 import net.corda.sandbox.CandidacyStatus;
 import net.corda.sandbox.CandidateMethod;
-import net.corda.sandbox.*;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static net.corda.sandbox.CandidateMethod.State.*;
 import net.corda.sandbox.Utils;
 import org.objectweb.asm.Label;
 

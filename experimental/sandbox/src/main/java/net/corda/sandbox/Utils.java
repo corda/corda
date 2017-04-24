@@ -1,11 +1,7 @@
 package net.corda.sandbox;
 
-import net.corda.sandbox.visitors.CostInstrumentingMethodVisitor;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.objectweb.asm.*;
-import org.objectweb.asm.commons.ClassRemapper;
 
 /**
  *
