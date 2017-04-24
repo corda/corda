@@ -17,7 +17,7 @@ The following information from the node configuration file is needed to generate
 
 :myLegalName: Your company's legal name. e.g. "Mega Corp LLC". This needs to be unique on the network. If another node
     has already been permissioned with this name then the permissioning server will automatically reject the request. The
-    request will also be rejected if the name contains a ``=`` or ``,``.
+    request will also be rejected if it violates legal name rules, see `Legal Name Constraints`_ for more information.
 
     .. note:: In a future version the uniqueness requirement will be relaxed to a X.500 name. This will allow differentiation
         between entities with the same name.
@@ -38,6 +38,32 @@ Once the request has been approved and the certificates downloaded from the serv
 
 This process only is needed when the node connects to the network for the first time, or when the certificate expires.
 
+Legal Name Constraints
+----------------------
+The legal name is the unique identifier in the Corda network, so constraints have been set out to prevent encoding attacks and visual spoofing.
+
+The legal name validator (see ``LegalNameValidator.kt``) is used to enforce rules on Corda's legal names, it is intended to be used by the network operator and Corda node during the node registration process.
+It has two functions, a function to normalize legal names, and a function to validate legal names.
+
+The normalize function performs the following transformations:
+
+* Remove leading and trailing whitespaces.
+
+* Replace multiple whitespaces with a single space.
+
+* Normalize the string according to `NFKC normalization form <https://en.wikipedia.org/wiki/Unicode_equivalence#Normalization>`_.
+
+The validation function will validate the input string using the following rules:
+
+* No blacklisted words like "node", "server".
+
+* Restrict names to Latin scripts for now to avoid right-to-left issues, debugging issues when we can't pronounce names over the phone, and character confusability attacks.
+
+* Should start with a capital letter.
+
+* No commas or equals signs.
+
+* No dollars or quote marks, although we may relax the quote mark constraint in future to handle Irish company names.
 
 Starting the Registration
 -------------------------
