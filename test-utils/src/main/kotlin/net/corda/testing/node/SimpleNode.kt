@@ -5,6 +5,7 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
@@ -13,7 +14,6 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.testing.MOCK_NODE_VERSION_INFO
 import net.corda.node.utilities.transaction
 import net.corda.testing.freeLocalHostAndPort
 import org.jetbrains.exposed.sql.Database
@@ -38,7 +38,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val net = database.transaction {
         NodeMessagingClient(
                 config,
-                MOCK_NODE_VERSION_INFO,
+                MOCK_VERSION_INFO,
                 address,
                 identity.public,
                 executor,

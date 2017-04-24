@@ -5,14 +5,15 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
+import net.corda.core.div
+import net.corda.core.flatMap
 import net.corda.core.messaging.RPCOps
-import net.corda.core.node.NodeVersionInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.Version
+import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
@@ -48,14 +49,14 @@ import kotlin.concurrent.thread
  */
 class Node(override val configuration: FullNodeConfiguration,
            advertisedServices: Set<ServiceInfo>,
-           val nodeVersionInfo: NodeVersionInfo,
+           val versionInfo: VersionInfo,
            clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
     }
 
     override val log: Logger get() = logger
-    override val version: Version get() = nodeVersionInfo.version
+    override val platformVersion: Int get() = versionInfo.platformVersion
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
     override fun makeTransactionVerifierService() = (net as NodeMessagingClient).verifierService
 
@@ -108,32 +109,13 @@ class Node(override val configuration: FullNodeConfiguration,
 
     private lateinit var userService: RPCUserService
 
-    init {
-        checkVersionUnchanged()
-    }
-
-    /**
-     * Abort starting the node if an existing deployment with a different version is detected in the base directory.
-     */
-    private fun checkVersionUnchanged() {
-        val versionFile = configuration.baseDirectory / "version"
-        if (versionFile.exists()) {
-            val previousVersion = Version.parse(versionFile.readAllLines()[0])
-            check(nodeVersionInfo.version.major == previousVersion.major) {
-                "Major version change detected - current: ${nodeVersionInfo.version}, previous: $previousVersion. " +
-                        "Node upgrades across major versions are not yet supported."
-            }
-        }
-        versionFile.writeLines(listOf(nodeVersionInfo.version.toString()))
-    }
-
     override fun makeMessagingService(): MessagingServiceInternal {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
         val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
         return NodeMessagingClient(
                 configuration,
-                nodeVersionInfo,
+                versionInfo,
                 serverAddress,
                 myIdentityOrNullIfNetworkMapService,
                 serverThread,

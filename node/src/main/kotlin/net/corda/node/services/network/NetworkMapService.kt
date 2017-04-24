@@ -109,7 +109,8 @@ interface NetworkMapService {
 }
 
 @ThreadSafe
-class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
+class InMemoryNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(services, minimumPlatformVersion) {
 
     override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
@@ -126,7 +127,8 @@ class InMemoryNetworkMapService(services: ServiceHubInternal) : AbstractNetworkM
  * subscriber clean up and is simpler to persist than the previous implementation based on a set of missing messages acks.
  */
 @ThreadSafe
-abstract class AbstractNetworkMapService(services: ServiceHubInternal) : NetworkMapService, AbstractNodeService(services) {
+abstract class AbstractNetworkMapService(services: ServiceHubInternal,
+                                         val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(services) {
     companion object {
         /**
          * Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
@@ -151,6 +153,13 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
     val maxUnacknowledgedUpdates = 10
 
     private val handlers = ArrayList<MessageHandlerRegistration>()
+
+    init {
+        require(minimumPlatformVersion >= 1) { "minimumPlatformVersion cannot be less than 1" }
+        require(minimumPlatformVersion <= services.myInfo.platformVersion) {
+            "minimumPlatformVersion cannot be greater than the node's own version"
+        }
+    }
 
     protected fun setup() {
         // Register message handlers
@@ -219,21 +228,27 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
     }
 
     private fun processRegistrationRequest(request: RegistrationRequest): RegistrationResponse {
-        if (request.wireReg.raw.size > MAX_SIZE_REGISTRATION_REQUEST_BYTES) return RegistrationResponse("Request is too big")
+        if (request.wireReg.raw.size > MAX_SIZE_REGISTRATION_REQUEST_BYTES) {
+            return RegistrationResponse("Request is too big")
+        }
 
         val change = try {
             request.wireReg.verified()
-        } catch(e: SignatureException) {
+        } catch (e: SignatureException) {
             return RegistrationResponse("Invalid signature on request")
         }
 
         val node = change.node
 
+        if (node.platformVersion < minimumPlatformVersion) {
+            return RegistrationResponse("Minimum platform version requirement not met: $minimumPlatformVersion")
+        }
+
         // Update the current value atomically, so that if multiple updates come
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
-            nodeRegistrations.compute(node.legalIdentity) { _: Party, existing: NodeRegistrationInfo? ->
+            nodeRegistrations.compute(node.legalIdentity) { _, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"
                 }
@@ -263,16 +278,16 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal) : Network
         return RegistrationResponse(null)
     }
 
-    private fun notifySubscribers(wireReg: WireNodeRegistration, mapVersion: Int) {
+    private fun notifySubscribers(wireReg: WireNodeRegistration, newMapVersion: Int) {
         // TODO: Once we have a better established messaging system, we can probably send
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
-        val update = NetworkMapService.Update(wireReg, mapVersion, net.myAddress).serialize().bytes
+        val update = NetworkMapService.Update(wireReg, newMapVersion, net.myAddress).serialize().bytes
         val message = net.createMessage(PUSH_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
             // Remove any stale subscribers
-            values.removeIf { lastAckInfo -> mapVersion - lastAckInfo.mapVersion > maxUnacknowledgedUpdates }
+            values.removeIf { (mapVersion) -> newMapVersion - mapVersion > maxUnacknowledgedUpdates }
             // TODO: introduce some concept of time in the condition to avoid unsubscribes when there's a message burst.
             keys.forEach { recipient -> net.send(message, recipient) }
         }

@@ -5,6 +5,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.transaction
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import java.math.BigInteger
@@ -48,11 +49,11 @@ class PersistentNetworkMapServiceTest : AbstractNetworkMapServiceTest<Persistent
      * state within it is correctly restored.
      */
     private class SwizzleNetworkMapService(val services: ServiceHubInternal) : NetworkMapService {
-        var delegate: PersistentNetworkMapService = PersistentNetworkMapService(services)
+        var delegate: PersistentNetworkMapService = PersistentNetworkMapService(services, MOCK_VERSION_INFO.platformVersion)
 
         fun swizzle() {
             delegate.unregisterNetworkHandlers()
-            delegate = PersistentNetworkMapService(services)
+            delegate = PersistentNetworkMapService(services, MOCK_VERSION_INFO.platformVersion)
         }
     }
 }

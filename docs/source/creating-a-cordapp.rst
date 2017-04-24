@@ -128,8 +128,8 @@ the following segments to the relevant part of your build.gradle.
 .. code-block:: groovy
 
     buildscript {
-        ext.corda_version = '<enter the corda version you build against here>'
-        ext.corda_gradle_plugins_version = '<enter the gradle plugins version here>' // This is usually the same as corda_version.
+        ext.corda_release_version = '<enter the corda version you build against here>'
+        ext.corda_gradle_plugins_version = '<enter the gradle plugins version here>' // This is usually the same as corda_release_version.
         ... your buildscript ...
 
         repositories {
@@ -155,10 +155,10 @@ the following segments to the relevant part of your build.gradle.
     }
 
     dependencies {
-        compile "net.corda.core:$corda_version"
-        compile "net.corda.finance:$corda_version"
-        compile "net.corda.node:$corda_version"
-        compile "net.corda.corda:$corda_version"
+        compile "net.corda.core:$corda_release_version"
+        compile "net.corda.finance:$corda_release_version"
+        compile "net.corda.node:$corda_release_version"
+        compile "net.corda.corda:$corda_release_version"
         ... other dependencies here ...
     }
 

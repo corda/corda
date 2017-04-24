@@ -274,10 +274,10 @@ class Node {
      */
     private File verifyAndGetCordaJar() {
         def maybeCordaJAR = project.configurations.runtime.filter {
-            it.toString().contains("corda-${project.corda_version}.jar")
+            it.toString().contains("corda-${project.corda_release_version}.jar")
         }
         if (maybeCordaJAR.size() == 0) {
-            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
+            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_release_version}.jar\"")
         } else {
             def cordaJar = maybeCordaJAR.getSingleFile()
             assert(cordaJar.isFile())
@@ -292,10 +292,10 @@ class Node {
      */
     private File verifyAndGetWebserverJar() {
         def maybeJar = project.configurations.runtime.filter {
-            it.toString().contains("corda-webserver-${project.corda_version}.jar")
+            it.toString().contains("corda-webserver-${project.corda_release_version}.jar")
         }
         if (maybeJar.size() == 0) {
-            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.jar\"")
+            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_release_version}.jar\"")
         } else {
             def jar = maybeJar.getSingleFile()
             assert(jar.isFile())

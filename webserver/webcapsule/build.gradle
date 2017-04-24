@@ -38,7 +38,7 @@ dependencies {
 
 task buildWebserverJar(type: FatCapsule) {
     applicationClass 'net.corda.webserver.WebServer'
-    archiveName "corda-webserver-${corda_version}.jar"
+    archiveName "corda-webserver-${corda_release_version}.jar"
     applicationSource = files(
             project.tasks.findByName('jar'),
             new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet.class'),
@@ -48,10 +48,9 @@ task buildWebserverJar(type: FatCapsule) {
     from 'NOTICE' // Copy CDDL notice
 
     capsuleManifest {
-        applicationVersion = corda_version
+        applicationVersion = corda_release_version
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
-        systemProperties['corda.version'] = corda_version
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']
@@ -62,10 +61,6 @@ task buildWebserverJar(type: FatCapsule) {
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
-    }
-
-    manifest {
-        attributes('Corda-Version': corda_version)
     }
 }
 

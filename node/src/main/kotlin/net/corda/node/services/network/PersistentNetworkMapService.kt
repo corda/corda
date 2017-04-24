@@ -17,7 +17,9 @@ import java.util.Collections.synchronizedMap
  * This class needs database transactions to be in-flight during method calls and init, otherwise it will throw
  * exceptions.
  */
-class PersistentNetworkMapService(services: ServiceHubInternal) : AbstractNetworkMapService(services) {
+class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
+    : AbstractNetworkMapService(services, minimumPlatformVersion) {
+
     private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}network_map_nodes") {
         val nodeParty = party("node_party_name", "node_party_key")
         val registrationInfo = blob("node_registration_info")

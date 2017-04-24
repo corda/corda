@@ -12,7 +12,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
-import net.corda.core.node.Version
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.loggerFor
@@ -29,7 +28,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.testing.MOCK_VERSION
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
@@ -136,7 +135,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
-        override val version: Version get() = MOCK_VERSION
+        override val platformVersion: Int get() = MOCK_VERSION_INFO.platformVersion
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -149,7 +148,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // through the java.nio API which we are already mocking via Jimfs.
         override fun makeMessagingService(): MessagingServiceInternal {
             require(id >= 0) { "Node ID must be zero or positive, was passed: " + id }
-            return mockNet.messagingNetwork.createNodeWithID(!mockNet.threadPerNode, id, serverThread, makeServiceEntries(), configuration.myLegalName, database).start().getOrThrow()
+            return mockNet.messagingNetwork.createNodeWithID(
+                    !mockNet.threadPerNode,
+                    id,
+                    serverThread,
+                    makeServiceEntries(),
+                    configuration.myLegalName,
+                    database)
+                    .start()
+                    .getOrThrow()
         }
 
         override fun makeIdentityService() = MockIdentityService(mockNet.identities)
@@ -165,7 +172,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         override fun makeNetworkMapService() {
-            inNodeNetworkMapService = InMemoryNetworkMapService(services)
+            inNodeNetworkMapService = InMemoryNetworkMapService(services, platformVersion)
         }
 
         override fun makeServiceEntries(): List<ServiceEntry> {

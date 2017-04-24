@@ -16,7 +16,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
-import net.corda.testing.MOCK_NODE_VERSION_INFO
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
 import org.junit.After
@@ -141,7 +141,7 @@ abstract class NodeBasedTest {
                 ) + configOverrides
         )
 
-        val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_NODE_VERSION_INFO)
+        val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_VERSION_INFO)
         node.start()
         nodes += node
         thread(name = legalName) {

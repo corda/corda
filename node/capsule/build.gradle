@@ -38,12 +38,12 @@ dependencies {
 
 task buildCordaJAR(type: FatCapsule) {
     applicationClass 'net.corda.node.Corda'
-    archiveName "corda-${corda_version}.jar"
+    archiveName "corda-${corda_release_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/CordaCaplet.class', '../build/classes/main/CordaCaplet$1.class', 'config/dev/log4j2.xml')
     from 'NOTICE' // Copy CDDL notice
 
     capsuleManifest {
-        applicationVersion = corda_version
+        applicationVersion = corda_release_version
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
@@ -63,12 +63,6 @@ task buildCordaJAR(type: FatCapsule) {
     // This lets you run the file like so: ./corda.jar
     // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
     reallyExecutable { trampolining() }
-
-    manifest {
-        attributes('Corda-Version': corda_version)
-        attributes('Corda-Revision': corda_revision)
-        attributes('Corda-Vendor': 'Corda Open Source')
-    }
 }
 
 artifacts {

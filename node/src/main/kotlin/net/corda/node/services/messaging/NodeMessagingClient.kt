@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.messaging.*
-import net.corda.core.node.NodeVersionInfo
+import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
 import net.corda.core.random63BitValue
@@ -68,7 +68,7 @@ import java.security.PublicKey
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
-                          nodeVersionInfo: NodeVersionInfo,
+                          val versionInfo: VersionInfo,
                           val serverHostPort: HostAndPort,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor,
@@ -85,9 +85,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         // confusion.
         private val topicProperty = SimpleString("platform-topic")
         private val sessionIdProperty = SimpleString("session-id")
-        private val nodeVersionProperty = SimpleString("node-version")
-        private val nodeVendorProperty = SimpleString("node-vendor")
-        private val amqDelay: Int = Integer.valueOf(System.getProperty("amq.delivery.delay.ms", "0"))
+        private val cordaVendorProperty = SimpleString("corda-vendor")
+        private val releaseVersionProperty = SimpleString("release-version")
+        private val platformVersionProperty = SimpleString("platform-version")
+        private val amqDelayMillis = System.getProperty("amq.delivery.delay.ms", "0").toInt()
         private val verifierResponseAddress = "$VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX.${random63BitValue()}"
     }
 
@@ -114,8 +115,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     data class Handler(val topicSession: TopicSession,
                        val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
-    private val nodeVendor = SimpleString(nodeVersionInfo.vendor)
-    private val version = SimpleString(nodeVersionInfo.version.toString())
+    private val cordaVendor = SimpleString(versionInfo.vendor)
+    private val releaseVersion = SimpleString(versionInfo.releaseVersion)
     /** An executor for sending messages */
     private val messagingExecutor = AffinityExecutor.ServiceAffinityExecutor("Messaging", 1)
 
@@ -409,8 +410,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             state.locked {
                 val mqAddress = getMQAddress(target)
                 val artemisMessage = session!!.createMessage(true).apply {
-                    putStringProperty(nodeVendorProperty, nodeVendor)
-                    putStringProperty(nodeVersionProperty, version)
+                    putStringProperty(cordaVendorProperty, cordaVendor)
+                    putStringProperty(releaseVersionProperty, releaseVersion)
+                    putIntProperty(platformVersionProperty, versionInfo.platformVersion)
                     putStringProperty(topicProperty, SimpleString(message.topicSession.topic))
                     putLongProperty(sessionIdProperty, message.topicSession.sessionID)
                     writeBodyBufferBytes(message.data)
@@ -418,8 +420,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString()))
 
                     // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
-                    if (amqDelay > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
-                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelay)
+                    if (amqDelayMillis > 0 && message.topicSession.topic == StateMachineManager.sessionTopic.topic) {
+                        putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
                     }
                 }
                 log.trace {

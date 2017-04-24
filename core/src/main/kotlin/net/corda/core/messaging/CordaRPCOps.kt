@@ -51,6 +51,12 @@ sealed class StateMachineUpdate {
 
 interface CordaRPCOps : RPCOps {
     /**
+     * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
+     * to be present.
+     */
+    override val protocolVersion: Int get() = nodeIdentity().platformVersion
+
+    /**
      * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables

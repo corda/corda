@@ -19,7 +19,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: Party)
 @CordaSerializable
 data class NodeInfo(val address: SingleMessageRecipient,
                     val legalIdentity: Party,
-                    val version: Version,
+                    val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
                     val physicalLocation: PhysicalLocation? = null) {
     init {

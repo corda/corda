@@ -57,11 +57,11 @@ the ``cancel`` method on the future will unsubscribe it from any future value an
 Versioning
 ----------
 
-The client RPC protocol is versioned with a simple incrementing integer. When a proxy is created the server is
-queried for its protocol version, and you can specify your minimum requirement. Methods added in later versions
-are tagged with the ``@RPCSinceVersion`` annotation. If you try to use a method that the server isn't advertising
-support of, an ``UnsupportedOperationException`` is thrown. If you want to know the version of the server, just
-use the ``protocolVersion`` property (i.e. ``getProtocolVersion`` in Java).
+The client RPC protocol is versioned using the node's Platform Version (see :doc:`versioning`). When a proxy is created
+the server is queried for its version, and you can specify your minimum requirement. Methods added in later versions
+are tagged with the ``@RPCSinceVersion`` annotation. If you try to use a method that the server isn't advertising support
+of, an ``UnsupportedOperationException`` is thrown. If you want to know the version of the server, just use the
+``protocolVersion`` property (i.e. ``getProtocolVersion`` in Java).
 
 Thread safety
 -------------
