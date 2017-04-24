@@ -1,6 +1,8 @@
 package net.corda.node.services.api
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
@@ -64,14 +66,34 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     /**
-     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
+     * defaults to [FlowInitiator.RPC] with username "Only For Testing".
      */
-    abstract fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T>
+    // TODO Move it to test utils.
+    @VisibleForTesting
+    fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
 
-    override fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
+    /**
+     * Starts an already constructed flow. Note that you must be on the server thread to call this method.
+     * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
+     */
+    abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T>
+
+
+    /**
+     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
+     * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
+     * See: [FlowInitiator].
+     *
+     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     */
+    fun <T : Any> invokeFlowAsync(
+            logicType: Class<out FlowLogic<T>>,
+            flowInitiator: FlowInitiator,
+            vararg args: Any?): FlowStateMachine<T> {
         val logicRef = flowLogicRefFactory.create(logicType, *args)
         @Suppress("UNCHECKED_CAST")
         val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
-        return startFlow(logic)
+        return startFlow(logic, flowInitiator)
     }
 }

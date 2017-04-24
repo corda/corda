@@ -3,6 +3,7 @@ package net.corda.testing.node
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
@@ -46,10 +47,6 @@ import javax.annotation.concurrent.ThreadSafe
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
-    override fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T> {
-        throw UnsupportedOperationException("not implemented")
-    }
-
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
             storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)

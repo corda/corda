@@ -1,10 +1,13 @@
 package net.corda.client.rpc
 
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.node.services.ServiceInfo
@@ -66,10 +69,7 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `close-send deadlock and premature shutdown on empty observable`() {
-        println("Starting client")
-        client.start(rpcUser.username, rpcUser.password)
-        println("Creating proxy")
-        val proxy = client.proxy()
+        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
         println("Starting flow")
         val flowHandle = proxy.startTrackedFlow(
                 ::CashIssueFlow,
@@ -104,11 +104,7 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `get cash balances`() {
-        println("Starting client")
-        client.start(rpcUser.username, rpcUser.password)
-        println("Creating proxy")
-        val proxy = client.proxy()
-
+        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
         val startCash = proxy.getCashBalances()
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
@@ -125,4 +121,38 @@ class CordaRPCClientTest : NodeBasedTest() {
         assertEquals(123.DOLLARS, finishCash.get(Currency.getInstance("USD")))
     }
 
+    @Test
+    fun `flow initiator via RPC`() {
+        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
+        val smUpdates = proxy.stateMachinesAndUpdates()
+        var countRpcFlows = 0
+        var countShellFlows = 0
+        smUpdates.second.subscribe {
+            if (it is StateMachineUpdate.Added) {
+                val initiator = it.stateMachineInfo.initiator
+                if (initiator is FlowInitiator.RPC)
+                    countRpcFlows++
+                if (initiator is FlowInitiator.Shell)
+                    countShellFlows++
+            }
+        }
+        val nodeIdentity = node.info.legalIdentity
+        node.services.startFlow(CashIssueFlow(2000.DOLLARS, OpaqueBytes.of(0), nodeIdentity, nodeIdentity), FlowInitiator.Shell).resultFuture.getOrThrow()
+        proxy.startFlow(::CashIssueFlow,
+                123.DOLLARS, OpaqueBytes.of(0),
+                nodeIdentity, nodeIdentity
+        ).returnValue.getOrThrow()
+        proxy.startFlowDynamic(CashIssueFlow::class.java,
+                1000.DOLLARS, OpaqueBytes.of(0),
+                nodeIdentity, nodeIdentity).returnValue.getOrThrow()
+        assertEquals(2, countRpcFlows)
+        assertEquals(1, countShellFlows)
+    }
+
+    private fun createRpcProxy(username: String, password: String): CordaRPCOps {
+        println("Starting client")
+        client.start(username, password)
+        println("Creating proxy")
+        return client.proxy()
+    }
 }

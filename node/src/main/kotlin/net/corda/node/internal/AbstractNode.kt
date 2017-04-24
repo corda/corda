@@ -10,6 +10,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
@@ -127,8 +128,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
         override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
 
-        override fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> {
-            return serverThread.fetchFrom { smm.add(logic) }
+        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T> {
+            return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
         }
 
         override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {

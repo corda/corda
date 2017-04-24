@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.MessagingService
@@ -85,14 +86,6 @@ interface ServiceHub : ServicesForResolution {
         val definingTx = storageService.validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
         return definingTx.tx.outRef<T>(ref.index)
     }
-
-    /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
-     * Note that you must be on the server thread to call this method.
-     *
-     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
-     */
-    fun <T : Any> invokeFlowAsync(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowStateMachine<T>
 
     /**
      * Helper property to shorten code for fetching the Node's KeyPair associated with the

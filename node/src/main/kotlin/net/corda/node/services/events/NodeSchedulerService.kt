@@ -7,6 +7,7 @@ import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.SchedulerService
@@ -158,7 +159,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
+        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService), FlowInitiator.Scheduled(scheduledState))
     }
 
     class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
@@ -167,7 +168,6 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
 
             fun tracker() = ProgressTracker(RUNNING)
         }
-
         override val progressTracker = tracker()
 
         @Suspendable
