@@ -49,7 +49,8 @@ interface FlowStateMachine<R> {
     fun <T : Any> sendAndReceive(receiveType: Class<T>,
                                  otherParty: Party,
                                  payload: Any,
-                                 sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+                                 sessionFlow: FlowLogic<*>,
+                                 retrySend: Boolean = false): UntrustworthyData<T>
 
     @Suspendable
     fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>

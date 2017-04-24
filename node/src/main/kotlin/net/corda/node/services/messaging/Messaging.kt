@@ -74,8 +74,14 @@ interface MessagingService {
      *
      * There is no way to know if a message has been received. If your flow requires this, you need the recipient
      * to send an ACK message back.
+     *
+     * @param retryId if provided the message will be scheduled for redelivery until [cancelRedelivery] is called for this id.
+     * Note that this feature should only be used when the target is an idempotent distributed service, e.g. a notary.
      */
-    fun send(message: Message, target: MessageRecipients)
+    fun send(message: Message, target: MessageRecipients, retryId: Long? = null)
+
+    /** Cancels the scheduled message redelivery for the specified [retryId] */
+    fun cancelRedelivery(retryId: Long)
 
     /**
      * Returns an initialised [Message] with the current time, etc, already filled in.
@@ -158,8 +164,8 @@ fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): Listenabl
 fun MessagingService.send(topic: String, sessionID: Long, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
         = send(TopicSession(topic, sessionID), payload, to, uuid)
 
-fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID())
-        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to)
+fun MessagingService.send(topicSession: TopicSession, payload: Any, to: MessageRecipients, uuid: UUID = UUID.randomUUID(), retryId: Long? = null)
+        = send(createMessage(topicSession, payload.serialize().bytes, uuid), to, retryId)
 
 /**
  * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
