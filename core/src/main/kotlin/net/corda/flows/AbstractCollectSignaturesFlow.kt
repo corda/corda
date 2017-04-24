@@ -12,18 +12,23 @@ import java.security.PublicKey
  * The [CollectSignaturesFlow] is used to automate the collection of signatures from the counter-parties to
  * a transaction.
  *
+ * **WARNING**: This Flow only works with [legalIdentityKey]s and WILL break if used with randomly generated keys.
+ *
+ * TODO: Update this flow to handle randomly generated keys when that works is complete.
+ *
  * Usage:
  * - Subclass [AbstractCollectSignaturesFlowResponder] in your CorDapp.
  * - You are required to override the [AbstractCollectSignaturesFlowResponder.checkTransaction] method to add
  *   custom logic for verifying the transaction in question.
- * - When calling the flow as a [subFlow], pass [CollectSignaturesFlow] a [SignedTransaction] which has the Initiator's
- *   signature. The flow will fail if the Initiator's signature is not present or if there are too many signatures.
+ * - When calling the flow as a [subFlow], pass [CollectSignaturesFlow] a [SignedTransaction] which at least has the
+ * - Initiator's signature (and possibly an Oracle's signature).
+ * - The flow will fail if the [Initiator]s signature is not present.
  * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's)
  * - Call the [FinalityFlow] with the return value of this flow.
  */
 
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
-                override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
+                            override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
 
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
@@ -33,26 +38,33 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     }
 
     @Suspendable override fun call(): SignedTransaction {
-        check(partiallySignedTx.sigs.size == 1) {
-            "There should be only one signature present when calling CollectSignaturesFlow."
-        }
-
         // TODO: Revisit when key management is properly fleshed out.
         // This will break if a party uses anything other than their legalIdentityKey.
+        // Check the signatures which have already been provided and that the transaction is valid.
+        // Usually just the Initiator and possibly an Oracle would have signed at this point.
         val myKey = serviceHub.myInfo.legalIdentity.owningKey
         val allButMe = partiallySignedTx.tx.mustSign - myKey
-        val notaryKey = partiallySignedTx.tx.notary?.owningKey
 
-        // If the counter-parties list is empty then we don't need to collect any signatures.
-        check(allButMe.isNotEmpty()) { return partiallySignedTx }
-
-        // Check the Initiator has already signed and that the transaction is valid.
+        // This step will fail if the Initiators signature is not present and valid.
         partiallySignedTx.verifySignatures(*allButMe.toTypedArray())
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
-        // Collect signatures from all counter-parties.
+        // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
-        val counterpartySignatures = collectSignatures(allButMe)
+        val notaryKey = partiallySignedTx.tx.notary?.owningKey
+        val signed = partiallySignedTx.sigs.map { it.by }
+        // We need to exclude the notary's key as the notary signature is collected separately with the [FinalityFlow].
+        val unsigned = if (notaryKey != null) {
+            partiallySignedTx.tx.mustSign - signed - notaryKey
+        } else {
+            partiallySignedTx.tx.mustSign - signed
+        }
+
+        // If the unsigned counter-parties list is empty then we don't need to collect any more signatures.
+        check(unsigned.isNotEmpty()) { return partiallySignedTx }
+
+        // Collect signatures from all counter-parties.
+        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
@@ -65,14 +77,11 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     /**
      * Lookup the [Party] object for each [PublicKey] using the [serviceHub.networkMapCache].
      */
-    @Suspendable private fun collectSignatures(keys: List<PublicKey>): List<DigitalSignature.WithKey> {
+    @Suspendable private fun keysToParties(keys: List<PublicKey>): List<Party> = keys.map {
         // TODO: Revisit when IdentityService supports resolution of a (possibly random) public key to a legal identity key.
-        val parties =  keys.map {
-            val partyNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it)
-                    ?: throw IllegalStateException("Party $it not found on the network.")
-            partyNode.legalIdentity
-        }
-        return parties.map { collectSignature(it) }
+        val partyNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it)
+                ?: throw IllegalStateException("Party $it not found on the network.")
+        partyNode.legalIdentity
     }
 
     /**
@@ -109,8 +118,8 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
             proposal.tx.toLedgerTransaction(serviceHub).verify()
             // Perform some custom verification over the transaction.
             checkTransaction(proposal)
-            // Check the Initiators signature. There should only be one signature in the list.
-            proposal.sigs.single().verifyWithECDSA(proposal.id)
+            // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
+            proposal.sigs.forEach { it.verifyWithECDSA(proposal.id) }
             // All good. Unwrap the proposal.
             proposal
         }

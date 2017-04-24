@@ -79,27 +79,16 @@ class CollectSignaturesFlowTests {
     }
 
     @Test
-    fun `fails with no initiator signature`() {
-        val twoPartyDummyContract = DummyContract.generateInitial(1337, notary,
-                a.info.legalIdentity.ref(1),
-                b.info.legalIdentity.ref(2))
-        val ptx = twoPartyDummyContract.signWith(DUMMY_KEY_1).toSignedTransaction(false)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
-        mockNet.runNetwork()
-        assertFailsWith<SignatureException> { flow.resultFuture.getOrThrow() }
-    }
-
-    @Test
-    fun `fails with more than one initial signature`() {
+    fun `passes with multiple initial signatures`() {
         val twoPartyDummyContract = DummyContract.generateInitial(1337, notary,
                 a.info.legalIdentity.ref(1),
                 b.info.legalIdentity.ref(2))
         val ptx = twoPartyDummyContract.signWith(a.services.legalIdentityKey).signWith(b.services.legalIdentityKey).toSignedTransaction(false)
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
-        assertFailsWith<IllegalStateException>("There should only be the Initiators signature present.") {
-            flow.resultFuture.getOrThrow()
-        }
+        val result = flow.resultFuture.getOrThrow()
+        println(result.tx)
+        println(result.sigs)
     }
 }
 
