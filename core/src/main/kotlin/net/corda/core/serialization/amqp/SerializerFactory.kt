@@ -25,6 +25,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: profile for performance in general
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
+// TODO: incorporate the class carpenter for classes not on the classpath.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, Serializer>()
@@ -34,7 +35,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     fun get(actualType: Class<*>?, declaredType: Type): Serializer {
         if (declaredType is ParameterizedType) {
             return serializersByType.computeIfAbsent(declaredType) {
-                // We allow only List and Map.
+                // We allow only Collection and Map.
                 val rawType = declaredType.rawType
                 if (rawType is Class<*>) {
                     checkParameterisedTypesConcrete(declaredType.actualTypeArguments)
@@ -50,7 +51,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 }
             }
         } else if (declaredType is Class<*>) {
-            // Straight classes allowed
+            // Simple classes allowed
             if (Collection::class.java.isAssignableFrom(declaredType)) {
                 return serializersByType.computeIfAbsent(declaredType) { makeCollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType))) }
             } else if (Map::class.java.isAssignableFrom(declaredType)) {
@@ -83,7 +84,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         when (typeNotation) {
         // java.lang.Class (whether a class or interface)
             is CompositeType -> processCompositeType(typeNotation)
-        // List / Map, possibly with generics
+        // Collection / Map, possibly with generics
             is RestrictedType -> processRestrictedType(typeNotation)
         }
     }
