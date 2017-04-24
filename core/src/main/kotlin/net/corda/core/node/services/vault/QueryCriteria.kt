@@ -36,6 +36,16 @@ sealed class QueryCriteria {
             val timeCondition: LogicalExpression<TimeInstantType, Array<Instant>>? = null) : QueryCriteria()
 
     /**
+     * GenericIndexedQueryCriteria: provides query by custom attributes defined in a contracts
+     * [QueryableState] implementation (see Persistence documentation for more information)
+     *
+     * Refer to [CommercialPaper.State] for a concrete example.
+     */
+    class GenericIndexedQueryCriteria @JvmOverloads constructor (
+            vararg indexes: IndexCriteria
+    ) : QueryCriteria()
+
+    /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(
@@ -124,3 +134,12 @@ data class Sort @JvmOverloads constructor(val direction: Sort.Direction = Sort.D
     }
     data class Order (val direction: Sort.Direction, val property: String)
 }
+
+/**
+ * [value] refers to an index mapping defined in a Contract's [Queryable] state implementation.
+ * Specifically, attributes that have been mapped within the [generateMappedObject] function to generic vault
+ * index attributes defined in [GenericVaultIndexSchemaV1]
+ *
+ * Refer to [CommercialPaper.State] for a concrete example.
+ */
+data class IndexCriteria(val value: Any)

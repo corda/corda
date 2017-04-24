@@ -19,6 +19,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CommercialPaperSchemaV1
+import net.corda.schemas.GenericVaultIndexSchemaV1
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -82,7 +83,7 @@ class CommercialPaper : Contract {
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
         /** Object Relational Mapping support. */
-        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1, GenericVaultIndexSchemaV1)
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -96,6 +97,12 @@ class CommercialPaper : Contract {
                         currency = this.faceValue.token.product.currencyCode,
                         faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
+                )
+                is GenericVaultIndexSchemaV1 -> GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState(
+                        contractStateClassName = this.javaClass.name,
+                        timeIndex1 = this.maturityDate,
+                        stringIndex1 = this.faceValue.token.product.currencyCode,
+                        longIndex1 = this.faceValue.quantity
                 )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }

@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import io.requery.kotlin.eq
 import io.requery.query.Operator
+import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
@@ -11,25 +12,21 @@ import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.days
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.*
 import net.corda.node.services.vault.schemas.VaultSchema
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.schemas.CashSchemaV1
-import net.corda.testing.BOC
-import net.corda.testing.BOC_KEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MINI_CORP
+import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -40,6 +37,7 @@ import org.junit.Test
 import java.io.Closeable
 import java.math.BigInteger
 import java.security.KeyPair
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -772,6 +770,46 @@ class VaultQueryTests {
             assertThat(states.states).hasSize(2)
         }
     }
+
+    /** Generic Indexed Query tests */
+
+    @Test
+    fun `commercial paper custom query`() {
+        database.transaction {
+
+            // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned by itself.
+            val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
+            val issuance = MEGA_CORP.ref(1)
+            val commercialPaper =
+                    CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
+                        setTime(TEST_TX_TIME, 30.seconds)
+                        signWith(MEGA_CORP_KEY)
+                        signWith(DUMMY_NOTARY_KEY)
+                    }.toSignedTransaction()
+            services.recordTransactions(commercialPaper)
+
+            val ccyIndex = IndexCriteria(USD.currencyCode)
+            val maturityIndex = IndexCriteria(TEST_TX_TIME + 30.days)
+            val faceValueIndex = IndexCriteria(10000)
+            val criteria = GenericIndexedQueryCriteria(maturityIndex, faceValueIndex, ccyIndex)
+            val result = vaultSvc.queryBy<CommercialPaper.State>(criteria)
+
+            /**
+             * Query result returns a [Vault.Page] which contains:
+             *  1) actual states as a list of [StateAndRef]
+             *  2) state reference and associated vault metadata as a list of [Vault.StateMetadata]
+             *  3) [PageSpecification] used to delimit the size of items returned in the result set (defaults to [DEFAULT_PAGE_SIZE])
+             *  4) Total number of items available (to aid further pagination if required)
+             */
+            val states = result.states
+            val metadata = result.statesMetadata
+
+            assertThat(states).hasSize(1)
+            assertThat(metadata).hasSize(1)
+        }
+    }
+
+
 
     /**
      *  USE CASE demonstrations (outside of mainline Corda)
