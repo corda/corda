@@ -8,7 +8,7 @@ import net.corda.demobench.model.NodeConfig
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 
-class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
+class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invoke: (CordaRPCOps) -> Unit) : AutoCloseable {
 
     private companion object {
         val log = loggerFor<NodeRPC>()
@@ -30,7 +30,7 @@ class NodeRPC(config: NodeConfig, start: () -> Unit, invoke: (CordaRPCOps) -> Un
                     this.cancel()
 
                     // Run "start-up" task, now that the RPC client is ready.
-                    start()
+                    start(config, ops)
 
                     // Schedule a new task that will refresh the display once per second.
                     timer.schedule(object : TimerTask() {
