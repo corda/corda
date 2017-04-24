@@ -11,6 +11,7 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.contracts.testing.DummyDealContract
+import net.corda.contracts.testing.DummyLinearContract
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.services.Vault
@@ -19,10 +20,7 @@ import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.DUMMY_PUBKEY_2
+import net.corda.core.utilities.*
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
@@ -30,7 +28,6 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.security.PublicKey
-import sun.misc.MessageUtils.where
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -39,11 +36,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import net.corda.contracts.testing.DummyLinearContract
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.CHARLIE
-import org.junit.Assert.assertThat
 
 class VaultSchemaTest {
 

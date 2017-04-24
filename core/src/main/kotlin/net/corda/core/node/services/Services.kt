@@ -165,8 +165,8 @@ interface VaultService {
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
      */
     fun <T : ContractState> queryBy(criteria: QueryCriteria,
-                                    paging: PageSpecification = PageSpecification(),
-                                    sorting: Sort? = null): Vault.Page<T>
+                                    paging: PageSpecification? = PageSpecification(),
+                                    sorting: Sort? = Sort()): Vault.Page<T>
 
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
@@ -179,9 +179,20 @@ interface VaultService {
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
      */
     fun <T : ContractState> trackBy(criteria: QueryCriteria,
-                                    paging: PageSpecification = PageSpecification(),
-                                    sorting: Sort? = null): Vault.QueryResults<T>
+                                    paging: PageSpecification? = PageSpecification(),
+                                    sorting: Sort? = Sort()): Vault.QueryResults<T>
     // DOCEND VaultQueryAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>
+            = queryBy(criteria, paging, Sort())
+    fun <T : ContractState> queryBy(criteria: QueryCriteria): Vault.Page<T>
+            = queryBy(criteria, PageSpecification(), Sort())
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T>
+            = trackBy(criteria, paging, Sort())
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.QueryResults<T>
+            = trackBy(criteria, PageSpecification(), Sort())
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s

@@ -72,13 +72,13 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      */
-    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.Page<T>
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.Page<T>
 
     /**
      * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
      */
     @RPCReturnsObservables
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.QueryResults<T>
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.QueryResults<T>
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.

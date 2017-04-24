@@ -219,7 +219,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return stateAndRefs.associateBy({ it.ref }, { it.state })
     }
 
-    override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.Page<T> {
+    override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.Page<T> {
 
         TODO("not implemented")
 
@@ -230,7 +230,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         //  take = pageSize
     }
 
-    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort?): Vault.QueryResults<T> {
+    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.QueryResults<T> {
         TODO("not implemented")
 
         return mutex.locked {
