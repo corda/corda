@@ -374,16 +374,18 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
         return quasarKryo().run { kryo ->
             // add the map of tokens -> tokenizedServices to the kyro context
-            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-            fiber.serialize(kryo)
+            kryo.withSerializationContext(serializationContext) {
+                fiber.serialize(kryo)
+            }
         }
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint): FlowStateMachineImpl<*> {
         return quasarKryo().run { kryo ->
             // put the map of token -> tokenized into the kryo context
-            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-            checkpoint.serializedFiber.deserialize(kryo).apply { fromCheckpoint = true }
+            kryo.withSerializationContext(serializationContext) {
+                checkpoint.serializedFiber.deserialize(kryo)
+            }.apply { fromCheckpoint = true }
         }
     }
 

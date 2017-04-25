@@ -173,7 +173,9 @@ class MockStorageService(override val attachments: AttachmentStorage = MockAttac
                          override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
                          override val uploaders: List<FileUploader> = listOf<FileUploader>(),
                          override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage())
-    : SingletonSerializeAsToken(), TxWritableStorageService
+    : SingletonSerializeAsToken(), TxWritableStorageService {
+    override val attachmentsClassLoaderEnabled = false
+}
 
 /**
  * Make properties appropriate for creating a DataSource for unit tests.
