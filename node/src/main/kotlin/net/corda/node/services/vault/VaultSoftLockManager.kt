@@ -20,7 +20,7 @@ class VaultSoftLockManager(val vault: VaultService, smm: StateMachineManager) {
         smm.changes.subscribe { change ->
             if (change is StateMachineManager.Change.Removed && (FlowStateMachineImpl.currentStateMachine())?.hasSoftLockedStates == true) {
                 log.trace { "Remove flow name ${change.logic.javaClass} with id $change.id" }
-                unregisterSoftLocks(change.id, change.logic)
+                unregisterSoftLocks(change.logic.runId, change.logic)
             }
         }
 

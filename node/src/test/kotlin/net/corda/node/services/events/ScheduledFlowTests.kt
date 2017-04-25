@@ -13,6 +13,7 @@ import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
@@ -117,8 +118,8 @@ class ScheduledFlowTests {
         val stateMachines = nodeA.smm.track()
         var countScheduledFlows = 0
         stateMachines.second.subscribe {
-            if (it.addOrRemove == AddOrRemove.ADD) {
-                val initiator = it.flowInitiator
+            if (it is StateMachineManager.Change.Add) {
+                val initiator = it.logic.stateMachine.flowInitiator
                 if (initiator is FlowInitiator.Scheduled)
                     countScheduledFlows++
             }

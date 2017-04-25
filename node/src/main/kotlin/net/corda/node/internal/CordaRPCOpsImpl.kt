@@ -62,7 +62,7 @@ class CordaRPCOpsImpl(
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
             Pair(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic, it.flowInitiator) },
+                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.logic) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
@@ -150,14 +150,14 @@ class CordaRPCOpsImpl(
     override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
 
     companion object {
-        private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>, flowInitiator: FlowInitiator): StateMachineInfo {
-            return StateMachineInfo(id, flowLogic.javaClass.name, flowInitiator, flowLogic.track())
+        private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
+            return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.flowInitiator, flowLogic.track())
         }
 
         private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
             return when (change) {
-                is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic, change.flowInitiator))
-                is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.id, change.result)
+                is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
+                is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
             }
         }
     }

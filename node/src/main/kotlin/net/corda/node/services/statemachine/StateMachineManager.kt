@@ -114,11 +114,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     sealed class Change {
         abstract val logic: FlowLogic<*>
-        abstract val id: StateMachineRunId
-        abstract val flowInitiator: FlowInitiator
 
-        data class Add(override val logic: FlowLogic<*>, override val id: StateMachineRunId, override val flowInitiator: FlowInitiator): Change()
-        data class Removed(override val logic: FlowLogic<*>, override val id: StateMachineRunId, val result: ErrorOr<*>, override val flowInitiator: FlowInitiator): Change()
+        data class Add(override val logic: FlowLogic<*>): Change()
+        data class Removed(override val logic: FlowLogic<*>, val result: ErrorOr<*>): Change()
     }
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -423,7 +421,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(Change.Removed(fiber.logic, fiber.id, resultOrError))
+                    notifyChangeObservers(Change.Removed(fiber.logic, resultOrError))
                 }
                 endAllFiberSessions(fiber, resultOrError.error, propagated)
             } finally {
@@ -436,7 +434,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
-            notifyChangeObservers(Change.Add(fiber.logic, fiber.id))
+            notifyChangeObservers(Change.Add(fiber.logic))
         }
     }
 
