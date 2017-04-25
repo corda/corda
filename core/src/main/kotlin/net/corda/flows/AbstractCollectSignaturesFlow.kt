@@ -63,8 +63,6 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures.
         check(unsigned.isNotEmpty()) { return partiallySignedTx }
 
-        logger.info(serviceHub.networkMapCache.partyNodes.toString())
-
         // Collect signatures from all counter-parties.
          val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
         val stx = partiallySignedTx + counterpartySignatures
