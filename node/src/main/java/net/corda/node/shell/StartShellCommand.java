@@ -1,6 +1,6 @@
 package net.corda.node.shell;
 
-// A simple forwarded to the "flow start" command, for easier typing.
+// A simple forwarder to the "flow start" command, for easier typing.
 
 import org.crsh.cli.*;
 
