@@ -146,11 +146,12 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         }
     }
 
-    open class UnparseableCallException(command: String) : Exception("Could not parse as a command: $command") {
+    open class UnparseableCallException(command: String, cause: Throwable? = null) : Exception("Could not parse as a command: $command", cause) {
         class UnknownMethod(val methodName: String) : UnparseableCallException("Unknown command name: $methodName")
         class MissingParameter(methodName: String, val paramName: String, command: String) : UnparseableCallException("Parameter $paramName missing from attempt to invoke $methodName in command: $command")
         class TooManyParameters(methodName: String, command: String) : UnparseableCallException("Too many parameters provided for $methodName: $command")
         class ReflectionDataMissing(methodName: String, argIndex: Int) : UnparseableCallException("Method $methodName missing parameter name at index $argIndex")
+        class FailedParse(e: Exception) : UnparseableCallException(e.message ?: e.toString(), e)
     }
 
     /**
@@ -195,7 +196,11 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         val inOrderParams: List<Any?> = parameters.mapIndexed { _, param ->
             val (argName, argType) = param
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
-            om.readValue(entry.traverse(om), argType)
+            try {
+                om.readValue(entry.traverse(om), argType)
+            } catch(e: Exception) {
+                throw UnparseableCallException.FailedParse(e)
+            }
         }
         if (log.isDebugEnabled) {
             inOrderParams.forEachIndexed { i, param ->
