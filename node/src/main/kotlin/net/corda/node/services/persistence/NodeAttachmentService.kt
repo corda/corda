@@ -13,7 +13,6 @@ import net.corda.core.div
 import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken

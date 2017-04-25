@@ -6,15 +6,8 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import com.google.common.collect.Multimaps
-import net.corda.core.crypto.SecureHash
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
-import org.apache.commons.lang3.ClassUtils
-import java.util.*
-import java.util.Collections.newSetFromMap
-import kotlin.reflect.KClass
-import kotlin.reflect.full.cast
 
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
@@ -83,8 +76,8 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
-    private val classNameToSingletons = Multimaps.newMultimap<String, SerializeAsToken>(HashMap(), { newSetFromMap(IdentityHashMap()) })
+class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool, val serviceHub: ServiceHub) {
+    private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false
 
     init {
@@ -105,29 +98,18 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
         readOnly = true
     }
 
-    // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
     internal fun putSingleton(toBeTokenized: SerializeAsToken) {
-        val impl = toBeTokenized.javaClass
-        if (toBeTokenized !in classNameToSingletons[impl.name]) {
+        val className = toBeTokenized.javaClass.name
+        if (className !in classNameToSingleton) {
+            // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
             if (readOnly) {
-                throw UnsupportedOperationException("Attempt to write token for lazy registered ${impl.name}. All tokens should be registered during context construction.")
+                throw UnsupportedOperationException("Attempt to write token for lazy registered ${className}. All tokens should be registered during context construction.")
             }
-            ClassUtils.hierarchy(impl, ClassUtils.Interfaces.INCLUDE).forEach { classNameToSingletons.put(it.name, toBeTokenized) }
+            classNameToSingleton[className] = toBeTokenized
         }
     }
 
-    private fun noSuchSingleton(className: String): Nothing = throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
-
-    internal fun uniqueSingleton(className: String, exactMatch: Boolean): Any {
-        val singletons = classNameToSingletons[className]
-        if (1 != singletons.size) noSuchSingleton(className)
-        val singleton = singletons.first()
-        if (exactMatch && singleton.javaClass.name != className) noSuchSingleton(className)
-        return singleton
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun <T : Any> uniqueSingletonImplementing(clazz: KClass<T>) = uniqueSingleton(clazz.java.name, false) as T
+    internal fun getSingleton(className: String) = classNameToSingleton[className] ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
 }
 
 /**
@@ -136,7 +118,7 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
  */
 class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
-    override fun fromToken(context: SerializeAsTokenContext) = context.uniqueSingleton(className, true)
+    override fun fromToken(context: SerializeAsTokenContext) = context.getSingleton(className)
 
     fun registerWithContext(context: SerializeAsTokenContext, toBeTokenized: SerializeAsToken) = also { context.putSingleton(toBeTokenized) }
 

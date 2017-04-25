@@ -48,9 +48,6 @@ dependencies {
     // Guava: Google utilities library.
     compile "com.google.guava:guava:$guava_version"
 
-    // Commons Lang: Apache utilities library.
-    compile 'org.apache.commons:commons-lang3:3.5'
-
     // RxJava: observable streams of events.
     compile "io.reactivex:rxjava:$rxjava_version"
 

@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
-import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
@@ -516,7 +515,7 @@ interface Attachment : NamedByHash {
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
-            val storage = uniqueSingletonImplementing(StorageService::class).attachments
+            val storage = serviceHub.storageService.attachments
             return {
                 val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
                 if (a is AbstractAttachment) a.attachmentData else a.open().use { it.readBytes() }

@@ -5,12 +5,9 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
-import java.io.InputStream
-import java.util.function.Supplier
 
 /**
  * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
