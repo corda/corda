@@ -18,7 +18,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
 import org.bouncycastle.asn1.x500.X500Name
 import net.corda.nodeapi.CURRENT_RPC_USER
@@ -63,7 +62,7 @@ class CordaRPCOpsImpl(
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
             Pair(
-                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.id, it.logic, it.flowInitiator) },
+                    allStateMachines.map { stateMachineInfoFromFlowLogic(it.logic) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
@@ -151,14 +150,14 @@ class CordaRPCOpsImpl(
     override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
 
     companion object {
-        private fun stateMachineInfoFromFlowLogic(id: StateMachineRunId, flowLogic: FlowLogic<*>, flowInitiator: FlowInitiator): StateMachineInfo {
-            return StateMachineInfo(id, flowLogic.javaClass.name, flowInitiator, flowLogic.track())
+        private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
+            return StateMachineInfo(flowLogic.runId, flowLogic.javaClass.name, flowLogic.stateMachine.flowInitiator, flowLogic.track())
         }
 
         private fun stateMachineUpdateFromStateMachineChange(change: StateMachineManager.Change): StateMachineUpdate {
-            return when (change.addOrRemove) {
-                AddOrRemove.ADD -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.id, change.logic, change.flowInitiator))
-                AddOrRemove.REMOVE -> StateMachineUpdate.Removed(change.id)
+            return when (change) {
+                is StateMachineManager.Change.Add -> StateMachineUpdate.Added(stateMachineInfoFromFlowLogic(change.logic))
+                is StateMachineManager.Change.Removed -> StateMachineUpdate.Removed(change.logic.runId, change.result)
             }
         }
     }
