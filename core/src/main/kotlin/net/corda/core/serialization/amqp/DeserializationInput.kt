@@ -32,7 +32,6 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
                 throw NotSerializableException("Unexpected size of data")
             }
             val envelope = Envelope.get(data)
-            println(envelope)
             // Now pick out the obj and schema from the envelope.
             return clazz.cast(readObjectOrNull(envelope.obj, envelope, clazz))
         } catch(nse: NotSerializableException) {

@@ -17,7 +17,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         if (params.size != rawType.typeParameters.size) {
             throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
         }
-        // We do not check bounds.  Both our use cases (List and Map) are not bounded.
+        // We do not check bounds.  Both our use cases (Collection and Map) are not bounded.
     }
 
     val isFullyWildcarded: Boolean = params.all { it == SerializerFactory.AnyType }
@@ -142,7 +142,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
 
     override fun hashCode(): Int = _typeName.hashCode()
 
-    // TODO: this might be a bit cheeky since to toString() of the built in impl. would be equal.
+    // TODO: this might be a bit cheeky since the toString() of the JDK impl. would be equal.
     override fun equals(other: Any?): Boolean {
         return other is ParameterizedType && other.toString() == toString()
     }
