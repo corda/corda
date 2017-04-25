@@ -34,7 +34,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     private val counterpartyNode by lazy {
-        rpc.networkMapUpdates().first.first { it.legalIdentity.name == BOB.name }
+        rpc.networkMapUpdates().first.first { it.legalIdentity.name == "CN=Counterparty,O=R3,OU=corda,L=London,C=UK" }
     }
 
     private companion object {
