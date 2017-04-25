@@ -144,12 +144,10 @@ public class JavaSerializationOutputTests {
 
         new EncoderImpl(decoder);
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.getBytes(), 8, bytes.getSize() - 8));
-        Object result = decoder.readObject();
-        System.out.println(result);
+        Envelope result = (Envelope) decoder.readObject();
 
         DeserializationInput des = new DeserializationInput();
         Object desObj = des.deserialize(bytes, Object.class);
-        System.out.println(desObj);
         assertTrue(Objects.deepEquals(obj, desObj));
 
         // Now repeat with a re-used factory
@@ -157,6 +155,7 @@ public class JavaSerializationOutputTests {
         DeserializationInput des2 = new DeserializationInput(factory);
         Object desObj2 = des2.deserialize(ser2.serialize(obj), Object.class);
         assertTrue(Objects.deepEquals(obj, desObj2));
+        // TODO: check schema is as expected
         return desObj2;
     }
 
