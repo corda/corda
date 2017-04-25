@@ -128,10 +128,6 @@ allprojects {
         maven {
             url 'https://dl.bintray.com/kotlin/exposed'
         }
-        // TODO: remove this once we have a released proton-j 0.19 or above.
-        maven {
-            url 'https://repository.apache.org/content/repositories/snapshots'
-        }
         maven { url 'https://jitpack.io' }
     }
 
