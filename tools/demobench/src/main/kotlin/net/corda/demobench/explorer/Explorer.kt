@@ -1,10 +1,16 @@
 package net.corda.demobench.explorer
 
+import net.corda.core.createDirectories
+import net.corda.core.div
+import net.corda.core.list
 import net.corda.core.utilities.loggerFor
+import net.corda.demobench.model.JVMConfig
 import net.corda.demobench.model.NodeConfig
 import net.corda.demobench.model.forceDirectory
 import net.corda.demobench.readErrorLines
+import tornadofx.*
 import java.io.IOException
+import java.nio.file.Files
 import java.util.concurrent.Executors
 
 class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
@@ -26,6 +32,8 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         }
 
         try {
+            installApps(config)
+
             val user = config.users.elementAt(0)
             val p = explorerController.process(
                     "--host=localhost",
@@ -62,6 +70,33 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         }
     }
 
+    private fun installApps(config: NodeConfig) {
+        // Make sure that the explorer has cordapps on its class path. This is only necessary because currently apps
+        // require the original class files to deserialise states: Kryo serialisation doesn't let us write generic
+        // tools that work with serialised data structures. But the AMQP serialisation revamp will fix this by
+        // integrating the class carpenter, so, we can eventually get rid of this function.
+        //
+        // Note: does not copy dependencies because we should soon be making all apps fat jars and dependencies implicit.
+        //
+        // TODO: Remove this code when serialisation has been upgraded.
+        val pluginsDir = config.explorerDir / "plugins"
+        pluginsDir.createDirectories()
+        config.pluginDir.list {
+            it.forEachOrdered { path ->
+                val destPath = pluginsDir / path.fileName.toString()
+                try {
+                    // Try making a symlink to make things faster and use less disk space.
+                    Files.createSymbolicLink(destPath, path)
+                } catch(e: UnsupportedOperationException) {
+                    // OS doesn't support symbolic links?
+                    Files.copy(path, destPath)
+                } catch(e: FileAlreadyExistsException) {
+                    // OK, don't care ...
+                }
+            }
+        }
+    }
+
     override fun close() {
         executor.shutdown()
         process?.destroy()
@@ -75,4 +110,17 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
         }
     }
 
+}
+
+class ExplorerController : Controller() {
+    private val jvm by inject<JVMConfig>()
+    private val explorerPath = jvm.applicationDir.resolve("explorer").resolve("node-explorer.jar")
+
+    init {
+        log.info("Explorer JAR: $explorerPath")
+    }
+
+    internal fun process(vararg args: String) = jvm.processFor(explorerPath, *args)
+
+    fun explorer() = Explorer(this)
 }
