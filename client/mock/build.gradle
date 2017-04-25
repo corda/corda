@@ -10,14 +10,6 @@ configurations {
     runtime.exclude module: 'isolated'
 }
 
-sourceSets {
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
-}
-
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 

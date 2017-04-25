@@ -21,12 +21,6 @@ configurations {
 }
 
 sourceSets {
-    main {
-        resources {
-            srcDir "../../../config/dev"
-        }
-    }
-
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output

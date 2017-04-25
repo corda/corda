@@ -10,14 +10,6 @@ buildscript {
     }
 }
 
-sourceSets {
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
-}
-
 dependencies {
 
     testCompile "junit:junit:$junit_version"

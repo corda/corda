@@ -21,11 +21,6 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
