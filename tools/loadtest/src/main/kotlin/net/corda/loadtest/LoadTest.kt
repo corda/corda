@@ -1,6 +1,7 @@
 package net.corda.loadtest
 
 import net.corda.client.mock.Generator
+import net.corda.client.rpc.notUsed
 import net.corda.core.crypto.toBase58String
 import net.corda.node.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
@@ -86,7 +87,7 @@ data class LoadTest<T, S>(
                     log.info("$count remaining commands, state:\n$state")
                     // Generate commands
                     val commands = nodes.generate(state, parameters.parallelism).generate(random).getOrThrow()
-                    require(commands.size > 0)
+                    require(commands.isNotEmpty())
                     log.info("Generated command batch of size ${commands.size}: $commands")
                     // Interpret commands
                     val newState = commands.fold(state, interpret)
@@ -170,7 +171,8 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             log.info("Getting node info of ${connection.hostName}")
             val nodeInfo = connection.proxy.nodeIdentity()
             log.info("Got node info of ${connection.hostName}: $nodeInfo!")
-            val otherNodeInfos = connection.proxy.networkMapUpdates().first
+            val (otherNodeInfos, nodeInfoUpdates) = connection.proxy.networkMapUpdates()
+            nodeInfoUpdates.notUsed()
             val pubkeysString = otherNodeInfos.map {
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
