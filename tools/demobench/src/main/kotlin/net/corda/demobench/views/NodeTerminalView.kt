@@ -211,7 +211,10 @@ class NodeTerminalView : Fragment() {
 
     fun destroy() {
         if (!isDestroyed) {
-            subscriptions.forEach { it.unsubscribe() }
+            subscriptions.forEach {
+                // Don't allow any exceptions here to halt tab destruction.
+                try { it.unsubscribe() } catch (e: Exception) {}
+            }
             webServer.close()
             explorer.close()
             viewer.close()
