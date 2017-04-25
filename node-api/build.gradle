@@ -10,19 +10,6 @@ buildscript {
     }
 }
 
-sourceSets {
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
-    main {
-        resources {
-            srcDir "../config/dev"
-        }
-    }
-}
-
 dependencies {
     compile project(":core")
 

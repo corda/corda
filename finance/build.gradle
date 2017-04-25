@@ -22,14 +22,6 @@ dependencies {
     testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 }
 
-sourceSets {
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
-}
-
 configurations.testCompile {
     // Excluding javassist:javassist because it clashes with Hibernate's
     // transitive org.javassist:javassist dependency.

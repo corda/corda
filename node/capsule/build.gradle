@@ -19,19 +19,6 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-sourceSets {
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-}
-
 dependencies {
     compile project(':node')
 }

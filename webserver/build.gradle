@@ -17,16 +17,14 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
-    test {
-        resources {
-            srcDir "$rootDir/config/test"
-        }
-    }
-    main {
-        resources {
-            srcDir "$rootDir/config/dev"
-        }
-    }
+}
+
+processResources {
+    from file("$rootDir/config/dev/jolokia-access.xml")
+}
+
+processTestResources {
+    from file("$rootDir/config/test/jolokia-access.xml")
 }
 
 dependencies {
