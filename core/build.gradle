@@ -82,6 +82,9 @@ dependencies {
 
     // Requery: SQL based query & persistence for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
+
+    // For AMQP serialisation.
+    compile "org.apache.qpid:proton-j:0.18.0"
 }
 
 configurations {
