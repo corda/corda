@@ -24,6 +24,7 @@ import net.corda.core.utilities.validateLegalName
 import net.corda.core.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import org.bouncycastle.asn1.x500.style.RFC4519Style.name
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
@@ -193,6 +194,8 @@ class NodeTabView : Fragment() {
         validator {
             if (it == null) {
                 error("Node name is required")
+            } else if (nodeController.nameExists(normaliseLegalName(it))) {
+                error("Node with this name already exists")
             } else {
                 try {
                     validateLegalName(normaliseLegalName(it))

@@ -17,6 +17,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.core.failure
 import net.corda.core.success
 import net.corda.core.then
 import net.corda.core.messaging.CordaRPCOps
@@ -129,6 +130,7 @@ class NodeTerminalView : Fragment() {
     }
 
     private var webURL: URI? = null
+    private var launchingWebServer = false
 
     /*
      * We only want to run one web server for each node.
@@ -142,7 +144,13 @@ class NodeTerminalView : Fragment() {
                 app.hostServices.showDocument(webURL.toString())
                 return@setOnAction
             }
-            launchWebButton.isDisable = true
+
+            // We use our own way to suppress clicks whilst starting as a quick style hack, as the progress spinner
+            // gets very dim when placed inside a disabled button.
+            if (launchingWebServer)
+                return@setOnAction
+
+            launchingWebServer = true
             val oldLabel = launchWebButton.text
             launchWebButton.text = ""
             launchWebButton.graphic = ProgressIndicator()
@@ -150,16 +158,17 @@ class NodeTerminalView : Fragment() {
             log.info("Starting web server for ${config.legalName}")
             webServer.open(config) then {
                 Platform.runLater {
-                    launchWebButton.isDisable = false
-                    launchWebButton.text = oldLabel
                     launchWebButton.graphic = null
                 }
             } success {
                 log.info("Web server for ${config.legalName} started on $it")
                 Platform.runLater {
                     webURL = it
+                    launchWebButton.text = "Reopen\nweb site"
                     app.hostServices.showDocument(it.toString())
                 }
+            } failure {
+                launchWebButton.text = oldLabel
             }
         }
     }

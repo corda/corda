@@ -159,7 +159,8 @@ class NodeWebServer(val config: WebServerConfig) {
                 addServlet(staticDir, "/web/${it.first}/*")
             }
 
-            addServlet(ServletHolder(HelpServlet("/web/${staticDirs.first().first}")), "/")
+            // If we have at least one static web data directory, redirect / to the right URL.
+            staticDirs.firstOrNull()?.let { addServlet(ServletHolder(IndexRedirectServlet("/web/${it.first}")), "/") }
 
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
@@ -172,7 +173,7 @@ class NodeWebServer(val config: WebServerConfig) {
         }
     }
 
-    private inner class HelpServlet(private val redirectTo: String) : HttpServlet() {
+    private inner class IndexRedirectServlet(private val redirectTo: String) : HttpServlet() {
         override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
             resp.sendRedirect(resp.encodeRedirectURL(redirectTo))
         }
