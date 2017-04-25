@@ -75,15 +75,10 @@ class LegalNameValidatorTest {
 
     @Test
     fun `legal name should be capitalized`() {
-        validateLegalName("Good Legal Name")
+        validateLegalName("Good legal name")
         assertFailsWith(IllegalArgumentException::class) {
             validateLegalName("bad name")
         }
-
-        assertFailsWith(IllegalArgumentException::class) {
-            validateLegalName("Bad name")
-        }
-
         assertFailsWith(IllegalArgumentException::class) {
             validateLegalName("bad Name")
         }
