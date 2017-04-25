@@ -79,7 +79,7 @@ class DeserializedParameterizedTypeTests {
         verify("java.util.List<java.lang.String, java.lang.Integer>")
     }
 
-    @Test(expected = NotSerializableException::class)
+    @Test
     fun `test no parameters`() {
         verify("java.lang.String")
     }
