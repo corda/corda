@@ -42,11 +42,9 @@ abstract class FlowLogic<out T> {
      */
     val serviceHub: ServiceHub get() = stateMachine.serviceHub
 
-    /**
-     * Return the marker [Class] which [party] has used to register the counterparty flow that is to execute on the
-     * other side. The default implementation returns the class object of this FlowLogic, but any [Class] instance
-     * will do as long as the other side registers with it.
-     */
+    @Deprecated("This is no longer used and will be removed in a future release. If you are using this to communicate " +
+            "with the same party but for two different message streams, then the correct way of doing that is to use sub-flows",
+            level = DeprecationLevel.ERROR)
     open fun getCounterpartyMarker(party: Party): Class<*> = javaClass
 
     /**
@@ -190,9 +188,10 @@ abstract class FlowLogic<out T> {
 
     private var _stateMachine: FlowStateMachine<*>? = null
     /**
-     * Internal only. Reference to the [Fiber] instance that is the top level controller for the entire flow. When
-     * inside a flow this is equivalent to [Strand.currentStrand]. This is public only because it must be accessed
-     * across module boundaries.
+     * @suppress
+     * Internal only. Reference to the [co.paralleluniverse.fibers.Fiber] instance that is the top level controller for
+     * the entire flow. When inside a flow this is equivalent to [co.paralleluniverse.strands.Strand.currentStrand]. This
+     * is public only because it must be accessed across module boundaries.
      */
     var stateMachine: FlowStateMachine<*>
         get() = _stateMachine ?: throw IllegalStateException("This can only be done after the flow has been started.")

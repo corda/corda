@@ -52,7 +52,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
@@ -108,7 +107,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
+    private val serviceFlowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
@@ -132,14 +131,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
         }
 
-        override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
-            require(markerClass !in flowFactories) { "${markerClass.name} has already been used to register a flow" }
-            log.info("Registering flow ${markerClass.name}")
-            flowFactories[markerClass] = flowFactory
+        override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) {
+            require(clientFlowClass !in serviceFlowFactories) { "${clientFlowClass.name} has already been used to register a service flow" }
+            log.info("Registering service flow for ${clientFlowClass.name}")
+            serviceFlowFactories[clientFlowClass] = serviceFlowFactory
         }
 
-        override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
-            return flowFactories[markerClass]
+        override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ((Party) -> FlowLogic<*>)? {
+            return serviceFlowFactories[clientFlowClass]
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -236,7 +235,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(rpcOps)
-            services.registerFlowInitiator(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
+            services.registerServiceFlow(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()

@@ -19,11 +19,7 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.messaging.ReceivedMessage
 import net.corda.core.messaging.TopicSession
 import net.corda.core.messaging.send
@@ -345,18 +341,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val markerClass = try {
-            Class.forName(sessionInit.flowName)
-        } catch (e: Exception) {
-            logger.warn("Received invalid $sessionInit", e)
-            sendSessionReject("Don't know ${sessionInit.flowName}")
-            return
-        }
-
-        val flowFactory = serviceHub.getFlowFactory(markerClass)
+        val flowFactory = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
         if (flowFactory == null) {
-            logger.warn("Unknown flow marker class in $sessionInit")
-            sendSessionReject("Don't know ${markerClass.name}")
+            logger.warn("${sessionInit.clientFlowClass} has not been registered with a service flow: $sessionInit")
+            sendSessionReject("Don't know ${sessionInit.clientFlowClass.name}")
             return
         }
 
@@ -378,7 +366,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using marker ${markerClass.name}" }
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.clientFlowClass.name}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }

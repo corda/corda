@@ -8,7 +8,6 @@ import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -111,7 +110,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `exception while fiber suspended`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node2.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow("Hello", it) }
         val flow = ReceiveFlow(node2.info.legalIdentity)
         val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
@@ -130,7 +129,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow restarted just after receiving payload`() {
-        node2.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
         node1.services.startFlow(SendFlow("Hello", node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
@@ -180,7 +179,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
-        node1.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node1.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow("Hello", it) }
         node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
@@ -244,8 +243,8 @@ class StateMachineManagerTests {
     fun `sending to multiple parties`() {
         val node3 = net.createNode(node1.info.address)
         net.runNetwork()
-        node2.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
-        node3.services.registerFlowInitiator(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node3.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
@@ -278,8 +277,8 @@ class StateMachineManagerTests {
         net.runNetwork()
         val node2Payload = "Test 1"
         val node3Payload = "Test 2"
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow(node2Payload, it) }
-        node3.services.registerFlowInitiator(ReceiveFlow::class.java) { SendFlow(node3Payload, it) }
+        node2.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow(node2Payload, it) }
+        node3.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow(node3Payload, it) }
         val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
@@ -304,7 +303,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        node2.services.registerFlowInitiator(PingPongFlow::class.java) { PingPongFlow(it, 20L) }
+        node2.services.registerServiceFlow(PingPongFlow::class.java) { PingPongFlow(it, 20L) }
         node1.services.startFlow(PingPongFlow(node2.info.legalIdentity, 10L))
         net.runNetwork()
 
@@ -340,7 +339,7 @@ class StateMachineManagerTests {
         sessionTransfers.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
-                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -350,7 +349,7 @@ class StateMachineManagerTests {
                         assertEquals(notary1.id, it.from)
                     },
                     // Second pay
-                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -360,7 +359,7 @@ class StateMachineManagerTests {
                         assertEquals(notary2.id, it.from)
                     },
                     // Third pay
-                    expect(match = { it.message is SessionInit && it.message.flowName == NotaryFlow.Client::class.java.name }) {
+                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -375,7 +374,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `other side ends before doing expected send`() {
-        node2.services.registerFlowInitiator(ReceiveFlow::class.java) { NoOpFlow() }
+        node2.services.registerServiceFlow(ReceiveFlow::class.java) { NoOpFlow() }
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
@@ -535,7 +534,7 @@ class StateMachineManagerTests {
             }
         }
 
-        node2.services.registerFlowInitiator(AskForExceptionFlow::class.java) { ConditionalExceptionFlow(it, "Hello") }
+        node2.services.registerServiceFlow(AskForExceptionFlow::class.java) { ConditionalExceptionFlow(it, "Hello") }
         val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
@@ -563,7 +562,7 @@ class StateMachineManagerTests {
         ptx.signWith(node1.services.legalIdentityKey)
         val stx = ptx.toSignedTransaction()
 
-        node1.services.registerFlowInitiator(WaitingFlows.Waiter::class.java) {
+        node1.services.registerServiceFlow(WaitingFlows.Waiter::class.java) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
         val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
@@ -578,6 +577,14 @@ class StateMachineManagerTests {
         val result = node2.services.startFlow(VaultAccessFlow(node1.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
+    }
+
+    @Test
+    fun `custom client flow`() {
+        val receiveFlowFuture = node2.initiateSingleShotFlow(SendFlow::class) { ReceiveFlow(it) }
+        node1.services.startFlow(CustomSendFlow("Hello", node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThat(receiveFlowFuture.getOrThrow().receivedPayloads).containsOnly("Hello")
     }
 
 
@@ -598,7 +605,9 @@ class StateMachineManagerTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private fun sessionInit(flowMarker: KClass<*>, payload: Any? = null) = SessionInit(0, flowMarker.java.name, payload)
+    private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, payload: Any? = null): SessionInit {
+        return SessionInit(0, clientFlowClass.java, payload)
+    }
     private val sessionConfirm = SessionConfirm(0, 0)
     private fun sessionData(payload: Any) = SessionData(0, payload)
     private val normalEnd = NormalSessionEnd(0)
@@ -663,7 +672,7 @@ class StateMachineManagerTests {
     }
 
 
-    private class SendFlow(val payload: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private open class SendFlow(val payload: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -672,6 +681,8 @@ class StateMachineManagerTests {
         override fun call() = otherParties.forEach { send(it, payload) }
     }
 
+    private interface CustomInterface
+    private class CustomSendFlow(payload: String, otherParty: Party) : CustomInterface, SendFlow(payload, otherParty)
 
     private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
         object START_STEP : ProgressTracker.Step("Starting")

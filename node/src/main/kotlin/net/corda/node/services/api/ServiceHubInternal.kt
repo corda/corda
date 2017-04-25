@@ -2,6 +2,7 @@ package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
@@ -85,7 +86,8 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * Note that you must be on the server thread to call this method. [flowInitiator] points how flow was started,
      * See: [FlowInitiator].
      *
-     * @throws IllegalFlowLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     * @throws net.corda.core.flows.IllegalFlowLogicException or IllegalArgumentException if there are problems with the
+     * [logicType] or [args].
      */
     fun <T : Any> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
@@ -96,4 +98,6 @@ abstract class ServiceHubInternal : PluginServiceHub {
         val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
         return startFlow(logic, flowInitiator)
     }
+
+    abstract fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ((Party) -> FlowLogic<*>)?
 }

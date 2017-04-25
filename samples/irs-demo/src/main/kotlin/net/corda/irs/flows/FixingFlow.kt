@@ -24,7 +24,7 @@ object FixingFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Floater::class.java) { Fixer(it) }
+            services.registerServiceFlow(Floater::class.java) { Fixer(it) }
         }
     }
 

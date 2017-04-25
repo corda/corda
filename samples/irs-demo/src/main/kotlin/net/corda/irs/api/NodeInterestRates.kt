@@ -75,8 +75,8 @@ object NodeInterestRates {
             // Note: access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
             // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
             // the framework Oracle and the flow will crash.
-            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
-            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
+            services.registerServiceFlow(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
+            services.registerServiceFlow(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
         }
 
         private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {

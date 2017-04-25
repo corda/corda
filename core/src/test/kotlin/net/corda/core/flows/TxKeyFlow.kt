@@ -15,7 +15,7 @@ import java.security.cert.Certificate
  */
 object TxKeyFlow {
     fun registerFlowInitiator(services: PluginServiceHub) {
-        services.registerFlowInitiator(Requester::class.java, ::Provider)
+        services.registerServiceFlow(Requester::class.java, ::Provider)
     }
 
     class Requester(val otherSide: Party,

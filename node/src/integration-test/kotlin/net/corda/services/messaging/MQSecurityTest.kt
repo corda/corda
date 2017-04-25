@@ -230,7 +230,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
-        bob.services.registerFlowInitiator(SendFlow::class.java, ::ReceiveFlow)
+        bob.services.registerServiceFlow(SendFlow::class.java, ::ReceiveFlow)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()

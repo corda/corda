@@ -22,7 +22,6 @@ import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStorageService
 import java.time.Clock
-import java.util.concurrent.ConcurrentHashMap
 
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
@@ -68,8 +67,6 @@ open class MockServiceHubInternal(
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
 
-    private val flowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
-
     lateinit var smm: StateMachineManager
 
     init {
@@ -86,11 +83,7 @@ open class MockServiceHubInternal(
         return smm.executor.fetchFrom { smm.add(logic, flowInitiator) }
     }
 
-    override fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
-        flowFactories[markerClass] = flowFactory
-    }
+    override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) = Unit
 
-    override fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)? {
-        return flowFactories[markerClass]
-    }
+    override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ((Party) -> FlowLogic<*>)? = null
 }
