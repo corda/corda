@@ -26,6 +26,10 @@ public class FlowShellCommand extends InteractiveShellCommand {
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
+        startFlow(name, input, out);
+    }
+
+    static void startFlow(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name, @Usage("The data to pass as input") @Argument(unquote = false) List<String> input, RenderPrintWriter out) {
         if (name == null) {
             out.println("You must pass a name for the flow, see 'man flow'", Color.red);
             return;
