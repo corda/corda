@@ -565,6 +565,17 @@ object LoggerSerializer : Serializer<Logger>() {
     }
 }
 
+object ClassSerializer : Serializer<Class<*>>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
+        val className = input.readString()
+        return Class.forName(className)
+    }
+
+    override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {
+        output.writeString(clazz.name)
+    }
+}
+
 /**
  * For serialising an [X500Name] without touching Sun internal classes.
  */

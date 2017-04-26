@@ -34,9 +34,9 @@ object DataVending {
     @ThreadSafe
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerFlowInitiator(FetchTransactionsFlow::class.java, ::FetchTransactionsHandler)
-            services.registerFlowInitiator(FetchAttachmentsFlow::class.java, ::FetchAttachmentsHandler)
-            services.registerFlowInitiator(BroadcastTransactionFlow::class.java, ::NotifyTransactionHandler)
+            services.registerServiceFlow(FetchTransactionsFlow::class.java, ::FetchTransactionsHandler)
+            services.registerServiceFlow(FetchAttachmentsFlow::class.java, ::FetchAttachmentsHandler)
+            services.registerServiceFlow(BroadcastTransactionFlow::class.java, ::NotifyTransactionHandler)
         }
 
         private class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {

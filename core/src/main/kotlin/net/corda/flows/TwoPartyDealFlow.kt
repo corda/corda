@@ -1,13 +1,10 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DealState
-import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -39,12 +36,6 @@ object TwoPartyDealFlow {
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
 
     /**
-     * [Primary] at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
-     * sepearate session with the regulator. This interface is used to do that in [Primary.getCounterpartyMarker].
-     */
-    interface MarkerForBogusRegulatorFlow
-
-    /**
      * Abstracted bilateral deal flow participant that initiates communication/handshake.
      *
      * There's a good chance we can push at least some of this logic down into core flow logic
@@ -68,14 +59,6 @@ object TwoPartyDealFlow {
         abstract val notaryNode: NodeInfo
         abstract val otherParty: Party
         abstract val myKeyPair: KeyPair
-
-        override fun getCounterpartyMarker(party: Party): Class<*> {
-            return if (serviceHub.networkMapCache.regulatorNodes.any { it.legalIdentity == party }) {
-                MarkerForBogusRegulatorFlow::class.java
-            } else {
-                super.getCounterpartyMarker(party)
-            }
-        }
 
         @Suspendable
         fun getPartialTransaction(): UntrustworthyData<SignedTransaction> {
@@ -146,9 +129,8 @@ object TwoPartyDealFlow {
             progressTracker.currentStep = COPYING_TO_REGULATOR
             val regulators = serviceHub.networkMapCache.regulatorNodes
             if (regulators.isNotEmpty()) {
-                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
-                // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), fullySigned) }
+                // If there are regulators in the network, then we could copy them in on the transaction via a sub-flow
+                // which would simply send them the transaction.
             }
 
             return fullySigned

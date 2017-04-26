@@ -11,11 +11,7 @@ import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.*
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.random63BitValue
@@ -34,6 +30,7 @@ import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable
+import java.lang.reflect.Modifier
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
@@ -304,13 +301,23 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.trace { "Initiating a new session with $otherParty" }
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty))
         openSessions[Pair(sessionFlow, otherParty)] = session
-        val counterpartyFlow = sessionFlow.getCounterpartyMarker(otherParty).name
-        val sessionInit = SessionInit(session.ourSessionId, counterpartyFlow, firstPayload)
+        // We get the top-most concrete class object to cater for the case where the client flow is customised via a sub-class
+        val clientFlowClass = sessionFlow.topConcreteFlowClass
+        val sessionInit = SessionInit(session.ourSessionId, clientFlowClass, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
         }
         return session
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private val FlowLogic<*>.topConcreteFlowClass: Class<out FlowLogic<*>> get() {
+        var current: Class<out FlowLogic<*>> = javaClass
+        while (!Modifier.isAbstract(current.superclass.modifiers)) {
+            current = current.superclass as Class<out FlowLogic<*>>
+        }
+        return current
     }
 
     @Suspendable

@@ -82,6 +82,7 @@ object DefaultKryoCustomizer {
 
             register(MetaData::class.java, MetaDataSerializer)
             register(BitSet::class.java, BitSetSerializer())
+            register(Class::class.java, ClassSerializer)
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
 

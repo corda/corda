@@ -184,7 +184,7 @@ object SimmFlow {
      */
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Requester::class.java, ::Receiver)
+            services.registerServiceFlow(Requester::class.java, ::Receiver)
         }
     }
 

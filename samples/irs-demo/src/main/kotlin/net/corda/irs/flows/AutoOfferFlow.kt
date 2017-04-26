@@ -31,7 +31,7 @@ object AutoOfferFlow {
 
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerFlowInitiator(Instigator::class.java) { Acceptor(it) }
+            services.registerServiceFlow(Instigator::class.java) { Acceptor(it) }
         }
     }
 

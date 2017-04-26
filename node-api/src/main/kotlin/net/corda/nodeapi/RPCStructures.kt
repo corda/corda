@@ -2,11 +2,8 @@
 
 package net.corda.nodeapi
 
-import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
@@ -71,17 +68,6 @@ open class RPCException(msg: String, cause: Throwable?) : RuntimeException(msg, 
     class DeadlineExceeded(rpcName: String) : RPCException("Deadline exceeded on call to $rpcName")
 }
 
-object ClassSerializer : Serializer<Class<*>>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<Class<*>>): Class<*> {
-        val className = input.readString()
-        return Class.forName(className)
-    }
-
-    override fun write(kryo: Kryo, output: Output, clazz: Class<*>) {
-        output.writeString(clazz.name)
-    }
-}
-
 @CordaSerializable
 class PermissionException(msg: String) : RuntimeException(msg)
 
@@ -99,7 +85,6 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
         DefaultKryoCustomizer.customize(this)
 
         // RPC specific classes
-        register(Class::class.java, ClassSerializer)
         register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
         register(MarshalledObservation::class.java, ImmutableClassSerializer(MarshalledObservation::class))
         register(Observable::class.java, observableSerializer)

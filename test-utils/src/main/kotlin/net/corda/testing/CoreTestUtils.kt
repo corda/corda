@@ -140,14 +140,14 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 
 /**
  * The given flow factory will be used to initiate just one instance of a flow of type [P] when a counterparty
- * flow requests for it using [markerClass].
+ * flow requests for it using [clientFlowClass].
  * @return Returns a [ListenableFuture] holding the single [FlowStateMachineImpl] created by the request.
  */
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
-        markerClass: KClass<out FlowLogic<*>>,
+        clientFlowClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it is StateMachineManager.Change.Add && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass.java, flowFactory)
+    services.registerServiceFlow(clientFlowClass.java, flowFactory)
     return future
 }
 

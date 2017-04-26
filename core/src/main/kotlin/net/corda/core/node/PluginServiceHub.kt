@@ -2,31 +2,26 @@ package net.corda.core.node
 
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
-import kotlin.reflect.KClass
 
 /**
  * A service hub to be used by the [CordaPluginRegistry]
  */
 interface PluginServiceHub : ServiceHub {
     /**
-     * Register the flow factory we wish to use when a initiating party attempts to communicate with us. The
-     * registration is done against a marker [Class] which is sent in the session handshake by the other party. If this
-     * marker class has been registered then the corresponding factory will be used to create the flow which will
-     * communicate with the other side. If there is no mapping then the session attempt is rejected.
-     * @param markerClass The marker [Class] present in a session initiation attempt. Conventionally this is a [FlowLogic]
-     * subclass, however any class can be used, with the default being the class of the initiating flow. This enables
-     * the registration to be of the form: `registerFlowInitiator(InitiatorFlow.class, InitiatedFlow::new)`
-     * @param flowFactory The flow factory generating the initiated flow.
+     * Register the service flow factory to use when an initiating party attempts to communicate with us. The registration
+     * is done against the [Class] object of the client flow to the service flow. What this means is if a counterparty
+     * starts a [FlowLogic] represented by [clientFlowClass] and starts communication with us, we will execute the service
+     * flow produced by [serviceFlowFactory]. This service flow has respond correctly to the sends and receives the client
+     * does.
+     * @param clientFlowClass [Class] of the client flow involved in this client-server communication.
+     * @param serviceFlowFactory Lambda which produces a new service flow for each new client flow communication. The
+     * [Party] parameter of the factory is the client's identity.
      */
-    fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>)
+    fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>)
 
-    @Deprecated(message = "Use overloaded method which uses Class instead of KClass. This is scheduled for removal in a future release.")
-    fun registerFlowInitiator(markerClass: KClass<*>, flowFactory: (Party) -> FlowLogic<*>) {
-        registerFlowInitiator(markerClass.java, flowFactory)
+    @Suppress("UNCHECKED_CAST")
+    @Deprecated("This is scheduled to be removed in a future release", ReplaceWith("registerServiceFlow"))
+    fun registerFlowInitiator(markerClass: Class<*>, flowFactory: (Party) -> FlowLogic<*>) {
+        registerServiceFlow(markerClass as Class<out FlowLogic<*>>, flowFactory)
     }
-
-    /**
-     * Return the flow factory that has been registered with [markerClass], or null if no factory is found.
-     */
-    fun getFlowFactory(markerClass: Class<*>): ((Party) -> FlowLogic<*>)?
 }
