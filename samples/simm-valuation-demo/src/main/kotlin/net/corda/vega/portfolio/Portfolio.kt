@@ -1,5 +1,6 @@
 package net.corda.vega.portfolio
 
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -33,7 +34,9 @@ fun List<StateAndRef<IRSState>>.toPortfolio(): Portfolio {
 }
 
 inline fun <reified T : ContractState> List<StateRef>.toStateAndRef(rpc: CordaRPCOps): List<StateAndRef<T>> {
-    val stateRefs = rpc.vaultAndUpdates().first.associateBy { it.ref }
+    val (vault, vaultUpdates) = rpc.vaultAndUpdates()
+    vaultUpdates.notUsed()
+    val stateRefs = vault.associateBy { it.ref }
     return mapNotNull { stateRefs[it] }.filterStatesOfType<T>()
 }
 

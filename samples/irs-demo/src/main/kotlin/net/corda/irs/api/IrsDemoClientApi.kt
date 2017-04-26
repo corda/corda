@@ -26,7 +26,7 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
     fun runUploadRates() {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$hostAndPort/upload/interest-rates")
-        assert(uploadFile(url, fileContents))
+        check(uploadFile(url, fileContents))
     }
 
     private companion object {

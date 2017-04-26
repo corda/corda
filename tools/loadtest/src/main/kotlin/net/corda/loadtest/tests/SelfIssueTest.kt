@@ -4,6 +4,7 @@ import de.danielbechler.diff.ObjectDifferFactory
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicatePoisson
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
 import net.corda.core.crypto.AbstractParty
@@ -70,7 +71,8 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         gatherRemoteState = { previousState ->
             val selfIssueVaults = HashMap<AbstractParty, Long>()
             simpleNodes.forEach { (_, connection, info) ->
-                val vault = connection.proxy.vaultAndUpdates().first
+                val (vault, vaultUpdates) = connection.proxy.vaultAndUpdates()
+                vaultUpdates.notUsed()
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {
