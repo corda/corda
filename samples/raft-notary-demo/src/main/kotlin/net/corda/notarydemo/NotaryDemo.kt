@@ -4,13 +4,13 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.notUsed
 import net.corda.core.crypto.toStringShort
 import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
@@ -30,11 +30,15 @@ fun main(args: Array<String>) {
 /** Interface for using the notary demo API from a client. */
 private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
-        rpc.networkMapUpdates().first.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
+        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        partyUpdates.notUsed()
+        parties.first { it.advertisedServices.any { it.info.type.isNotary() } }.notaryIdentity
     }
 
     private val counterpartyNode by lazy {
-        rpc.networkMapUpdates().first.first { it.legalIdentity.name == "CN=Counterparty,O=R3,OU=corda,L=London,C=UK" }
+        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        partyUpdates.notUsed()
+        parties.first { it.legalIdentity.name == "CN=Counterparty,O=R3,OU=corda,L=London,C=UK" }
     }
 
     private companion object {

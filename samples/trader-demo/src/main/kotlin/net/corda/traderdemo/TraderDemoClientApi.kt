@@ -1,6 +1,7 @@
 package net.corda.traderdemo
 
 import com.google.common.util.concurrent.Futures
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.testing.calculateRandomlySizedAmounts
@@ -18,7 +19,6 @@ import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.BOC
 import net.corda.traderdemo.flow.SellerFlow
 import java.util.*
-import kotlin.test.assertEquals
 
 /**
  * Interface for communicating with nodes running the trader demo.
@@ -28,11 +28,19 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         val logger = loggerFor<TraderDemoClientApi>()
     }
 
-    val cashCount: Int get() = rpc.vaultAndUpdates().first.filterStatesOfType<Cash.State>().size
+    val cashCount: Int get() {
+        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
+        vaultUpdates.notUsed()
+        return vault.filterStatesOfType<Cash.State>().size
+    }
 
     val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalances()[USD]!!
 
-    val commercialPaperCount: Int get() = rpc.vaultAndUpdates().first.filterStatesOfType<CommercialPaper.State>().size
+    val commercialPaperCount: Int get() {
+        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
+        vaultUpdates.notUsed()
+        return vault.filterStatesOfType<CommercialPaper.State>().size
+    }
 
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS) {
         val bankOfCordaParty = rpc.partyFromName(BOC.name)
@@ -58,7 +66,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         if (!rpc.attachmentExists(SellerFlow.PROSPECTUS_HASH)) {
             javaClass.classLoader.getResourceAsStream("bank-of-london-cp.jar").use {
                 val id = rpc.uploadAttachment(it)
-                assertEquals(SellerFlow.PROSPECTUS_HASH, id)
+                check(SellerFlow.PROSPECTUS_HASH == id)
             }
         }
 

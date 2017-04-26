@@ -1,6 +1,7 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
@@ -35,7 +36,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
-        return rpc.vaultAndUpdates().first.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
+        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
+        vaultUpdates.notUsed()
+        return vault.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
     }
 
     /**
@@ -130,8 +133,8 @@ class PortfolioApi(val rpc: CordaRPCOps) {
             Response.ok().entity(swaps.map {
                 it.toView(ownParty,
                         latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(rpc)?.toPortfolio(),
-                        PVs?.get(it.id.second.toString()) ?: MultiCurrencyAmount.empty(),
-                        IMs?.get(it.id.second.toString()) ?: InitialMarginTriple.zero()
+                        PVs?.get(it.id.second) ?: MultiCurrencyAmount.empty(),
+                        IMs?.get(it.id.second) ?: InitialMarginTriple.zero()
                 )
             }).build()
         }
@@ -247,7 +250,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
-        val counterParties = rpc.networkMapUpdates().first.filter {
+        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        partyUpdates.notUsed()
+        val counterParties = parties.filter {
             it.legalIdentity.name != DUMMY_MAP.name
                     && it.legalIdentity.name != DUMMY_NOTARY.name
                     && it.legalIdentity.name != ownParty.name
