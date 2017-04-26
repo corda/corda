@@ -15,6 +15,7 @@ object CollectSignatureFlowImpl {
     }
 
     class Responder(otherParty: Party) : AbstractCollectSignaturesFlowResponder(otherParty) {
+        // TODO: Add appropriate security checks here.
         @Suspendable override fun checkTransaction(stx: SignedTransaction) = Unit
     }
 }
