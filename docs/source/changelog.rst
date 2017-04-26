@@ -12,44 +12,65 @@ UNRELEASED
     * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
       composite keys and signatures.
 
-    * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable`` field has been moved to the ``FlowProgressHandle`` child interface. Hence developers no longer need to invoke ``notUsed`` on their flows' unwanted progress-tracking observables.
+    * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using
+      one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable``
+      field has been moved to the ``FlowProgressHandle`` child interface. Hence developers no longer need to invoke ``notUsed``
+      on their flows' unwanted progress-tracking observables.
 
     * Moved ``generateSpend`` and ``generateExit`` functions into ``OnLedgerAsset`` from the vault and
       ``AbstractConserveAmount`` clauses respectively.
+
+    * ``PluginServiceHub.registerServiceFlow`` has been deprecated and replaced by ``registerServiceFlow`` with the
+      marker Class restricted to ``FlowLogic``.
+
+    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
+      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
 
 * DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
 
 Milestone 10.0
 --------------
 
-Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_, `Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions to Corda in M10.
+Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_,
+`Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions
+to Corda in M10.
 
-.. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
+.. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij
+   to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
+   from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
 
-.. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references`` errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or ``./gradlew kaptKotlin`` in other systems.
-             Alternatively, perform a full gradle build or install.
+.. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references``
+   errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
+   ``./gradlew kaptKotlin`` in other systems. Alternatively, perform a full gradle build or install.
 
-.. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation processor.
+.. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation
+   processor.
 
 * Corda DemoBench:
-    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
-        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
+    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate
+      to your colleagues the fundamentals of Corda in real-time. It has the following features:
+        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node
+          before launch, such as its legal name and which CorDapps will be loaded.
         * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
-        * You can launch an Corda Explorer instance for each node via the DemoBench UI. Credentials are handed to the Corda Explorer so it starts out logged in already.
+        * You can launch an Corda Explorer instance for each node via the DemoBench UI. Credentials are handed to the Corda
+          Explorer so it starts out logged in already.
         * Some basic statistics are shown about each node, informed via the RPC connection.
         * Another button launches a database viewer in the system browser.
         * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
     * You can download Corda DemoBench from `here <https://www.corda.net/downloads/>`_
 
 * Vault:
-    * Soft Locking is a new feature implemented in the vault which prevent a node constructing transactions that attempt to use the same input(s) simultaneously.
+    * Soft Locking is a new feature implemented in the vault which prevent a node constructing transactions that attempt
+      to use the same input(s) simultaneously.
     * Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
-    * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt to spend the same fungible states.
+    * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt
+      to spend the same fungible states.
 
 * Corda Shell :
     * The shell lets developers and node administrators easily command the node by running flows, RPCs and SQL queries.
     * It provides a variety of commands to monitor the node.
-    * The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
+    * The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can be easily
+      added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
     * We have many enhancements planned over time including SSH access, more commands and better tab completion.
 
 * API changes:
@@ -62,9 +83,11 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
     * We have restructured client package in this milestone.
         * ``CordaClientRPC`` is now in the new ``:client:rpc`` module.
         * The old ``:client`` module has been split up into ``:client:jfx`` and ``:client:mock``.
-        * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between ``node`` and ``client``.
+        * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between
+          ``node`` and ``client``.
 
-    * The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with currency reference data.
+    * The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with
+      currency reference data.
 
 * Configuration:
     * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration.
@@ -75,7 +98,8 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
     * Pool Kryo instances for efficiency.
 
 * RPC client changes:
-    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker, SSL must not be used for RPC connection.
+    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker,
+      SSL must not be used for RPC connection.
     * CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
 
 * Dependencies changes:
@@ -88,7 +112,8 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
 * Improvements:
     * Added ``--version`` command line flag to print the version of the node.
     * Flows written in Java can now execute a sub-flow inside ``UntrustworthyData.unwrap``.
-    * Added optional out-of-process transaction verification. Any number of external verifier processes may be attached to the node which can handle loadbalanced verification requests.
+    * Added optional out-of-process transaction verification. Any number of external verifier processes may be attached
+      to the node which can handle loadbalanced verification requests.
 
 * Bug fixes:
     * ``--logging-level`` command line flag was previously broken, now correctly sets the logging level.
@@ -153,9 +178,8 @@ Milestone 8
 * Node memory usage and performance improvements, demo nodes now only require 200 MB heap space to run.
 
 * The Corda node no longer runs an internal web server, it's now run in a separate process. Driver and Cordformation have
-  been updated to reflect this change.
-  Existing CorDapps should be updated with additional calls to the new ``startWebserver()`` interface in their Driver logic (if they use the driver e.g. in integration tests).
-  See the IRS demo for an example.
+  been updated to reflect this change. Existing CorDapps should be updated with additional calls to the new ``startWebserver()``
+  interface in their Driver logic (if they use the driver e.g. in integration tests). See the IRS demo for an example.
 
 * Data model: ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
   party anonymisation to work, as each key must identify exactly one party.

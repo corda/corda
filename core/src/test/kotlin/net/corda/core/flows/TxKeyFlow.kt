@@ -14,7 +14,7 @@ import java.security.cert.Certificate
  * DoS of the node, as key generation/storage is vastly more expensive than submitting a request.
  */
 object TxKeyFlow {
-    fun registerFlowInitiator(services: PluginServiceHub) {
+    fun registerServiceFlow(services: PluginServiceHub) {
         services.registerServiceFlow(Requester::class.java, ::Provider)
     }
 
