@@ -31,6 +31,7 @@ import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before

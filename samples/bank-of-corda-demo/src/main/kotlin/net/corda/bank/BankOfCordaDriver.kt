@@ -16,6 +16,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
+import org.bouncycastle.asn1.x500.X500Name
 import kotlin.system.exitProcess
 
 /**
@@ -28,7 +29,7 @@ fun main(args: Array<String>) {
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
 
-val BIGCORP_LEGAL_NAME = "CN=BigCorporation,O=R3,OU=corda,L=London,C=UK"
+val BIGCORP_LEGAL_NAME = X500Name("CN=BigCorporation,O=R3,OU=corda,L=London,C=UK")
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -66,7 +67,7 @@ private class BankOfCordaDriver {
             }, isDebug = true)
         } else {
             try {
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name)
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", X500Name(BOC.name))
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
