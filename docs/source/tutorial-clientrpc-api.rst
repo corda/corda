@@ -61,7 +61,7 @@ Now we just need to create the transactions themselves!
     :start-after: START 6
     :end-before: END 6
 
-We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault.
+We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault. These RPC functions also return ``Observable`` objects so that the node can send us updated values. However, we don't need updates here and so we mark these observables as ``notUsed``. (As a rule, you should always either subscribe to an ``Observable`` or mark it as not used. Failing to do this will leak resources in the node.)
 
 Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.
 
