@@ -687,7 +687,7 @@ class VaultQueryTests {
         }
     }
 
-    /** Custom Query tests */
+    /** Vault Custom Query Criteria tests */
 
     // specifying Order
     @Test
@@ -703,12 +703,6 @@ class VaultQueryTests {
             val states = vaultSvc.queryBy<ContractState>(customCriteria, sorting = Sort(direction = Sort.Direction.DESC), paging = pagingSpec)
             assertThat(states.states).hasSize(10)
         }
-    }
-
-    // specifying Order by custom attribute
-    @Test
-    fun `all states with paging specification reverse chronological order by recorded timestamp`() {
-
     }
 
     // specifying Query on custom Contract state attributes
@@ -787,7 +781,7 @@ class VaultQueryTests {
         }
     }
 
-    /** Generic Indexed Query tests */
+    /** Vault Indexed Query tests */
 
     @Test
     fun `commercial paper custom query`() {
@@ -804,28 +798,16 @@ class VaultQueryTests {
                     }.toSignedTransaction()
             services.recordTransactions(commercialPaper)
 
-            val ccyIndex = IndexCriteria(USD.currencyCode)
-            val maturityIndex = IndexCriteria(TEST_TX_TIME + 30.days)
-            val faceValueIndex = IndexCriteria(10000)
-            val criteria = GenericIndexedQueryCriteria(maturityIndex, faceValueIndex, ccyIndex)
+            val ccyIndex = IndexExpression(CommercialPaper.currencyIndexColumn, Operator.EQUAL, USD.currencyCode)
+            val maturityIndex = IndexExpression(CommercialPaper.maturityDateIndexColumn, Operator.GREATER_THAN_OR_EQUAL, TEST_TX_TIME + 30.days)
+            val faceValueIndex = IndexExpression(CommercialPaper.quantityIndexColumn, Operator.GREATER_THAN_OR_EQUAL, 10000)
+            val criteria = VaultIndexedQueryCriteria(maturityIndex.and(faceValueIndex).and(ccyIndex))
             val result = vaultSvc.queryBy<CommercialPaper.State>(criteria)
 
-            /**
-             * Query result returns a [Vault.Page] which contains:
-             *  1) actual states as a list of [StateAndRef]
-             *  2) state reference and associated vault metadata as a list of [Vault.StateMetadata]
-             *  3) [PageSpecification] used to delimit the size of items returned in the result set (defaults to [DEFAULT_PAGE_SIZE])
-             *  4) Total number of items available (to aid further pagination if required)
-             */
-            val states = result.states
-            val metadata = result.statesMetadata
-
-            assertThat(states).hasSize(1)
-            assertThat(metadata).hasSize(1)
+            assertThat(result.states).hasSize(1)
+            assertThat(result.statesMetadata).hasSize(1)
         }
     }
-
-
 
     /**
      *  USE CASE demonstrations (outside of mainline Corda)

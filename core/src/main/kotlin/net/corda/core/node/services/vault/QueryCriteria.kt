@@ -35,16 +35,6 @@ sealed class QueryCriteria {
             val participantIdentities: List<String>? = null) : QueryCriteria()
 
     /**
-     * GenericIndexedQueryCriteria: provides query by custom attributes defined in a contracts
-     * [QueryableState] implementation (see Persistence documentation for more information)
-     *
-     * Refer to [CommercialPaper.State] for a concrete example.
-     */
-    class GenericIndexedQueryCriteria @JvmOverloads constructor (
-            vararg indexes: IndexCriteria
-    ) : QueryCriteria()
-
-    /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(
@@ -68,6 +58,30 @@ sealed class QueryCriteria {
             val issuerPartyName: List<String>? = null,
             val issuerRef: List<OpaqueBytes>? = null,
             val exitKeyIdentity: List<String>? = null) : QueryCriteria()
+
+    /**
+     * VaultIndexedQueryCriteria: provides query by custom attributes defined in a contracts
+     * [QueryableState] implementation. A custom state must defined its own state attribute mappings
+     * to a versioned generic Vault Index schema [PersistentGenericVaultIndexSchemaState]
+     * (see Persistence documentation for more information)
+     *
+     * Refer to [CommercialPaper.State] for a concrete example.
+     */
+    data class VaultIndexedQueryCriteria(val indexExpression: IndexLogical? = null) : QueryCriteria()
+
+    interface IndexLogical : IndexCondition, AndOr<IndexLogical>
+
+    interface IndexCondition
+
+    interface AndOr<out Q> {
+        infix fun and(condition: IndexCondition): Q
+        infix fun or(condition: IndexCondition): Q
+    }
+
+    class IndexExpression(val columnName: String, val operator: Operator, val value: Any) : IndexLogical {
+        override fun and(condition: IndexCondition): IndexLogical = IndexExpression(this.columnName, Operator.AND, this.value)
+        override fun or(condition: IndexCondition): IndexLogical = IndexExpression(this.columnName, Operator.OR, this.value)
+    }
 
     /**
      * Specify any query criteria by leveraging the Requery Query DSL:
@@ -141,4 +155,4 @@ data class Sort @JvmOverloads constructor(val direction: Sort.Direction = Sort.D
  *
  * Refer to [CommercialPaper.State] for a concrete example.
  */
-data class IndexCriteria(val value: Any)
+

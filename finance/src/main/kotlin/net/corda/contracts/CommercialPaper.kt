@@ -109,6 +109,15 @@ class CommercialPaper : Contract {
         }
     }
 
+    /**
+     * Object Relational Mapping support: define constants for Queryable Indexes for ease of use in Vault Queries
+     */
+    companion object {
+        val currencyIndexColumn = "stringIndex1"
+        val quantityIndexColumn = "longIndex1"
+        val maturityDateIndexColumn = "timeIndex1"
+    }
+
     interface Clauses {
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
                 AnyOf(
