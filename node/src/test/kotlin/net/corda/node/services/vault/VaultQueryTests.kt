@@ -5,7 +5,6 @@ import io.requery.query.Operator
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
@@ -37,7 +36,6 @@ import org.junit.Test
 import java.io.Closeable
 import java.math.BigInteger
 import java.security.KeyPair
-import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -195,9 +193,26 @@ class VaultQueryTests {
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
 
             // DOCSTART VaultQueryExample4
-            val criteria = VaultQueryCriteria(notary = setOf(CASH_NOTARY))
+            val criteria = VaultQueryCriteria(notaryName = listOf(CASH_NOTARY.name))
             val states = vaultSvc.queryBy<ContractState>(criteria)
             // DOCEND VaultQueryExample4
+            assertThat(states.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed states by participants`() {
+        database.transaction {
+
+            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"), participants = listOf(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY))
+            services.fillWithSomeTestDeals(listOf("456"), 3, participants = listOf(MEGA_CORP_PUBKEY, BIG_CORP_PUBKEY))
+            services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(BIG_CORP_PUBKEY, MINI_CORP_PUBKEY))
+
+            // DOCSTART VaultQueryExample4_1
+            val criteria = VaultQueryCriteria(participantIdentities = listOf(MEGA_CORP.name, MINI_CORP.name))
+            val states = vaultSvc.queryBy<ContractState>(criteria)
+            // DOCEND VaultQueryExample4_1
+
             assertThat(states.states).hasSize(3)
         }
     }
@@ -534,7 +549,7 @@ class VaultQueryTests {
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
             // DOCSTART VaultQueryExample11
-            val criteria = LinearStateQueryCriteria(dealParties = listOf(MEGA_CORP, MINI_CORP))
+            val criteria = LinearStateQueryCriteria(dealPartyName = listOf(MEGA_CORP.name, MINI_CORP.name))
             val states = vaultSvc.queryBy<DealState>(criteria)
             // DOCEND VaultQueryExample11
 
@@ -552,7 +567,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val criteria = FungibleAssetQueryCriteria(tokenType = setOf(Currency::class.java))
+            val criteria = FungibleAssetQueryCriteria(tokenType = listOf(Currency::class.java))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states.states).hasSize(9)
         }
@@ -568,7 +583,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
             // DOCSTART VaultQueryExample12
-            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(USD.currencyCode))
+            val criteria = FungibleAssetQueryCriteria(tokenValue = listOf(USD.currencyCode))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample12
 
@@ -587,7 +602,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
             // DOCSTART VaultQueryExample13
-            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(GBP.currencyCode),
+            val criteria = FungibleAssetQueryCriteria(tokenValue = listOf(GBP.currencyCode),
                                                       quantity = LogicalExpression(this, Operator.GREATER_THAN, 50))
             val states = vaultSvc.queryBy<Cash.State>(criteria)
             // DOCEND VaultQueryExample13
@@ -604,7 +619,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val criteria = FungibleAssetQueryCriteria(tokenValue = setOf(CHF.currencyCode, GBP.currencyCode))
+            val criteria = FungibleAssetQueryCriteria(tokenValue = listOf(CHF.currencyCode, GBP.currencyCode))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states.states).hasSize(3)
         }
@@ -618,7 +633,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
 
             // DOCSTART VaultQueryExample14
-            val criteria = FungibleAssetQueryCriteria(issuerParty = setOf(BOC))
+            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC.name))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample14
 
@@ -635,7 +650,8 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(2)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(2))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(3)), issuerKey = BOC_KEY, ref = OpaqueBytes.of(3))
 
-            val criteria = FungibleAssetQueryCriteria(issuerParty = setOf(BOC), issuerRef = setOf(BOC.ref(1).reference, BOC.ref(2).reference))
+            val criteria = FungibleAssetQueryCriteria(issuerPartyName = listOf(BOC.name),
+                                                      issuerRef = listOf(BOC.ref(1).reference, BOC.ref(2).reference))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states.states).hasSize(2)
         }
@@ -649,7 +665,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = (BOC.ref(1)), issuerKey = BOC_KEY)
 
             // DOCSTART VaultQueryExample15
-            val criteria = FungibleAssetQueryCriteria(exitKeys = setOf(DUMMY_CASH_ISSUER_KEY.public))
+            val criteria = FungibleAssetQueryCriteria(exitKeyIdentity = listOf(DUMMY_CASH_ISSUER.party.toString()))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample15
 
@@ -665,7 +681,7 @@ class VaultQueryTests {
             // issue some cash to BOB
             // issue some cash to ALICE
 
-            val criteria = FungibleAssetQueryCriteria(owner = setOf(BOB, ALICE))
+            val criteria = FungibleAssetQueryCriteria(ownerIdentity = listOf(BOB.name, ALICE.name))
             val states = vaultSvc.queryBy<FungibleAsset<*>>(criteria)
             assertThat(states.states).hasSize(1)
         }

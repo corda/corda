@@ -18,12 +18,16 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
-fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>, revisions: Int? = 0) : Vault<DealState> {
+@JvmOverloads
+fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
+                                     revisions: Int? = 0,
+                                     participants: List<PublicKey> = emptyList()) : Vault<DealState> {
     val freshKey = keyManagementService.freshKey()
+
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = listOf(freshKey.public)))
+            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
@@ -40,13 +44,16 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>, revisions: Int? = 0)
     return Vault(states)
 }
 
-fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int, uid: UniqueIdentifier = UniqueIdentifier()) : Vault<LinearState> {
+@JvmOverloads
+fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
+                                            uid: UniqueIdentifier = UniqueIdentifier(),
+                                            participants: List<PublicKey> = emptyList()) : Vault<LinearState> {
     val freshKey = keyManagementService.freshKey()
 
     val transactions: List<SignedTransaction> = (1..numberToCreate).map {
         // Issue a Linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = uid, participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = uid, participants = participants.plus(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }

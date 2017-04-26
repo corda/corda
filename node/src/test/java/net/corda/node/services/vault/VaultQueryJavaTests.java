@@ -93,7 +93,7 @@ public class VaultQueryJavaTests {
                                  getDUMMY_CASH_ISSUER_KEY() );
 
             // DOCSTART VaultJavaQueryExample1
-            Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
+            List contractStateTypes = Arrays.asList(Cash.State.class);
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(status, contractStateTypes);
@@ -118,12 +118,12 @@ public class VaultQueryJavaTests {
 
             // DOCSTART VaultJavaQueryExample2
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
-            HashSet contractStateTypes = new HashSet(Arrays.asList(DealState.class));
+            List contractStateTypes = Arrays.asList(DealState.class);
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
-            List<Party> dealParties = Arrays.asList(getMEGA_CORP());
-            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealParties);
+            List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealPartyNames);
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 
@@ -158,7 +158,7 @@ public class VaultQueryJavaTests {
                     getDUMMY_CASH_ISSUER_KEY() );
 
             // DOCSTART VaultJavaQueryExample1
-            Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
+            List contractStateTypes = Arrays.asList(Cash.State.class);
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
             Vault.QueryResults<ContractState> results = vaultSvc.trackBy(criteria);
@@ -184,12 +184,12 @@ public class VaultQueryJavaTests {
             fillWithSomeTestDeals(services, dealIds, 0);
 
             // DOCSTART VaultJavaQueryExample2
-            HashSet contractStateTypes = new HashSet(Arrays.asList(DealState.class));
+            List contractStateTypes = Arrays.asList(DealState.class);
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
-            List<Party> dealParties = Arrays.asList(getMEGA_CORP());
-            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealParties);
+            List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
+            QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealPartyNames);
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 

@@ -341,7 +341,7 @@ inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
                 .associateBy { it.state.data.linearId }.mapValues { it.value }
 
 // TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealParties = listOf(<Party>)))"))
+@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }
