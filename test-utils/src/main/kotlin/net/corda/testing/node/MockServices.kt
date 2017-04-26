@@ -3,9 +3,6 @@ package net.corda.testing.node
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
@@ -65,7 +62,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party("MegaCorp", key.public), MOCK_VERSION_INFO.platformVersion)
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     fun makeVaultService(dataSourceProps: Properties): VaultService {

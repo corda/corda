@@ -43,6 +43,7 @@ import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

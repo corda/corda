@@ -9,6 +9,8 @@ import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.flatMap
 import net.corda.core.map
@@ -30,6 +32,9 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -61,6 +66,23 @@ interface DriverDSLExposedInterface {
     /**
      * Starts a [net.corda.node.internal.Node] in a separate process.
      *
+     * @param providedName Name of the node, which will be its legal name in [Party].
+     *   Note that this must be unique as the driver uses it as a primary key!
+     * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
+     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
+     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
+     * @return The [NodeInfo] of the started up node retrieved from the network map service.
+     */
+    @Deprecated("To be removed once X500Name is used as legal name everywhere")
+    fun startNode(providedName: String,
+                  advertisedServices: Set<ServiceInfo> = emptySet(),
+                  rpcUsers: List<User> = emptyList(),
+                  verifierType: VerifierType = VerifierType.InMemory,
+                  customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
+
+    /**
+     * Starts a [net.corda.node.internal.Node] in a separate process.
+     *
      * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
      *   random. Note that this must be unique as the driver uses it as a primary key!
      * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
@@ -68,7 +90,7 @@ interface DriverDSLExposedInterface {
      * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
-    fun startNode(providedName: String? = null,
+    fun startNode(providedName: X500Name? = null,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
@@ -415,8 +437,12 @@ class DriverDSL(
         }
     }
 
+    override fun startNode(providedName: String, advertisedServices: Set<ServiceInfo>, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
+        return startNode(X500Name(providedName), advertisedServices, rpcUsers, verifierType, customOverrides)
+    }
+
     override fun startNode(
-            providedName: String?,
+            providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
@@ -426,11 +452,11 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName ?: "${pickA(name)}-${p2pAddress.port}"
+        val name = providedName ?: X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}")
 
-        val baseDirectory = driverDirectory / name
+        val baseDirectory = driverDirectory / name.toString()
         val configOverrides = mapOf(
-                "myLegalName" to name,
+                "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
@@ -554,9 +580,9 @@ class DriverDSL(
 
     companion object {
         val name = arrayOf(
-                ALICE.name,
-                BOB.name,
-                DUMMY_BANK_A.name
+                X500Name(ALICE.name),
+                X500Name(BOB.name),
+                X500Name(DUMMY_BANK_A.name)
         )
 
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]

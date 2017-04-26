@@ -18,6 +18,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.failure
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
@@ -44,6 +45,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import org.apache.commons.lang.SystemUtils
+import org.bouncycastle.asn1.x500.X500Name
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
 import java.time.Instant
@@ -172,10 +174,10 @@ fun main(args: Array<String>) {
         val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                 customOverrides = mapOf("nearestCity" to "Madrid"))
-        val issuerGBP = startNode("UK Bank Plc", rpcUsers = arrayListOf(manager),
+        val issuerGBP = startNode(X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=UK"), rpcUsers = arrayListOf(manager),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                 customOverrides = mapOf("nearestCity" to "London"))
-        val issuerUSD = startNode("USA Bank Corp", rpcUsers = arrayListOf(manager),
+        val issuerUSD = startNode(X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA"), rpcUsers = arrayListOf(manager),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
                 customOverrides = mapOf("nearestCity" to "New York"))
 

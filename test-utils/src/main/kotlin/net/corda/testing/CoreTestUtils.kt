@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
@@ -26,6 +27,7 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.bouncycastle.asn1.x500.X500Name
 import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
@@ -67,17 +69,17 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
-val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
+val MEGA_CORP: Party get() = Party(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
+val MINI_CORP: Party get() = Party(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC: Party get() = Party("CN=BankOfCorda,O=R3,OU=corda,L=New York,C=USA", BOC_PUBKEY)
+val BOC: Party get() = Party(X500Name("CN=BankOfCorda,O=R3,OU=corda,L=New York,C=USA"), BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP: Party get() = Party("BigCorporation", BIG_CORP_PUBKEY)
+val BIG_CORP: Party get() = Party(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)

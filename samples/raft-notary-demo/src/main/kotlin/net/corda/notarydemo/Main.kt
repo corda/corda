@@ -7,6 +7,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Paths
 
 /** Creates and starts all nodes required for the demo. */
