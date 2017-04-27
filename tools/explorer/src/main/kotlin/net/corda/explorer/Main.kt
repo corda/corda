@@ -177,7 +177,7 @@ fun main(args: Array<String>) {
         val issuerGBP = startNode(X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=UK"), rpcUsers = arrayListOf(manager),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
                 customOverrides = mapOf("nearestCity" to "London"))
-        val issuerUSD = startNode(X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA"), rpcUsers = arrayListOf(manager),
+        val issuerUSD = startNode(X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=US"), rpcUsers = arrayListOf(manager),
                 advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
                 customOverrides = mapOf("nearestCity" to "New York"))
 

@@ -1,7 +1,7 @@
 export class FloatingLegViewModel {
   constructor() { }
 
-  floatingRatePayer = "CN=Bank B,O=Bank B,L=New York,C=USA";
+  floatingRatePayer = "CN=Bank B,O=Bank B,L=New York,C=US";
   notional: Object = {
      quantity: 2500000000
   };

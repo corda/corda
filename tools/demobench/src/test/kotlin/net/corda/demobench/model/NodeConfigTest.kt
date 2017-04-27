@@ -1,5 +1,8 @@
 package net.corda.demobench.model
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
@@ -11,6 +14,7 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.webserver.WebServerConfig
 import org.junit.Test
+import java.io.StringWriter
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.test.assertEquals
@@ -114,6 +118,19 @@ class NodeConfigTest {
         assertFalse(config.isCashIssuer)
     }
 
+    /**
+     * Reformat JSON via Jackson to ensure a consistent format for comparison purposes.
+     */
+    private fun prettyPrint(content: String): String {
+        val mapper = ObjectMapper()
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        mapper.enable(SerializationFeature.INDENT_OUTPUT)
+        val sw = StringWriter()
+        val parsed = mapper.readTree(content)
+        mapper.writeValue(sw, parsed)
+        return sw.toString()
+    }
+
     @Test
     fun `test config text`() {
         val config = createConfig(
@@ -126,10 +143,10 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        assertEquals("{"
+        assertEquals(prettyPrint("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"MyName\","
+                + "\"myLegalName\":\"My Name\","
                 + "\"nearestCity\":\"Stockholm\","
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
@@ -138,7 +155,7 @@ class NodeConfigTest {
                 + "],"
                 + "\"useTestClock\":true,"
                 + "\"webAddress\":\"localhost:20001\""
-                + "}", config.toText().stripWhitespace())
+                + "}"), prettyPrint(config.toText()))
     }
 
     @Test
@@ -155,12 +172,12 @@ class NodeConfigTest {
         )
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
-        assertEquals("{"
+        assertEquals(prettyPrint("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"MyName\","
+                + "\"myLegalName\":\"My Name\","
                 + "\"nearestCity\":\"Stockholm\","
-                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=NotaryService,O=R3,OU=corda,L=London,C=UK\"},"
+                + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -168,7 +185,7 @@ class NodeConfigTest {
                 + "],"
                 + "\"useTestClock\":true,"
                 + "\"webAddress\":\"localhost:20001\""
-                + "}", config.toText().stripWhitespace())
+                + "}"), prettyPrint(config.toText()))
     }
 
     @Test
