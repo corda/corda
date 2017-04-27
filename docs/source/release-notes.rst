@@ -36,7 +36,7 @@ We anticipate enforcing the use of distinguished names in node configurations fr
 
 Contract attachments can now be up to 10 MB in size.
 
-The node now disables any use of ObjectInputStream, to prevent Java deserialisation within flows.
+The Corda node now disables any use of ObjectInputStream, to prevent Java deserialisation within flows.
 
 We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
 any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
