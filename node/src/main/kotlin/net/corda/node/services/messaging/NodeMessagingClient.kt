@@ -486,7 +486,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-    private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService, nodeLegalName: String) =
+    private fun createRPCDispatcher(ops: RPCOps, userService: RPCUserService, nodeLegalName: X500Name): RPCDispatcher =
             object : RPCDispatcher(ops, userService, nodeLegalName) {
                 override fun send(data: SerializedBytes<*>, toAddress: String) {
                     messagingExecutor.fetchFrom {

@@ -27,7 +27,9 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
@@ -156,23 +158,23 @@ inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
 // TODO Replace this with testConfiguration
 data class TestNodeConfiguration(
         override val baseDirectory: Path,
-        override val myLegalName: String,
+        override val myLegalName: X500Name,
         override val networkMapService: NetworkMapInfo?,
         override val minimumPlatformVersion: Int = 1,
         override val keyStorePassword: String = "cordacadevpass",
         override val trustStorePassword: String = "trustpass",
         override val rpcUsers: List<User> = emptyList(),
-        override val dataSourceProperties: Properties = makeTestDataSourceProperties(X500Name(myLegalName)),
-        override val nearestCity: String = "Null Island",
+        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
         override val devMode: Boolean = true,
         override val certificateSigningService: URL = URL("http://localhost"),
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
         override val verifierType: VerifierType = VerifierType.InMemory) : NodeConfiguration {
+    override val nearestCity = myLegalName.getRDNs(BCStyle.L).single().typesAndValues.single().value.toString()
 }
 
-fun testConfiguration(baseDirectory: Path, legalName: String, basePort: Int): FullNodeConfiguration {
+fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): FullNodeConfiguration {
     return FullNodeConfiguration(
             basedir = baseDirectory,
             myLegalName = legalName,

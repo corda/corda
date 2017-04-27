@@ -559,7 +559,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
         val privKeyFile = dir / privateKeyFileName
         val pubIdentityFile = dir / publicKeyFileName
-        val identityName = serviceName ?: configuration.myLegalName
+        val identityName = serviceName ?: configuration.myLegalName.toString()
 
         val identityAndKey = if (!privKeyFile.exists()) {
             log.info("Identity key not found, generating fresh key!")

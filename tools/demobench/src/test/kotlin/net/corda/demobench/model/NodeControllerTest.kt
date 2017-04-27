@@ -1,7 +1,9 @@
 package net.corda.demobench.model
 
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.nodeapi.User
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -11,11 +13,13 @@ class NodeControllerTest {
 
     private val baseDir: Path = Paths.get(".").toAbsolutePath()
     private val controller = NodeController({ _, _ -> })
+    private val node1Name = X500Name("CN=Node 1,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
+    private val node2Name = X500Name("CN=Node 2,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
 
     @Test
     fun `test unique nodes after validate`() {
         val data = NodeData()
-        data.legalName.value = "Node 1"
+        data.legalName.value = node1Name.toString()
         assertNotNull(controller.validate(data))
         assertNull(controller.validate(data))
     }
@@ -23,7 +27,7 @@ class NodeControllerTest {
     @Test
     fun `test unique key after validate`() {
         val data = NodeData()
-        data.legalName.value = "Node 1"
+        data.legalName.value = node1Name.toString()
 
         assertFalse(controller.keyExists("node1"))
         controller.validate(data)
@@ -33,7 +37,7 @@ class NodeControllerTest {
     @Test
     fun `test matching name after validate`() {
         val data = NodeData()
-        data.legalName.value = "Node 1"
+        data.legalName.value = node1Name.toString()
 
         assertFalse(controller.nameExists("Node 1"))
         assertFalse(controller.nameExists("Node1"))
@@ -47,7 +51,7 @@ class NodeControllerTest {
     @Test
     fun `test first validated node becomes network map`() {
         val data = NodeData()
-        data.legalName.value = "Node 1"
+        data.legalName.value = node1Name.toString()
         data.p2pPort.value = 100000
 
         assertFalse(controller.hasNetworkMap())
@@ -57,14 +61,14 @@ class NodeControllerTest {
 
     @Test
     fun `test register unique nodes`() {
-        val config = createConfig(legalName = "Node 2")
+        val config = createConfig(legalName = node2Name)
         assertTrue(controller.register(config))
         assertFalse(controller.register(config))
     }
 
     @Test
     fun `test unique key after register`() {
-        val config = createConfig(legalName = "Node 2")
+        val config = createConfig(legalName = node2Name)
 
         assertFalse(controller.keyExists("node2"))
         controller.register(config)
@@ -73,7 +77,7 @@ class NodeControllerTest {
 
     @Test
     fun `test matching name after register`() {
-        val config = createConfig(legalName = "Node 2")
+        val config = createConfig(legalName = node2Name)
 
         assertFalse(controller.nameExists("Node 2"))
         assertFalse(controller.nameExists("Node2"))
@@ -86,7 +90,7 @@ class NodeControllerTest {
 
     @Test
     fun `test register network map node`() {
-        val config = createConfig(legalName = "Node is Network Map")
+        val config = createConfig(legalName = X500Name("CN=Node is Network Map,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
         assertTrue(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())
@@ -96,8 +100,8 @@ class NodeControllerTest {
 
     @Test
     fun `test register non-network-map node`() {
-        val config = createConfig(legalName = "Node is not Network Map")
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
+        val config = createConfig(legalName = X500Name("CN=Node is not Network Map,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
+        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 10000)
         assertFalse(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())
@@ -151,7 +155,7 @@ class NodeControllerTest {
 
     @Test
     fun `dispose node`() {
-        val config = createConfig(legalName = "MyName")
+        val config = createConfig(legalName = X500Name("CN=MyName,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
         controller.register(config)
 
         assertEquals(NodeState.STARTING, config.state)
@@ -162,8 +166,7 @@ class NodeControllerTest {
     }
 
     private fun createConfig(
-            legalName: String = "Unknown",
-            nearestCity: String = "Nowhere",
+            legalName: X500Name = X509Utilities.getDevX509Name("Unknown"),
             p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,
@@ -173,7 +176,6 @@ class NodeControllerTest {
     ) = NodeConfig(
             baseDir,
             legalName = legalName,
-            nearestCity = nearestCity,
             p2pPort = p2pPort,
             rpcPort = rpcPort,
             webPort = webPort,

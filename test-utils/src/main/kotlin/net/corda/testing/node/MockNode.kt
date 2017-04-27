@@ -288,7 +288,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         val config = TestNodeConfiguration(
                 baseDirectory = path,
-                myLegalName = legalName ?: "CN=Mock Company $id,OU=Corda QA Department,O=R3 CEV,L=New York,C=US",
+                myLegalName = X500Name(legalName ?: "CN=Mock Company $id,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"),
                 networkMapService = null,
                 dataSourceProperties = makeTestDataSourceProperties(X500Name("CN=node_${id}_net_$networkId,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")))
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
