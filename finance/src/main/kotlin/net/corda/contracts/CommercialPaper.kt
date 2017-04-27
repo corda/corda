@@ -82,6 +82,7 @@ class CommercialPaper : Contract {
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
+        // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1, GenericVaultIndexSchemaV1)
 
@@ -107,6 +108,7 @@ class CommercialPaper : Contract {
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
+        // DOCEND VaultIndexedQueryCriteria
     }
 
     /**

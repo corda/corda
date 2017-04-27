@@ -26,7 +26,7 @@ sealed class QueryCriteria {
             val stateRefs: List<StateRef>? = null,
             val contractStateTypes: Set<Class<out ContractState>>? = null,
             val notaryName: List<String>? = null,
-            val includeSoftlocks: Boolean? = true,
+            val includeSoftlockedStates: Boolean? = true,
             val timeCondition: Logical<TimeInstantType, Array<Instant>>? = null,
             val participantIdentities: List<String>? = null) : QueryCriteria()
 

@@ -55,7 +55,7 @@ open class LogicalExpression<L, R>(leftOperand: L,
  *  paging and sorting capability:
  *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
  */
-val DEFAULT_PAGE_NUM = 1
+val DEFAULT_PAGE_NUM = 0
 val DEFAULT_PAGE_SIZE = 200
 
 data class PageSpecification(val pageNumber: Int = DEFAULT_PAGE_NUM, val pageSize: Int = DEFAULT_PAGE_SIZE)

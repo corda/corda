@@ -161,7 +161,7 @@ interface VaultService {
      * optional [PageSpecification] and [Sort] modification criteria,
      * and returns a [Vault.QueryResults] object containing a [Vault.Page] of [StateAndRef]
      *
-     * Note: a default [PageSpecification] is applied to the query returning the 1st page of up to 200 rows.
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with of up to 200 entries.
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
      */
     fun <T : ContractState> queryBy(criteria: QueryCriteria,

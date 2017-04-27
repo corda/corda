@@ -97,10 +97,10 @@ public class VaultQueryJavaTests {
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(status, contractStateTypes);
-            Vault.Page<ContractState> states = vaultSvc.queryBy(criteria);
+            Vault.Page<ContractState> results = vaultSvc.queryBy(criteria);
             // DOCEND VaultJavaQueryExample1
 
-            assertThat(states.getStates()).hasSize(3);
+            assertThat(results.getStates()).hasSize(3);
 
             return tx;
         });
@@ -129,10 +129,10 @@ public class VaultQueryJavaTests {
 
             PageSpecification pageSpec  = new PageSpecification(1, 100);
             Sort sorting = new Sort(Sort.Direction.DESC);
-            Vault.Page<ContractState> states = vaultSvc.queryBy(compositeCriteria, pageSpec, sorting);
+            Vault.Page<ContractState> results = vaultSvc.queryBy(compositeCriteria, pageSpec, sorting);
             // DOCEND VaultJavaQueryExample2
 
-            assertThat(states.getStates()).hasSize(4);
+            assertThat(results.getStates()).hasSize(4);
 
             return tx;
         });
@@ -230,10 +230,10 @@ public class VaultQueryJavaTests {
             EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
-            Iterable<StateAndRef<ContractState>> states = vaultSvc.states(contractStateTypes, status, true);
+            Iterable<StateAndRef<ContractState>> results = vaultSvc.states(contractStateTypes, status, true);
             // DOCEND VaultDeprecatedJavaQueryExample1
 
-            assertThat(states).hasSize(3);
+            assertThat(results).hasSize(3);
 
             return tx;
         });
@@ -252,13 +252,13 @@ public class VaultQueryJavaTests {
             EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
-            Iterable<StateAndRef<ContractState>> states = vaultSvc.states(contractStateTypes, status, true);
+            Iterable<StateAndRef<ContractState>> results = vaultSvc.states(contractStateTypes, status, true);
 
-            Stream<StateAndRef<ContractState>> trackedLinearState = StreamSupport.stream(states.spliterator(), false).filter(
+            Stream<StateAndRef<ContractState>> trackedLinearState = StreamSupport.stream(results.spliterator(), false).filter(
                     state -> ((LinearState) state.component1().getData()).getLinearId() == trackUid);
             // DOCEND VaultDeprecatedJavaQueryExample2
 
-            assertThat(states).hasSize(4);
+            assertThat(results).hasSize(4);
             assertThat(trackedLinearState).hasSize(1);
 
             return tx;

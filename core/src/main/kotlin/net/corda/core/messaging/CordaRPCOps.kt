@@ -68,6 +68,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
 
+    // DOCSTART VaultQueryAPI
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      */
@@ -78,6 +79,7 @@ interface CordaRPCOps : RPCOps {
      */
     @RPCReturnsObservables
     fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.QueryResults<T>
+    // DOCEND VaultQueryAPI
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.

@@ -46,7 +46,7 @@ Note the following:
 * the vault performs fungible state spending (and in future, fungible state optimisation management including merging, splitting and re-issuance)
 * vault extensions represent additional custom plugin code a developer may write to query specific custom contract state attributes.
 * customer "Off Ledger" (private store) represents internal organisational data that may be joined with the vault data to perform additional reporting or processing
-* a vault query API is exposed to developers using standard Corda RPC and CorDapp plugin mechanisms
+* a :doc:`vault-query` API is exposed to developers using standard Corda RPC and CorDapp plugin mechanisms
 * a vault update API is internally used by transaction recording flows.
 * the vault database schemas are directly accessible via JDBC for customer joins and queries
 
