@@ -13,6 +13,9 @@ import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.services.database.RequeryConfiguration
@@ -84,7 +87,7 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
 
     private class AttachmentImpl(override val id: SecureHash,
                                  private val attachment: ByteArray,
-                                 private val checkOnLoad: Boolean) : Attachment {
+                                 private val checkOnLoad: Boolean) : Attachment, SerializeAsToken {
         override fun open(): InputStream {
 
             val stream = ByteArrayInputStream(attachment)
@@ -98,6 +101,13 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
 
         override fun equals(other: Any?) = other is Attachment && other.id == id
         override fun hashCode(): Int = id.hashCode()
+
+        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentReloader.reloadAttachment(id), checkOnLoad)
+        }
+
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad)
+
     }
 
     override fun openAttachment(id: SecureHash): Attachment? {

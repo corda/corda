@@ -6,6 +6,8 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import net.corda.core.crypto.SecureHash
+import net.corda.core.node.ServiceHub
 
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
@@ -66,6 +68,22 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
 }
 
 /**
+ * Limited interface to attachment storage for deserializers.
+ */
+interface AttachmentReloader {
+
+    class NoSuchAttachmentException(id: SecureHash) : Exception(id.toString())
+
+    /**
+     * Unlike AttachmentStorage, this does not require an explicit database transaction.
+     *
+     * @throws NoSuchAttachmentException if there is no attachment with the given hash.
+     */
+    fun reloadAttachment(id: SecureHash): ByteArray
+
+}
+
+/**
  * A context for mapping SerializationTokens to/from SerializeAsTokens.
  *
  * A context is initialised with an object containing all the instances of [SerializeAsToken] to eagerly register all the tokens.
@@ -74,7 +92,7 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
+class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool, val attachmentReloader: AttachmentReloader) {
     internal val tokenToTokenized = mutableMapOf<SerializationToken, SerializeAsToken>()
     internal var readOnly = false
 
