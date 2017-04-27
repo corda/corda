@@ -21,19 +21,14 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {
             val data = Data.Factory.create()
-            data.putDescribed()
-            data.enter()
-            // Descriptor
-            data.putObject(Envelope.DESCRIPTOR)
-            // Envelope body
-            data.putList()
-            data.enter()
-            // Our object
-            writeObject(obj, data)
-            // The schema
-            data.putObject(Schema(schemaHistory.toList()))
-            data.exit() // Exit envelope body
-            data.exit() // Exit described
+            data.withDescribed(Envelope.DESCRIPTOR_OBJECT) {
+                withList {
+                    // Our object
+                    writeObject(obj, this)
+                    // The schema
+                    putObject(Schema(schemaHistory.toList()))
+                }
+            }
             val bytes = ByteArray(data.encodedSize().toInt() + 8)
             val buf = ByteBuffer.wrap(bytes)
             buf.put(AmqpHeaderV1_0.bytes)

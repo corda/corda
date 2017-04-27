@@ -26,6 +26,7 @@ val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteAr
 data class Envelope(val obj: Any?, val schema: Schema) : DescribedType {
     companion object : DescribedTypeConstructor<Envelope> {
         val DESCRIPTOR = UnsignedLong(1L or DESCRIPTOR_TOP_32BITS)
+        val DESCRIPTOR_OBJECT = Descriptor(null, DESCRIPTOR)
 
         fun get(data: Data): Envelope {
             val describedType = data.`object` as DescribedType
@@ -343,4 +344,28 @@ fun hashType(type: Type, alreadySeen: MutableSet<Type> = mutableSetOf()): Secure
             throw NotSerializableException("Don't know how to hash $type")
         }
     }
+}
+
+/**
+ * Extension helper for writing described objects.
+ */
+fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
+    // Write described
+    putDescribed()
+    enter()
+    // Write descriptor
+    putObject(descriptor.code ?: descriptor.name)
+    block()
+    exit() // exit described
+}
+
+/**
+ * Extension helper for writing lists.
+ */
+fun Data.withList(block: Data.() -> Unit) {
+    // Write list
+    putList()
+    enter()
+    block()
+    exit() // exit list
 }

@@ -130,7 +130,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 whitelisted(clazz.componentType)
                 ArraySerializer(clazz)
             } else if (isPrimitive(clazz)) {
-                PrimitiveSerializer(clazz)
+                AMQPPrimitiveSerializer(clazz)
             } else {
                 whitelisted(clazz)
                 ClassSerializer(clazz)

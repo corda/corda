@@ -35,28 +35,4 @@ interface AMQPSerializer {
      * Read the given object from the input. The envelope is provided in case the schema is required.
      */
     fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any
-
-    /**
-     * Extension helper for writing described objects.
-     */
-    fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
-        // Write described
-        putDescribed()
-        enter()
-        // Write descriptor
-        putObject(descriptor.code ?: descriptor.name)
-        block()
-        exit() // exit described
-    }
-
-    /**
-     * Extension helper for writing lists.
-     */
-    fun Data.withList(block: Data.() -> Unit) {
-        // Write list
-        putList()
-        enter()
-        block()
-        exit() // exit list
-    }
 }

@@ -57,36 +57,37 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
             val type = readMethod.genericReturnType
             if (SerializerFactory.isPrimitive(type)) {
                 // This is a little inefficient for performance since it does a runtime check of type.  We could do build time check with lots of subclasses here.
-                return PrimitivePropertySerializer(name, readMethod)
+                return AMQPPrimitivePropertySerializer(name, readMethod)
             } else {
-                return ObjectPropertySerializer(name, readMethod)
+                return DescribedTypePropertySerializer(name, readMethod)
             }
+        }
+    }
+
+    /**
+     * A property serializer for a complex type (another object).
+     */
+    class DescribedTypePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
+        override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
+            return input.readObjectOrNull(obj, envelope, readMethod.genericReturnType)
+        }
+
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+            output.writeObjectOrNull(readMethod.invoke(obj), data, readMethod.genericReturnType)
+        }
+    }
+
+    /**
+     * A property serializer for an AMQP primitive type (Int, String, etc).
+     */
+    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
+        override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
+            return obj
+        }
+
+        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
+            data.putObject(readMethod.invoke(obj))
         }
     }
 }
 
-/**
- * A property serializer for a complex type (another object).
- */
-class ObjectPropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
-    override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
-        return input.readObjectOrNull(obj, envelope, readMethod.genericReturnType)
-    }
-
-    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-        output.writeObjectOrNull(readMethod.invoke(obj), data, readMethod.genericReturnType)
-    }
-}
-
-/**
- * A property serializer for an AMQP primitive type (Int, String, etc).
- */
-class PrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
-    override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
-        return obj
-    }
-
-    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-        data.putObject(readMethod.invoke(obj))
-    }
-}
