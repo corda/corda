@@ -291,7 +291,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         val config = TestNodeConfiguration(
                 baseDirectory = path,
-                myLegalName = legalName ?: getTestX509Name("Mock Company $id"),
+                myLegalName = legalName ?: getTestX509Name("CN=Mock Company $id"),
                 networkMapService = null,
                 dataSourceProperties = makeTestDataSourceProperties("node_${id}_net_$networkId"))
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)

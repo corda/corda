@@ -234,8 +234,10 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val ourCertificate = X509Utilities
-                .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
+        val keyStore = KeyStoreUtilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
+        val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_CA)
+
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
         require(ourSubjectDN == config.myLegalName) {
@@ -246,8 +248,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 NODE_ROLE to CertificateChainCheckPolicy.LeafMustMatch,
                 VERIFIER_ROLE to CertificateChainCheckPolicy.RootMustMatch
         )
-        val keyStore = X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
-        val trustStore = X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
         val certChecks = defaultCertPolicies.mapValues { (role, defaultPolicy) ->
             val configPolicy = config.certificateChainCheckPolicies.noneOrSingle { it.role == role }?.certificateChainCheckPolicy
             (configPolicy ?: defaultPolicy).createCheck(keyStore, trustStore)
