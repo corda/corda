@@ -39,7 +39,7 @@ class NetworkRegistrationHelperTest {
 
         val config = TestNodeConfiguration(
                 baseDirectory = tempFolder.root.toPath(),
-                myLegalName = ALICE.name,
+                myLegalName = X500Name(ALICE.name),
                 networkMapService = null)
 
         assertFalse(config.keyStoreFile.exists())

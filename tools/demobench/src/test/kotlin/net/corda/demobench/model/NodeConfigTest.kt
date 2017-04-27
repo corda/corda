@@ -13,6 +13,7 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.webserver.WebServerConfig
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.io.StringWriter
 import java.nio.file.Path
@@ -22,39 +23,37 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+
 class NodeConfigTest {
 
-    private val baseDir: Path = Paths.get(".").toAbsolutePath()
+    companion object {
+        private val baseDir: Path = Paths.get(".").toAbsolutePath()
+        private val myLegalName = X500Name("CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
+    }
 
     @Test
     fun `test name`() {
-        val config = createConfig(legalName = "My Name")
-        assertEquals("My Name", config.legalName)
+        val config = createConfig(legalName = myLegalName)
+        assertEquals(myLegalName, config.legalName)
         assertEquals("myname", config.key)
     }
 
     @Test
     fun `test node directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname", config.nodeDir)
     }
 
     @Test
     fun `test explorer directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname-explorer", config.explorerDir)
     }
 
     @Test
     fun `test plugin directory`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
         assertEquals(baseDir / "myname" / "plugins", config.pluginDir)
-    }
-
-    @Test
-    fun `test nearest city`() {
-        val config = createConfig(nearestCity = "Leicester")
-        assertEquals("Leicester", config.nearestCity)
     }
 
     @Test
@@ -134,8 +133,7 @@ class NodeConfigTest {
     @Test
     fun `test config text`() {
         val config = createConfig(
-                legalName = "My Name",
-                nearestCity = "Stockholm",
+                legalName = myLegalName,
                 p2pPort = 10001,
                 rpcPort = 40002,
                 webPort = 20001,
@@ -147,7 +145,6 @@ class NodeConfigTest {
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"My Name\","
-                + "\"nearestCity\":\"Stockholm\","
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -161,8 +158,7 @@ class NodeConfigTest {
     @Test
     fun `test config text with network map`() {
         val config = createConfig(
-                legalName = "My Name",
-                nearestCity = "Stockholm",
+                legalName = myLegalName,
                 p2pPort = 10001,
                 rpcPort = 40002,
                 webPort = 20001,
@@ -170,13 +166,12 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
 
         assertEquals(prettyPrint("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"My Name\","
-                + "\"nearestCity\":\"Stockholm\","
                 + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
@@ -191,8 +186,7 @@ class NodeConfigTest {
     @Test
     fun `reading node configuration`() {
         val config = createConfig(
-                legalName = "My Name",
-                nearestCity = "Stockholm",
+                legalName = myLegalName,
                 p2pPort = 10001,
                 rpcPort = 40002,
                 webPort = 20001,
@@ -200,7 +194,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -208,8 +202,8 @@ class NodeConfigTest {
                 .resolve()
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
-        assertEquals("My Name", fullConfig.myLegalName)
-        assertEquals("Stockholm", fullConfig.nearestCity)
+        assertEquals(myLegalName, fullConfig.myLegalName)
+        assertEquals("London", fullConfig.nearestCity)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
@@ -222,8 +216,7 @@ class NodeConfigTest {
     @Test
     fun `reading webserver configuration`() {
         val config = createConfig(
-                legalName = "My Name",
-                nearestCity = "Stockholm",
+                legalName = myLegalName,
                 p2pPort = 10001,
                 rpcPort = 40002,
                 webPort = 20001,
@@ -231,7 +224,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
+        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -247,7 +240,7 @@ class NodeConfigTest {
 
     @Test
     fun `test moving`() {
-        val config = createConfig(legalName = "My Name")
+        val config = createConfig(legalName = myLegalName)
 
         val elsewhere = baseDir / "elsewhere"
         val moved = config.moveTo(elsewhere)
@@ -257,8 +250,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: String = "Unknown",
-            nearestCity: String = "Nowhere",
+            legalName: X500Name = X500Name("CN=Unknown,O=R3,OU=corda,L=Nowhere,C=UK"),
             p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,
@@ -268,7 +260,6 @@ class NodeConfigTest {
     ) = NodeConfig(
             baseDir,
             legalName = legalName,
-            nearestCity = nearestCity,
             p2pPort = p2pPort,
             rpcPort = rpcPort,
             webPort = webPort,

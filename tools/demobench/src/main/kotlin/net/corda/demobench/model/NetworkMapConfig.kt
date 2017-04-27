@@ -1,8 +1,11 @@
 package net.corda.demobench.model
 
-open class NetworkMapConfig(val legalName: String, val p2pPort: Int) {
+import net.corda.core.crypto.commonName
+import org.bouncycastle.asn1.x500.X500Name
 
-    val key: String = legalName.toKey()
+open class NetworkMapConfig(val legalName: X500Name, val p2pPort: Int) {
+
+    val key: String = legalName.commonName.toKey()
 
 }
 
