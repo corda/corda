@@ -14,6 +14,8 @@ this space...
 Milestone 11
 ------------
 
+Special thank you to `Gary Rowe <https://github.com/gary-rowe>`_ for his contribution to Corda in M11.
+
 Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
 composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
 formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
