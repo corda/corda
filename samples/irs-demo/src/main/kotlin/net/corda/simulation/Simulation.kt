@@ -72,8 +72,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "CN=Bank $letter,O=Bank $letter,L=$city,C=$country",
-                    nearestCity = city,
+                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=$city,C=$country"),
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
@@ -95,8 +94,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             require(advertisedServices.containsType(NetworkMapService.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_MAP.name,
-                    nearestCity = X500Name(DUMMY_MAP.name).location,
+                    myLegalName = X500Name(DUMMY_MAP.name),
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {}
         }
@@ -109,8 +107,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             require(advertisedServices.containsType(SimpleNotaryService.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_NOTARY.name,
-                    nearestCity = X500Name(DUMMY_NOTARY.name).location,
+                    myLegalName = X500Name(DUMMY_NOTARY.name),
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
@@ -118,7 +115,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     object RatesOracleFactory : MockNetwork.Factory {
         // TODO: Make a more realistic legal name
-        val RATES_SERVICE_NAME = "CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES"
+        val RATES_SERVICE_NAME = X500Name("CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES")
 
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
@@ -127,7 +124,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     myLegalName = RATES_SERVICE_NAME,
-                    nearestCity = X500Name(RATES_SERVICE_NAME).location,
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
@@ -149,8 +145,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_REGULATOR.name,
-                    nearestCity = X500Name(DUMMY_REGULATOR.name).location,
+                    myLegalName = X500Name(DUMMY_REGULATOR.name),
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.

@@ -20,6 +20,7 @@ import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMAcceptorFactory
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnectorFactory
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import java.util.*
@@ -74,7 +75,7 @@ abstract class AbstractClientRPCTest {
             override val users: List<User> get() = listOf(rpcUser)
         }
 
-        val dispatcher = object : RPCDispatcher(rpcImpl, userService, ALICE.name) {
+        val dispatcher = object : RPCDispatcher(rpcImpl, userService, X500Name(ALICE.name)) {
             override fun send(data: SerializedBytes<*>, toAddress: String) {
                 val msg = serverSession.createMessage(false).apply {
                     writeBodyBufferBytes(data.bytes)

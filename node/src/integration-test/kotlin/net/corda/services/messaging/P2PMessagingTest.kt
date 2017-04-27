@@ -3,6 +3,7 @@ package net.corda.services.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -19,6 +20,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -27,6 +29,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
+    private companion object {
+        val DISTRIBUTED_SERVICE_NAME = X509Utilities.getDevX509Name("DistributedService")
+        val SERVICE_2_NAME = X509Utilities.getDevX509Name("Service Node 2")
+    }
+
     @Test
     fun `network map will work after restart`() {
         val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
@@ -55,15 +62,14 @@ class P2PMessagingTest : NodeBasedTest() {
     // TODO Use a dummy distributed service
     @Test
     fun `communicating with a distributed service which the network map node is part of`() {
-        val serviceName = "DistributedService"
 
         val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
-                listOf(root / DUMMY_MAP.name, root / "Service Node 2"),
+                listOf(root / DUMMY_MAP.name.toString(), root / SERVICE_2_NAME.toString()),
                 RaftValidatingNotaryService.type.id,
-                serviceName)
+                DISTRIBUTED_SERVICE_NAME)
 
-        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, serviceName)
+        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
         val notaryClusterAddress = freeLocalHostAndPort()
         startNetworkMapNode(
                 DUMMY_MAP.name,
@@ -71,7 +77,7 @@ class P2PMessagingTest : NodeBasedTest() {
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = Futures.allAsList(
                 startNode(
-                        "Service Node 2",
+                        SERVICE_2_NAME,
                         advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
@@ -79,14 +85,13 @@ class P2PMessagingTest : NodeBasedTest() {
                 startNode(ALICE.name)
         ).getOrThrow()
 
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)
+        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
 
     @Test
     fun `communicating with a distributed service which we're part of`() {
-        val serviceName = "Distributed Service"
-        val distributedService = startNotaryCluster(serviceName, 2).getOrThrow()
-        assertAllNodesAreUsed(distributedService, serviceName, distributedService[0])
+        val distributedService = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
+        assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
     }
 
     @Test
@@ -183,13 +188,13 @@ class P2PMessagingTest : NodeBasedTest() {
         return Pair(firstRequestReceived, requestsReceived)
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: String, originatingNode: Node) {
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: X500Name, originatingNode: Node) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.info)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.net.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
+            originatingNode.net.getAddressOfParty(getPartyInfo(getNotary(serviceName.toString())!!)!!)
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection

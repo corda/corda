@@ -238,7 +238,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourSubjectDN.commonName == config.myLegalName) {
+        require(ourSubjectDN.commonName == config.myLegalName.commonName) {
             "Legal name does not match with our subject CN: $ourSubjectDN"
         }
         val defaultCertPolicies = mapOf(
@@ -398,18 +398,18 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun getBridgeName(queueName: String, hostAndPort: HostAndPort): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(peerLegalName: String, expectedCommonName: String) {
-        log.error("Peer has wrong CN - expected $expectedCommonName but got $peerLegalName. This is either a fatal " +
+    internal fun hostVerificationFail(peerLegalName: X500Name, expectedLegalName: X500Name) {
+        log.error("Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
                 "misconfiguration by the remote peer or an SSL man-in-the-middle attack!")
-        if (expectedCommonName == config.networkMapService?.legalName) {
+        if (expectedLegalName.toString() == config.networkMapService?.legalName) {
             // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
             _networkMapConnectionFuture!!.setException(IOException("${config.networkMapService} failed host verification check"))
         }
     }
 
     // This is called on one of Artemis' background threads
-    internal fun onTcpConnection(peerLegalName: String) {
-        if (peerLegalName == config.networkMapService?.legalName) {
+    internal fun onTcpConnection(peerLegalName: X500Name) {
+        if (peerLegalName.toString() == config.networkMapService?.legalName) {
             _networkMapConnectionFuture!!.set(Unit)
         }
     }
@@ -437,7 +437,9 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expectedCommonName = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as? String
+    private val expectedCommonName = (configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as? String)?.let {
+        X500Name(it)
+    }
 
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as NettyConnection?
@@ -451,9 +453,8 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                     .peerPrincipal
                     .name
                     .let(::X500Name)
-                    .commonName
             // TODO Verify on the entire principle (subject)
-            if (peerLegalName != expectedCommonName) {
+            if (peerLegalName.commonName != expectedCommonName.commonName) {
                 connection.close()
                 server!!.hostVerificationFail(peerLegalName, expectedCommonName)
                 return null  // Artemis will keep trying to reconnect until it's told otherwise
