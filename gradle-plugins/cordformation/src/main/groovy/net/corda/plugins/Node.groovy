@@ -1,6 +1,8 @@
 package net.corda.plugins
 
 import com.typesafe.config.*
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -154,7 +156,15 @@ class Node {
     }
 
     void build(File rootDir) {
-        nodeDir = new File(rootDir, name.replaceAll("\\s",""))
+        def dirName
+        try {
+            X500Name x500Name = new X500Name(name)
+            dirName = x500Name.getRDNs(BCStyle.CN).getAt(0).getFirst().getValue().toString()
+        } catch(IllegalArgumentException ex) {
+            // Can't parse as an X500 name, use the full string
+            dirName = name
+        }
+        nodeDir = new File(rootDir, dirName.replaceAll("\\s",""))
         configureRpcUsers()
         installCordaJar()
         installWebserverJar()
