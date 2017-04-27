@@ -5,14 +5,14 @@ import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_KEY_1
 import net.corda.flows.AbstractCollectSignaturesFlowResponder
 import net.corda.flows.CollectSignaturesFlow
+import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.SignatureException
+import java.util.concurrent.ExecutionException
 import kotlin.test.assertFailsWith
 
 class CollectSignaturesFlowTests {
@@ -63,6 +63,7 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
+        result.verifySignatures()
         println(result.tx)
         println(result.sigs)
     }
@@ -74,15 +75,28 @@ class CollectSignaturesFlowTests {
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
+        result.verifySignatures()
         println(result.tx)
         println(result.sigs)
+    }
+
+    @Test
+    fun `fails when not signed by initiator`() {
+        val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.legalIdentity.ref(1))
+        val ptx = onePartyDummyContract.signWith(MINI_CORP_KEY).toSignedTransaction(false)
+        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
+        mockNet.runNetwork()
+        assertFailsWith<ExecutionException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {
+            flow.resultFuture.get()
+        }
     }
 
     @Test
     fun `passes with multiple initial signatures`() {
         val twoPartyDummyContract = DummyContract.generateInitial(1337, notary,
                 a.info.legalIdentity.ref(1),
-                b.info.legalIdentity.ref(2))
+                b.info.legalIdentity.ref(2),
+                b.info.legalIdentity.ref(3))
         val ptx = twoPartyDummyContract.signWith(a.services.legalIdentityKey).signWith(b.services.legalIdentityKey).toSignedTransaction(false)
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()

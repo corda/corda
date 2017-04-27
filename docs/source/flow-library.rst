@@ -28,18 +28,22 @@ CollectSignaturesFlow
 ---------------------
 
 The ``CollectSignaturesFlow`` is used to automate the collection of signatures from the counter-parties to a transaction.
-This is instead of manually writing a flow to send a transaction to each required party and wait for them to provide a
-signature in response. This flow has been written because many of the custom flows created by CorDapp developers often
-re-implemented this logic which can be the source of bugs but is easy to automate.
 
-You use the ``CollectSignaturesFlow`` by passing it a ``SignedTransaction`` which has been signed by the node calling the
-``CollectSignaturesFlow``. The flow will handle the resolution of the counter-party identities and request a signature from
-each.
+You use the ``CollectSignaturesFlow`` by passing it a ``SignedTransaction`` which has at least been signed by yourself.
+The flow will handle the resolution of the counter-party identities and request a signature from each counter-party.
 
-Finally, the flow will verify all the signatures and return a ``SignedTransaction`` with all the collected signatures.
+Finally, the flow will verify all the signatures  and return a ``SignedTransaction`` with all the collected signatures.
 
-When using this flow you will have to subclass the ``AbstractCollectSignaturesFlowResponder`` and provide your own
-implementation of the ``checkTransaction`` method. This is to add additional verification logic on the responder side.
+When using this flow on the responding side you will have to subclass the ``AbstractCollectSignaturesFlowResponder`` and
+provide your own implementation of the ``checkTransaction`` method. This is to add additional verification logic on the
+responder side. Types of things you will need to check include:
+
+* Ensuring that the transaction you are receiving is the transaction you *EXPECT* to receive. I.e. is has the expected
+  type of inputs and outputs
+* Checking that the properties of the outputs are as you would expect, this is in the absence of integrating reference
+  data sources to facilitate this for us
+* Checking that the transaction is not incorrectly spending (perhaps maliciously) one of your asset states, as potentially
+  the transaction creator has access to some of your state references
 
 Typically after calling the ``CollectSignaturesFlow`` you then called the ``FinalityFlow``.
 
@@ -52,8 +56,8 @@ checked again.
 
 A couple of constructors are provided that accept a single transaction. When these are used, the dependencies of that
 transaction are resolved and then the transaction itself is verified. Again, if successful, the results are inserted
-into the database as long as a [SignedTransaction] was provided. If only the [WireTransaction] form was provided
+into the database as long as a [SignedTransaction] was provided. If only the ``WireTransaction`` form was provided
 then this isn't enough to put into the local database, so only the dependencies are checked and inserted. This way
-to use the flow is helpful when resolving and verifying a finished but partially signed transaction.
+to use the flow is helpful when resolving and verifying an unfinished transaction.
 
 The flow returns a list of verified ``LedgerTransaction`` objects, in a depth-first order.

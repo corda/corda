@@ -1,7 +1,9 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -9,22 +11,40 @@ import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
 /**
- * The [CollectSignaturesFlow] is used to automate the collection of signatures from the counter-parties to
- * a transaction.
+ * The [CollectSignaturesFlow] is used to automate the collection of counter-party signatures.
+ *
+ * You would typically use this flow after you have build a transaction with the TransactionBuilder and signed it with
+ * your key pair. If there are additional signatures to collect then they can be collected using this flow.
  *
  * **WARNING**: This Flow only works with [legalIdentityKey]s and WILL break if used with randomly generated keys.
  *
- * TODO: Update this flow to handle randomly generated keys when that works is complete.
- *
  * Usage:
- * - Subclass [AbstractCollectSignaturesFlowResponder] in your CorDapp.
+ *
+ * - Subclass [AbstractCollectSignaturesFlowResponder] in your CorDapp
  * - You are required to override the [AbstractCollectSignaturesFlowResponder.checkTransaction] method to add
- *   custom logic for verifying the transaction in question.
- * - When calling the flow as a [subFlow], pass [CollectSignaturesFlow] a [SignedTransaction] which at least has the
- * - Initiator's signature (and possibly an Oracle's signature).
- * - The flow will fail if the [Initiator]s signature is not present.
+ *   custom logic for verifying the transaction in question
+ * - When calling the flow as a [subFlow], pass it a [SignedTransaction] which has at least been signed by the
+ *   transaction creator (and possibly an Oracle, if required)
+ * - The flow expects that the calling [Party] signs the provided transaction, if not the flow will fail
  * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's)
- * - Call the [FinalityFlow] with the return value of this flow.
+ * - Call the [FinalityFlow] with the return value of this flow
+ *
+ * Example - issuing a multi-lateral agreement which requires N signatures:
+ *
+ *     val builder = TransactionType.General.Builder(notaryRef)
+ *     val issueCommand = Command(Agreement.Commands.Issue(), state.participants)
+ *
+ *     builder.withItems(state, issueCommand)
+ *     builder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
+ *
+ *     // Transaction creator signs transaction.
+ *     val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+ *
+ *     // Call to CollectSignaturesFlow.
+ *     // The returned signed transaction will have all signatures appended apart from the notary's.
+ *     val stx = subFlow(CollectSignaturesFlow(ptx))
+ *
+ *  TODO: Update this flow to handle randomly generated keys when that works is complete.
  */
 
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
@@ -35,6 +55,8 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         object VERIFYING : ProgressTracker.Step("Verifying collected signatures.")
 
         fun tracker() = ProgressTracker(COLLECTING, VERIFYING)
+
+        // TODO: Make the progress tracker adapt to the number of counter-parties to collect from.
     }
 
     @Suspendable override fun call(): SignedTransaction {
@@ -43,28 +65,30 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         // Check the signatures which have already been provided and that the transaction is valid.
         // Usually just the Initiator and possibly an Oracle would have signed at this point.
         val myKey = serviceHub.myInfo.legalIdentity.owningKey
-        val allButMe = partiallySignedTx.tx.mustSign - myKey
+        val signed = partiallySignedTx.sigs.map { it.by }
+        val notSigned = partiallySignedTx.tx.mustSign - signed
 
-        // This step will fail if the Initiators signature is not present and valid.
-        partiallySignedTx.verifySignatures(*allButMe.toTypedArray())
+        // One of the signatures collected so far MUST be from the initiator of this flow.
+        check(partiallySignedTx.sigs.any { it.by == myKey }) {
+            "The Initiator of CollectSignaturesFlow must have signed the transaction."
+        }
+
+        // The signatures must be valid and the transaction must be valid.
+        partiallySignedTx.verifySignatures(*notSigned.toTypedArray())
         partiallySignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
         // Determine who still needs to sign.
         progressTracker.currentStep = COLLECTING
         val notaryKey = partiallySignedTx.tx.notary?.owningKey
-        val signed = partiallySignedTx.sigs.map { it.by }
-        // We need to exclude the notary's key as the notary signature is collected separately with the [FinalityFlow].
-        val unsigned = if (notaryKey != null) {
-            partiallySignedTx.tx.mustSign - signed - notaryKey
-        } else {
-            partiallySignedTx.tx.mustSign - signed
-        }
+        // If present, we need to exclude the notary's PublicKey as the notary signature is collected separately with
+        // the FinalityFlow.
+        val unsigned = if (notaryKey != null) notSigned - notaryKey else notSigned
 
-        // If the unsigned counter-parties list is empty then we don't need to collect any more signatures.
+        // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
         check(unsigned.isNotEmpty()) { return partiallySignedTx }
 
-        // Collect signatures from all counter-parties.
-         val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
+        // Collect signatures from all counter-parties and append them to the partially signed transaction.
+        val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
         val stx = partiallySignedTx + counterpartySignatures
 
         // Verify all but the notary's signature if the transaction requires a notary, otherwise verify all signatures.
@@ -113,13 +137,13 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
             progressTracker.currentStep = VERIFYING
             // Check that the Responder actually needs to sign.
             checkMySignatureRequired(proposal)
+            // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
+            checkSignatures(proposal)
             // Resolve dependencies and verify, pass in the WireTransaction as we don't have all signatures.
             subFlow(ResolveTransactionsFlow(proposal.tx, otherParty))
             proposal.tx.toLedgerTransaction(serviceHub).verify()
             // Perform some custom verification over the transaction.
             checkTransaction(proposal)
-            // Check the signatures which have already been provided. Usually the Initiators and possibly an Oracle's.
-            proposal.sigs.forEach { it.verifyWithECDSA(proposal.id) }
             // All good. Unwrap the proposal.
             proposal
         }
@@ -130,7 +154,17 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
         send(otherParty, mySignature)
     }
 
-    @Throws(StateReplacementException::class)
+    private fun checkSignatures(stx: SignedTransaction) {
+        check(stx.sigs.any { it.by == otherParty.owningKey }) {
+            "The Initiator of CollectSignaturesFlow must have signed the transaction."
+        }
+        val signed = stx.sigs.map { it.by }
+        val allSigners = stx.tx.mustSign
+        val notSigned = allSigners - signed
+        stx.verifySignatures(*notSigned.toTypedArray())
+    }
+
+    @Throws(FlowException::class)
     @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction) {
