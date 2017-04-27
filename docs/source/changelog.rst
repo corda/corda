@@ -28,6 +28,9 @@ UNRELEASED
 
 * DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
 
+* Rewrote standard test identities to have full X.500 distinguished names. As part of this work standardised on a
+  smaller set of test identities, to reduce risk of subtle differences in naming making it hard to debug.
+
 Milestone 10.0
 --------------
 
