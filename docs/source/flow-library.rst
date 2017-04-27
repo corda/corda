@@ -6,7 +6,7 @@ There are a number of built-in flows supplied with Corda, which cover some core 
 FinalityFlow
 ------------
 
-The ``FinalityFlow`` verifies the given transactions, then sends them to the specified notaries.
+The ``FinalityFlow`` verifies the given transactions, then sends them to the specified notary.
 
 If the notary agrees that the transactions are acceptable then they are from that point onwards committed to the ledger,
 and will be written through to the vault. Additionally they will be distributed to the parties reflected in the participants
