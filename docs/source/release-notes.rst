@@ -19,7 +19,7 @@ enforced, however it will be in a later milestone.
 * "myLegalName" in node configurations will need to be replaced, for example "Bank A" is replaced with
   "CN=Bank A,O=Bank A,L=London,C=UK". Obviously organisation, location and country ("O", "L" and "C" respectively)
   must be given values which are appropriate to the node, do not just use these example values.
-* "networkMap" in node configurations should be updated to match changes to the legal name of the network map.
+* "networkMap" in node configurations must be updated to match any change to the legal name of the network map.
 * If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided
   in order to ensure consistency.
 
