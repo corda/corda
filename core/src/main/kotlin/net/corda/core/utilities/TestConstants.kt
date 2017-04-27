@@ -20,11 +20,11 @@ val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
 
 val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
 /** Dummy notary identity for tests and simulations */
-val DUMMY_NOTARY: Party get() = Party(X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"), DUMMY_NOTARY_KEY.public)
+val DUMMY_NOTARY: Party get() = Party(X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=Switzerland"), DUMMY_NOTARY_KEY.public)
 
 val DUMMY_MAP_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
 /** Dummy network map service identity for tests and simulations */
-val DUMMY_MAP: Party get() = Party(X500Name("CN=Network Map Service,O=R3,OU=corda,L=London,C=UK"), DUMMY_MAP_KEY.public)
+val DUMMY_MAP: Party get() = Party(X500Name("CN=Network Map Service,O=R3,OU=corda,L=Amsterdam,C=Netherlands"), DUMMY_MAP_KEY.public)
 
 val DUMMY_BANK_A_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(40)) }
 /** Dummy bank identity for tests and simulations */
@@ -49,3 +49,7 @@ val BOB: Party get() = Party(X500Name("CN=Bob Plc,O=Bob Plc,L=London,C=UK"), BOB
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
 val CHARLIE: Party get() = Party(X500Name("CN=Charlie Ltd,O=Charlie Ltd,L=London,C=UK"), CHARLIE_KEY.public)
+
+val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
+/** Dummy regulator for tests and simulations */
+val DUMMY_REGULATOR: Party get() = Party(X500Name("CN=Regulator A,OU=Corda,O=AMF,L=Paris,C=France"), DUMMY_REGULATOR_KEY.public)

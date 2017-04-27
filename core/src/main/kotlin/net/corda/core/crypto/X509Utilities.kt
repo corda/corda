@@ -659,6 +659,7 @@ object X509Utilities {
 }
 
 val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()
+val X500Name.location: String get() = getRDNs(BCStyle.L).first().first.value.toString()
 
 class CertificateStream(val input: InputStream) {
     private val certificateFactory = CertificateFactory.getInstance("X.509")
