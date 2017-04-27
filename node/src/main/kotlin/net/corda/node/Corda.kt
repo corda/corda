@@ -181,9 +181,9 @@ Corda will now exit...""")
 }
 
 private fun disableJavaDeserialization() {
-    // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we use the system property interface for portability:
-    System.setProperty("jdk.serialFilter", "maxbytes=0")
-    // Attempt a deserialization so that ObjectInputFilter (permanently) inits itself:
+    // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we are using the system property interface for portability.
+    // This property has been set in the Capsule. Anywhere else may be too late.
+    // Attempt at deserialization so that ObjectInputFilter (permanently) inits itself:
     val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
     try {
         withLevel("java.io.serialization", "WARN") {
@@ -191,7 +191,7 @@ private fun disableJavaDeserialization() {
         }
         javaIsTooOld()
     } catch (e: InvalidClassException) {
-        // Good, our system property is honoured (assuming ObjectInputFilter wasn't inited earlier).
+        // Good, our system property is honoured.
     }
 }
 
