@@ -2,7 +2,6 @@ package net.corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ErrorOr
-import io.requery.query.Order
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef

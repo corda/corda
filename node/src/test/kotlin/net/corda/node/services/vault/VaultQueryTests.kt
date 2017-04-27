@@ -1,7 +1,5 @@
 package net.corda.node.services.vault
 
-import io.requery.kotlin.eq
-import io.requery.query.Operator
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
@@ -241,7 +239,7 @@ class VaultQueryTests {
             // DOCSTART VaultQueryExample5
             val start = TEST_TX_TIME
             val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
-            val recordedBetweenExpression = QueryCriteria.LogicalExpression(
+            val recordedBetweenExpression = LogicalExpression(
                     QueryCriteria.TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
             val criteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
             val states = vaultSvc.queryBy<ContractState>(criteria)
@@ -260,7 +258,7 @@ class VaultQueryTests {
 
             // DOCSTART VaultQueryExample6
             val asOfDateTime = TEST_TX_TIME
-            val consumedAfterExpression = QueryCriteria.LogicalExpression(
+            val consumedAfterExpression = LogicalExpression(
                     QueryCriteria.TimeInstantType.CONSUMED, Operator.GREATER_THAN, arrayOf(asOfDateTime))
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED,
                                               timeCondition = consumedAfterExpression)
@@ -745,7 +743,7 @@ class VaultQueryTests {
 
             // TODO: enforce strict type safety of Attributes (via Enum) ???
             val linearIdsExpression = LogicalExpression(LinearState::linearId, Operator.IN, filterByLinearIds)
-            val linearIdCondition = (VaultSchema.VaultLinearState::uuid eq linearIds[2])
+            val linearIdCondition = LogicalExpression(VaultSchema.VaultLinearState::uuid, Operator.EQUAL, linearIds[2])
 
             val compositeExpression = recordedBetweenExpression.and(linearIdsExpression).or(linearIdCondition)
 
@@ -798,9 +796,9 @@ class VaultQueryTests {
                     }.toSignedTransaction()
             services.recordTransactions(commercialPaper)
 
-            val ccyIndex = IndexExpression(CommercialPaper.currencyIndexColumn, Operator.EQUAL, USD.currencyCode)
-            val maturityIndex = IndexExpression(CommercialPaper.maturityDateIndexColumn, Operator.GREATER_THAN_OR_EQUAL, TEST_TX_TIME + 30.days)
-            val faceValueIndex = IndexExpression(CommercialPaper.quantityIndexColumn, Operator.GREATER_THAN_OR_EQUAL, 10000)
+            val ccyIndex = LogicalExpression(CommercialPaper.currencyIndexColumn, Operator.EQUAL, USD.currencyCode)
+            val maturityIndex = LogicalExpression(CommercialPaper.maturityDateIndexColumn, Operator.GREATER_THAN_OR_EQUAL, TEST_TX_TIME + 30.days)
+            val faceValueIndex = LogicalExpression(CommercialPaper.quantityIndexColumn, Operator.GREATER_THAN_OR_EQUAL, 10000)
             val criteria = VaultIndexedQueryCriteria(maturityIndex.and(faceValueIndex).and(ccyIndex))
             val result = vaultSvc.queryBy<CommercialPaper.State>(criteria)
 
