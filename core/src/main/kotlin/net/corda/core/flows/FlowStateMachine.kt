@@ -26,7 +26,7 @@ sealed class FlowInitiator {
     /** Started when we get new session initiation request. */
     data class Peer(val party: Party) : FlowInitiator()
     /** Started as scheduled activity. */
-    class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator()
+    data class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator()
     object Shell : FlowInitiator() // TODO When proper ssh access enabled, add username/use RPC?
 }
 

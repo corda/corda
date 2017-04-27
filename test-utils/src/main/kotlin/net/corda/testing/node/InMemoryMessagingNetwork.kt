@@ -272,12 +272,20 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    private data class InMemoryMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant = Instant.now()) : Message {
+    private data class InMemoryMessage(override val topicSession: TopicSession,
+                                       override val data: ByteArray,
+                                       override val uniqueMessageId: UUID,
+                                       override val debugTimestamp: Instant = Instant.now()) : Message {
         override fun toString() = "$topicSession#${String(data)}"
     }
 
     @CordaSerializable
-    private data class InMemoryReceivedMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant, override val peer: X500Name) : ReceivedMessage
+    private data class InMemoryReceivedMessage(override val topicSession: TopicSession,
+                                               override val data: ByteArray,
+                                               override val platformVersion: Int,
+                                               override val uniqueMessageId: UUID,
+                                               override val debugTimestamp: Instant,
+                                               override val peer: X500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
@@ -453,6 +461,9 @@ class InMemoryMessagingNetwork(
         private fun MessageTransfer.toReceivedMessage(): ReceivedMessage = InMemoryReceivedMessage(
                 message.topicSession,
                 message.data.copyOf(), // Kryo messes with the buffer so give each client a unique copy
-                message.uniqueMessageId, message.debugTimestamp, X509Utilities.getDevX509Name(sender.description))
+                1,
+                message.uniqueMessageId,
+                message.debugTimestamp,
+                X509Utilities.getDevX509Name(sender.description))
     }
 }

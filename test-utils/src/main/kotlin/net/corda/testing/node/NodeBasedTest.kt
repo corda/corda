@@ -60,21 +60,24 @@ abstract class NodeBasedTest {
      * will automatically be started with the default parameters.
      */
     fun startNetworkMapNode(legalName: String = DUMMY_MAP.name,
+                            platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
                             configOverrides: Map<String, Any> = emptyMap()): Node {
         check(_networkMapNode == null)
-        return startNodeInternal(legalName, advertisedServices, rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides).apply {
             _networkMapNode = this
         }
     }
 
     fun startNode(legalName: String,
+                  platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   configOverrides: Map<String, Any> = emptyMap()): ListenableFuture<Node> {
         val node = startNodeInternal(
                 legalName,
+                platformVersion,
                 advertisedServices,
                 rpcUsers,
                 mapOf(
@@ -118,6 +121,7 @@ abstract class NodeBasedTest {
     }
 
     private fun startNodeInternal(legalName: String,
+                                  platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
@@ -141,7 +145,7 @@ abstract class NodeBasedTest {
                 ) + configOverrides
         )
 
-        val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_VERSION_INFO)
+        val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
         node.start()
         nodes += node
         thread(name = legalName) {

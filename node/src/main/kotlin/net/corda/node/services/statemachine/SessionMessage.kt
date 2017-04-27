@@ -15,6 +15,7 @@ interface SessionMessage
 
 data class SessionInit(val initiatorSessionId: Long,
                        val clientFlowClass: Class<out FlowLogic<*>>,
+                       val flowVerison: Int,
                        val firstPayload: Any?) : SessionMessage
 
 interface ExistingSessionMessage : SessionMessage {

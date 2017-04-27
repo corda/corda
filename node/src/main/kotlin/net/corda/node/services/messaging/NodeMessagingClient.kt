@@ -38,13 +38,13 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import java.security.PublicKey
 
 // TODO: Stop the wallet explorer and other clients from using this class and get rid of persistentInbox
 
@@ -296,23 +296,13 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         try {
             val topic = message.required(topicProperty) { getStringProperty(it) }
             val sessionID = message.required(sessionIdProperty) { getLongProperty(it) }
+            val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
+            val platformVersion = message.required(platformVersionProperty) { getIntProperty(it) }
             // Use the magic deduplication property built into Artemis as our message identity too
             val uuid = message.required(HDR_DUPLICATE_DETECTION_ID) { UUID.fromString(message.getStringProperty(it)) }
-            val user = requireNotNull(message.getStringProperty(HDR_VALIDATED_USER)) { "Message is not authenticated" }
             log.trace { "Received message from: ${message.address} user: $user topic: $topic sessionID: $sessionID uuid: $uuid" }
 
-            val body = ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }
-
-            val msg = object : ReceivedMessage {
-                override val topicSession = TopicSession(topic, sessionID)
-                override val data: ByteArray = body
-                override val peer: X500Name = X500Name(user)
-                override val debugTimestamp: Instant = Instant.ofEpochMilli(message.timestamp)
-                override val uniqueMessageId: UUID = uuid
-                override fun toString() = "$topic#${data.opaque()}"
-            }
-
-            return msg
+            return ArtemisReceivedMessage(TopicSession(topic, sessionID), X500Name(user), platformVersion, uuid, message)
         } catch (e: Exception) {
             log.error("Unable to process message, ignoring it: $message", e)
             return null
@@ -322,6 +312,16 @@ class NodeMessagingClient(override val config: NodeConfiguration,
     private inline fun <T> ClientMessage.required(key: SimpleString, extractor: ClientMessage.(SimpleString) -> T): T {
         require(containsProperty(key)) { "Missing $key" }
         return extractor(key)
+    }
+
+    private class ArtemisReceivedMessage(override val topicSession: TopicSession,
+                                         override val peer: X500Name,
+                                         override val platformVersion: Int,
+                                         override val uniqueMessageId: UUID,
+                                         private val message: ClientMessage) : ReceivedMessage {
+        override val data: ByteArray by lazy { ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) } }
+        override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
+        override fun toString() = "${topicSession.topic}#${data.opaque()}"
     }
 
     private fun deliver(msg: ReceivedMessage): Boolean {

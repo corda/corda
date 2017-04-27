@@ -25,7 +25,7 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
                                     timestampChecker: TimestampChecker,
                                     serverId: Int,
                                     db: Database,
-                                    val client: BFTSMaRt.Client) : NotaryService(services) {
+                                    val client: BFTSMaRt.Client) : NotaryService {
     init {
         thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
             Server(serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
@@ -37,9 +37,11 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    override fun createFlow(otherParty: Party) = ServiceFlow(otherParty, client)
+    override val serviceFlowFactory: (Party, Int) -> FlowLogic<Void?> = { otherParty, _ ->
+        ServiceFlow(otherParty, client)
+    }
 
-    class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
@@ -60,11 +62,11 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         }
     }
 
-    class Server(id: Int,
-                 db: Database,
-                 tableName: String,
-                 services: ServiceHubInternal,
-                 timestampChecker: TimestampChecker) : BFTSMaRt.Server(id, db, tableName, services, timestampChecker) {
+    private class Server(id: Int,
+                         db: Database,
+                         tableName: String,
+                         services: ServiceHubInternal,
+                         timestampChecker: TimestampChecker) : BFTSMaRt.Server(id, db, tableName, services, timestampChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()

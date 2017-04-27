@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TxKeyFlowUtilities
 import java.security.PublicKey
@@ -14,9 +13,6 @@ import java.security.cert.Certificate
  * DoS of the node, as key generation/storage is vastly more expensive than submitting a request.
  */
 object TxKeyFlow {
-    fun registerServiceFlow(services: PluginServiceHub) {
-        services.registerServiceFlow(Requester::class.java, ::Provider)
-    }
 
     class Requester(val otherSide: Party,
                     override val progressTracker: ProgressTracker) : FlowLogic<Pair<PublicKey, Certificate?>>() {

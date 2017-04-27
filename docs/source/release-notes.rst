@@ -34,6 +34,11 @@ serialisation, etc. The node exposes the platform version it's on and we envisio
 run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
 API Level.
 
+Flows can now be versioned using the ``FlowVersion`` annotation, which assigns an integer version number to it. For now
+this enables a node to restrict usage of a flow to a specific version. Support for multiple verisons of the same flow,
+hence achieving backwards compatibility, will be possible once we start loading CorDapps in separate class loaders. Watch
+this space...
+
 Milestone 10
 ------------
 

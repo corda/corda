@@ -145,9 +145,9 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
  */
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
         clientFlowClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): ListenableFuture<P> {
+        noinline serviceFlowFactory: (Party) -> P): ListenableFuture<P> {
     val future = smm.changes.filter { it is StateMachineManager.Change.Add && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerServiceFlow(clientFlowClass.java, flowFactory)
+    services.registerServiceFlow(clientFlowClass.java, serviceFlowFactory)
     return future
 }
 

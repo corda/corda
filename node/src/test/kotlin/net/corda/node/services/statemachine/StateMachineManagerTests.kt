@@ -11,6 +11,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -110,7 +111,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `exception while fiber suspended`() {
-        node2.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow("Hello", it) }
         val flow = ReceiveFlow(node2.info.legalIdentity)
         val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
@@ -129,7 +130,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow restarted just after receiving payload`() {
-        node2.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         node1.services.startFlow(SendFlow("Hello", node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
@@ -179,7 +180,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
-        node1.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow("Hello", it) }
+        node1.registerServiceFlow(ReceiveFlow::class) { SendFlow("Hello", it) }
         node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
@@ -243,8 +244,8 @@ class StateMachineManagerTests {
     fun `sending to multiple parties`() {
         val node3 = net.createNode(node1.info.address)
         net.runNetwork()
-        node2.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
-        node3.services.registerServiceFlow(SendFlow::class.java) { ReceiveFlow(it).nonTerminating() }
+        node2.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
+        node3.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
         net.runNetwork()
@@ -254,14 +255,14 @@ class StateMachineManagerTests {
         assertThat(node3Flow.receivedPayloads[0]).isEqualTo(payload)
 
         assertSessionTransfers(node2,
-                node1 sent sessionInit(SendFlow::class, payload) to node2,
+                node1 sent sessionInit(SendFlow::class, 1, payload) to node2,
                 node2 sent sessionConfirm to node1,
                 node1 sent normalEnd to node2
                 //There's no session end from the other flows as they're manually suspended
         )
 
         assertSessionTransfers(node3,
-                node1 sent sessionInit(SendFlow::class, payload) to node3,
+                node1 sent sessionInit(SendFlow::class, 1, payload) to node3,
                 node3 sent sessionConfirm to node1,
                 node1 sent normalEnd to node3
                 //There's no session end from the other flows as they're manually suspended
@@ -277,8 +278,8 @@ class StateMachineManagerTests {
         net.runNetwork()
         val node2Payload = "Test 1"
         val node3Payload = "Test 2"
-        node2.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow(node2Payload, it) }
-        node3.services.registerServiceFlow(ReceiveFlow::class.java) { SendFlow(node3Payload, it) }
+        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow(node2Payload, it) }
+        node3.registerServiceFlow(ReceiveFlow::class) { SendFlow(node3Payload, it) }
         val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
@@ -303,12 +304,12 @@ class StateMachineManagerTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        node2.services.registerServiceFlow(PingPongFlow::class.java) { PingPongFlow(it, 20L) }
+        node2.registerServiceFlow(PingPongFlow::class) { PingPongFlow(it, 20L) }
         node1.services.startFlow(PingPongFlow(node2.info.legalIdentity, 10L))
         net.runNetwork()
 
         assertSessionTransfers(
-                node1 sent sessionInit(PingPongFlow::class, 10L) to node2,
+                node1 sent sessionInit(PingPongFlow::class, 1, 10L) to node2,
                 node2 sent sessionConfirm to node1,
                 node2 sent sessionData(20L) to node1,
                 node1 sent sessionData(11L) to node2,
@@ -374,7 +375,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `other side ends before doing expected send`() {
-        node2.services.registerServiceFlow(ReceiveFlow::class.java) { NoOpFlow() }
+        node2.registerServiceFlow(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
@@ -534,7 +535,7 @@ class StateMachineManagerTests {
             }
         }
 
-        node2.services.registerServiceFlow(AskForExceptionFlow::class.java) { ConditionalExceptionFlow(it, "Hello") }
+        node2.registerServiceFlow(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
         val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
         net.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
@@ -562,7 +563,7 @@ class StateMachineManagerTests {
         ptx.signWith(node1.services.legalIdentityKey)
         val stx = ptx.toSignedTransaction()
 
-        node1.services.registerServiceFlow(WaitingFlows.Waiter::class.java) {
+        node1.registerServiceFlow(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
         val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
@@ -587,6 +588,31 @@ class StateMachineManagerTests {
         assertThat(receiveFlowFuture.getOrThrow().receivedPayloads).containsOnly("Hello")
     }
 
+    @Test
+    fun `upgraded flow`() {
+        node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity))
+        net.runNetwork()
+        assertThat(sessionTransfers).startsWith(
+                node1 sent sessionInit(UpgradedFlow::class, 2) to node2
+        )
+    }
+
+    @Test
+    fun `unsupported new flow version`() {
+        node2.registerServiceFlow(UpgradedFlow::class, flowVersion = 1) { SendFlow("Hello", it) }
+        val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+            result.getOrThrow()
+        }.withMessageContaining("Version")
+    }
+
+    @FlowVersion(2)
+    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Any>() {
+        @Suspendable
+        override fun call(): Any = receive<Any>(otherParty).unwrap { it }
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //region Helpers
@@ -605,8 +631,8 @@ class StateMachineManagerTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
-    private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, payload: Any? = null): SessionInit {
-        return SessionInit(0, clientFlowClass.java, payload)
+    private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
+        return SessionInit(0, clientFlowClass.java, flowVersion, payload)
     }
     private val sessionConfirm = SessionConfirm(0, 0)
     private fun sessionData(payload: Any) = SessionData(0, payload)

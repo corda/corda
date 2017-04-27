@@ -10,10 +10,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.*
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -25,6 +22,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.debug
 import net.corda.flows.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.FullNodeConfiguration
@@ -43,6 +41,7 @@ import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.node.services.statemachine.flowVersion
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
@@ -63,7 +62,9 @@ import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.collections.ArrayList
+import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -107,7 +108,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
 
-    private val serviceFlowFactories = ConcurrentHashMap<Class<*>, (Party) -> FlowLogic<*>>()
+    protected val serviceFlowFactories = ConcurrentHashMap<Class<*>, ServiceFlowInfo>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
@@ -118,7 +119,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
-        override val clock: Clock = platformClock
+        override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
         override val schemaService: SchemaService get() = schemas
         override val transactionVerifierService: TransactionVerifierService get() = txVerifierService
@@ -133,11 +134,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) {
             require(clientFlowClass !in serviceFlowFactories) { "${clientFlowClass.name} has already been used to register a service flow" }
-            log.info("Registering service flow for ${clientFlowClass.name}")
-            serviceFlowFactories[clientFlowClass] = serviceFlowFactory
+            val version = clientFlowClass.flowVersion
+            val info = ServiceFlowInfo.CorDapp(version, serviceFlowFactory)
+            log.info("Registering service flow for ${clientFlowClass.name}: $info")
+            serviceFlowFactories[clientFlowClass] = info
         }
 
-        override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ((Party) -> FlowLogic<*>)? {
+        override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? {
             return serviceFlowFactories[clientFlowClass]
         }
 
@@ -157,7 +160,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var vault: VaultService
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
-    var inNodeNotaryService: NotaryService? = null
     lateinit var txVerifierService: TransactionVerifierService
     lateinit var identity: IdentityService
     lateinit var net: MessagingServiceInternal
@@ -224,7 +226,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     // We wait here, even though any in-flight messages should have been drained away because the
                     // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
                     // arbitrary and might be inappropriate.
-                    MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, TimeUnit.SECONDS)
+                    MoreExecutors.shutdownAndAwaitTermination(serverThread as ExecutorService, 50, SECONDS)
                 }
             }
 
@@ -235,7 +237,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 false
             }
             startMessagingService(rpcOps)
-            services.registerServiceFlow(ContractUpgradeFlow.Instigator::class.java) { ContractUpgradeFlow.Acceptor(it) }
+            installCoreFlows()
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()
@@ -245,6 +247,29 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         started = true
         return this
+    }
+
+    /**
+     * @suppress
+     * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
+     * [FlowVersion], core flows have the same version as the node's platform version. To cater for backwards compatibility
+     * [serviceFlowFactory] provides a second parameter which is the platform version of the initiating party.
+     */
+    @VisibleForTesting
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, serviceFlowFactory: (Party, Int) -> FlowLogic<*>) {
+        require(!clientFlowClass.java.isAnnotationPresent(FlowVersion::class.java)) {
+            "${FlowVersion::class.java.name} not applicable for core flows; their version is the node's platform version"
+        }
+        serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.Core(serviceFlowFactory)
+        log.debug { "Installed core flow ${clientFlowClass.java.name}" }
+    }
+
+    private fun installCoreFlows() {
+        installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
+        installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
+        installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
+        installCoreFlow(NotaryChangeFlow.Instigator::class) { otherParty, _ -> NotaryChangeFlow.Acceptor(otherParty) }
+        installCoreFlow(ContractUpgradeFlow.Instigator::class) { otherParty, _ -> ContractUpgradeFlow.Acceptor(otherParty) }
     }
 
     /**
@@ -369,14 +394,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {
-        val pluginServices = pluginRegistries.flatMap { x -> x.servicePlugins }
-        val serviceList = mutableListOf<Any>()
-        for (serviceConstructor in pluginServices) {
-            val service = serviceConstructor.apply(services)
-            serviceList.add(service)
-            tokenizableServices.add(service)
-        }
-        return serviceList
+        val pluginServices = pluginRegistries.flatMap { it.servicePlugins }.map { it.apply(services) }
+        tokenizableServices.addAll(pluginServices)
+        return pluginServices
     }
 
     /**
@@ -393,13 +413,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val notaryServiceType = serviceTypes.singleOrNull { it.isNotary() }
         if (notaryServiceType != null) {
-            inNodeNotaryService = makeNotaryService(notaryServiceType, tokenizableServices)
+            makeNotaryService(notaryServiceType, tokenizableServices)
         }
     }
 
     private fun registerWithNetworkMapIfConfigured(): ListenableFuture<Unit> {
         services.networkMapCache.addNode(info)
-        // In the unit test environment, we may run without any network map service sometimes.
+        // In the unit test environment, we may sometimes run without any network map service
         return if (networkMapAddress == null && inNodeNetworkMapService == null) {
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
@@ -448,26 +468,28 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
     }
 
-    open protected fun makeNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>): NotaryService {
+    open protected fun makeNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>) {
         val timestampChecker = TimestampChecker(platformClock, 30.seconds)
         val uniquenessProvider = makeUniquenessProvider(type)
         tokenizableServices.add(uniquenessProvider)
 
-        return when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(services, timestampChecker, uniquenessProvider)
-            ValidatingNotaryService.type -> ValidatingNotaryService(services, timestampChecker, uniquenessProvider)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(services, timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+        val notaryService = when (type) {
+            SimpleNotaryService.type -> SimpleNotaryService(timestampChecker, uniquenessProvider)
+            ValidatingNotaryService.type -> ValidatingNotaryService(timestampChecker, uniquenessProvider)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
                 val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")
                 val client = BFTSMaRt.Client(nodeId)
-                tokenizableServices.add(client)
+                tokenizableServices += client
                 BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
             }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
             }
         }
+
+        installCoreFlow(NotaryFlow.Client::class, notaryService.serviceFlowFactory)
     }
 
     protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
@@ -578,4 +600,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected fun createNodeDir() {
         configuration.baseDirectory.createDirectories()
     }
+}
+
+sealed class ServiceFlowInfo {
+    data class Core(val factory: (Party, Int) -> FlowLogic<*>) : ServiceFlowInfo()
+    data class CorDapp(val version: Int, val factory: (Party) -> FlowLogic<*>) : ServiceFlowInfo()
 }
