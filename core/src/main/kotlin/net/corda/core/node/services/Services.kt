@@ -159,7 +159,11 @@ interface VaultService {
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
      * optional [PageSpecification] and [Sort] modification criteria,
-     * and returns a [Vault.QueryResults] object containing a [Vault.Page] of [StateAndRef]
+     * and returns a [Vault.Page] object containing the following:
+     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
+     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
+     *  3. the [PageSpecification] used in the query
+     *  4. a total number of results available (for subsequent paging if necessary)
      *
      * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with of up to 200 entries.
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
@@ -167,12 +171,11 @@ interface VaultService {
     fun <T : ContractState> queryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                     paging: PageSpecification = PageSpecification(),
                                     sorting: Sort = Sort()): Vault.Page<T>
-
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
      * optional [PageSpecification] and [Sort] modification criteria,
      * and returns a [Vault.QueryResults] object containing
-     * 1) a snapshot as a [Vault.Page] of [StateAndRef]
+     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
      * 2) an [Observable] of [Vault.Update]
      *
      * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.

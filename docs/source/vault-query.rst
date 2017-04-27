@@ -73,6 +73,78 @@ The Vault Query API leverages the rich semantics of the underlying Requery_ pers
 
 .. note:: Current queries by ``Party`` specify only a party name as the underlying identity framework is being re-designed. In future it may be possible to query on specific elements of a parties identity such as a ``CompositeKey`` hierarchy (parent and child nodes, weightings). 
 
+Upgrading from previous releases
+--------------------------------
+Here follows a selection of the most common upgrade scenarios:
+
+1. ServiceHub usage to obtain Unconsumed states for a given contract state type
+   
+   Previously::
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val yoStates = b.vault.unconsumedStates<Yo.State>()
+
+This query returned an ``Iterable<StateAndRef<T>>`` 
+
+   Now:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val yoStates = b.vault.queryBy<Yo.State>().states
+
+The query returns a ``Vault.Page`` result containing:
+
+	- states as a ``List<StateAndRef<T : ContractState>>`` sized according to the default Page specification of ``DEFAULT_PAGE_NUM`` (0) and ``DEFAULT_PAGE_SIZE`` (200).
+	- states metadata as a ``List<Vault.StateMetadata>`` containing Vault State metadata held in the Vault states table.
+	- the ``PagingSpecification`` used in the query
+	- a ``total`` number of results available. This value can be used issue subsequent queries with appropriately specified ``PageSpecification`` (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
+
+2. ServiceHub usage obtaining linear heads for a given contract state type
+   
+   Previously:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val iouStates = serviceHub.vaultService.linearHeadsOfType<IOUState>()
+		val iouToSettle = iouStates[linearId] ?: throw Exception("IOUState with linearId $linearId not found.")
+
+   Now::
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val criteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
+		val iouStates = serviceHub.vaultService.queryBy<IOUState>(criteria).states
+
+		val iouToSettle = iouStates.singleOrNull() ?: throw Exception("IOUState with linearId $linearId not found.")
+   
+3. RPC usage was limited to using the ``vaultAndUpdates`` RPC method, which returned a snapshot and streaming updates as an Observable. 
+   In many cases, queries were not interested in the streaming updates part of the query. 
+
+   Previously::
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val iouStates = services.vaultAndUpdates().first.filter { it.state.data is IOUState }
+
+   Now::
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+		val iouStates = services.vaultServiceQueryBy<IOUState>()
+
 Example usage
 -------------
 
