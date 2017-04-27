@@ -1,6 +1,7 @@
 package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
+import net.corda.core.checkNotUnorderedHashMap
 import net.corda.core.serialization.AllWhitelist
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
@@ -20,6 +21,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
 // TODO: support for custom serialisation of core types (of e.g. PublicKey, Throwables)
+// TODO: exclude schemas for core types that don't need custom serializers that everyone already knows the schema for.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
@@ -28,11 +30,11 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: incorporate the class carpenter for classes not on the classpath.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
-    private val serializersByType = ConcurrentHashMap<Type, Serializer>()
-    private val serializersByDescriptor = ConcurrentHashMap<Any, Serializer>()
+    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
+    private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer>()
 
     @Throws(NotSerializableException::class)
-    fun get(actualType: Class<*>?, declaredType: Type): Serializer {
+    fun get(actualType: Class<*>?, declaredType: Type): AMQPSerializer {
         if (declaredType is ParameterizedType) {
             return serializersByType.computeIfAbsent(declaredType) {
                 // We allow only Collection and Map.
@@ -40,7 +42,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 if (rawType is Class<*>) {
                     checkParameterisedTypesConcrete(declaredType.actualTypeArguments)
                     if (Collection::class.java.isAssignableFrom(rawType)) {
-                        makeCollectionSerializer(declaredType)
+                        CollectionSerializer(declaredType)
                     } else if (Map::class.java.isAssignableFrom(rawType)) {
                         makeMapSerializer(declaredType)
                     } else {
@@ -53,7 +55,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else if (declaredType is Class<*>) {
             // Simple classes allowed
             if (Collection::class.java.isAssignableFrom(declaredType)) {
-                return serializersByType.computeIfAbsent(declaredType) { makeCollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType))) }
+                return serializersByType.computeIfAbsent(declaredType) { CollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType))) }
             } else if (Map::class.java.isAssignableFrom(declaredType)) {
                 return serializersByType.computeIfAbsent(declaredType) { makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType))) }
             } else {
@@ -67,7 +69,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, envelope: Envelope): Serializer {
+    fun get(typeDescriptor: Any, envelope: Envelope): AMQPSerializer {
         return serializersByDescriptor[typeDescriptor] ?: {
             processSchema(envelope.schema)
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
@@ -82,10 +84,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun processSchemaEntry(typeNotation: TypeNotation) {
         when (typeNotation) {
-        // java.lang.Class (whether a class or interface)
-            is CompositeType -> processCompositeType(typeNotation)
-        // Collection / Map, possibly with generics
-            is RestrictedType -> processRestrictedType(typeNotation)
+            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+            is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
     }
 
@@ -124,18 +124,16 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeClassSerializer(clazz: Class<*>): Serializer {
+    private fun makeClassSerializer(clazz: Class<*>): AMQPSerializer {
         return serializersByType.computeIfAbsent(clazz) {
             if (clazz.isArray) {
                 whitelisted(clazz.componentType)
                 ArraySerializer(clazz)
+            } else if (isPrimitive(clazz)) {
+                PrimitiveSerializer(clazz)
             } else {
-                if (isPrimitive(clazz)) {
-                    PrimitiveSerializer(clazz)
-                } else {
-                    whitelisted(clazz)
-                    ClassSerializer(clazz)
-                }
+                whitelisted(clazz)
+                ClassSerializer(clazz)
             }
         }
     }
@@ -148,15 +146,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeCollectionSerializer(declaredType: ParameterizedType): Serializer {
-        return CollectionSerializer(declaredType)
-    }
-
-    private fun makeMapSerializer(declaredType: ParameterizedType): Serializer {
+    private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer {
         val rawType = declaredType.rawType as Class<*>
-        if (HashMap::class.java.isAssignableFrom(rawType) && !LinkedHashMap::class.java.isAssignableFrom(rawType)) {
-            throw NotSerializableException("Map type $declaredType is unstable under iteration.")
-        }
+        rawType.checkNotUnorderedHashMap()
         return MapSerializer(declaredType)
     }
 
@@ -165,7 +157,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
         fun primitiveTypeName(type: Type): String? = primitiveTypeNames[type as? Class<*>]
 
-        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(Boolean::class.java to "boolean",
+        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
+                Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",
                 Short::class.java to "short",

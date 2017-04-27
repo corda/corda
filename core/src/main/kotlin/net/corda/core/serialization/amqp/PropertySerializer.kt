@@ -8,7 +8,7 @@ import kotlin.reflect.jvm.javaGetter
 /**
  * Base class for serialization of a property of an object.
  */
-abstract class PropertySerializer(val name: String, val readMethod: Method) {
+sealed class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any?
 
@@ -18,7 +18,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     val mandatory: Boolean = generateMandatory()
 
     private val isInterface: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isInterface ?: false
-    private val isPrimitive: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isPrimitive ?: false
+    private val isJVMPrimitive: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isPrimitive ?: false
 
     private fun generateType(): String {
         return if (isInterface) "*" else {
@@ -32,11 +32,11 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     private fun generateDefault(): String? {
-        if (isPrimitive) {
-            if (readMethod.genericReturnType == java.lang.Boolean.TYPE) {
-                return "false"
-            } else {
-                return "0"
+        if (isJVMPrimitive) {
+            return when (readMethod.genericReturnType) {
+                java.lang.Boolean.TYPE -> "false"
+                java.lang.Character.TYPE -> "&#0"
+                else -> "0"
             }
         } else {
             return null
@@ -44,7 +44,7 @@ abstract class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     private fun generateMandatory(): Boolean {
-        return isPrimitive || !readMethod.returnsNullable()
+        return isJVMPrimitive || !readMethod.returnsNullable()
     }
 
     private fun Method.returnsNullable(): Boolean {

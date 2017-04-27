@@ -3,7 +3,6 @@
 
 package net.corda.core
 
-import com.google.common.base.Function
 import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
@@ -24,6 +23,7 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
+import java.util.HashMap
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
@@ -32,6 +32,13 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.collections.Iterable
+import kotlin.collections.LinkedHashMap
+import kotlin.collections.List
+import kotlin.collections.filter
+import kotlin.collections.firstOrNull
+import kotlin.collections.fold
+import kotlin.collections.forEach
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -455,4 +462,10 @@ fun codePointsString(vararg codePoints: Int): String {
     val builder = StringBuilder()
     codePoints.forEach { builder.append(Character.toChars(it)) }
     return builder.toString()
+}
+
+fun <T> Class<T>.checkNotUnorderedHashMap() {
+    if (HashMap::class.java.isAssignableFrom(this) && !LinkedHashMap::class.java.isAssignableFrom(this)) {
+        throw NotSerializableException("Map type $this is unstable under iteration. Suggested fix: use LinkedHashMap instead.")
+    }
 }

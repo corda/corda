@@ -40,7 +40,7 @@ class SerializationOutputTests {
     }
 
     data class Woo2(val fred: Int, val bob: String = "Bob") {
-        @CordaConstructor constructor(@CordaParam("fred") foo: Int) : this(foo, "Ginger")
+        @ConstructorForDeserialization constructor(@SerializedName("fred") foo: Int) : this(foo, "Ginger")
     }
 
     @CordaSerializable
@@ -74,7 +74,7 @@ class SerializationOutputTests {
         override fun hashCode(): Int = ginger
     }
 
-    class MismatchRename(@CordaParam("ginger") fred: Int) {
+    class MismatchRename(@SerializedName("ginger") fred: Int) {
         val ginger: Int = fred
 
         override fun equals(other: Any?): Boolean = (other as? MismatchRename)?.ginger == ginger
@@ -86,13 +86,13 @@ class SerializationOutputTests {
         val bytes = ser.serialize(obj)
 
         val decoder = DecoderImpl().apply {
-            this.register(Envelope.DESCRIPTOR, Envelope.Constructor)
-            this.register(Schema.DESCRIPTOR, Schema.Constructor)
-            this.register(Descriptor.DESCRIPTOR, Descriptor.Constructor)
-            this.register(Field.DESCRIPTOR, Field.Constructor)
-            this.register(CompositeType.DESCRIPTOR, CompositeType.Constructor)
-            this.register(Choice.DESCRIPTOR, Choice.Constructor)
-            this.register(RestrictedType.DESCRIPTOR, RestrictedType.Constructor)
+            this.register(Envelope.DESCRIPTOR, Envelope.Companion)
+            this.register(Schema.DESCRIPTOR, Schema.Companion)
+            this.register(Descriptor.DESCRIPTOR, Descriptor.Companion)
+            this.register(Field.DESCRIPTOR, Field.Companion)
+            this.register(CompositeType.DESCRIPTOR, CompositeType.Companion)
+            this.register(Choice.DESCRIPTOR, Choice.Companion)
+            this.register(RestrictedType.DESCRIPTOR, RestrictedType.Companion)
         }
         EncoderImpl(decoder)
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.bytes, 8, bytes.size - 8))

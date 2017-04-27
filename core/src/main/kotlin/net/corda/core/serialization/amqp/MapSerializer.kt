@@ -1,27 +1,26 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.checkNotUnorderedHashMap
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
-import kotlin.collections.LinkedHashMap
 import kotlin.collections.Map
 import kotlin.collections.iterator
 import kotlin.collections.map
-import kotlin.collections.toMap
 
 /**
  * Serialization / deserialization of certain supported [Map] types.
  */
-class MapSerializer(val declaredType: ParameterizedType) : Serializer {
+class MapSerializer(val declaredType: ParameterizedType) : AMQPSerializer {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = "net.corda:${hashType(type)}"
 
     companion object {
         private val supportedTypes: Map<Class<out Map<*, *>>, (Map<*, *>) -> Map<*, *>> = mapOf(
-                Map::class.java to { map -> map },
+                Map::class.java to { map -> Collections.unmodifiableMap(map) },
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
         )
@@ -43,27 +42,25 @@ class MapSerializer(val declaredType: ParameterizedType) : Serializer {
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        if (HashMap::class.java.isAssignableFrom(obj.javaClass) && !LinkedHashMap::class.java.isAssignableFrom(obj.javaClass)) {
-            throw NotSerializableException("Map type ${obj.javaClass} is unstable under iteration.")
-        }
+        obj.javaClass.checkNotUnorderedHashMap()
         // Write described
-        data.putDescribed()
-        data.enter()
-        // Write descriptor
-        data.putObject(typeNotation.descriptor.name)
-        // Write map
-        data.putMap()
-        data.enter()
-        for (entry in obj as Map<*, *>) {
-            output.writeObjectOrNull(entry.key, data, declaredType.actualTypeArguments[0])
-            output.writeObjectOrNull(entry.value, data, declaredType.actualTypeArguments[1])
+        data.withDescribed(typeNotation.descriptor) {
+            // Write map
+            data.putMap()
+            data.enter()
+            for (entry in obj as Map<*, *>) {
+                output.writeObjectOrNull(entry.key, data, declaredType.actualTypeArguments[0])
+                output.writeObjectOrNull(entry.value, data, declaredType.actualTypeArguments[1])
+            }
+            data.exit() // exit map
         }
-        data.exit() // exit map
-        data.exit() // exit described
     }
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
-        // Can we verify the entries in the map?
-        return concreteBuilder((obj as Map<*, *>).map { input.readObjectOrNull(it.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(it.value, envelope, declaredType.actualTypeArguments[1]) }.toMap())
+        // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
+        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(envelope, input, it) }
+        return concreteBuilder(entries.toMap())
     }
+
+    private fun readEntry(envelope: Envelope, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) = input.readObjectOrNull(entry.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(entry.value, envelope, declaredType.actualTypeArguments[1])
 }

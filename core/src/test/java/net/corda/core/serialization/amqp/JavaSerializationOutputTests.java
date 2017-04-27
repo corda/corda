@@ -18,8 +18,8 @@ public class JavaSerializationOutputTests {
         private final String bob;
         private final int count;
 
-        @CordaConstructor
-        public Foo(@CordaParam("fred") String msg, @CordaParam("count") int count) {
+        @ConstructorForDeserialization
+        public Foo(@SerializedName("fred") String msg, @SerializedName("count") int count) {
             this.bob = msg;
             this.count = count;
         }
@@ -55,8 +55,8 @@ public class JavaSerializationOutputTests {
         private final String fred;
         private final Integer count;
 
-        @CordaConstructor
-        public BoxedFoo(@CordaParam("fred") String fred, @CordaParam("count") Integer count) {
+        @ConstructorForDeserialization
+        public BoxedFoo(@SerializedName("fred") String fred, @SerializedName("count") Integer count) {
             this.fred = fred;
             this.count = count;
         }
@@ -93,8 +93,8 @@ public class JavaSerializationOutputTests {
         private final String fred;
         private final Integer count;
 
-        @CordaConstructor
-        public BoxedFooNotNull(@CordaParam("fred") String fred, @CordaParam("count") Integer count) {
+        @ConstructorForDeserialization
+        public BoxedFooNotNull(@SerializedName("fred") String fred, @SerializedName("count") Integer count) {
             this.fred = fred;
             this.count = count;
         }
@@ -134,13 +134,13 @@ public class JavaSerializationOutputTests {
 
         DecoderImpl decoder = new DecoderImpl();
 
-        decoder.register(Envelope.Companion.getDESCRIPTOR(), Envelope.Constructor.INSTANCE);
-        decoder.register(Schema.Companion.getDESCRIPTOR(), Schema.Constructor.INSTANCE);
-        decoder.register(Descriptor.Companion.getDESCRIPTOR(), Descriptor.Constructor.INSTANCE);
-        decoder.register(Field.Companion.getDESCRIPTOR(), Field.Constructor.INSTANCE);
-        decoder.register(CompositeType.Companion.getDESCRIPTOR(), CompositeType.Constructor.INSTANCE);
-        decoder.register(Choice.Companion.getDESCRIPTOR(), Choice.Constructor.INSTANCE);
-        decoder.register(RestrictedType.Companion.getDESCRIPTOR(), RestrictedType.Constructor.INSTANCE);
+        decoder.register(Envelope.Companion.getDESCRIPTOR(), Envelope.Companion);
+        decoder.register(Schema.Companion.getDESCRIPTOR(), Schema.Companion);
+        decoder.register(Descriptor.Companion.getDESCRIPTOR(), Descriptor.Companion);
+        decoder.register(Field.Companion.getDESCRIPTOR(), Field.Companion);
+        decoder.register(CompositeType.Companion.getDESCRIPTOR(), CompositeType.Companion);
+        decoder.register(Choice.Companion.getDESCRIPTOR(), Choice.Companion);
+        decoder.register(RestrictedType.Companion.getDESCRIPTOR(), RestrictedType.Companion);
 
         new EncoderImpl(decoder);
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.getBytes(), 8, bytes.getSize() - 8));

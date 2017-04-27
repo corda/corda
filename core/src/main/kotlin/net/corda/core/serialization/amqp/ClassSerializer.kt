@@ -11,15 +11,15 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ClassSerializer(val clazz: Class<*>) : Serializer {
+class ClassSerializer(val clazz: Class<*>) : AMQPSerializer {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
     private val propertySerializers: Collection<PropertySerializer>
 
     init {
-        val konstructor = constructorForDeserialization(clazz)
-        javaConstructor = konstructor?.javaConstructor
-        propertySerializers = propertiesForSerialization(konstructor, clazz)
+        val kotlinConstructor = constructorForDeserialization(clazz)
+        javaConstructor = kotlinConstructor?.javaConstructor
+        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz)
     }
     private val typeName = clazz.name
     override val typeDescriptor = "net.corda:${hashType(type)}"
@@ -36,18 +36,15 @@ class ClassSerializer(val clazz: Class<*>) : Serializer {
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         // Write described
-        data.putDescribed()
-        data.enter()
-        // Write descriptor
-        data.putObject(typeNotation.descriptor.code ?: typeNotation.descriptor.name)
-        // Write list
-        data.putList()
-        data.enter()
-        for (property in propertySerializers) {
-            property.writeProperty(obj, data, output)
+        data.withDescribed(typeNotation.descriptor) {
+            // Write list
+            putList()
+            enter()
+            for (property in propertySerializers) {
+                property.writeProperty(obj, this, output)
+            }
+            exit() // exit list
         }
-        data.exit() // exit list
-        data.exit() // exit described
     }
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {

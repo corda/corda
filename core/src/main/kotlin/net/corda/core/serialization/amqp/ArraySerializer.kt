@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-class ArraySerializer(override val type: Type) : Serializer {
+class ArraySerializer(override val type: Type) : AMQPSerializer {
     private val typeName = type.typeName
 
     override val typeDescriptor = "net.corda:${hashType(type)}"
@@ -30,18 +30,13 @@ class ArraySerializer(override val type: Type) : Serializer {
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         // Write described
-        data.putDescribed()
-        data.enter()
-        // Write descriptor
-        data.putObject(typeNotation.descriptor.name)
-        // Write list
-        data.putList()
-        data.enter()
-        for (entry in obj as Array<*>) {
-            output.writeObjectOrNull(entry, data, elementType)
+        data.withDescribed(typeNotation.descriptor) {
+            withList {
+                for (entry in obj as Array<*>) {
+                    output.writeObjectOrNull(entry, this, elementType)
+                }
+            }
         }
-        data.exit() // exit list
-        data.exit() // exit described
     }
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
@@ -49,20 +44,17 @@ class ArraySerializer(override val type: Type) : Serializer {
     }
 
     private fun <T> List<T>.toArrayOfType(type: Type): Any {
-        return if (type is Class<*>) {
-            return java.lang.reflect.Array.newInstance(type, this.size).apply {
-                for (i in 0..lastIndex) {
-                    java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
-                }
-            }
+        val elementType: Class<*> = if (type is Class<*>) {
+            type
         } else if (type is ParameterizedType) {
-            return java.lang.reflect.Array.newInstance(type.rawType as Class<*>, this.size).apply {
-                for (i in 0..lastIndex) {
-                    java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
-                }
-            }
+            type.rawType as Class<*>
         } else {
             throw NotSerializableException("Unexpected array element type $type")
+        }
+        return java.lang.reflect.Array.newInstance(elementType, this.size).apply {
+            for (i in 0..lastIndex) {
+                java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
+            }
         }
     }
 }

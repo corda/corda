@@ -6,7 +6,7 @@ import java.lang.reflect.Type
 /**
  * Implemented to serialize and deserialize different types of objects to/from AMQP.
  */
-interface Serializer {
+interface AMQPSerializer {
     /**
      * The JVM type this can serialize and deserialize.
      */
@@ -16,7 +16,7 @@ interface Serializer {
      * Textual unique representation of the JVM type this represents.  Will be encoded into the AMQP stream and
      * will appear in the schema.
      *
-     * Typically this is unique enough that we can use one global cache of [Serializer]s and use this as the look up key.
+     * Typically this is unique enough that we can use one global cache of [AMQPSerializer]s and use this as the look up key.
      */
     val typeDescriptor: String
 
@@ -35,4 +35,28 @@ interface Serializer {
      * Read the given object from the input. The envelope is provided in case the schema is required.
      */
     fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any
+
+    /**
+     * Extension helper for writing described objects.
+     */
+    fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
+        // Write described
+        putDescribed()
+        enter()
+        // Write descriptor
+        putObject(descriptor.code ?: descriptor.name)
+        block()
+        exit() // exit described
+    }
+
+    /**
+     * Extension helper for writing lists.
+     */
+    fun Data.withList(block: Data.() -> Unit) {
+        // Write list
+        putList()
+        enter()
+        block()
+        exit() // exit list
+    }
 }

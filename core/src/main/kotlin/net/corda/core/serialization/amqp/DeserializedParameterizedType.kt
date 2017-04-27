@@ -4,6 +4,7 @@ import java.io.NotSerializableException
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
 
 /**
  * Implementation of [ParameterizedType] that we can actually construct, and a parser from the string representation
@@ -18,6 +19,11 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             throw NotSerializableException("Expected ${rawType.typeParameters.size} for ${rawType.name} but found ${params.size}")
         }
         // We do not check bounds.  Both our use cases (Collection and Map) are not bounded.
+        if (rawType.typeParameters.any { boundedType(it) }) throw NotSerializableException("Bounded types in ParamterizedTypes not supported, but found a bound in $rawType")
+    }
+
+    private fun boundedType(type: TypeVariable<out Class<out Any>>): Boolean {
+        return !(type.bounds.size == 1 && type.bounds[0] == Object::class.java)
     }
 
     val isFullyWildcarded: Boolean = params.all { it == SerializerFactory.AnyType }
@@ -38,10 +44,10 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         const val MAX_DEPTH: Int = 32
 
         fun make(name: String, cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): Type {
-            val paramTypes = mutableListOf<Type>()
+            val paramTypes = ArrayList<Type>()
             val pos = parseTypeList("$name>", paramTypes, cl)
             if (pos <= name.length) {
-                throw NotSerializableException("Too many close generics '>'")
+                throw NotSerializableException("Malformed string form of ParameterizedType. Unexpected '>' at character position $pos of $name.")
             }
             if (paramTypes.size != 1) {
                 throw NotSerializableException("Expected only one type, but got $paramTypes")
@@ -57,7 +63,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
             while (pos < params.length) {
                 if (params[pos] == '<') {
                     val typeEnd = pos++
-                    val paramTypes = mutableListOf<Type>()
+                    val paramTypes = ArrayList<Type>()
                     pos = parseTypeParams(params, pos, paramTypes, cl, depth + 1)
                     types += makeParameterizedType(params.substring(typeStart, typeEnd).trim(), paramTypes, cl)
                     typeStart = pos
@@ -142,7 +148,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
 
     override fun hashCode(): Int = _typeName.hashCode()
 
-    // TODO: this might be a bit cheeky since the toString() of the JDK impl. would be equal.
+    // TODO: this might be a bit cheeky since the toString() of the JDK impl. would be equal, which we desire.
     override fun equals(other: Any?): Boolean {
         return other is ParameterizedType && other.toString() == toString()
     }

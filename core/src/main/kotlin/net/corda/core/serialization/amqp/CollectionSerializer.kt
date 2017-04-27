@@ -12,7 +12,7 @@ import kotlin.collections.Set
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
-class CollectionSerializer(val declaredType: ParameterizedType) : Serializer {
+class CollectionSerializer(val declaredType: ParameterizedType) : AMQPSerializer {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = "net.corda:${hashType(type)}"
@@ -43,18 +43,13 @@ class CollectionSerializer(val declaredType: ParameterizedType) : Serializer {
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         // Write described
-        data.putDescribed()
-        data.enter()
-        // Write descriptor
-        data.putObject(typeNotation.descriptor.name)
-        // Write list
-        data.putList()
-        data.enter()
-        for (entry in obj as Collection<*>) {
-            output.writeObjectOrNull(entry, data, declaredType.actualTypeArguments[0])
+        data.withDescribed(typeNotation.descriptor) {
+            withList {
+                for (entry in obj as Collection<*>) {
+                    output.writeObjectOrNull(entry, this, declaredType.actualTypeArguments[0])
+                }
+            }
         }
-        data.exit() // exit list
-        data.exit() // exit described
     }
 
     override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {

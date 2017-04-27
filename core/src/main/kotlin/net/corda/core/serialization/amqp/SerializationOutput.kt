@@ -6,6 +6,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.collections.LinkedHashSet
 
 /**
  * Main entry point for serializing an object to AMQP.
@@ -13,8 +14,8 @@ import java.util.*
 class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
-    private val serializerHistory: MutableSet<Serializer> = mutableSetOf()
-    private val schemaHistory: MutableSet<TypeNotation> = mutableSetOf()
+    private val serializerHistory: MutableSet<AMQPSerializer> = LinkedHashSet()
+    private val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
 
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
