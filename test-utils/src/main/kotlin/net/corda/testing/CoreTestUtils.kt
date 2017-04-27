@@ -162,7 +162,7 @@ data class TestNodeConfiguration(
         override val keyStorePassword: String = "cordacadevpass",
         override val trustStorePassword: String = "trustpass",
         override val rpcUsers: List<User> = emptyList(),
-        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
+        override val dataSourceProperties: Properties = makeTestDataSourceProperties(X500Name(myLegalName)),
         override val nearestCity: String = "Null Island",
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
@@ -181,7 +181,7 @@ fun testConfiguration(baseDirectory: Path, legalName: String, basePort: Int): Fu
             emailAddress = "",
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(legalName),
+            dataSourceProperties = makeTestDataSourceProperties(X500Name(legalName)),
             certificateSigningService = URL("http://localhost"),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
@@ -198,7 +198,7 @@ fun testConfiguration(baseDirectory: Path, legalName: String, basePort: Int): Fu
 }
 
 @JvmOverloads
-fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {
+fun configureTestSSL(legalName: String = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"
