@@ -10,8 +10,8 @@ import java.security.spec.AlgorithmParameterSpec
  * @param schemeNumberID we assign a number ID for more efficient on-wire serialisation. Please ensure uniqueness between schemes.
  * @param schemeCodeName code name for this signature scheme (e.g. RSA_SHA256, ECDSA_SECP256K1_SHA256, ECDSA_SECP256R1_SHA256, EDDSA_ED25519_SHA512, SPHINCS-256_SHA512).
  * @param algorithmName which signature algorithm is used (e.g. RSA, ECDSA. EdDSA, SPHINCS-256).
- * @param sig the [Signature] class that provides the functionality of a digital signature scheme.
- * eg. Signature.getInstance("SHA256withECDSA", "BC").
+ * @param providerName the provider's name (e.g. "BC").
+ * @param sigSchemeName a signature-scheme name as required to create [Signature] objects (e.g. "SHA256withECDSA")
  * @param keyFactory the KeyFactory for this scheme (e.g. KeyFactory.getInstance("RSA", "BC")).
  * @param keyPairGenerator defines the <i>Service Provider Interface</i> (<b>SPI</b>) for the {@code KeyPairGenerator} class.
  * e.g. KeyPairGenerator.getInstance("ECDSA", "BC").
@@ -24,7 +24,8 @@ data class SignatureScheme(
         val schemeNumberID: Int,
         val schemeCodeName: String,
         val algorithmName: String,
-        val sig: Signature,
+        val providerName: String,
+        val sigSchemeName: String,
         val keyFactory: KeyFactory,
         val keyPairGenerator: KeyPairGeneratorSpi,
         val algSpec: AlgorithmParameterSpec?,

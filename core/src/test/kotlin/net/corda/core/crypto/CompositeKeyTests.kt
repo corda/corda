@@ -4,7 +4,6 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.serialize
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -19,9 +18,9 @@ class CompositeKeyTests {
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
-    val aliceSignature = aliceKey.signWithECDSA(message)
-    val bobSignature = bobKey.signWithECDSA(message)
-    val charlieSignature = charlieKey.signWithECDSA(message)
+    val aliceSignature = aliceKey.sign(message)
+    val bobSignature = bobKey.sign(message)
+    val charlieSignature = charlieKey.sign(message)
     val compositeAliceSignature = CompositeSignaturesWithKeys(listOf(aliceSignature))
 
     @Test

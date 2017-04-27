@@ -22,7 +22,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
          * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
+        fun verify(content: ByteArray) = by.verify(content, this)
         /**
          * Utility to simplify the act of verifying a signature.
          *
@@ -31,9 +31,9 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
          * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bytes, this)
+        fun verify(content: OpaqueBytes) = by.verify(content.bytes, this)
         /**
-         * Utility to simplify the act of verifying a signature. In comparison to [verifyWithECDSA] doesn't throw an
+         * Utility to simplify the act of verifying a signature. In comparison to [verify] doesn't throw an
          * exception, making it more suitable where a boolean is required, but normally you should use the function
          * which throws, as it avoids the risk of failing to test the result.
          *
@@ -43,7 +43,7 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
          * @return whether the signature is correct for this key.
          */
         @Throws(InvalidKeyException::class, SignatureException::class)
-        fun isValidForECDSA(content: ByteArray) = by.isValidForECDSA(content, this)
+        fun isValid(content: ByteArray) = by.isValid(content, this)
     }
 
     // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key

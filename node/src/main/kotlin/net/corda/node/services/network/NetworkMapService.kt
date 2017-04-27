@@ -323,7 +323,7 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bytes, node.legalIdentity.owningKey)
+        val regSig = privateKey.sign(regSerialized.bytes, node.legalIdentity.owningKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }

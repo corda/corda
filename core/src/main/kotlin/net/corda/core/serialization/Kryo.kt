@@ -4,7 +4,6 @@ import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
@@ -17,7 +16,6 @@ import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -25,6 +23,7 @@ import java.io.*
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.spec.InvalidKeySpecException
 import java.time.Instant
@@ -387,6 +386,31 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
         val builder = CompositeKey.Builder()
         children.forEach { builder.addKey(it.node, it.weight)  }
         return builder.build(threshold) as CompositeKey
+    }
+}
+
+@ThreadSafe
+object PrivateKeySerializer : Serializer<PrivateKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: PrivateKey) {
+        output.writeBytesWithLength(obj.encoded)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<PrivateKey>): PrivateKey {
+        val A = input.readBytesWithLength()
+        return Crypto.decodePrivateKey(A)
+    }
+}
+
+/** For serialising a public key */
+@ThreadSafe
+object PublicKeySerializer : Serializer<PublicKey>() {
+    override fun write(kryo: Kryo, output: Output, obj: PublicKey) {
+        output.writeBytesWithLength(obj.encoded)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<PublicKey>): PublicKey {
+        val A = input.readBytesWithLength()
+        return Crypto.decodePublicKey(A)
     }
 }
 

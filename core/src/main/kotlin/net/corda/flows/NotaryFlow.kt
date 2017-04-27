@@ -77,7 +77,7 @@ object NotaryFlow {
 
         private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verifyWithECDSA(data)
+            sig.verify(data)
         }
     }
 
@@ -142,7 +142,7 @@ object NotaryFlow {
 
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
-            return mySigningKey.signWithECDSA(bits)
+            return mySigningKey.sign(bits)
         }
 
         private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
