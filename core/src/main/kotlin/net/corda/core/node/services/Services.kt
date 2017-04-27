@@ -164,9 +164,9 @@ interface VaultService {
      * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with of up to 200 entries.
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
      */
-    fun <T : ContractState> queryBy(criteria: QueryCriteria,
-                                    paging: PageSpecification? = PageSpecification(),
-                                    sorting: Sort? = Sort()): Vault.Page<T>
+    fun <T : ContractState> queryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort()): Vault.Page<T>
 
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
@@ -178,21 +178,22 @@ interface VaultService {
      * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
      */
-    fun <T : ContractState> trackBy(criteria: QueryCriteria,
-                                    paging: PageSpecification? = PageSpecification(),
-                                    sorting: Sort? = Sort()): Vault.QueryResults<T>
+    fun <T : ContractState> trackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort()): Vault.QueryResults<T>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
-    fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>
-            = queryBy(criteria, paging, Sort())
-    fun <T : ContractState> queryBy(criteria: QueryCriteria): Vault.Page<T>
-            = queryBy(criteria, PageSpecification(), Sort())
-    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T>
-            = trackBy(criteria, paging, Sort())
-    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.QueryResults<T>
-            = trackBy(criteria, PageSpecification(), Sort())
+    fun <T : ContractState> queryBy(): Vault.Page<T> = queryBy()
+    fun <T : ContractState> queryBy(criteria: QueryCriteria): Vault.Page<T> = queryBy(criteria)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = queryBy(criteria, paging)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = queryBy(criteria, sorting)
+
+    fun <T : ContractState> trackBy(): Vault.QueryResults<T> = trackBy()
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.QueryResults<T> = trackBy(criteria)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T> = trackBy(criteria, paging)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = trackBy(criteria, Sort())
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s

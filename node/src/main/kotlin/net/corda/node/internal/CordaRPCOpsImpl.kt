@@ -59,8 +59,8 @@ class CordaRPCOpsImpl(
     }
 
     override fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria,
-                                                         paging: PageSpecification?,
-                                                         sorting: Sort?): Vault.Page<T> {
+                                                         paging: PageSpecification,
+                                                         sorting: Sort): Vault.Page<T> {
         return database.transaction {
             services.vaultService.queryBy<T>(criteria, paging, sorting)
         }
@@ -68,8 +68,8 @@ class CordaRPCOpsImpl(
 
     @RPCReturnsObservables
     override fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria,
-                                                paging: PageSpecification?,
-                                                sorting: Sort?): Vault.QueryResults<T> {
+                                                         paging: PageSpecification,
+                                                         sorting: Sort): Vault.QueryResults<T> {
         return database.transaction {
             services.vaultService.trackBy<T>(criteria, paging, sorting)
         }

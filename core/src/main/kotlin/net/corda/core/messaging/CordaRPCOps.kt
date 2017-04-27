@@ -72,14 +72,30 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      */
-    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.Page<T>
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                                paging: PageSpecification = PageSpecification(),
+                                                sorting: Sort = Sort()): Vault.Page<T>
 
     /**
      * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
      */
     @RPCReturnsObservables
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification?, sorting: Sort?): Vault.QueryResults<T>
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                                paging: PageSpecification = PageSpecification(),
+                                                sorting: Sort = Sort()): Vault.QueryResults<T>
     // DOCEND VaultQueryAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+    fun <T : ContractState> vaultServiceQueryBy(): Vault.Page<T> = vaultServiceQueryBy()
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria): Vault.Page<T> = vaultServiceQueryBy(criteria)
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultServiceQueryBy(criteria, paging)
+    fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultServiceQueryBy(criteria, sorting)
+
+    fun <T : ContractState> vaultServiceTrackBy(): Vault.QueryResults<T> = vaultServiceTrackBy()
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria): Vault.QueryResults<T> = vaultServiceTrackBy(criteria)
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, paging)
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, Sort())
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
