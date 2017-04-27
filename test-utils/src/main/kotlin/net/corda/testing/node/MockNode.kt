@@ -35,6 +35,7 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
@@ -158,7 +159,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     id,
                     serverThread,
                     makeServiceEntries(),
-                    configuration.myLegalName,
+                    configuration.myLegalName.toString(),
                     database)
                     .start()
                     .getOrThrow()
@@ -287,9 +288,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         val config = TestNodeConfiguration(
                 baseDirectory = path,
-                myLegalName = legalName ?: "Mock Company $id",
+                myLegalName = legalName ?: "CN=Mock Company $id,OU=Corda QA Department,O=R3 CEV,L=New York,C=US",
                 networkMapService = null,
-                dataSourceProperties = makeTestDataSourceProperties("node_${id}_net_$networkId"))
+                dataSourceProperties = makeTestDataSourceProperties(X500Name("CN=node_${id}_net_$networkId,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")))
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
