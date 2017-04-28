@@ -7,9 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.node.services.ServiceType
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
 import java.io.InputStream
@@ -512,4 +510,22 @@ interface Attachment : NamedByHash {
         }
         throw FileNotFoundException(path)
     }
+}
+
+abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
+    companion object {
+        fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
+            val storage = serviceHub.storageService.attachments
+            return {
+                val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
+                if (a is AbstractAttachment) a.attachmentData else a.open().use { it.readBytes() }
+            }
+        }
+    }
+
+    protected val attachmentData: ByteArray by lazy(dataLoader)
+    override fun open(): InputStream = attachmentData.inputStream()
+    override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
+    override fun hashCode() = id.hashCode()
+    override fun toString() = "${javaClass.simpleName}(id=$id)"
 }

@@ -3,6 +3,7 @@ package net.corda.node.utilities
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SingletonSerializationToken
+import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 import java.time.*
 import javax.annotation.concurrent.ThreadSafe
 
@@ -12,9 +13,9 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 class TestClock(private var delegateClock: Clock = Clock.systemUTC()) : MutableClock(), SerializeAsToken {
 
-    private val token = SingletonSerializationToken(this)
+    private val token = singletonSerializationToken(javaClass)
 
-    override fun toToken(context: SerializeAsTokenContext) = SingletonSerializationToken.registerWithContext(token, this, context)
+    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
 
     @Synchronized fun updateDate(date: LocalDate): Boolean {
         val currentDate = LocalDate.now(this)

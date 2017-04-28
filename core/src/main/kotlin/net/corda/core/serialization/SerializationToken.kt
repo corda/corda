@@ -6,6 +6,8 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
@@ -74,15 +76,15 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
-    internal val tokenToTokenized = mutableMapOf<SerializationToken, SerializeAsToken>()
-    internal var readOnly = false
+class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool, val serviceHub: ServiceHub) {
+    private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
+    private var readOnly = false
 
     init {
-        /*
+        /**
          * Go ahead and eagerly serialize the object to register all of the tokens in the context.
          *
-         * This results in the toToken() method getting called for any [SerializeAsStringToken] instances which
+         * This results in the toToken() method getting called for any [SingletonSerializeAsToken] instances which
          * are encountered in the object graph as they are serialized by Kryo and will therefore register the token to
          * object mapping for those instances.  We then immediately set the readOnly flag to stop further adhoc or
          * accidental registrations from occuring as these could not be deserialized in a deserialization-first
@@ -95,30 +97,33 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
         }
         readOnly = true
     }
+
+    internal fun putSingleton(toBeTokenized: SerializeAsToken) {
+        val className = toBeTokenized.javaClass.name
+        if (className !in classNameToSingleton) {
+            // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
+            if (readOnly) {
+                throw UnsupportedOperationException("Attempt to write token for lazy registered ${className}. All tokens should be registered during context construction.")
+            }
+            classNameToSingleton[className] = toBeTokenized
+        }
+    }
+
+    internal fun getSingleton(className: String) = classNameToSingleton[className] ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
 }
 
 /**
  * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
-@CordaSerializable
-data class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
-    constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)
+class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
-    override fun fromToken(context: SerializeAsTokenContext): Any = context.tokenToTokenized[this] ?:
-            throw IllegalStateException("Unable to find tokenized instance of $className in context $context")
+    override fun fromToken(context: SerializeAsTokenContext) = context.getSingleton(className)
+
+    fun registerWithContext(context: SerializeAsTokenContext, toBeTokenized: SerializeAsToken) = also { context.putSingleton(toBeTokenized) }
 
     companion object {
-        fun registerWithContext(token: SingletonSerializationToken, toBeTokenized: SerializeAsToken, context: SerializeAsTokenContext): SerializationToken =
-                if (token in context.tokenToTokenized) token else registerNewToken(token, toBeTokenized, context)
-
-        // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
-        private fun registerNewToken(token: SingletonSerializationToken, toBeTokenized: SerializeAsToken, context: SerializeAsTokenContext): SerializationToken {
-            if (context.readOnly) throw UnsupportedOperationException("Attempt to write token for lazy registered ${toBeTokenized.javaClass.name}. " +
-                    "All tokens should be registered during context construction.")
-            context.tokenToTokenized[token] = toBeTokenized
-            return token
-        }
+        fun <T : SerializeAsToken> singletonSerializationToken(toBeTokenized: Class<T>) = SingletonSerializationToken(toBeTokenized.name)
     }
 }
 
@@ -127,8 +132,7 @@ data class SingletonSerializationToken private constructor(private val className
  * to indicate which instance the token is a serialized form of.
  */
 abstract class SingletonSerializeAsToken : SerializeAsToken {
-    @Suppress("LeakingThis")
-    private val token = SingletonSerializationToken(this)
+    private val token = singletonSerializationToken(javaClass)
 
-    override fun toToken(context: SerializeAsTokenContext) = SingletonSerializationToken.registerWithContext(token, this, context)
+    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
 }
