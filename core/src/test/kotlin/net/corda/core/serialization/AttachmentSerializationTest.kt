@@ -58,7 +58,6 @@ private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, dat
 }
 
 class AttachmentSerializationTest {
-
     private lateinit var network: MockNetwork
     private lateinit var server: MockNetwork.MockNode
     private lateinit var client: MockNetwork.MockNode
@@ -88,7 +87,6 @@ class AttachmentSerializationTest {
     private class ClientResult(internal val attachmentContent: String)
 
     private abstract class ClientLogic(server: MockNetwork.MockNode) : FlowLogic<ClientResult>() {
-
         internal val server = server.info.legalIdentity
 
         @Suspendable
@@ -102,7 +100,6 @@ class AttachmentSerializationTest {
 
         @Suspendable // This annotation is required by the instrumentation verifier.
         internal abstract fun getAttachmentContent(): String
-
     }
 
     private class CustomAttachment(override val id: SecureHash, internal val customContent: String) : Attachment {
@@ -188,5 +185,4 @@ class AttachmentSerializationTest {
         client.hackAttachment(attachmentId, "hacked")
         assertEquals("hacked", rebootClientAndGetAttachmentContent(false))
     }
-
 }
