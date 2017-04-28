@@ -4,20 +4,17 @@ import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import com.esotericsoftware.kryo.serializers.JavaSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.transactions.WireTransaction
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -80,7 +77,7 @@ fun storageKryo(): KryoPool = internalKryoPool
  * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
  * to get the original object back.
  */
-@Suppress("unused")  // Type parameter is just for documentation purposes.
+@Suppress("unused") // Type parameter is just for documentation purposes.
 class SerializedBytes<T : Any>(bytes: ByteArray, val internalOnly: Boolean = false) : OpaqueBytes(bytes) {
     // It's OK to use lazy here because SerializedBytes is configured to use the ImmutableClassSerializer.
     val hash: SecureHash by lazy { bytes.sha256() }
@@ -308,6 +305,18 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.timestamp)
     }
 
+    private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
+        val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
+        serializationContext.serviceHub.storageService.attachmentsClassLoaderEnabled || return null
+        val missing = ArrayList<SecureHash>()
+        val attachments = ArrayList<Attachment>()
+        attachmentHashes.forEach { id ->
+            serializationContext.serviceHub.storageService.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+        }
+        missing.isNotEmpty() && throw MissingAttachmentsException(missing)
+        return AttachmentsClassLoader(attachments)
+    }
+
     @Suppress("UNCHECKED_CAST")
     override fun read(kryo: Kryo, input: Input, type: Class<WireTransaction>): WireTransaction {
         val inputs = kryo.readClassAndObject(input) as List<StateRef>
@@ -315,30 +324,13 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 
         // If we're deserialising in the sandbox context, we use our special attachments classloader.
         // Otherwise we just assume the code we need is on the classpath already.
-        val attachmentStorage = kryo.attachmentStorage
-        val classLoader = if (attachmentStorage != null) {
-            val missing = ArrayList<SecureHash>()
-            val attachments = ArrayList<Attachment>()
-            for (id in attachmentHashes) {
-                val attachment = attachmentStorage.openAttachment(id)
-                if (attachment == null)
-                    missing += id
-                else
-                    attachments += attachment
-            }
-            if (missing.isNotEmpty())
-                throw MissingAttachmentsException(missing)
-            AttachmentsClassLoader(attachments)
-        } else javaClass.classLoader
-
-        kryo.useClassLoader(classLoader) {
+        kryo.useClassLoader(attachmentsClassLoader(kryo, attachmentHashes) ?: javaClass.classLoader) {
             val outputs = kryo.readClassAndObject(input) as List<TransactionState<ContractState>>
             val commands = kryo.readClassAndObject(input) as List<Command>
             val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
             val timestamp = kryo.readClassAndObject(input) as Timestamp?
-
             return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, signers, transactionType, timestamp)
         }
     }
@@ -385,7 +377,7 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
         val threshold = input.readInt()
         val children = readListOfLength<CompositeKey.NodeAndWeight>(kryo, input, minLen = 2)
         val builder = CompositeKey.Builder()
-        children.forEach { builder.addKey(it.node, it.weight)  }
+        children.forEach { builder.addKey(it.node, it.weight) }
         return builder.build(threshold) as CompositeKey
     }
 }
@@ -394,7 +386,7 @@ object CompositeKeySerializer : Serializer<CompositeKey>() {
  * Helper function for reading lists with number of elements at the beginning.
  * @param minLen minimum number of elements we expect for list to include, defaults to 1
  * @param expectedLen expected length of the list, defaults to null if arbitrary length list read
-  */
+ */
 inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 1, expectedLen: Int? = null): List<T> {
     val elemCount = input.readInt()
     if (elemCount < minLen) throw KryoException("Cannot deserialize list, too little elements. Minimum required: $minLen, got: $elemCount")
@@ -506,21 +498,6 @@ fun <T> Kryo.withoutReferences(block: () -> T): T {
         return block()
     } finally {
         references = previousValue
-    }
-}
-
-val ATTACHMENT_STORAGE = "ATTACHMENT_STORAGE"
-
-val Kryo.attachmentStorage: AttachmentStorage?
-    get() = this.context.get(ATTACHMENT_STORAGE, null) as AttachmentStorage?
-
-fun <T> Kryo.withAttachmentStorage(attachmentStorage: AttachmentStorage?, block: () -> T): T {
-    val priorAttachmentStorage = this.attachmentStorage
-    this.context.put(ATTACHMENT_STORAGE, attachmentStorage)
-    try {
-        return block()
-    } finally {
-        this.context.put(ATTACHMENT_STORAGE, priorAttachmentStorage)
     }
 }
 

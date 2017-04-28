@@ -41,29 +41,31 @@ interface SerializationToken {
  */
 class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
     override fun write(kryo: Kryo, output: Output, obj: T) {
-        kryo.writeClassAndObject(output, obj.toToken(getContext(kryo) ?: throw KryoException("Attempt to write a ${SerializeAsToken::class.simpleName} instance of ${obj.javaClass.name} without initialising a context")))
+        kryo.writeClassAndObject(output, obj.toToken(kryo.serializationContext() ?: throw KryoException("Attempt to write a ${SerializeAsToken::class.simpleName} instance of ${obj.javaClass.name} without initialising a context")))
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
         val token = (kryo.readClassAndObject(input) as? SerializationToken) ?: throw KryoException("Non-token read for tokenized type: ${type.name}")
-        val fromToken = token.fromToken(getContext(kryo) ?: throw KryoException("Attempt to read a token for a ${SerializeAsToken::class.simpleName} instance of ${type.name} without initialising a context"))
+        val fromToken = token.fromToken(kryo.serializationContext() ?: throw KryoException("Attempt to read a token for a ${SerializeAsToken::class.simpleName} instance of ${type.name} without initialising a context"))
         if (type.isAssignableFrom(fromToken.javaClass)) {
             return type.cast(fromToken)
         } else {
             throw KryoException("Token read ($token) did not return expected tokenized type: ${type.name}")
         }
     }
+}
 
-    companion object {
-        private fun getContext(kryo: Kryo): SerializeAsTokenContext? = kryo.context.get(SerializeAsTokenContext::class.java) as? SerializeAsTokenContext
+private val serializationContextKey = SerializeAsTokenContext::class.java
 
-        fun setContext(kryo: Kryo, context: SerializeAsTokenContext) {
-            kryo.context.put(SerializeAsTokenContext::class.java, context)
-        }
+fun Kryo.serializationContext() = context.get(serializationContextKey) as? SerializeAsTokenContext
 
-        fun clearContext(kryo: Kryo) {
-            kryo.context.remove(SerializeAsTokenContext::class.java)
-        }
+fun <T> Kryo.withSerializationContext(serializationContext: SerializeAsTokenContext, block: () -> T) = run {
+    context.containsKey(serializationContextKey) && throw IllegalStateException("There is already a serialization context.")
+    context.put(serializationContextKey, serializationContext)
+    try {
+        block()
+    } finally {
+        context.remove(serializationContextKey)
     }
 }
 
@@ -76,7 +78,15 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool, val serviceHub: ServiceHub) {
+class SerializeAsTokenContext internal constructor(val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) {
+    constructor(toBeTokenized: Any, kryoPool: KryoPool, serviceHub: ServiceHub) : this(serviceHub, {
+        kryoPool.run { kryo ->
+            kryo.withSerializationContext(this) {
+                toBeTokenized.serialize(kryo)
+            }
+        }
+    })
+
     private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
     private var readOnly = false
 
@@ -90,11 +100,7 @@ class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool, val servic
          * accidental registrations from occuring as these could not be deserialized in a deserialization-first
          * scenario if they are not part of this iniital context construction serialization.
          */
-        kryoPool.run { kryo ->
-            SerializeAsTokenSerializer.setContext(kryo, this)
-            toBeTokenized.serialize(kryo)
-            SerializeAsTokenSerializer.clearContext(kryo)
-        }
+        init(this)
         readOnly = true
     }
 

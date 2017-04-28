@@ -328,6 +328,7 @@ interface FileUploader {
 interface AttachmentsStorageService {
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+    val attachmentsClassLoaderEnabled: Boolean
 }
 
 /**

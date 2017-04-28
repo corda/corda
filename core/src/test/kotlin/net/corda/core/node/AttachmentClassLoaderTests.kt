@@ -1,10 +1,13 @@
 package net.corda.core.node
 
 import com.esotericsoftware.kryo.Kryo
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -35,6 +38,15 @@ val ATTACHMENT_TEST_PROGRAM_ID = AttachmentClassLoaderTests.AttachmentDummyContr
 class AttachmentClassLoaderTests {
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
+
+        private fun <T> Kryo.withAttachmentStorage(attachmentStorage: AttachmentStorage, block: () -> T) = run {
+            val serviceHub = mock<ServiceHub>()
+            val storageService = mock<StorageService>()
+            whenever(serviceHub.storageService).thenReturn(storageService)
+            whenever(storageService.attachmentsClassLoaderEnabled).thenReturn(true)
+            whenever(storageService.attachments).thenReturn(attachmentStorage)
+            withSerializationContext(SerializeAsTokenContext(serviceHub) {}, block)
+        }
     }
 
     class AttachmentDummyContract : Contract {
