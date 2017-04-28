@@ -6,7 +6,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
@@ -54,8 +53,6 @@ fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature {
 fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
     return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
 }
-
-val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName("ED25519")
 
 /**
  * Helper function to sign with a key pair.
@@ -153,6 +150,7 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
+ * This currently works for EdDSA ED25519 only.
  */
 fun entropyToKeyPair(entropy: BigInteger): KeyPair {
     val params = EdDSANamedCurveTable.getByName("ED25519")

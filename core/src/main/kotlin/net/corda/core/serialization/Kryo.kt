@@ -13,6 +13,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.transactions.WireTransaction
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
@@ -347,13 +348,13 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
 @ThreadSafe
 object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPrivateKey) {
-        check(obj.params == ed25519Curve)
+        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec )
         output.writeBytesWithLength(obj.seed)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPrivateKey>): EdDSAPrivateKey {
         val seed = input.readBytesWithLength()
-        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, ed25519Curve))
+        return EdDSAPrivateKey(EdDSAPrivateKeySpec(seed, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
     }
 }
 
@@ -361,13 +362,13 @@ object Ed25519PrivateKeySerializer : Serializer<EdDSAPrivateKey>() {
 @ThreadSafe
 object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     override fun write(kryo: Kryo, output: Output, obj: EdDSAPublicKey) {
-        check(obj.params == ed25519Curve)
+        check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
         output.writeBytesWithLength(obj.abyte)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
         val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+        return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
     }
 }
 
