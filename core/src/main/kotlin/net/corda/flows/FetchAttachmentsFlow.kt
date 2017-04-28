@@ -18,7 +18,7 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
 
-    override fun convert(wire: ByteArray): Attachment = ByteArrayAttachment({ wire })
+    override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire })
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
@@ -26,11 +26,11 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class ByteArrayAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
+    private class FetchedAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
         override val id: SecureHash by lazy { attachmentData.sha256() }
 
         private class Token(private val id: SecureHash) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = ByteArrayAttachment(context.attachmentDataLoader(id))
+            override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id))
         }
 
         override fun toToken(context: SerializeAsTokenContext) = Token(id)
