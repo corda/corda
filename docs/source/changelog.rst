@@ -19,9 +19,6 @@ Milestone 11.0
 * API changes:
     * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
 
-    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
-      composite keys and signatures.
-
     * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using
       one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable``
       field has been moved to the ``FlowProgressHandle`` child interface. Hence developers no longer need to invoke ``notUsed``
@@ -29,6 +26,19 @@ Milestone 11.0
 
     * Moved ``generateSpend`` and ``generateExit`` functions into ``OnLedgerAsset`` from the vault and
       ``AbstractConserveAmount`` clauses respectively.
+
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
+      composite keys and signatures.
+
+    * ``CompositeKey`` now implements ``java.security.PublicKey`` interface, so that keys can be used on standard classes such as ``Certificate``. 
+
+        * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is imposible to create ``CompositeKey`` with only one leaf.
+
+        * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key. Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node. (Long chains of single nodes are shortened.)
+
+        * Use extension function ``PublicKeys.keys`` to access all keys belonging to an instance of ``PublicKey``. For a ``CompositeKey``, this is equivalent to ``CompositeKey.leafKeys``.
+
+        * Introduced ``containsAny``, ``isFulfilledBy``, ``keys`` extension functions on ``PublicKey`` - ``CompositeKey`` type checking is done there.
 
 * Corda now requires JDK 8u131 or above in order to run. Our Kotlin now also compiles to JDK8 bytecode, and so you'll need to update your CorDapp projects to do the same. E.g. by adding this to ``build.gradle``:
 
