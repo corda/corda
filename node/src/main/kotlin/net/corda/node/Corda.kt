@@ -169,14 +169,13 @@ private fun assertCanNormalizeEmptyPath() {
     try {
         Paths.get("").normalize()
     } catch (e: ArrayIndexOutOfBoundsException) {
-        javaIsTooOld()
+        failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
     }
 }
 
-private fun javaIsTooOld(): Nothing {
-    println("""
-You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
-Corda will now exit...""")
+private fun failStartUp(message: String): Nothing {
+    println(message)
+    println("Corda will now exit...")
     exitProcess(1)
 }
 
@@ -189,7 +188,8 @@ private fun disableJavaDeserialization() {
         withLevel("java.io.serialization", "WARN") {
             ObjectInputStream(data.inputStream()).use { it.readObject() } // Logs REJECTED at INFO, which we don't want users to see.
         }
-        javaIsTooOld()
+        // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
+        failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121 and set system property 'jdk.serialFilter' to 'maxbytes=0' when booting Corda.")
     } catch (e: InvalidClassException) {
         // Good, our system property is honoured.
     }
