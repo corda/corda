@@ -14,7 +14,7 @@ this space...
 Milestone 11
 ------------
 
-Special thank you to `Gary Rowe <https://github.com/gary-rowe>`_ for his contribution to Corda in M11.
+Special thank you to `Gary Rowe <https://github.com/gary-rowe>`_ for his contribution to Corda's Contracts DSL in M11.
 
 Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
 composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
@@ -34,9 +34,9 @@ enforced, however it will be in a later milestone.
 
 We anticipate enforcing the use of distinguished names in node configurations from M12, and across the network from M13.
 
-Contract attachments can now be up to 10 MB in size.
+We have increased the maximum message size that we can send to Corda over RPC from 100 KB to 10 MB.
 
-The Corda node now disables any use of ObjectInputStream, to prevent Java deserialisation within flows.
+The Corda node now disables any use of ObjectInputStream to prevent Java deserialisation within flows. This is a security fix, and prevents the node from deserialising arbitrary objects.
 
 We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
 any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
@@ -46,8 +46,6 @@ API Level.
 
 We have revamped the DemoBench user interface. DemoBench will now also be installed as "Corda DemoBench" for both Windows and MacOSX. The original version
 was installed as just "DemoBench", and so will not be overwritten automatically by the new version.
-
-Corda now requires JDK 8u131 or above in order to run.
 
 Milestone 10
 ------------
