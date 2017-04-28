@@ -181,7 +181,8 @@ private fun failStartUp(message: String): Nothing {
 
 private fun disableJavaDeserialization() {
     // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we are using the system property interface for portability.
-    // This property has been set in the Capsule. Anywhere else may be too late.
+    // This property has already been set in the Capsule. Anywhere else may be too late, but we'll repeat it here for developers.
+    System.setProperty("jdk.serialFilter", "maxbytes=0")
     // Attempt at deserialization so that ObjectInputFilter (permanently) inits itself:
     val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
     try {
