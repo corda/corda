@@ -23,36 +23,40 @@ class CorDappInfoServlet(val plugins: List<CordaPluginRegistry>, val rpc: CordaR
             }
             body {
                 h2 { +"Installed CorDapps" }
-                plugins.forEach { plugin ->
-                    h3 { +plugin::class.java.name }
-                    if (plugin.requiredFlows.isNotEmpty()) {
-                        div {
-                            p { +"Whitelisted flows:" }
-                            ul {
-                                plugin.requiredFlows.map { it.key }.forEach { li { +it } }
+                if (plugins.isEmpty()) {
+                    p { +"No installed custom CorDapps." }
+                } else {
+                    plugins.forEach { plugin ->
+                        h3 { +plugin::class.java.name }
+                        if (plugin.requiredFlows.isNotEmpty()) {
+                            div {
+                                p { +"Whitelisted flows:" }
+                                ul {
+                                    plugin.requiredFlows.map { it.key }.forEach { li { +it } }
+                                }
                             }
                         }
-                    }
-                    if (plugin.webApis.isNotEmpty()) {
-                        div {
-                            plugin.webApis.forEach { api ->
-                                val resource = Resource.from(api.apply(rpc)::class.java)
-                                p { +"${resource.name}:" }
-                                val endpoints = processEndpoints("", resource, mutableListOf<Endpoint>())
-                                ul {
-                                    endpoints.forEach {
-                                        li { a(it.uri) { +"${it.method}\t${it.text}" } }
+                        if (plugin.webApis.isNotEmpty()) {
+                            div {
+                                plugin.webApis.forEach { api ->
+                                    val resource = Resource.from(api.apply(rpc)::class.java)
+                                    p { +"${resource.name}:" }
+                                    val endpoints = processEndpoints("", resource, mutableListOf<Endpoint>())
+                                    ul {
+                                        endpoints.forEach {
+                                            li { a(it.uri) { +"${it.method}\t${it.text}" } }
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    if (plugin.staticServeDirs.isNotEmpty()) {
-                        div {
-                            p { +"Static web content:" }
-                            ul {
-                                plugin.staticServeDirs.map { it.key }.forEach {
-                                    li { a("web/$it") { +it } }
+                        if (plugin.staticServeDirs.isNotEmpty()) {
+                            div {
+                                p { +"Static web content:" }
+                                ul {
+                                    plugin.staticServeDirs.map { it.key }.forEach {
+                                        li { a("web/$it") { +it } }
+                                    }
                                 }
                             }
                         }
