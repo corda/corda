@@ -118,7 +118,7 @@ fun PublicKey.toStringShort(): String {
 }
 
 val PublicKey.keys: Set<PublicKey> get() {
-    return if (this is CompositeKey) this.leavesKeys
+    return if (this is CompositeKey) this.leafKeys
     else setOf(this)
 }
 

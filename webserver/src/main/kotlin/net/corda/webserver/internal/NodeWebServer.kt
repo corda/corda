@@ -7,10 +7,7 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
-import net.corda.webserver.servlets.AttachmentDownloadServlet
-import net.corda.webserver.servlets.DataUploadServlet
-import net.corda.webserver.servlets.ObjectMapperConfig
-import net.corda.webserver.servlets.ResponseFilter
+import net.corda.webserver.servlets.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
 import org.eclipse.jetty.server.handler.ErrorHandler
@@ -159,23 +156,17 @@ class NodeWebServer(val config: WebServerConfig) {
                 addServlet(staticDir, "/web/${it.first}/*")
             }
 
-            // If we have at least one static web data directory, redirect / to the right URL.
-            staticDirs.firstOrNull()?.let { addServlet(ServletHolder(IndexRedirectServlet("/web/${it.first}")), "/") }
-
             // Give the app a slightly better name in JMX rather than a randomly generated one and enable JMX
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
                     ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
+
+            val infoServlet = ServletHolder(CorDappInfoServlet(pluginRegistries, localRpc))
+            addServlet(infoServlet, "")
 
             val container = ServletContainer(resourceConfig)
             val jerseyServlet = ServletHolder(container)
             addServlet(jerseyServlet, "/api/*")
             jerseyServlet.initOrder = 0 // Initialise at server start
-        }
-    }
-
-    private inner class IndexRedirectServlet(private val redirectTo: String) : HttpServlet() {
-        override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-            resp.sendRedirect(resp.encodeRedirectURL(redirectTo))
         }
     }
 

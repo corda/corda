@@ -80,7 +80,7 @@ class CompositeKey private constructor (val threshold: Int,
     /**
      * Set of all leaf keys of that CompositeKey.
      */
-    val leavesKeys: Set<PublicKey>
+    val leafKeys: Set<PublicKey>
         get() = children.flatMap { it.node.keys }.toSet() // Uses PublicKey.keys extension.
 
     override fun equals(other: Any?): Boolean {

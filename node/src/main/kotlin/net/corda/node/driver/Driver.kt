@@ -573,10 +573,11 @@ class DriverDSL(
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
-                val systemProperties = mapOf(
+                val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}"
-                ) + overriddenSystemProperties
+                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                        "jdk.serialFilter" to "maxbytes=0"  // disable deserialisation
+                )
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
