@@ -184,9 +184,15 @@ abstract class RPCDispatcher(val ops: RPCOps, val userService: RPCUserService, v
         val rpcUser = userService.getUser(validatedUser)
         if (rpcUser != null) {
             return rpcUser
-        } else if (X500Name(validatedUser).commonName == nodeLegalName) {
-            return nodeUser
         } else {
+            try {
+                if (X500Name(validatedUser) == X500Name(nodeLegalName)) {
+                    return nodeUser
+                }
+            } catch(ex: IllegalArgumentException) {
+                // Can't parse the validated user as an X500 name, so can't match the node legal name.
+                // Fall through to exception below.
+            }
             throw IllegalArgumentException("Validated user '$validatedUser' is not an RPC user nor the NODE user")
         }
     }
