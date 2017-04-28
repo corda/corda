@@ -24,10 +24,8 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
-import java.util.ServiceLoader
-import javax.servlet.http.HttpServlet
+import java.util.*
 import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 import javax.ws.rs.core.MediaType
 
 class NodeWebServer(val config: WebServerConfig) {
@@ -160,7 +158,13 @@ class NodeWebServer(val config: WebServerConfig) {
             resourceConfig.addProperties(mapOf(ServerProperties.APPLICATION_NAME to "node.api",
                     ServerProperties.MONITORING_STATISTICS_MBEANS_ENABLED to "true"))
 
-            val infoServlet = ServletHolder(CorDappInfoServlet(pluginRegistries, localRpc))
+            val filteredPlugins = pluginRegistries.filterNot {
+                it.javaClass.name.startsWith("net.corda.node.") ||
+                        it.javaClass.name.startsWith("net.corda.core.") ||
+                        it.javaClass.name.startsWith("net.corda.nodeapi.")
+            }
+
+            val infoServlet = ServletHolder(CorDappInfoServlet(filteredPlugins, localRpc))
             addServlet(infoServlet, "")
 
             val container = ServletContainer(resourceConfig)
