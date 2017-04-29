@@ -573,7 +573,7 @@ object MetaDataSerializer : Serializer<MetaData>() {
         val visibleInputs = kryo.readClassAndObject(input) as BitSet?
         val signedInputs = kryo.readClassAndObject(input) as BitSet?
         val merkleRoot = input.readBytesWithLength()
-        val publicKey = Crypto.decodePublicKey(input.readBytesWithLength(), schemeCodeName)
+        val publicKey = Crypto.decodePublicKey(schemeCodeName, input.readBytesWithLength())
         return MetaData(schemeCodeName, versionID, signatureType, timestamp, visibleInputs, signedInputs, merkleRoot, publicKey)
     }
 }
