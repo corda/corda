@@ -120,7 +120,7 @@ fun recipient(rpc: CordaRPCOps) {
 
                 // Write out the entries inside this jar.
                 println("Attachment JAR contains these entries:")
-                JarInputStream(connection.inputStream, true).use { it ->
+                JarInputStream(connection.inputStream).use { it ->
                     while (true) {
                         val e = it.nextJarEntry ?: break
                         println("Entry> ${e.name}")

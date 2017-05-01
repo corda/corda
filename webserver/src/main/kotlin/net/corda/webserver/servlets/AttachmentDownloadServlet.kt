@@ -51,7 +51,7 @@ class AttachmentDownloadServlet : HttpServlet() {
                 } else {
                     val filename = subPath.split('/').last()
                     resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"")
-                    JarInputStream(attachment, true).use { jar ->
+                    JarInputStream(attachment).use { jar ->
                         jar.extractFile(subPath, out)
                     }
                 }
