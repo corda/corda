@@ -1,32 +1,44 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
 /**
- * The [CollectSignaturesFlow] is used to automate the collection of counter-party signatures.
+ * The [CollectSignaturesFlow] is used to automate the collection of counter-party signatures for a given transaction.
  *
- * You would typically use this flow after you have build a transaction with the TransactionBuilder and signed it with
- * your key pair. If there are additional signatures to collect then they can be collected using this flow.
+ * You would typically use this flow after you have built a transaction with the TransactionBuilder and signed it with
+ * your key pair. If there are additional signatures to collect then they can be collected using this flow. Signatures
+ * are collected based upon the [WireTransaction.mustSign] property which contains the union of all the PublicKeys
+ * listed in the transaction's commands as well as a notary's public key, if required. This flow returns a
+ * [SignedTransaction] which can then be passed to the [FinalityFlow] for notarisation. The other side of this flow is
+ * the [SignTransactionFlow].
  *
- * **WARNING**: This Flow only works with [legalIdentityKey]s and WILL break if used with randomly generated keys.
+ * **WARNING**: This Flow ONLY works with [ServiceHub.legalIdentityKey]s and WILL break if used with randomly generated
+ * keys by the [ServiceHub.keyManagementService].
+ *
+ * **IMPORTANT** This flow NEEDS to be called with the 'shareParentSessions" parameter of [subFlow] set to true.
  *
  * Usage:
  *
- * - Subclass [AbstractCollectSignaturesFlowResponder] in your CorDapp
- * - You are required to override the [AbstractCollectSignaturesFlowResponder.checkTransaction] method to add
- *   custom logic for verifying the transaction in question
- * - When calling the flow as a [subFlow], pass it a [SignedTransaction] which has at least been signed by the
- *   transaction creator (and possibly an Oracle, if required)
- * - The flow expects that the calling [Party] signs the provided transaction, if not the flow will fail
- * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's)
+ * - Call this flow as a [subFlow] and pass it a [SignedTransaction] which has at least been signed by the
+ *   transaction creator (and possibly an oracle, if required)
+ * - The flow expects that the calling node has signed the provided transaction, if not the flow will fail
+ * - The flow will also fail if:
+ *   1. The provided transaction is invalid
+ *   2. Any of the required signing parties cannot be found in the [ServiceHub.networkMapCache] of the initiator
+ *   3. If the wrong key has been used by a counterparty to sign the transaction
+ *   4. The counterparty rejects the provided transaction
+ * - The flow will return a [SignedTransaction] with all the counter-party signatures (but not the notary's!)
+ * - If the provided transaction has already been signed by all counter-parties then this flow simply returns the
+ *   provided transaction without contacting any counter-parties
  * - Call the [FinalityFlow] with the return value of this flow
  *
  * Example - issuing a multi-lateral agreement which requires N signatures:
@@ -44,7 +56,9 @@ import java.security.PublicKey
  *     // The returned signed transaction will have all signatures appended apart from the notary's.
  *     val stx = subFlow(CollectSignaturesFlow(ptx))
  *
- *  TODO: Update this flow to handle randomly generated keys when that works is complete.
+ * @param partiallySignedTx Transaction to collect the remaining signatures for
+ *
+ * TODO: Update this flow to handle randomly generated keys when that works is complete.
  */
 
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
@@ -63,7 +77,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         // TODO: Revisit when key management is properly fleshed out.
         // This will break if a party uses anything other than their legalIdentityKey.
         // Check the signatures which have already been provided and that the transaction is valid.
-        // Usually just the Initiator and possibly an Oracle would have signed at this point.
+        // Usually just the Initiator and possibly an oracle would have signed at this point.
         val myKey = serviceHub.myInfo.legalIdentity.owningKey
         val signed = partiallySignedTx.sigs.map { it.by }
         val notSigned = partiallySignedTx.tx.mustSign - signed
@@ -85,7 +99,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         val unsigned = if (notaryKey != null) notSigned - notaryKey else notSigned
 
         // If the unsigned counter-parties list is empty then we don't need to collect any more signatures here.
-        check(unsigned.isNotEmpty()) { return partiallySignedTx }
+        if (unsigned.isEmpty()) return partiallySignedTx
 
         // Collect signatures from all counter-parties and append them to the partially signed transaction.
         val counterpartySignatures = keysToParties(unsigned).map { collectSignature(it) }
@@ -99,7 +113,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     }
 
     /**
-     * Lookup the [Party] object for each [PublicKey] using the [serviceHub.networkMapCache].
+     * Lookup the [Party] object for each [PublicKey] using the [ServiceHub.networkMapCache].
      */
     @Suspendable private fun keysToParties(keys: List<PublicKey>): List<Party> = keys.map {
         // TODO: Revisit when IdentityService supports resolution of a (possibly random) public key to a legal identity key.
@@ -112,16 +126,58 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
      * Get and check the required signature.
      */
     @Suspendable private fun collectSignature(counterparty: Party): DigitalSignature.WithKey {
-        return sendAndReceive<DigitalSignature.WithKey>(counterparty, partiallySignedTx).unwrap { it ->
+        return sendAndReceive<DigitalSignature.WithKey>(counterparty, partiallySignedTx).unwrap {
             check(counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required Party." }
-            it.verifyWithECDSA(partiallySignedTx.tx.id)
             it
         }
     }
 }
 
-abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
-                                                      override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+
+/**
+ * The [SignTransactionFlow] should be called in response to the [CollectSignaturesFlow]. It automates the signing of
+ * a transaction providing the transaction:
+ *
+ * 1. Should actually be signed by the [Party] invoking this flow
+ * 2. Is valid as per the contracts referenced in the transaction
+ * 3. Has been, at least, signed by the counter-party which created it
+ * 4. Conforms to custom checking provided in the [checkTransaction] method of the [SignTransactionFlow]
+ *
+ * Usage:
+ *
+ * - Subclass [SignTransactionFlow] - this can be done inside an existing flow (as shown below)
+ * - Override the [checkTransaction] method to add some custom verification logic
+ * - Call the flow via subFlow with "shareParentSessions" set to true
+ * - The flow returns the fully signed transaction once it has been committed to the ledger
+ *
+ * Example - checking and signing a transaction involving a [DummyContract], see CollectSignaturesFlowTests.Kt for
+ * further examples:
+ *
+ *     class Responder(val otherParty: Party): FlowLogic<SignedTransaction>() {
+ *          @Suspendable override fun call(): SignedTransaction {
+ *              // [SignTransactionFlow] sub-classed as a singleton object.
+ *              val flow = object : SignTransactionFlow(otherParty) {
+ *                  @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
+ *                      val tx = stx.tx
+ *                      "There should only be one output state" using (tx.outputs.size == 1)
+ *                      "There should only be one output state" using (tx.inputs.isEmpty())
+ *                      val magicNumberState = tx.outputs.single().data as DummyContract.MultiOwnerState
+ *                      "Must be 1337 or greater" using (magicNumberState.magicNumber >= 1337)
+ *                  }
+ *              }
+ *
+ *              // Invoke the subFlow, in response to the counterparty calling [CollectSignaturesFlow].
+ *              val stx = subFlow(flow, shareParentSessions = true)
+ *
+ *              return waitForLedgerCommit(stx.id)
+ *          }
+ *      }
+ *
+ * @param party The counter-party which is providing you a transaction to sign.
+ *
+ */
+abstract class SignTransactionFlow(val otherParty: Party,
+                                   override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")
@@ -131,7 +187,7 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
         fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING)
     }
 
-    @Suspendable override fun call(): Unit {
+    @Suspendable override fun call(): SignedTransaction {
         progressTracker.currentStep = RECEIVING
         val checkedProposal = receive<SignedTransaction>(otherParty).unwrap { proposal ->
             progressTracker.currentStep = VERIFYING
@@ -152,9 +208,12 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
         progressTracker.currentStep = SIGNING
         val mySignature = serviceHub.legalIdentityKey.signWithECDSA(checkedProposal.id)
         send(otherParty, mySignature)
+
+        // Return the fully signed transaction once it has been committed.
+        return waitForLedgerCommit(checkedProposal.id)
     }
 
-    private fun checkSignatures(stx: SignedTransaction) {
+    @Suspendable private fun checkSignatures(stx: SignedTransaction) {
         check(stx.sigs.any { it.by == otherParty.owningKey }) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
         }
@@ -164,7 +223,23 @@ abstract class AbstractCollectSignaturesFlowResponder(val otherParty: Party,
         stx.verifySignatures(*notSigned.toTypedArray())
     }
 
-    @Throws(FlowException::class)
+    /**
+     * The [CheckTransaction] method allows the caller of this flow to provide some additional checks over the proposed
+     * transaction received from the counter-party. For example:
+     *
+     * - Ensuring that the transaction you are receiving is the transaction you *EXPECT* to receive. I.e. is has the
+     *   expected type and number of inputs and outputs
+     * - Checking that the properties of the outputs are as you would expect. Linking into any reference data sources
+     *   might be appropriate here
+     * - Checking that the transaction is not incorrectly spending (perhaps maliciously) one of your asset states, as
+     *   potentially the transaction creator has access to some of your state references
+     *
+     * **WARNING**: If appropriate checks, such as the ones listed above, are not defined then it is likely that your
+     * node will sign any transaction if it conforms to the contract code in the transaction's referenced contracts.
+     *
+     * @param stx a partially signed transaction received from your counter-party.
+     * @throws FlowException if the proposed transaction fails the checks.
+     */
     @Suspendable abstract protected fun checkTransaction(stx: SignedTransaction)
 
     @Suspendable private fun checkMySignatureRequired(stx: SignedTransaction) {
