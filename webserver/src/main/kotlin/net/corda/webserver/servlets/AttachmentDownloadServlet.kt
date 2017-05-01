@@ -67,7 +67,7 @@ class AttachmentDownloadServlet : HttpServlet() {
         val p = path.toLowerCase().split('\\', '/')
         while (true) {
             val e = nextJarEntry ?: break
-            if (e.name.toLowerCase().split('\\', '/') == p) {
+            if (!e.isDirectory && e.name.toLowerCase().split('\\', '/') == p) {
                 copyTo(outputTo)
                 return
             }
