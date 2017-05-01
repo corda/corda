@@ -19,9 +19,14 @@ import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.PublicKey
+import java.util.jar.JarInputStream
+import javax.servlet.http.HttpServletResponse.SC_OK
+import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
+import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 import kotlin.system.exitProcess
-import kotlin.test.assertEquals
 
 internal enum class Role {
     SENDER,
@@ -73,7 +78,7 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
             val id = rpc.uploadAttachment(it)
-            assertEquals(hash, id)
+            require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
     }
 
@@ -102,6 +107,29 @@ fun recipient(rpc: CordaRPCOps) {
         if (wtx.outputs.isNotEmpty()) {
             val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
             require(rpc.attachmentExists(state.hash))
+
+            // Download the attachment via the Web endpoint.
+            val connection = URL("http://localhost:10010/attachments/${state.hash}").openConnection() as HttpURLConnection
+            try {
+                require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
+                require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
+                require(connection.contentLength > 1024) { "Attachment contains only ${connection.contentLength} bytes" }
+                require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
+                    "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
+                }
+
+                // Write out the entries inside this jar.
+                println("Attachment JAR contains these entries:")
+                JarInputStream(connection.inputStream, true).use { it ->
+                    while (true) {
+                        val e = it.nextJarEntry ?: break
+                        println("Entry> ${e.name}")
+                        it.closeEntry()
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
             println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
         } else {
             println("Error: no output state found in ${wtx.id}")
