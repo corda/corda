@@ -4,7 +4,9 @@ import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.AnonymousParty
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.days
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
@@ -16,11 +18,7 @@ import net.corda.core.rootCause
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.*
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
@@ -105,6 +103,57 @@ class TwoPartyTradeFlowTests {
 
             // TODO: Verify that the result was inserted into the transaction database.
             // assertEquals(bobResult.get(), aliceNode.storage.validatedTransactions[aliceResult.get().id])
+            assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
+
+            aliceNode.stop()
+            bobNode.stop()
+
+            aliceNode.database.transaction {
+                assertThat(aliceNode.checkpointStorage.checkpoints()).isEmpty()
+            }
+            aliceNode.manuallyCloseDB()
+            bobNode.database.transaction {
+                assertThat(bobNode.checkpointStorage.checkpoints()).isEmpty()
+            }
+            bobNode.manuallyCloseDB()
+        }
+    }
+
+    @Test(expected = InsufficientBalanceException::class)
+    fun `trade cash for commercial paper fails using soft locking`() {
+        net = MockNetwork(false, true)
+
+        ledger {
+            val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
+            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
+            val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
+            val aliceKey = aliceNode.services.legalIdentityKey
+            val notaryKey = notaryNode.services.notaryIdentityKey
+
+            aliceNode.disableDBCloseOnStop()
+            bobNode.disableDBCloseOnStop()
+
+            val cashStates =
+                bobNode.database.transaction {
+                    bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
+                }
+
+            val alicesFakePaper = aliceNode.database.transaction {
+                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                        1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
+            }
+
+            insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
+
+            val cashLockId = UUID.randomUUID()
+            bobNode.database.transaction {
+                // lock the cash states with an arbitrary lockId (to prevent the Buyer flow from claiming the states)
+                bobNode.vault.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
+            }
+
+            val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
+                        "alice's paper".outputStateAndRef())
+
             assertEquals(aliceResult.getOrThrow(), bobStateMachine.getOrThrow().resultFuture.getOrThrow())
 
             aliceNode.stop()
