@@ -7,6 +7,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria.AndComposition
 import net.corda.core.node.services.vault.QueryCriteria.OrComposition
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import java.time.Instant
 import java.util.*
@@ -15,7 +16,7 @@ import java.util.*
  * Indexing assumptions:
  * QueryCriteria assumes underlying schema tables are correctly indexed for performance.
  */
-
+@CordaSerializable
 sealed class QueryCriteria {
 
     /**
@@ -65,17 +66,12 @@ sealed class QueryCriteria {
      */
     data class VaultIndexedQueryCriteria<L,R>(val indexExpression: Logical<L,R>? = null) : QueryCriteria()
 
-    /**
-     * Specify any query criteria by leveraging the Requery Query DSL:
-     * provides query ability on any [Queryable] custom contract state attribute defined by a [MappedSchema]
-     */
-    data class VaultCustomQueryCriteria<L,R>(val expression: Logical<L,R>? = null) : QueryCriteria()
-
     // enable composition of [QueryCriteria]
     data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
     data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
+    @CordaSerializable
     enum class TimeInstantType {
         RECORDED,
         CONSUMED

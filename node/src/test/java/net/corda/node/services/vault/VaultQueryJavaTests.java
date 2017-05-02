@@ -1,5 +1,6 @@
 package net.corda.node.services.vault;
 
+import com.google.common.collect.*;
 import kotlin.*;
 import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
@@ -9,6 +10,7 @@ import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.*;
 import net.corda.core.serialization.*;
 import net.corda.core.transactions.*;
+import net.corda.node.services.vault.schemas.*;
 import net.corda.testing.node.*;
 import org.jetbrains.annotations.*;
 import org.jetbrains.exposed.sql.*;
@@ -22,6 +24,7 @@ import java.util.stream.*;
 import static net.corda.contracts.asset.CashKt.*;
 import static net.corda.contracts.testing.VaultFiller.*;
 import static net.corda.core.node.services.vault.QueryCriteriaKt.*;
+import static net.corda.core.node.services.vault.QueryCriteriaUtilsKt.*;
 import static net.corda.core.utilities.TestConstants.*;
 import static net.corda.node.utilities.DatabaseSupportKt.*;
 import static net.corda.node.utilities.DatabaseSupportKt.transaction;
@@ -127,8 +130,9 @@ public class VaultQueryJavaTests {
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 
-            PageSpecification pageSpec  = new PageSpecification(1, 100);
-            Sort sorting = new Sort(Sort.Direction.DESC);
+            PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
+            Sort.SortColumn sortByUid = new Sort.SortColumn(VaultLinearStateEntity.UUID.getName(), Sort.Direction.DESC, Sort.NullHandling.NULLS_LAST);
+            Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             Vault.Page<ContractState> results = vaultSvc.queryBy(compositeCriteria, pageSpec, sorting);
             // DOCEND VaultJavaQueryExample2
 
@@ -193,8 +197,9 @@ public class VaultQueryJavaTests {
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
 
-            PageSpecification pageSpec  = new PageSpecification(1, 100);
-            Sort sorting = new Sort(Sort.Direction.DESC);
+            PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
+            Sort.SortColumn sortByUid = new Sort.SortColumn(VaultLinearStateEntity.UUID.getName(), Sort.Direction.DESC, Sort.NullHandling.NULLS_LAST);
+            Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             Vault.QueryResults<ContractState> results = vaultSvc.trackBy(compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();

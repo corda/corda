@@ -74,7 +74,7 @@ interface CordaRPCOps : RPCOps {
      */
     fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                                 paging: PageSpecification = PageSpecification(),
-                                                sorting: Sort = Sort()): Vault.Page<T>
+                                                sorting: Sort = Sort(emptySet())): Vault.Page<T>
 
     /**
      * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
@@ -82,7 +82,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                                 paging: PageSpecification = PageSpecification(),
-                                                sorting: Sort = Sort()): Vault.QueryResults<T>
+                                                sorting: Sort = Sort(emptySet())): Vault.QueryResults<T>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
@@ -95,7 +95,7 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultServiceTrackBy(): Vault.QueryResults<T> = vaultServiceTrackBy()
     fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria): Vault.QueryResults<T> = vaultServiceTrackBy(criteria)
     fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, paging)
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, Sort())
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, Sort(emptySet()))
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.

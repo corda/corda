@@ -22,7 +22,6 @@ import net.corda.core.utilities.*
 import net.corda.node.services.vault.schemas.VaultSchema
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.schemas.CashSchemaV1
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -434,7 +433,8 @@ class VaultQueryTests {
             // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(id))
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting = Sort(direction = Sort.Direction.DESC))
+            val sorting = Sort(setOf(Sort.SortColumn(VaultSchema.VaultLinearState::uuid.name, Sort.Direction.DESC)))
+            val results = vaultSvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria), sorting)
             // DOCEND VaultQueryExample9
             assertThat(results.states).hasSize(4)
         }
@@ -551,31 +551,6 @@ class VaultQueryTests {
             // DOCEND VaultQueryExample11
 
             assertThat(results.states).hasSize(1)
-        }
-    }
-
-    // chaining LogicalExpressions with AND and OR
-    @Test
-    fun `consumed linear heads for linearId between two timestamps`() {
-        database.transaction {
-            val issuedStates = services.fillWithSomeTestLinearStates(10)
-            val linearIds = issuedStates.states.map { it.state.data.linearId }.toList()
-            val filterByLinearIds = listOf(linearIds.first(), linearIds.last())
-
-            val start = TEST_TX_TIME
-            val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
-            val recordedBetweenExpression = LogicalExpression(TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
-
-            // TODO: enforce strict type safety of Attributes (via Enum) ???
-            val linearIdsExpression = LogicalExpression(LinearState::linearId, Operator.IN, filterByLinearIds)
-            val linearIdCondition = LogicalExpression(VaultSchema.VaultLinearState::uuid, Operator.EQUAL, linearIds[2])
-
-            val compositeExpression = recordedBetweenExpression.and(linearIdsExpression).or(linearIdCondition)
-
-            val criteria = VaultCustomQueryCriteria(compositeExpression)
-            val results = vaultSvc.queryBy<LinearState>(criteria)
-
-            assertThat(results.states).hasSize(2)
         }
     }
 
@@ -711,6 +686,7 @@ class VaultQueryTests {
 
     /** Vault Indexed Query tests */
 
+    // specifying Query on Commercial Paper contract state attributes
     @Test
     fun `commercial paper custom query`() {
         database.transaction {
@@ -739,49 +715,9 @@ class VaultQueryTests {
         }
     }
 
-    /** Vault Custom Query Criteria tests */
-
-    // specifying Order
-    @Test
-    fun `all states with paging specification reverse order`() {
-        database.transaction {
-
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
-
-            val statusAllExpression = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.ALL)
-            val customCriteria = VaultCustomQueryCriteria(expression = statusAllExpression)
-
-            val pagingSpec = PageSpecification(1, 10)
-            val results = vaultSvc.queryBy<ContractState>(customCriteria, sorting = Sort(direction = Sort.Direction.DESC), paging = pagingSpec)
-            assertThat(results.states).hasSize(10)
-        }
-    }
-
-    // specifying Query on custom Contract state attributes
-    @Test
-    fun `unconsumed cash states with amount of currency greater or equal than`() {
-
-        database.transaction {
-
-            services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-
-            val statusUnconsumedExpr = LogicalExpression(VaultSchema.VaultStates::stateStatus, Operator.EQUAL, Vault.StateStatus.UNCONSUMED)
-            val currencyExpr = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
-            val quantityExpr = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
-            val combinedExpr = statusUnconsumedExpr.and(currencyExpr).and(quantityExpr)
-
-            val criteria = VaultCustomQueryCriteria(expression = combinedExpr)
-            val results = vaultSvc.queryBy<ContractState>(criteria)
-
-            assertThat(results.states).hasSize(2)
-        }
-    }
-
     /** Chaining together different Query Criteria tests**/
 
+    // specifying Query on Cash contract state attributes
     @Test
     fun `all cash states with amount of currency greater or equal than`() {
 
@@ -789,18 +725,42 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
-            // services.spend(100.DOLLARS)
             services.fillWithSomeTestCash(10.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(1.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
 
-            // custom criteria
-            val currencyExpr = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
-            val quantityExpr = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
-            val customCriteria = VaultCustomQueryCriteria(currencyExpr.and(quantityExpr))
+            val statusUnconsumedStateCriteria = VaultQueryCriteria(Vault.StateStatus.ALL)
 
-            val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val currencyIndex = LogicalExpression(Cash.currencyIndexColumn, Operator.EQUAL, USD.currencyCode)
+            val quantityIndex = LogicalExpression(Cash.quantityIndexColumn, Operator.GREATER_THAN_OR_EQUAL, 10)
+            val customIndexCriteria = VaultIndexedQueryCriteria(currencyIndex.and(quantityIndex))
 
-            val results = vaultSvc.queryBy<ContractState>(vaultCriteria.and(customCriteria))
+            val criteria = statusUnconsumedStateCriteria.and(customIndexCriteria)
+            val results = vaultSvc.queryBy<Cash.State>(criteria)
+
+            assertThat(results.states).hasSize(2)
+        }
+    }
+
+    // specifying Query on Linear state attributes
+    @Test
+    fun `consumed linear heads for linearId between two timestamps`() {
+        database.transaction {
+            val issuedStates = services.fillWithSomeTestLinearStates(10)
+            val externalIds = issuedStates.states.map { it.state.data.linearId }.map { it.externalId }[0]
+            val uuids = issuedStates.states.map { it.state.data.linearId }.map { it.id }[1]
+
+            val start = TEST_TX_TIME
+            val end = TEST_TX_TIME.plus(30, ChronoUnit.DAYS)
+            val recordedBetweenExpression = LogicalExpression(TimeInstantType.RECORDED, Operator.BETWEEN, arrayOf(start, end))
+            val basicCriteria = VaultQueryCriteria(timeCondition = recordedBetweenExpression)
+
+            val linearIdsExpression = LogicalExpression(VaultSchema.INDEX_LINEAR_STATE_EXTERNAL_ID, Operator.IN, externalIds)
+            val linearIdCondition = LogicalExpression(VaultSchema.INDEX_LINEAR_STATE_UUID, Operator.EQUAL, uuids)
+            val customIndexCriteria = VaultIndexedQueryCriteria(linearIdsExpression.or(linearIdCondition))
+
+            val criteria = basicCriteria.and(customIndexCriteria)
+            val results = vaultSvc.queryBy<LinearState>(criteria)
+
             assertThat(results.states).hasSize(2)
         }
     }

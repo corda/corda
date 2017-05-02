@@ -18,8 +18,12 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
+import net.corda.node.services.vault.schemas.GenericVaultIndexSchema
+import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1
+import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_NUMERIC_1
+import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_STRING_1
+import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_TIME_1
 import net.corda.schemas.CommercialPaperSchemaV1
-import net.corda.schemas.GenericVaultIndexSchemaV1
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -115,9 +119,9 @@ class CommercialPaper : Contract {
      * Object Relational Mapping support: define constants for Queryable Indexes for ease of use in Vault Queries
      */
     companion object {
-        val currencyIndexColumn = "stringIndex1"
-        val quantityIndexColumn = "longIndex1"
-        val maturityDateIndexColumn = "timeIndex1"
+        val currencyIndexColumn = INDEX_STRING_1
+        val quantityIndexColumn = INDEX_NUMERIC_1
+        val maturityDateIndexColumn = INDEX_TIME_1
     }
 
     interface Clauses {
