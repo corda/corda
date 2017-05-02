@@ -60,6 +60,35 @@ If IDEA refuses to open a project because an SDK has not been selected, you may 
 
 If you are having trouble selecting the correct JDK, the JetBrains website provides the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
 
+IDEA fails to compile Corda because it refuses to find some dependencies
+************************************************************************
+
+First check that Corda compiles successfully from the command line using ``gradlew clean build``. If this succeeds then IntelliJ may just have imported the project's Gradle files incorrectly. Try opening the
+
+.. parsed-literal::
+
+    View/Tool Windows/Gradle
+
+..
+
+pane and clicking the "Refresh all Gradle projects" button. Then retry compiling Corda within IntelliJ. If this still fails then try
+
+.. parsed-literal::
+
+    File/Invalidate Caches, Restart...
+
+..
+
+or checking the
+
+.. parsed-literal::
+
+    Settings/Build,Execution,Deployment/Build Tools/Gradle/Runner/Delegate IDE build-run actions to gradle
+
+..
+
+checkbox, and then refreshing Gradle again.
+
 IDEA fails to compile in VaultSchemaTest.kt
 *******************************************
 
