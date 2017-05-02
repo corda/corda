@@ -165,7 +165,7 @@ public class VaultQueryJavaTests {
             List contractStateTypes = Arrays.asList(Cash.State.class);
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
-            Vault.QueryResults<ContractState> results = vaultSvc.trackBy(criteria);
+            Vault.PageAndUpdates<ContractState> results = vaultSvc.trackBy(criteria);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();
             Observable<Vault.Update> updates = results.getFuture();
@@ -200,7 +200,7 @@ public class VaultQueryJavaTests {
             PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
             Sort.SortColumn sortByUid = new Sort.SortColumn(VaultLinearStateEntity.UUID.getName(), Sort.Direction.DESC, Sort.NullHandling.NULLS_LAST);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
-            Vault.QueryResults<ContractState> results = vaultSvc.trackBy(compositeCriteria, pageSpec, sorting);
+            Vault.PageAndUpdates<ContractState> results = vaultSvc.trackBy(compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();
             Observable<Vault.Update> updates = results.getFuture();

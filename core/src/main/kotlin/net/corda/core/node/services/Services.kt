@@ -95,9 +95,21 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         UNCONSUMED, CONSUMED, ALL
     }
 
+    /**
+     * Returned in queries [VaultService.queryBy] and [VaultService.trackBy].
+     * A Page contains:
+     *  1) a [List] of actual [StateAndRef] requested by the specified [QueryCriteria] to a maximum of [MAX_PAGE_SIZE]
+     *  2) a [List] of associated [Vault.StateMetadata], one per [StateAndRef] result
+     *  3) the [PageSpecification] definition used to bound this result set
+     *  4) a total number of states that met the given [QueryCriteria]
+     *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
+     *     further pagination (by issuing new queries).
+     */
     @CordaSerializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
-                                           val statesMetadata: List<Vault.StateMetadata>, val pageable: PageSpecification, val total: Long)
+                                           val statesMetadata: List<Vault.StateMetadata>,
+                                           val pageable: PageSpecification,
+                                           val totalStatesAvailable: Long)
 
     @CordaSerializable
     data class StateMetadata(val ref: StateRef,
@@ -111,7 +123,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                              val lockUpdateTime: Instant?)
 
     @CordaSerializable
-    data class QueryResults<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>? = null)
+    data class PageAndUpdates<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>? = null)
 }
 
 /**
@@ -174,7 +186,7 @@ interface VaultService {
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
      * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
-     * and returns a [Vault.QueryResults] object containing
+     * and returns a [Vault.PageAndUpdates] object containing
      * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
      * 2) an [Observable] of [Vault.Update]
      *
@@ -183,7 +195,7 @@ interface VaultService {
      */
     fun <T : ContractState> trackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                     paging: PageSpecification = PageSpecification(),
-                                    sorting: Sort = Sort(emptySet())): Vault.QueryResults<T>
+                                    sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
@@ -193,10 +205,10 @@ interface VaultService {
     fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = queryBy(criteria, paging)
     fun <T : ContractState> queryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = queryBy(criteria, sorting)
 
-    fun <T : ContractState> trackBy(): Vault.QueryResults<T> = trackBy()
-    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.QueryResults<T> = trackBy(criteria)
-    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T> = trackBy(criteria, paging)
-    fun <T : ContractState> trackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = trackBy(criteria, Sort(emptySet()))
+    fun <T : ContractState> trackBy(): Vault.PageAndUpdates<T> = trackBy()
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = trackBy(criteria)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = trackBy(criteria, paging)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = trackBy(criteria, Sort(emptySet()))
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s

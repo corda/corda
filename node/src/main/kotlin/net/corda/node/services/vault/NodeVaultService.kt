@@ -230,11 +230,11 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         //  take = pageSize
     }
 
-    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.QueryResults<T> {
+    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
         TODO("not implemented")
 
         return mutex.locked {
-            Vault.QueryResults(queryBy(criteria),
+            Vault.PageAndUpdates(queryBy(criteria),
                               _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }

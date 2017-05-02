@@ -82,7 +82,7 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                                 paging: PageSpecification = PageSpecification(),
-                                                sorting: Sort = Sort(emptySet())): Vault.QueryResults<T>
+                                                sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
@@ -92,10 +92,10 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultServiceQueryBy(criteria, paging)
     fun <T : ContractState> vaultServiceQueryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultServiceQueryBy(criteria, sorting)
 
-    fun <T : ContractState> vaultServiceTrackBy(): Vault.QueryResults<T> = vaultServiceTrackBy()
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria): Vault.QueryResults<T> = vaultServiceTrackBy(criteria)
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, paging)
-    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.QueryResults<T> = vaultServiceTrackBy(criteria, Sort(emptySet()))
+    fun <T : ContractState> vaultServiceTrackBy(): Vault.PageAndUpdates<T> = vaultServiceTrackBy()
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultServiceTrackBy(criteria)
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultServiceTrackBy(criteria, paging)
+    fun <T : ContractState> vaultServiceTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultServiceTrackBy(criteria, Sort(emptySet()))
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
