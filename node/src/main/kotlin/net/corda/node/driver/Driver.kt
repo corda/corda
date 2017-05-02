@@ -575,8 +575,7 @@ class DriverDSL(
 
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
-                        "jdk.serialFilter" to "maxbytes=0"  // disable deserialisation
+                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}"
                 )
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"

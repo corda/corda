@@ -209,6 +209,7 @@ object TwoPartyTradeFlow {
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
+        @Suspendable
         private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
 

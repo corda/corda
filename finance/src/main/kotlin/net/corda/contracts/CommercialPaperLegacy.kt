@@ -1,5 +1,6 @@
 package net.corda.contracts
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullPublicKey
@@ -124,6 +125,7 @@ class CommercialPaperLegacy : Contract {
     }
 
     @Throws(InsufficientBalanceException::class)
+    @Suspendable
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
         // Add the cash movement using the states in our vault.
         vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
