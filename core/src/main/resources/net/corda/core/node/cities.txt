@@ -997,3 +997,6 @@ Bristol (GB)	-2.57	51.45
 Yokosuka (JP)	139.67	35.28
 Akola (IN)	77	20.72
 Belgaum (IN)	74.5	15.87
+# These have been added back by hand
+Cairo (EG)	31.25	30.06
+Zurich (CH)	8.55	47.36
