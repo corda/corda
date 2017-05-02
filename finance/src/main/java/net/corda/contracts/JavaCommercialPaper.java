@@ -1,5 +1,6 @@
 package net.corda.contracts;
 
+import co.paralleluniverse.fibers.*;
 import com.google.common.collect.*;
 import kotlin.*;
 import net.corda.contracts.asset.*;
@@ -311,6 +312,7 @@ public class JavaCommercialPaper implements Contract {
         return generateIssue(issuance, faceValue, maturityDate, notary, null);
     }
 
+    @Suspendable
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
         vault.generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
         tx.addInputState(paper);

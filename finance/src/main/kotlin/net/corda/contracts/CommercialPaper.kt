@@ -1,5 +1,6 @@
 package net.corda.contracts
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.core.contracts.*
@@ -214,6 +215,7 @@ class CommercialPaper : Contract {
      * @throws InsufficientBalanceException if the vault doesn't contain enough money to pay the redeemer.
      */
     @Throws(InsufficientBalanceException::class)
+    @Suspendable
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
         // Add the cash movement using the states in our vault.
         val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
