@@ -10,6 +10,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
@@ -517,7 +518,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     override fun toString() = "${javaClass.simpleName}(id=$id)"
 }
 
-@Throws(FileNotFoundException::class)
+@Throws(IOException::class)
 fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
     val p = path.toLowerCase().split('\\', '/')
     while (true) {

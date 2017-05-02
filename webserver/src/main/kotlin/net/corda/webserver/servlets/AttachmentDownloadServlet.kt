@@ -44,16 +44,17 @@ class AttachmentDownloadServlet : HttpServlet() {
             val subPath = reqPath.substringAfter('/', missingDelimiterValue = "").toLowerCase()
 
             resp.contentType = MediaType.APPLICATION_OCTET_STREAM
-            resp.outputStream.use { out ->
-                if (subPath.isEmpty()) {
-                    resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$hash.zip\"")
-                    attachment.use { it.copyTo(out) }
-                } else {
-                    val filename = subPath.split('/').last()
-                    resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"")
-                    JarInputStream(attachment).use { it.extractFile(subPath, out) }
-                }
+            if (subPath.isEmpty()) {
+                resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$hash.zip\"")
+                attachment.use { it.copyTo(resp.outputStream) }
+            } else {
+                val filename = subPath.split('/').last()
+                resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"")
+                JarInputStream(attachment).use { it.extractFile(subPath, resp.outputStream) }
             }
+
+            // Closing the output stream commits our response. We cannot change the status code after this.
+            resp.outputStream.close()
         } catch(e: FileNotFoundException) {
             log.warn("404 Not Found whilst trying to handle attachment download request for ${servletContext.contextPath}/$reqPath")
             resp.sendError(HttpServletResponse.SC_NOT_FOUND)
