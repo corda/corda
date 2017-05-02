@@ -1,11 +1,11 @@
 package net.corda.webserver.servlets
 
+import net.corda.core.contracts.extractFile
 import net.corda.core.crypto.SecureHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.io.OutputStream
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -51,9 +51,7 @@ class AttachmentDownloadServlet : HttpServlet() {
                 } else {
                     val filename = subPath.split('/').last()
                     resp.addHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$filename\"")
-                    JarInputStream(attachment).use { jar ->
-                        jar.extractFile(subPath, out)
-                    }
+                    JarInputStream(attachment).use { it.extractFile(subPath, out) }
                 }
             }
         } catch(e: FileNotFoundException) {
@@ -61,18 +59,5 @@ class AttachmentDownloadServlet : HttpServlet() {
             resp.sendError(HttpServletResponse.SC_NOT_FOUND)
             return
         }
-    }
-
-    private fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase().split('\\', '/')
-        while (true) {
-            val e = nextJarEntry ?: break
-            if (!e.isDirectory && e.name.toLowerCase().split('\\', '/') == p) {
-                copyTo(outputTo)
-                return
-            }
-            closeEntry()
-        }
-        throw FileNotFoundException(path)
     }
 }

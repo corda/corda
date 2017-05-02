@@ -496,20 +496,7 @@ interface Attachment : NamedByHash {
      *
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
-    fun extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase().split('\\', '/')
-        openAsJAR().use { jar ->
-            while (true) {
-                val e = jar.nextJarEntry ?: break
-                if (e.name.toLowerCase().split('\\', '/') == p) {
-                    jar.copyTo(outputTo)
-                    return
-                }
-                jar.closeEntry()
-            }
-        }
-        throw FileNotFoundException(path)
-    }
+    fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 }
 
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
@@ -528,4 +515,18 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
     override fun hashCode() = id.hashCode()
     override fun toString() = "${javaClass.simpleName}(id=$id)"
+}
+
+@Throws(FileNotFoundException::class)
+fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
+    val p = path.toLowerCase().split('\\', '/')
+    while (true) {
+        val e = nextJarEntry ?: break
+        if (!e.isDirectory && e.name.toLowerCase().split('\\', '/') == p) {
+            copyTo(outputTo)
+            return
+        }
+        closeEntry()
+    }
+    throw FileNotFoundException(path)
 }
