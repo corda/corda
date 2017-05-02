@@ -10,6 +10,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
+import java.security.Principal
 import java.util.*
 
 /**
@@ -18,14 +19,23 @@ import java.util.*
  * or via the Corda Shell [FlowInitiator.Shell].
  */
 @CordaSerializable
-sealed class FlowInitiator {
+sealed class FlowInitiator : Principal {
     /** Started using [net.corda.core.messaging.CordaRPCOps.startFlowDynamic]. */
-    data class RPC(val username: String) : FlowInitiator()
+    data class RPC(val username: String) : FlowInitiator() {
+        override fun getName(): String = username
+    }
     /** Started when we get new session initiation request. */
-    data class Peer(val party: Party) : FlowInitiator()
+    data class Peer(val party: Party) : FlowInitiator() {
+        override fun getName(): String = party.name.toString()
+    }
     /** Started as scheduled activity. */
-    data class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator()
-    object Shell : FlowInitiator() // TODO When proper ssh access enabled, add username/use RPC?
+    data class Scheduled(val scheduledState: ScheduledStateRef) : FlowInitiator() {
+        override fun getName(): String = "Scheduler"
+    }
+    // TODO When proper ssh access enabled, add username/use RPC?
+    object Shell : FlowInitiator() {
+        override fun getName(): String = "Shell User"
+    }
 }
 
 /**
@@ -58,6 +68,10 @@ interface FlowStateMachine<R> {
 
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
+
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String,String>)
+
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>)
 
     val serviceHub: ServiceHub
     val logger: Logger

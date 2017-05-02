@@ -68,6 +68,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
     abstract val schemaService: SchemaService
     abstract override val networkMapCache: NetworkMapCacheInternal
     abstract val schedulerService: SchedulerService
+    abstract val auditService: AuditService
 
     abstract val networkService: MessagingService
 
