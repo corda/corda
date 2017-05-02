@@ -16,7 +16,7 @@ interface AMQPSerializer {
      * Textual unique representation of the JVM type this represents.  Will be encoded into the AMQP stream and
      * will appear in the schema.
      *
-     * Typically this is unique enough that we can use one global cache of [AMQPSerializer]s and use this as the look up key.
+     * This should be unique enough that we can use one global cache of [AMQPSerializer]s and use this as the look up key.
      */
     val typeDescriptor: String
 

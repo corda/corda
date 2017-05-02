@@ -51,9 +51,11 @@ class ArraySerializer(override val type: Type) : AMQPSerializer {
         } else {
             throw NotSerializableException("Unexpected array element type $type")
         }
+        val list = this
         return java.lang.reflect.Array.newInstance(elementType, this.size).apply {
+            val array = this
             for (i in 0..lastIndex) {
-                java.lang.reflect.Array.set(this@apply, i, this@toArrayOfType.get(i))
+                java.lang.reflect.Array.set(array, i, list[i])
             }
         }
     }

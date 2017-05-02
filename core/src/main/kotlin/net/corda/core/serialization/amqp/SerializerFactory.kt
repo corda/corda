@@ -133,7 +133,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 AMQPPrimitiveSerializer(clazz)
             } else {
                 whitelisted(clazz)
-                ClassSerializer(clazz)
+                ObjectSerializer(clazz)
             }
         }
     }

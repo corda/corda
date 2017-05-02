@@ -11,7 +11,7 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ClassSerializer(val clazz: Class<*>) : AMQPSerializer {
+class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
     private val propertySerializers: Collection<PropertySerializer>
@@ -38,12 +38,11 @@ class ClassSerializer(val clazz: Class<*>) : AMQPSerializer {
         // Write described
         data.withDescribed(typeNotation.descriptor) {
             // Write list
-            putList()
-            enter()
-            for (property in propertySerializers) {
-                property.writeProperty(obj, this, output)
+            withList {
+                for (property in propertySerializers) {
+                    property.writeProperty(obj, this, output)
+                }
             }
-            exit() // exit list
         }
     }
 
