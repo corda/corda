@@ -6,7 +6,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 
-
 /**
  * Notify the specified parties about a transaction. The remote peers will download this transaction and its
  * dependency graph, verifying them all. The flow returns when all peers have acknowledged the transactions
@@ -26,7 +25,7 @@ class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
         // TODO: Messaging layer should handle this broadcast for us
         val msg = NotifyTxRequest(notarisedTransaction)
         participants.filter { it != serviceHub.myInfo.legalIdentity }.forEach { participant ->
-            // This pops out the other side in DataVending.NotifyTransactionHandler.
+            // This pops out the other side in NotifyTransactionHandler
             send(participant, msg)
         }
     }

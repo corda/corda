@@ -1,6 +1,7 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.send
@@ -8,9 +9,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.CHARLIE
 import net.corda.flows.sendRequest
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Added
@@ -22,12 +20,18 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
+import net.corda.node.services.network.NodeRegistration
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.CHARLIE
+import net.corda.core.utilities.DUMMY_MAP
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.eclipse.jetty.util.BlockingArrayQueue
 import org.junit.After
 import org.junit.Before
@@ -41,10 +45,14 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var mapServiceNode: MockNode
     lateinit var alice: MockNode
 
+    companion object {
+        val subscriberLegalName = "CN=Subscriber,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"
+    }
+
     @Before
     fun setup() {
         network = MockNetwork(defaultFactory = nodeFactory)
-        network.createTwoNodes(firstNodeName = "map service", secondNodeName = ALICE.name).apply {
+        network.createTwoNodes(firstNodeName = DUMMY_MAP.name, secondNodeName = ALICE.name).apply {
             mapServiceNode = first
             alice = second
         }
@@ -149,7 +157,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     @Test
     fun `surpass unacknowledged update limit`() {
-        val subscriber = newNodeSeparateFromNetworkMap("Subscriber")
+        val subscriber = newNodeSeparateFromNetworkMap(subscriberLegalName)
         val updates = subscriber.subscribe()
         val bob = addNewNodeToNetworkMap(BOB.name)
         var serial = updates.first().wireReg.verified().serial
@@ -163,7 +171,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
 
     @Test
     fun `delay sending update ack until just before unacknowledged update limit`() {
-        val subscriber = newNodeSeparateFromNetworkMap("Subscriber")
+        val subscriber = newNodeSeparateFromNetworkMap(subscriberLegalName)
         val updates = subscriber.subscribe()
         val bob = addNewNodeToNetworkMap(BOB.name)
         var serial = updates.first().wireReg.verified().serial

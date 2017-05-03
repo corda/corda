@@ -1,3 +1,0 @@
-# Register a ServiceLoader service extending from net.corda.core.node.CordaPluginRegistry
-net.corda.node.services.NotaryChange$Plugin
-net.corda.node.services.persistence.DataVending$Plugin

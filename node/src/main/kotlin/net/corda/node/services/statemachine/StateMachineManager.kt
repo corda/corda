@@ -13,9 +13,7 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
-import net.corda.core.ErrorOr
-import net.corda.core.ThreadBox
-import net.corda.core.bufferUntilSubscribed
+import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
@@ -23,12 +21,11 @@ import net.corda.core.flows.*
 import net.corda.core.messaging.ReceivedMessage
 import net.corda.core.messaging.TopicSession
 import net.corda.core.messaging.send
-import net.corda.core.random63BitValue
 import net.corda.core.serialization.*
-import net.corda.core.then
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -151,7 +148,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     // Context for tokenized services in checkpoints
-    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo(), serviceHub)
+    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
@@ -289,7 +286,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
-                is SessionInit -> onSessionInit(sessionMessage, sender)
+                is SessionInit -> onSessionInit(sessionMessage, message, sender)
             }
         } else {
             logger.error("Unknown peer ${message.peer} in $sessionMessage")
@@ -335,21 +332,38 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
     }
 
-    private fun onSessionInit(sessionInit: SessionInit, sender: Party) {
+    private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
         logger.trace { "Received $sessionInit from $sender" }
         val otherPartySessionId = sessionInit.initiatorSessionId
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val flowFactory = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
-        if (flowFactory == null) {
+        val serviceFlowInfo = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
+        if (serviceFlowInfo == null) {
             logger.warn("${sessionInit.clientFlowClass} has not been registered with a service flow: $sessionInit")
             sendSessionReject("Don't know ${sessionInit.clientFlowClass.name}")
             return
         }
 
         val session = try {
-            val flow = flowFactory(sender)
+            val flow = when (serviceFlowInfo) {
+                is ServiceFlowInfo.CorDapp -> {
+                    // TODO Add support for multiple versions of the same flow when CorDapps are loaded in separate class loaders
+                    if (sessionInit.flowVerison != serviceFlowInfo.version) {
+                        logger.warn("Version mismatch - ${sessionInit.clientFlowClass} is only registered for version " +
+                                "${serviceFlowInfo.version}: $sessionInit")
+                        sendSessionReject("Version not supported")
+                        return
+                    }
+                    serviceFlowInfo.factory(sender)
+                }
+                is ServiceFlowInfo.Core -> serviceFlowInfo.factory(sender, receivedMessage.platformVersion)
+            }
+
+            if (flow.javaClass.isAnnotationPresent(FlowVersion::class.java)) {
+                logger.warn("${FlowVersion::class.java.name} is not applicable for service flows: ${flow.javaClass.name}")
+            }
+
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
@@ -372,7 +386,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        return quasarKryo().run { kryo ->
+        return quasarKryoPool.run { kryo ->
             // add the map of tokens -> tokenizedServices to the kyro context
             kryo.withSerializationContext(serializationContext) {
                 fiber.serialize(kryo)
@@ -381,15 +395,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint): FlowStateMachineImpl<*> {
-        return quasarKryo().run { kryo ->
+        return quasarKryoPool.run { kryo ->
             // put the map of token -> tokenized into the kryo context
             kryo.withSerializationContext(serializationContext) {
                 checkpoint.serializedFiber.deserialize(kryo)
             }.apply { fromCheckpoint = true }
         }
     }
-
-    private fun quasarKryo(): KryoPool = quasarKryoPool
 
     private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()

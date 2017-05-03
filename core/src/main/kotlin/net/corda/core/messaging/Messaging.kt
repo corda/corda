@@ -190,6 +190,8 @@ interface Message {
 interface ReceivedMessage : Message {
     /** The authenticated sender. */
     val peer: X500Name
+    /** Platform version of the sender's node. */
+    val platformVersion: Int
 }
 
 /** A singleton that's useful for validating topic strings */

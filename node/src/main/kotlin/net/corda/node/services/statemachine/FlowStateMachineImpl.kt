@@ -298,7 +298,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         openSessions[Pair(sessionFlow, otherParty)] = session
         // We get the top-most concrete class object to cater for the case where the client flow is customised via a sub-class
         val clientFlowClass = sessionFlow.topConcreteFlowClass
-        val sessionInit = SessionInit(session.ourSessionId, clientFlowClass, firstPayload)
+        val sessionInit = SessionInit(session.ourSessionId, clientFlowClass, clientFlowClass.flowVersion, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
@@ -432,6 +432,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
     }
+}
+
+val Class<out FlowLogic<*>>.flowVersion: Int get() {
+    val flowVersion = getDeclaredAnnotation(FlowVersion::class.java) ?: return 1
+    require(flowVersion.value > 0) { "Flow versions have to be greater or equal to 1" }
+    return flowVersion.value
 }
 
 // I would prefer for [FlowProgressHandleImpl] to extend [FlowHandleImpl],

@@ -69,7 +69,7 @@ class InteractiveShellTest {
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
-    fun party() = check("party: \"${someCorpLegalName}\"", someCorpLegalName)
+    fun party() = check("party: \"${someCorpLegalName}\"", someCorpLegalName.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> {
         override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>): UntrustworthyData<T> {

@@ -9,6 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
@@ -19,7 +20,13 @@ import javax.ws.rs.core.Response
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
                                   val issueToPartyName: String, val issueToPartyRefAsString: String,
-                                  val issuerBankName: String)
+                                  val issuerBankName: String) {
+        constructor(amount: Long, currency: String,
+                    issueToPartyName: X500Name, issueToPartyRefAsString: String,
+                    issuerBankName: X500Name) : this(amount, currency,
+                issueToPartyName.toString(), issueToPartyRefAsString,
+                issuerBankName.toString())
+    }
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()

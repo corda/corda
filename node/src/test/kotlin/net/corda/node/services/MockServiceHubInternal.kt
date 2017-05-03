@@ -9,12 +9,12 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
+import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.services.persistence.DataVending
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -69,14 +69,6 @@ open class MockServiceHubInternal(
 
     lateinit var smm: StateMachineManager
 
-    init {
-        if (net != null && storage != null) {
-            // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
-            // on the networking service, so that will keep it from being collected.
-            DataVending.Service(this)
-        }
-    }
-
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
     override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T> {
@@ -85,5 +77,5 @@ open class MockServiceHubInternal(
 
     override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) = Unit
 
-    override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ((Party) -> FlowLogic<*>)? = null
+    override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? = null
 }

@@ -27,15 +27,15 @@ import kotlin.test.assertFailsWith
 
 class BFTNotaryServiceTests : NodeBasedTest() {
     private companion object {
-        val notaryName = "BFT Notary Server"
+        val notaryCommonName = "BFT Notary Server"
     }
 
     @Test
     fun `detect double spend`() {
-        val masterNode = startBFTNotaryCluster(notaryName, 4, BFTNonValidatingNotaryService.type).first()
+        val masterNode = startBFTNotaryCluster(notaryCommonName, 4, BFTNonValidatingNotaryService.type).first()
         val alice = startNode(ALICE.name).getOrThrow()
 
-        val notaryParty = alice.netMapCache.getNotary(notaryName)!!
+        val notaryParty = alice.netMapCache.getNotary(notaryCommonName)!!
         val notaryNodeKeyPair = with(masterNode) { database.transaction { services.notaryIdentityKey } }
         val aliceKey = with(alice) { database.transaction { services.legalIdentityKey } }
 

@@ -88,9 +88,7 @@ object NotaryChangeFlow : AbstractStateReplacementFlow() {
 
     }
 
-    class Acceptor(otherSide: Party,
-                   override val progressTracker: ProgressTracker = tracker()) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
-
+    class Acceptor(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
         /**
          * Check the notary change proposal.
          *

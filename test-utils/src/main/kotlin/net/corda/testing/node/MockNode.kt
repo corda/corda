@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
@@ -7,6 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -16,11 +18,13 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
+import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.statemachine.flowVersion
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -38,6 +42,7 @@ import java.security.KeyPair
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.reflect.KClass
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -223,6 +228,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
+
+        @VisibleForTesting
+        fun registerServiceFlow(clientFlowClass: KClass<out FlowLogic<*>>,
+                                flowVersion: Int = clientFlowClass.java.flowVersion,
+                                serviceFlowFactory: (Party) -> FlowLogic<*>) {
+            serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.CorDapp(flowVersion, serviceFlowFactory)
+        }
 
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
             return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)

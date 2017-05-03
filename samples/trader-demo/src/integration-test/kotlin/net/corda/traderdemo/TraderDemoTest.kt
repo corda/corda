@@ -30,7 +30,7 @@ class TraderDemoTest : NodeBasedTest() {
                 startNode(DUMMY_BANK_A.name, rpcUsers = demoUser),
                 startNode(DUMMY_BANK_B.name, rpcUsers = demoUser),
                 startNode(BOC.name, rpcUsers = listOf(user)),
-                startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
+                startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         ).getOrThrow()
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {

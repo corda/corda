@@ -12,7 +12,6 @@ import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
-import net.corda.node.services.persistence.DataVending.Service.NotifyTransactionHandler
 import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
@@ -89,7 +88,7 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.services.registerServiceFlow(NotifyTxFlow::class.java, ::NotifyTransactionHandler)
+        walletServiceNode.registerServiceFlow(clientFlowClass = NotifyTxFlow::class, serviceFlowFactory = ::NotifyTransactionHandler)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }

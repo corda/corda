@@ -25,6 +25,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert
@@ -48,7 +49,7 @@ class NodeInterestRatesTest {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK", DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_CASH_ISSUER_KEY.public)
 
     val clock = Clock.systemUTC()
     lateinit var oracle: NodeInterestRates.Oracle

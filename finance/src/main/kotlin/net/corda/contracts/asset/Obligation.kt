@@ -13,6 +13,7 @@ import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.core.utilities.nonEmptySetOf
+import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Duration
@@ -719,7 +720,7 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=UK", DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
 
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
