@@ -1,16 +1,16 @@
 package net.corda.core.serialization.amqp
 
 import java.io.NotSerializableException
-import java.lang.UnsupportedOperationException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
+import java.util.*
 
 /**
  * Implementation of [ParameterizedType] that we can actually construct, and a parser from the string representation
  * of the JDK implementation which we use as the textual format in the AMQP schema.
  */
-class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>) : ParameterizedType {
+class DeserializedParameterizedType(private val rawType: Class<*>, private val params: Array<out Type>, private val ownerType: Type? = null) : ParameterizedType {
     init {
         if (params.isEmpty()) {
             throw NotSerializableException("Must be at least one parameter type in a ParameterizedType")
@@ -123,7 +123,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
         }
 
         private fun makeParameterizedType(rawTypeName: String, args: MutableList<Type>, cl: ClassLoader): Type {
-            return DeserializedParameterizedType(makeType(rawTypeName, cl) as Class<*>, args.toTypedArray())
+            return DeserializedParameterizedType(makeType(rawTypeName, cl) as Class<*>, args.toTypedArray(), null)
         }
 
         private fun parseTypeParams(params: String, startPos: Int, paramTypes: MutableList<Type>, cl: ClassLoader, depth: Int): Int {
@@ -136,9 +136,7 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
 
     override fun getRawType(): Type = rawType
 
-    override fun getOwnerType(): Type {
-        throw UnsupportedOperationException("Should not get called")
-    }
+    override fun getOwnerType(): Type? = ownerType
 
     override fun getActualTypeArguments(): Array<out Type> = params
 
@@ -146,10 +144,19 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
 
     override fun toString(): String = _typeName
 
-    override fun hashCode(): Int = _typeName.hashCode()
+    override fun hashCode(): Int {
+        return Arrays.hashCode(this.actualTypeArguments) xor Objects.hashCode(this.ownerType) xor Objects.hashCode(this.rawType)
+    }
 
-    // TODO: this might be a bit cheeky since the toString() of the JDK impl. would be equal, which we desire.
     override fun equals(other: Any?): Boolean {
-        return other is ParameterizedType && other.toString() == toString()
+        if (other is ParameterizedType) {
+            if (this === other) {
+                return true
+            } else {
+                return this.ownerType == other.ownerType && this.rawType == other.rawType && Arrays.equals(this.actualTypeArguments, other.actualTypeArguments)
+            }
+        } else {
+            return false
+        }
     }
 }

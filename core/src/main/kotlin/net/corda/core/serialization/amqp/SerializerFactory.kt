@@ -55,9 +55,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else if (declaredType is Class<*>) {
             // Simple classes allowed
             if (Collection::class.java.isAssignableFrom(declaredType)) {
-                return serializersByType.computeIfAbsent(declaredType) { CollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType))) }
+                return serializersByType.computeIfAbsent(declaredType) { CollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType), null)) }
             } else if (Map::class.java.isAssignableFrom(declaredType)) {
-                return serializersByType.computeIfAbsent(declaredType) { makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType))) }
+                return serializersByType.computeIfAbsent(declaredType) { makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType), null)) }
             } else {
                 return makeClassSerializer(actualType ?: declaredType)
             }
