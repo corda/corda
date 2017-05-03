@@ -109,12 +109,3 @@ the validated user is the username itself and the RPC framework uses this to det
 
 The broker also does host verification when connecting to another peer. It checks that the TLS certificate common name
 matches with the advertised legal name from the network map service.
-
-Messaging types
----------------
-
-Every ``Message`` object has an associated *topic* and may have a *session ID*. These are wrapped in a ``TopicSession``.
-An implementation of ``MessagingService`` can be used to create messages and send them. You can get access to the
-messaging service via the ``ServiceHub`` object that is provided to your app. Endpoints on the network are
-identified at the lowest level using ``SingleMessageRecipient`` which may be e.g. an IP address, or in future
-versions perhaps a routing path through the network.

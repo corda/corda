@@ -6,20 +6,20 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.Party
 import net.corda.core.map
-import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.node.services.NetworkCacheError
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.sendRequest
+import net.corda.node.services.api.NetworkCacheError
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.createMessage
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
@@ -36,7 +36,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
+open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }

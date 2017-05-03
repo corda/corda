@@ -2,10 +2,6 @@ package net.corda.core.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.messaging.MessagingService
 import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
 import java.security.KeyPair
@@ -41,7 +37,6 @@ interface ServicesForResolution {
 interface ServiceHub : ServicesForResolution {
     val vaultService: VaultService
     val keyManagementService: KeyManagementService
-    val networkService: MessagingService
     override val storageService: StorageService
     val networkMapCache: NetworkMapCache
     val schedulerService: SchedulerService

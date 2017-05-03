@@ -32,6 +32,8 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
@@ -112,8 +114,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
-        override val networkService: MessagingServiceInternal get() = net
-        override val networkMapCache: NetworkMapCache get() = netMapCache
+        override val networkService: MessagingService get() = net
+        override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -162,8 +164,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var txVerifierService: TransactionVerifierService
     lateinit var identity: IdentityService
-    lateinit var net: MessagingServiceInternal
-    lateinit var netMapCache: NetworkMapCache
+    lateinit var net: MessagingService
+    lateinit var netMapCache: NetworkMapCacheInternal
     lateinit var scheduler: NodeSchedulerService
     lateinit var flowLogicFactory: FlowLogicRefFactory
     lateinit var schemas: SchemaService
@@ -528,7 +530,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         runOnStop.clear()
     }
 
-    protected abstract fun makeMessagingService(): MessagingServiceInternal
+    protected abstract fun makeMessagingService(): MessagingService
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 

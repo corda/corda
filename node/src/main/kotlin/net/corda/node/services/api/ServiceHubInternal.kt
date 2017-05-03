@@ -6,37 +6,55 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
-import net.corda.core.messaging.MessagingService
+import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.TxWritableStorageService
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.ServiceFlowInfo
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 
-interface MessagingServiceInternal : MessagingService {
+interface NetworkMapCacheInternal : NetworkMapCache {
     /**
-     * Initiates shutdown: if called from a thread that isn't controlled by the executor passed to the constructor
-     * then this will block until all in-flight messages have finished being handled and acknowledged. If called
-     * from a thread that's a part of the [net.corda.node.utilities.AffinityExecutor] given to the constructor,
-     * it returns immediately and shutdown is asynchronous.
+     * Deregister from updates from the given map service.
+     * @param net the network messaging service.
+     * @param service the network map service to fetch current state from.
      */
-    fun stop()
+    fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+
+    /**
+     * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
+     * updates.
+     * @param net the network messaging service.
+     * @param networkMapAddress the network map service to fetch current state from.
+     * @param subscribe if the cache should subscribe to updates.
+     * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
+     * version is less than or equal to the given version, no update is fetched.
+     */
+    fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient,
+                      subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
+
+    /** Adds a node to the local cache (generally only used for adding ourselves). */
+    fun addNode(node: NodeInfo)
+
+    /** Removes a node from the local cache. */
+    fun removeNode(node: NodeInfo)
+
+    /** For testing where the network map cache is manipulated marks the service as immediately ready. */
+    @VisibleForTesting
+    fun runWithoutMapService()
+
 }
 
-/**
- * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods
- * on the messaging service interface until you have successfully started up the system. One of these objects should
- * be the only way to obtain a reference to a [MessagingService]. Startup may be a slow process: some implementations
- * may let you cast the returned future to an object that lets you get status info.
- *
- * A specific implementation of the controller class will have extra features that let you customise it before starting
- * it up.
- */
-interface MessagingServiceBuilder<out T : MessagingServiceInternal> {
-    fun start(): ListenableFuture<out T>
+@CordaSerializable
+sealed class NetworkCacheError : Exception() {
+    /** Indicates a failure to deregister, because of a rejected request from the remote node */
+    class DeregistrationFailed : NetworkCacheError()
 }
-
 
 abstract class ServiceHubInternal : PluginServiceHub {
     companion object {
@@ -46,8 +64,9 @@ abstract class ServiceHubInternal : PluginServiceHub {
     abstract val monitoringService: MonitoringService
     abstract val flowLogicRefFactory: FlowLogicRefFactory
     abstract val schemaService: SchemaService
+    abstract override val networkMapCache: NetworkMapCacheInternal
 
-    abstract override val networkService: MessagingServiceInternal
+    abstract val networkService: MessagingService
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the given storage for validated transactions and then
