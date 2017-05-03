@@ -3,16 +3,6 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code from the previous milestone release.
 
-UNRELEASED
-----------
-
-* API changes:
-    * ``PluginServiceHub.registerServiceFlow`` has been deprecated and replaced by ``registerServiceFlow`` with the
-      marker Class restricted to ``FlowLogic``.
-
-    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
-      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
-
 Milestone 11.0
 --------------
 

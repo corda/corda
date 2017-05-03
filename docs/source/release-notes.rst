@@ -3,14 +3,6 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
-Unreleased
-----------
-
-Flows can now be versioned using the ``FlowVersion`` annotation, which assigns an integer version number to it. For now
-this enables a node to restrict usage of a flow to a specific version. Support for multiple verisons of the same flow,
-hence achieving backwards compatibility, will be possible once we start loading CorDapps in separate class loaders. Watch
-this space...
-
 Milestone 11
 ------------
 
