@@ -8,9 +8,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
 import net.corda.core.utilities.BOB
-import net.corda.flows.sendRequest
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration

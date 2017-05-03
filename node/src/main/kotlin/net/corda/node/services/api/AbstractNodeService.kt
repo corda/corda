@@ -1,13 +1,10 @@
 package net.corda.node.services.api
 
-import net.corda.core.messaging.Message
-import net.corda.core.messaging.MessageHandlerRegistration
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.flows.ServiceRequestMessage
+import net.corda.node.services.messaging.*
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -16,7 +13,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 abstract class AbstractNodeService(val services: ServiceHubInternal) : SingletonSerializeAsToken() {
 
-    val net: MessagingServiceInternal get() = services.networkService
+    val net: MessagingService get() = services.networkService
 
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of

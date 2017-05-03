@@ -3,7 +3,10 @@ package net.corda.node.services.messaging
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.ThreadBox
-import net.corda.core.messaging.*
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.RPCOps
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
@@ -15,7 +18,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.RPCUserService
-import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
@@ -75,7 +77,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,
                           val monitoringService: MonitoringService
-) : ArtemisMessagingComponent(), MessagingServiceInternal {
+) : ArtemisMessagingComponent(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
 

@@ -4,7 +4,6 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -58,7 +57,6 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
-    override val networkService: MessagingService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
     override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()

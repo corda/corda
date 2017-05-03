@@ -11,10 +11,11 @@ import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.serialization.NodeClock
-import net.corda.node.services.api.MessagingServiceInternal
 import net.corda.node.services.api.MonitoringService
+import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -26,10 +27,10 @@ import java.time.Clock
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
         val keyManagement: KeyManagementService? = null,
-        val net: MessagingServiceInternal? = null,
+        val net: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         val storage: TxWritableStorageService? = MockStorageService(),
-        val mapCache: NetworkMapCache? = MockNetworkMapCache(),
+        val mapCache: NetworkMapCacheInternal? = MockNetworkMapCache(),
         val scheduler: SchedulerService? = null,
         val overrideClock: Clock? = NodeClock(),
         val flowFactory: FlowLogicRefFactory? = FlowLogicRefFactory(),
@@ -44,9 +45,9 @@ open class MockServiceHubInternal(
         get() = keyManagement ?: throw UnsupportedOperationException()
     override val identityService: IdentityService
         get() = identity ?: throw UnsupportedOperationException()
-    override val networkService: MessagingServiceInternal
+    override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
-    override val networkMapCache: NetworkMapCache
+    override val networkMapCache: NetworkMapCacheInternal
         get() = mapCache ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()

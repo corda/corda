@@ -1,11 +1,8 @@
 package net.corda.core.node.services
 
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.crypto.Party
-import net.corda.core.messaging.MessagingService
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
@@ -119,39 +116,4 @@ interface NetworkMapCache {
                 "Your options are: ${notaryNodes.map { "\"${it.notaryIdentity.name}\"" }.joinToString()}.")
         return notary.advertisedServices.any { it.info.type.isValidatingNotary() }
     }
-
-    /**
-     * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
-     * updates.
-     * @param net the network messaging service.
-     * @param networkMapAddress the network map service to fetch current state from.
-     * @param subscribe if the cache should subscribe to updates.
-     * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
-     * version is less than or equal to the given version, no update is fetched.
-     */
-    fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient,
-                      subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
-
-    /** Adds a node to the local cache (generally only used for adding ourselves). */
-    fun addNode(node: NodeInfo)
-
-    /** Removes a node from the local cache. */
-    fun removeNode(node: NodeInfo)
-
-    /**
-     * Deregister from updates from the given map service.
-     * @param net the network messaging service.
-     * @param service the network map service to fetch current state from.
-     */
-    fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
-
-    /** For testing where the network map cache is manipulated marks the service as immediately ready. */
-    @VisibleForTesting
-    fun runWithoutMapService()
-}
-
-@CordaSerializable
-sealed class NetworkCacheError : Exception() {
-    /** Indicates a failure to deregister, because of a rejected request from the remote node */
-    class DeregistrationFailed : NetworkCacheError()
 }

@@ -6,14 +6,16 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.*
+import net.corda.core.messaging.AllPossibleRecipients
+import net.corda.core.messaging.MessageRecipientGroup
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.MessagingServiceBuilder
-import net.corda.node.services.api.MessagingServiceInternal
+import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JDBCHashSet
 import net.corda.node.utilities.transaction
@@ -298,7 +300,7 @@ class InMemoryMessagingNetwork(
     inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
-                                  private val database: Database) : SingletonSerializeAsToken(), MessagingServiceInternal {
+                                  private val database: Database) : SingletonSerializeAsToken(), MessagingService {
         inner class Handler(val topicSession: TopicSession,
                             val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
