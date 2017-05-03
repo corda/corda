@@ -24,3 +24,5 @@ sourceSets {
         }
     }
 }
+
+clean.doLast { kaptKotlin.execute() }
