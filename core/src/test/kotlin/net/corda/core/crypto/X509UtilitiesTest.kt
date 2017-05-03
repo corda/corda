@@ -228,7 +228,7 @@ class X509UtilitiesTest {
         val serverThread = thread {
             try {
                 val sslServerSocket = serverSocket.accept()
-                assert(sslServerSocket.isConnected)
+                assertTrue(sslServerSocket.isConnected)
                 val serverInput = DataInputStream(sslServerSocket.inputStream)
                 val receivedString = serverInput.readUTF()
                 assertEquals("Hello World", receivedString)

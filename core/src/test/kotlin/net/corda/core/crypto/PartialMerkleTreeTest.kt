@@ -117,7 +117,7 @@ class PartialMerkleTreeTest {
         assertTrue(mt.filteredLeaves.timestamp != null)
         assertEquals(null, mt.filteredLeaves.type)
         assertEquals(null, mt.filteredLeaves.notary)
-        assert(mt.verify())
+        assertTrue(mt.verify())
     }
 
     @Test
@@ -143,19 +143,19 @@ class PartialMerkleTreeTest {
     fun `build Partial Merkle Tree, only left nodes branch`() {
         val inclHashes = listOf(hashed[3], hashed[5])
         val pmt = PartialMerkleTree.build(merkleTree, inclHashes)
-        assert(pmt.verify(merkleTree.hash, inclHashes))
+        assertTrue(pmt.verify(merkleTree.hash, inclHashes))
     }
 
     @Test
     fun `build Partial Merkle Tree, include zero leaves`() {
         val pmt = PartialMerkleTree.build(merkleTree, emptyList())
-        assert(pmt.verify(merkleTree.hash, emptyList()))
+        assertTrue(pmt.verify(merkleTree.hash, emptyList()))
     }
 
     @Test
     fun `build Partial Merkle Tree, include all leaves`() {
         val pmt = PartialMerkleTree.build(merkleTree, hashed)
-        assert(pmt.verify(merkleTree.hash, hashed))
+        assertTrue(pmt.verify(merkleTree.hash, hashed))
     }
 
     @Test

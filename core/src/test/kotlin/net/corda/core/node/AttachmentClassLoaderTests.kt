@@ -24,9 +24,7 @@ import java.net.URLClassLoader
 import java.security.PublicKey
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
+import kotlin.test.*
 
 interface DummyContractBackdoor {
     fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder
@@ -136,7 +134,7 @@ class AttachmentClassLoaderTests {
 
         val jar = attachment.openAsJAR()
 
-        assert(jar.nextEntry != null)
+        assertNotNull(jar.nextEntry)
     }
 
     @Test
@@ -234,7 +232,7 @@ class AttachmentClassLoaderTests {
         kryo.addToWhitelist(contract.javaClass)
 
         val state2 = bytes.deserialize(kryo)
-        assert(state2.javaClass.classLoader is AttachmentsClassLoader)
+        assertTrue(state2.javaClass.classLoader is AttachmentsClassLoader)
         assertNotNull(state2)
     }
 

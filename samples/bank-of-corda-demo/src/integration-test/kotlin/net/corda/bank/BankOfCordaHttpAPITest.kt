@@ -10,6 +10,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
+import kotlin.test.assertTrue
 
 class BankOfCordaHttpAPITest {
     @Test
@@ -20,7 +21,7 @@ class BankOfCordaHttpAPITest {
                     startNode(BIGCORP_LEGAL_NAME)
             ).getOrThrow()
             val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
-            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", X500Name(BOC.name))))
+            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", X500Name(BOC.name))))
         }, isDebug = true)
     }
 }
