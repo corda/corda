@@ -12,6 +12,7 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
@@ -498,18 +499,19 @@ interface Attachment : NamedByHash {
      *
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
-    fun extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase().split('\\', '/')
-        openAsJAR().use { jar ->
-            while (true) {
-                val e = jar.nextJarEntry ?: break
-                if (e.name.toLowerCase().split('\\', '/') == p) {
-                    jar.copyTo(outputTo)
-                    return
-                }
-                jar.closeEntry()
-            }
+    fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
+}
+
+@Throws(IOException::class)
+fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
+    val p = path.toLowerCase().split('\\', '/')
+    while (true) {
+        val e = nextJarEntry ?: break
+        if (!e.isDirectory && e.name.toLowerCase().split('\\', '/') == p) {
+            copyTo(outputTo)
+            return
         }
-        throw FileNotFoundException(path)
+        closeEntry()
     }
+    throw FileNotFoundException(path)
 }
