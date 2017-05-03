@@ -362,5 +362,5 @@ The query returns a ``Vault.Page`` result containing:
 
    .. sourcecode:: kotlin
 
-		val iouStates = services.vaultServiceQueryBy<IOUState>()
+		val iouStates = services.vaultQueryBy<IOUState>()
  

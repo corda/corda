@@ -116,7 +116,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                              val contractStateClassName: String,
                              val recordedTime: Instant,
                              val consumedTime: Instant?,
-                             val stateStatus: Vault.StateStatus,
+                             val status: Vault.StateStatus,
                              val notaryName: String,
                              val notaryKey: String,
                              val lockId: String?,
