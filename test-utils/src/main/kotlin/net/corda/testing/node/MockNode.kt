@@ -159,7 +159,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     id,
                     serverThread,
                     makeServiceEntries(),
-                    configuration.myLegalName.toString(),
+                    configuration.myLegalName,
                     database)
                     .start()
                     .getOrThrow()

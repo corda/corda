@@ -15,7 +15,7 @@ import org.bouncycastle.asn1.x500.X500Name
 class SimpleMQClient(val target: HostAndPort,
                      override val config: SSLConfiguration? = configureTestSSL(DEFAULT_MQ_LEGAL_NAME)) : ArtemisMessagingComponent() {
     companion object {
-        val DEFAULT_MQ_LEGAL_NAME = "SimpleMQClient"
+        val DEFAULT_MQ_LEGAL_NAME = X500Name("CN=SimpleMQClient,O=R3,OU=corda,L=London,C=UK")
     }
     lateinit var sessionFactory: ClientSessionFactory
     lateinit var session: ClientSession

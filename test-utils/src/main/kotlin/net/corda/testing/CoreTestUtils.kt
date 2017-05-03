@@ -183,7 +183,7 @@ fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): 
             emailAddress = "",
             keyStorePassword = "cordacadevpass",
             trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(X500Name(legalName)),
+            dataSourceProperties = makeTestDataSourceProperties(legalName),
             certificateSigningService = URL("http://localhost"),
             rpcUsers = emptyList(),
             verifierType = VerifierType.InMemory,
@@ -200,7 +200,7 @@ fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): 
 }
 
 @JvmOverloads
-fun configureTestSSL(legalName: String = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
+fun configureTestSSL(legalName: X500Name = X500Name(MEGA_CORP.name)): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"
