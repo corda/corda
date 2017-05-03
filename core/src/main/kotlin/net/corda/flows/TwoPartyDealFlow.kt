@@ -1,10 +1,11 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DealState
-import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
@@ -12,9 +13,7 @@ import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.KeyPair
@@ -70,7 +69,19 @@ object TwoPartyDealFlow {
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, serviceHub.myInfo.legalIdentity.owningKey)
             // Wait for the FinalityFlow to finish on the other side and return the tx when it's available.
-            return sendAndReceive<SecureHash>(otherParty, hello).unwrap { waitForLedgerCommit(it) }
+            send(otherParty, hello)
+
+            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    //TODO: "Perform some checks here."
+                }
+            }
+
+            subFlow(signTransactionFlow, shareParentSessions = true)
+
+            val txHash = receive<SecureHash>(otherParty).unwrap { it }
+
+            return waitForLedgerCommit(txHash)
         }
     }
 
@@ -104,7 +115,7 @@ object TwoPartyDealFlow {
             logger.trace { "Signed proposed transaction." }
 
             progressTracker.currentStep = COLLECTING_SIGNATURES
-            val stx = subFlow(CollectSignaturesFlow(ptx))
+            val stx = subFlow(CollectSignaturesFlow(ptx), shareParentSessions = true)
 
             logger.trace { "Got signatures from other party, verifying ... " }
 
