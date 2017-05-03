@@ -2,7 +2,6 @@ package net.corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -123,7 +122,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     // TODO: Make a more realistic legal name
-                    myLegalName = "CN=Rates Service Provider,O=R3,OU=corda,L=London,C=UK",
+                    myLegalName = "CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES",
                     nearestCity = "Madrid",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
@@ -147,7 +146,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
                     // TODO: Make a more realistic legal name
-                    myLegalName = "Regulator A,O=R3,OU=corda,L=London,C=UK",
+                    myLegalName = "CN=Regulator A,O=R3,OU=corda,L=Paris,C=FR",
                     nearestCity = "Paris",
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
