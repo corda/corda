@@ -4,6 +4,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
 import org.junit.Test
 import java.time.Instant
+import kotlin.test.assertEquals
 
 class ZeroCouponBond {
 
@@ -41,7 +42,7 @@ class ZeroCouponBond {
 
     @Test
     fun basic() {
-        assert(Zero().equals(Zero()))
+        assertEquals(Zero(), Zero())
     }
 
 

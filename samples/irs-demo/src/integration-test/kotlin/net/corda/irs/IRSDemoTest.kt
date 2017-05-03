@@ -80,20 +80,20 @@ class IRSDemoTest : IntegrationTestCategory {
 
     private fun runDateChange(nodeAddr: HostAndPort) {
         val url = URL("http://$nodeAddr/api/irs/demodate")
-        assert(putJson(url, "\"$futureDate\""))
+        assertThat(putJson(url, "\"$futureDate\"")).isTrue()
     }
 
     private fun runTrade(nodeAddr: HostAndPort) {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
-        assert(postJson(url, tradeFile))
+        assertThat(postJson(url, tradeFile)).isTrue()
     }
 
     private fun runUploadRates(host: HostAndPort) {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$host/upload/interest-rates")
-        assert(uploadFile(url, fileContents))
+        assertThat(uploadFile(url, fileContents)).isTrue()
     }
 
     private fun getTradeCount(nodeAddr: HostAndPort): Int {

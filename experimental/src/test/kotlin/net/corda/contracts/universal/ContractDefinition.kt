@@ -1,13 +1,13 @@
 package net.corda.contracts.universal
 
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.utilities.ALICE
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import org.junit.Test
 import java.util.*
+import kotlin.test.*
 
 // Test parties
 val acmeCorp = Party(ALICE.name, generateKeyPair().public)
@@ -99,10 +99,10 @@ class ContractDefinition {
                }
            }
 
-           assert( arr is Actions )
+           assertTrue( arr is Actions )
 
            if (arr is Actions) {
-               assert( arr.actions.size == 1)
+               assertEquals(1, arr.actions.size)
            }
        }
    */
@@ -124,10 +124,10 @@ class ContractDefinition {
             }
         }
 
-        assert(arr is Actions)
+        assertTrue(arr is Actions)
 
         if (arr is Actions) {
-            assert(arr.actions.size == 1)
+            assertEquals(1, arr.actions.size)
         }
     }
 

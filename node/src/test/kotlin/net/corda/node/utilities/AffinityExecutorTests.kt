@@ -5,9 +5,7 @@ import org.junit.Test
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertNotEquals
+import kotlin.test.*
 
 class AffinityExecutorTests {
     var _executor: AffinityExecutor.ServiceAffinityExecutor? = null
@@ -28,13 +26,13 @@ class AffinityExecutorTests {
         }
         latch.countDown()
         executor.flush()
-        assert(nestedRan)
+        assertTrue(nestedRan)
     }
 
     @Test fun `single threaded affinity executor runs on correct thread`() {
         val thisThread = Thread.currentThread()
         _executor = AffinityExecutor.ServiceAffinityExecutor("test thread", 1)
-        assert(!executor.isOnThread)
+        assertTrue(!executor.isOnThread)
         assertFails { executor.checkOnThread() }
 
         val thread = AtomicReference<Thread>()
@@ -54,7 +52,7 @@ class AffinityExecutorTests {
 
     @Test fun `pooled executor`() {
         _executor = AffinityExecutor.ServiceAffinityExecutor("test2", 3)
-        assert(!executor.isOnThread)
+        assertFalse(executor.isOnThread)
 
         val latch = CountDownLatch(1)
         val latch2 = CountDownLatch(2)
@@ -62,7 +60,7 @@ class AffinityExecutorTests {
 
         fun blockAThread() {
             executor.execute {
-                assert(executor.isOnThread)
+                assertTrue(executor.isOnThread)
                 threads += Thread.currentThread()
                 latch2.countDown()
                 latch.await()
@@ -73,7 +71,7 @@ class AffinityExecutorTests {
         latch2.await()
         assertEquals(2, threads.size)
         val numThreads = executor.fetchFrom {
-            assert(executor.isOnThread)
+            assertTrue(executor.isOnThread)
             threads += Thread.currentThread()
             threads.distinct().size
         }
