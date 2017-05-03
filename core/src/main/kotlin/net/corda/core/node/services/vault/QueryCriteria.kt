@@ -62,6 +62,10 @@ sealed class QueryCriteria {
      * to a versioned generic Vault Index schema [PersistentGenericVaultIndexSchemaState]
      * (see Persistence documentation for more information)
      *
+     * Params
+     *  [indexExpression] refers to a (composable) SQL like expression of the form:
+     *      [JPA entityAttributeName] [Operand] [Value]
+     *
      * Refer to [CommercialPaper.State] for a concrete example.
      */
     data class VaultIndexedQueryCriteria<L,R>(val indexExpression: Logical<L,R>? = null) : QueryCriteria()

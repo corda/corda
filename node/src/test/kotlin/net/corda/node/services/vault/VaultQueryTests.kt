@@ -22,6 +22,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.vault.schemas.VaultSchema
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
+import net.corda.schemas.CashSchemaV1
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -730,8 +731,8 @@ class VaultQueryTests {
 
             val statusUnconsumedStateCriteria = VaultQueryCriteria(Vault.StateStatus.ALL)
 
-            val currencyIndex = LogicalExpression(Cash.currencyIndexColumn, Operator.EQUAL, USD.currencyCode)
-            val quantityIndex = LogicalExpression(Cash.quantityIndexColumn, Operator.GREATER_THAN_OR_EQUAL, 10)
+            val currencyIndex = LogicalExpression(CashSchemaV1.PersistentCashState::currency, Operator.EQUAL, USD.currencyCode)
+            val quantityIndex = LogicalExpression(CashSchemaV1.PersistentCashState::pennies, Operator.GREATER_THAN_OR_EQUAL, 10)
             val customIndexCriteria = VaultIndexedQueryCriteria(currencyIndex.and(quantityIndex))
 
             val criteria = statusUnconsumedStateCriteria.and(customIndexCriteria)
