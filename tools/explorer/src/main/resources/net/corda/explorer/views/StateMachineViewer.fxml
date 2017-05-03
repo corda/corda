@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.VBox?>
+
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.Tab?>
+<TabPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1"
+         tabClosingPolicy="UNAVAILABLE">
+    <padding>
+        <Insets bottom="5" left="5" right="5" top="5"/>
+    </padding>
+    <Tab text="In progress" fx:id="progressFlowsTab">
+        <TableView fx:id="progressViewTable" VBox.vgrow="ALWAYS">
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+    </Tab>
+    <Tab text="Finished" fx:id="doneFlowsTab">
+        <TableView fx:id="doneViewTable" VBox.vgrow="ALWAYS">
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+    </Tab>
+    <Tab text="With errors" fx:id="errorFlowsTab">
+        <TableView fx:id="errorViewTable" VBox.vgrow="ALWAYS">
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+    </Tab>
+    <!--<bottom>-->
+    <!--<Label fx:id="matchingFlowsLabel" text="matching flow(s)" />-->
+    <!--</bottom>-->
+</TabPane>

@@ -117,7 +117,10 @@ class TransactionViewer : CordaView("Transactions") {
         // Transaction table
         transactionViewTable.apply {
             items = searchField.filteredData
-            column("Transaction ID", Transaction::id) { maxWidth = 200.0 }.setCustomCellFactory {
+            column("Transaction ID", Transaction::id) {
+                minWidth = 20.0
+                maxWidth = 200.0
+            }.setCustomCellFactory {
                 label("$it") {
                     graphic = identicon(it, 15.0)
                     tooltip = identiconToolTip(it)
@@ -159,10 +162,10 @@ class TransactionViewer : CordaView("Transactions") {
                 add(ContractStatesView(it).root)
                 prefHeight = 400.0
             }.apply {
-                prefWidth = 26.0
-                isResizable = false
+                // Column stays the same size, but we don't violate column restricted resize policy for the whole table view.
+                minWidth = 26.0
+                maxWidth = 26.0
             }
-            setColumnResizePolicy { true }
         }
         matchingTransactionsLabel.textProperty().bind(Bindings.size(transactionViewTable.items).map {
             "$it matching transaction${if (it == 1) "" else "s"}"

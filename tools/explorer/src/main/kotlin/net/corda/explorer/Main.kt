@@ -131,7 +131,7 @@ class Main : App(MainView::class) {
             // Stock Views.
             registerView<Dashboard>()
             registerView<TransactionViewer>()
-            registerView<FlowViewer>()
+            registerView<StateMachineViewer>()
             // CordApps Views.
             registerView<CashViewer>()
             // Tools.
