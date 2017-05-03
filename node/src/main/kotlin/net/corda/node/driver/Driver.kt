@@ -74,7 +74,7 @@ interface DriverDSLExposedInterface {
      * @return The [NodeInfo] of the started up node retrieved from the network map service.
      */
     @Deprecated("To be removed once X500Name is used as legal name everywhere")
-    fun startNode(providedName: String,
+    fun startNode(providedName: String?,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
@@ -437,10 +437,6 @@ class DriverDSL(
         }
     }
 
-    override fun startNode(providedName: String, advertisedServices: Set<ServiceInfo>, rpcUsers: List<User>, verifierType: VerifierType, customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
-        return startNode(X500Name(providedName), advertisedServices, rpcUsers, verifierType, customOverrides)
-    }
-
     override fun startNode(
             providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
@@ -448,13 +444,25 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>
     ): ListenableFuture<NodeHandle> {
+        return startNode(providedName?.toString(), advertisedServices, rpcUsers, verifierType, customOverrides)
+    }
+
+    override fun startNode(providedName: String?,
+                           advertisedServices: Set<ServiceInfo>,
+                           rpcUsers: List<User>,
+                           verifierType: VerifierType,
+                           customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName ?: X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}")
-
-        val baseDirectory = driverDirectory / name.toString()
+        val name = providedName.toString() ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}").toString()
+        val commonName = try {
+            X500Name(name).commonName
+        } catch(ex: IllegalArgumentException) {
+            name
+        }
+        val baseDirectory = driverDirectory / commonName
         val configOverrides = mapOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
@@ -501,7 +509,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { "${DUMMY_NOTARY.name} $it" }
+        val nodeNames = (1..clusterSize).map { "Notary Node $it" }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
@@ -559,7 +567,12 @@ class DriverDSL(
     override fun startNetworkMapService() {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val baseDirectory = driverDirectory / networkMapLegalName
+        val nodeDirectoryName = try {
+            X500Name(networkMapLegalName).commonName
+        } catch(ex: IllegalArgumentException) {
+            networkMapLegalName
+        }
+        val baseDirectory = driverDirectory / nodeDirectoryName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
