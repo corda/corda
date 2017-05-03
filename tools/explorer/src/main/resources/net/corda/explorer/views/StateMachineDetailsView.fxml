@@ -4,24 +4,37 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.GridPane?>
-
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
 <GridPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1">
     <padding>
         <Insets bottom="5" left="5" right="5" top="5" />
     </padding>
     <TitledPane fx:id="flowNamePane" collapsible="false" text="Flow name" GridPane.columnSpan="2" GridPane.fillWidth="true" GridPane.rowIndex="0">
+        <!--TODO text styling-->
         <Label fx:id="flowNameLabel"/>
     </TitledPane>
     <TitledPane fx:id="flowInitiatorPane" collapsible="false" maxHeight="Infinity" text="Flow initiator"
                 GridPane.columnIndex="0" GridPane.fillWidth="true" GridPane.rowIndex="1">
-        <!-- todo add gridpane - from code! -->
+        <GridPane fx:id="flowInitiatorGrid" vgap="10.0" hgap="10.0">
+            <padding>
+                <Insets bottom="5.0" left="5.0" right="10.0" top="10.0" />
+            </padding>
+            <!--TODO text styling-->
+            <Label fx:id="flowInitiatorTitle" GridPane.columnSpan="2" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.halignment="LEFT"/>
+        </GridPane>
     </TitledPane>
     <TitledPane fx:id="flowResultPane" collapsible="false" maxHeight="Infinity" text="Result" GridPane.columnIndex="1" GridPane.rowIndex="1">
-        <!-- todo add vbox - from code! -->
+        <VBox fx:id="flowResultVBox" spacing="10.0">
+            <padding>
+                <Insets bottom="5" left="5" right="5" top="5"/>
+            </padding>
+        </VBox>
     </TitledPane>
     <TitledPane fx:id="flowProgressPane" collapsible="false" maxWidth="Infinity" text="Progress steps" GridPane.columnSpan="2" GridPane.rowIndex="2">
+        <!--TODO add progress graph-->
     </TitledPane>
     <columnConstraints>
         <ColumnConstraints minWidth="450.0"/>

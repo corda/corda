@@ -135,200 +135,160 @@ class StateMachineViewer : CordaView("Flow Triage") {
 
     private inner class StateMachineDetailsView(val smmData: StateMachineData) : Fragment() {
         override val root by fxml<Parent>()
-        private val flowNamePane by fxid<TitledPane>()
+        private val flowNameLabel by fxid<Label>()
         private val flowProgressPane by fxid<TitledPane>()
-        private val flowInitiatorPane by fxid<TitledPane>()
-        private val flowResultPane by fxid<TitledPane>()
+        private val flowInitiatorGrid by fxid<GridPane>()
+        private val flowResultVBox by fxid<VBox>()
 
         init {
-            flowNamePane.apply {
-                content = label {
-                    text = FlowNameFormatter.boring.format(smmData.stateMachineName)
-                }
+            flowNameLabel.apply {
+                text = FlowNameFormatter.boring.format(smmData.stateMachineName)
             }
             flowProgressPane.apply {
                 content = label {
                     text = smmData.stateMachineStatus.value?.status // TODO later we can do some magic with showing progress steps with subflows
                 }
             }
-            flowInitiatorPane.apply {
-                //TODO use fxml to access initiatorGridPane
-                // initiatorGridPane.apply {when...
-                content = when (smmData.flowInitiator) {
-                    is FlowInitiator.Shell -> ShellNode() // TODO Extend this when we will have more information on shell user.
-                    is FlowInitiator.Peer -> PeerNode(smmData.flowInitiator as FlowInitiator.Peer)
-                    is FlowInitiator.RPC -> RPCNode(smmData.flowInitiator as FlowInitiator.RPC)
-                    is FlowInitiator.Scheduled -> ScheduledNode(smmData.flowInitiator as FlowInitiator.Scheduled)
-                }
+            when (smmData.flowInitiator) {
+                is FlowInitiator.Shell -> makeShellGrid(flowInitiatorGrid) // TODO Extend this when we will have more information on shell user.
+                is FlowInitiator.Peer -> makePeerGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Peer)
+                is FlowInitiator.RPC -> makeRPCGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.RPC)
+                is FlowInitiator.Scheduled -> makeScheduledGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Scheduled)
             }
-            flowResultPane.apply {
-                val status = smmData.addRmStatus.value
-                if (status is StateMachineStatus.Removed) {
-                    content = status.result.match(onValue =  { ResultNode(it) }, onError = { ErrorNode(it) })
-                }
+            val status = smmData.addRmStatus.value
+            if (status is StateMachineStatus.Removed) {
+                status.result.match(onValue =  { makeResultVBox(flowResultVBox, it) }, onError = { makeErrorVBox(flowResultVBox, it) })
             }
         }
     }
 
-    // TODO make that Vbox part of FXML
-    private inner class ResultNode<T>(result: T) : VBox() {
-        init {
-            spacing = 10.0
-            padding = Insets(5.0, 5.0, 5.0, 5.0)
-            if (result == null) {
-                label("No return value from flow.")
-            } else if (result is SignedTransaction) {
+    private fun <T>makeResultVBox(vbox: VBox, result: T) {
+        if (result == null) {
+            vbox.apply { label("No return value from flow.") }
+        } else if (result is SignedTransaction) {
 //                scrollpane {
 //                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
 //                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                    // TODO Make link to transaction view
-                    label("Signed transaction")
-                    label {
-                        text = result.id.toString()
-                        graphic = identicon(result.id, 30.0)
-                        tooltip = identiconToolTip(result.id)
-                    }
+            // TODO Make link to transaction view
+            vbox.apply {
+                label("Signed transaction")
+                label {
+                    text = result.id.toString()
+                    graphic = identicon(result.id, 30.0)
+                    tooltip = identiconToolTip(result.id)
+                }
 //                }
-            } else if (result is Unit) {
-                label("Flow completed with success.")
             }
-            else {
-                // TODO Here we could have sth different than SignedTransaction
-                label(result.toString())
-            }
+        } else if (result is Unit) {
+            vbox.apply { label("Flow completed with success.") }
+        }
+        else {
+            // TODO Here we could have sth different than SignedTransaction
+            vbox.apply { label(result.toString()) }
         }
     }
 
-    // TODO make that Vbox part of FXML
-    private inner class ErrorNode(val error: Throwable) : VBox() {
-        init {
+    private fun makeErrorVBox(vbox: VBox, error: Throwable) {
+        vbox.apply {
+            label("Error") {
+                graphic = FontAwesomeIconView(FontAwesomeIcon.BOLT).apply {
+                    glyphSize = 30
+                    textAlignment = TextAlignment.CENTER
+                    style = "-fx-fill: -color-4"
+                }
+            }
+        }
+        // TODO border styling?
+        vbox.apply {
             vbox {
                 spacing = 10.0
-                padding = Insets(5.0, 5.0, 5.0, 5.0)
-                label("Error") {
-                    graphic = FontAwesomeIconView(FontAwesomeIcon.BOLT).apply {
-                        glyphSize = 30
-                        textAlignment = TextAlignment.CENTER
-                        style = "-fx-fill: -color-4"
-                    }
-                }
-                // TODO think of border styling
-                vbox {
-                    spacing = 10.0
-                    label { text = error::class.simpleName }
-                    scrollpane {
-                        hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
-                        vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                        label { text = error.message }
-                    }
-                }
-            }
-
-        }
-    }
-
-    private inner class ShellNode : Label() {
-        init {
-            label("Flow started by shell user")
-        }
-    }
-
-    // TODO make it more generic, reuse gridpane definition - to fxml
-    private inner class PeerNode(val initiator: FlowInitiator.Peer): GridPane() {
-        init {
-            gridpane {
-                padding = Insets(0.0, 5.0, 10.0, 10.0)
-                vgap = 10.0
-                hgap = 10.0
-                row {
-                    label("Flow started by a peer node") {
-                        gridpaneConstraints {
-                            columnSpan = 2
-                            hAlignment = HPos.CENTER
-                        }
-                    }
-                }
-//                scrollpane { // TODO scrollbar vbox + hbox
-//                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
-//                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                row {
-                    label("Legal name: ") {
-                        gridpaneConstraints { hAlignment = HPos.LEFT }
-                        style { fontWeight = FontWeight.BOLD }
-                        minWidth = 150.0
-                        prefWidth = 150.0
-                    }
-                    label(initiator.party.name) { gridpaneConstraints { hAlignment = HPos.LEFT } }
-                }
-                row {
-                    label("Owning key: ") {
-                        gridpaneConstraints { hAlignment = HPos.LEFT }
-                        style { fontWeight = FontWeight.BOLD }
-                        minWidth = 150.0
-                        prefWidth = 150.0
-                    }
-                    label(initiator.party.owningKey.toBase58String()) { gridpaneConstraints { hAlignment = HPos.LEFT } }
-                }
-            }
-        }
-    }
-
-    private inner class RPCNode(val initiator: FlowInitiator.RPC) : GridPane() {
-        init {
-            gridpane {
-                padding = Insets(0.0, 5.0, 10.0, 10.0)
-                vgap = 10.0
-                hgap = 10.0
-                row {
-                    label("Flow started by a RPC user") {
-                        gridpaneConstraints {
-                            columnSpan = 2
-                            hAlignment = HPos.CENTER
-                        }
-                    }
-                }
-                row {
-                    label("User name: ") {
-                        gridpaneConstraints { hAlignment = HPos.LEFT }
-                        style { fontWeight = FontWeight.BOLD }
-                        prefWidth = 150.0
-                    }
-                    label(initiator.username) { gridpaneConstraints { hAlignment = HPos.LEFT } }
+                label { text = error::class.simpleName }
+                scrollpane { //TODO do that error scroll pane nicely
+                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
+                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+                    label { text = error.message }
                 }
             }
         }
     }
 
     // TODO test
-    private inner class ScheduledNode(val initiator: FlowInitiator.Scheduled) : GridPane() {
-        init {
-            gridpane {
-                padding = Insets(0.0, 5.0, 10.0, 10.0)
-                vgap = 10.0
-                hgap = 10.0
-                row {
-                    label("Flow started as scheduled activity")
-                    gridpaneConstraints {
-                        columnSpan = 2
-                        hAlignment = HPos.CENTER
-                    }
+    private fun makeShellGrid(gridPane: GridPane) {
+        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+        title.apply {
+            text = "Flow started by shell user"
+        }
+    }
+
+    private fun makePeerGrid(gridPane: GridPane, initiator: FlowInitiator.Peer) {
+        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+        title.apply {
+            text = "Flow started by a peer node"
+        }
+        gridPane.apply{
+            //                scrollpane { // TODO scrollbar vbox + hbox
+//                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
+//                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+            row {
+                label("Legal name: ") {
+                    gridpaneConstraints { hAlignment = HPos.LEFT }
+                    style { fontWeight = FontWeight.BOLD }
+                    minWidth = 150.0
+                    prefWidth = 150.0
                 }
-                row {
-                    label("Scheduled state: ") {
-                        gridpaneConstraints { hAlignment = HPos.LEFT }
-                        style { fontWeight = FontWeight.BOLD }
-                        prefWidth = 150.0
-                    }
-                    label(initiator.scheduledState.ref.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
+                label(initiator.party.name) { gridpaneConstraints { hAlignment = HPos.LEFT } }
+            }
+            row {
+                label("Owning key: ") {
+                    gridpaneConstraints { hAlignment = HPos.LEFT }
+                    style { fontWeight = FontWeight.BOLD }
+                    minWidth = 150.0
+                    prefWidth = 150.0
                 }
-                row {
-                    label("Scheduled at: ") {
-                        gridpaneConstraints { hAlignment = HPos.LEFT }
-                        style { fontWeight = FontWeight.BOLD }
-                        prefWidth = 150.0
-                    }
-                    label(initiator.scheduledState.scheduledAt.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
+                label(initiator.party.owningKey.toBase58String()) { gridpaneConstraints { hAlignment = HPos.LEFT } }
+            }
+        }
+    }
+
+    private fun makeRPCGrid(gridPane: GridPane, initiator: FlowInitiator.RPC) {
+        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+        title.apply {
+            text = "Flow started by a RPC user"
+        }
+        gridPane.apply {
+            row {
+                label("User name: ") {
+                    gridpaneConstraints { hAlignment = HPos.LEFT }
+                    style { fontWeight = FontWeight.BOLD }
+                    prefWidth = 150.0
                 }
+                label(initiator.username) { gridpaneConstraints { hAlignment = HPos.LEFT } }
+            }
+        }
+    }
+
+    // TODO test
+    private fun makeScheduledGrid(gridPane: GridPane, initiator: FlowInitiator.Scheduled) {
+        val title = gridPane.lookup("flowInitiatorTitle") as Label
+        title.apply {
+            text = "Flow started as scheduled activity"
+        }
+        gridPane.apply {
+            row {
+                label("Scheduled state: ") {
+                    gridpaneConstraints { hAlignment = HPos.LEFT }
+                    style { fontWeight = FontWeight.BOLD }
+                    prefWidth = 150.0
+                }
+                label(initiator.scheduledState.ref.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
+            }
+            row {
+                label("Scheduled at: ") {
+                    gridpaneConstraints { hAlignment = HPos.LEFT }
+                    style { fontWeight = FontWeight.BOLD }
+                    prefWidth = 150.0
+                }
+                label(initiator.scheduledState.scheduledAt.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
             }
         }
     }
