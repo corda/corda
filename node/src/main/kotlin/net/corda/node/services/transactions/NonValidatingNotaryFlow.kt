@@ -1,4 +1,4 @@
-package net.corda.flows
+package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.Party
@@ -6,6 +6,8 @@ import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.unwrap
+import net.corda.flows.NotaryFlow
+import net.corda.flows.TransactionParts
 
 class NonValidatingNotaryFlow(otherSide: Party,
                               timestampChecker: TimestampChecker,

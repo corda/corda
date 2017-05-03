@@ -56,9 +56,9 @@ Currently the vault service is used to manage the authorisation records. The adm
    
       /**
        * Authorise a contract state upgrade.
-       * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow.Acceptor] during contract upgrade process.
+       * This will store the upgrade authorisation in the vault, and will be queried by [ContractUpgradeFlow] during contract upgrade process.
        * Invoking this method indicate the node is willing to upgrade the [state] using the [upgradedContractClass].
-       * This method will NOT initiate the upgrade process. To start the upgrade process, see [ContractUpgradeFlow.Instigator].
+       * This method will NOT initiate the upgrade process.
        */
       fun authoriseContractUpgrade(state: StateAndRef<*>, upgradedContractClass: Class<UpgradedContract<*, *>>)   
       /**
@@ -111,7 +111,7 @@ The upgraded transaction state will be recorded in every participant's node at t
       
       val rpcClient : CordaRPCClient = << Bank B's Corda RPC Client >>
       val rpcB = rpcClient.proxy()
-      rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Instigator(stateAndRef, upgrade) },
+      rpcB.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow(stateAndRef, upgrade) },
           <<StateAndRef of the contract state>>,
           DummyContractV2::class.java)
           

@@ -5,7 +5,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.flows.ValidatingNotaryFlow
 
 /** A Notary service that validates the transaction chain of the submitted transaction before committing it */
 class ValidatingNotaryService(val timestampChecker: TimestampChecker,

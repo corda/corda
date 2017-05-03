@@ -2,14 +2,13 @@ package net.corda.node.services
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.flows.NotaryChangeFlow.Instigator
+import net.corda.flows.NotaryChangeFlow
 import net.corda.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
@@ -48,7 +47,7 @@ class NotaryChangeTests {
     fun `should change notary for a state with single participant`() {
         val state = issueState(clientNodeA, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
-        val flow = Instigator(state, newNotary)
+        val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
@@ -61,7 +60,7 @@ class NotaryChangeTests {
     fun `should change notary for a state with multiple participants`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newNotary = newNotaryNode.info.notaryIdentity
-        val flow = Instigator(state, newNotary)
+        val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
@@ -77,7 +76,7 @@ class NotaryChangeTests {
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
         val newEvilNotary = Party(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=UK"), generateKeyPair().public)
-        val flow = Instigator(state, newEvilNotary)
+        val flow = NotaryChangeFlow(state, newEvilNotary)
         val future = clientNodeA.services.startFlow(flow)
 
         net.runNetwork()
@@ -93,7 +92,7 @@ class NotaryChangeTests {
 
         val state = StateAndRef(issueTx.outputs.first(), StateRef(issueTx.id, 0))
         val newNotary = newNotaryNode.info.notaryIdentity
-        val flow = Instigator(state, newNotary)
+        val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
         net.runNetwork()
         val newState = future.resultFuture.getOrThrow()

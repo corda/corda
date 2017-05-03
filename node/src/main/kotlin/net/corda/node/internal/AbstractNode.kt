@@ -24,6 +24,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.flows.*
+import net.corda.node.services.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -92,7 +93,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 CashIssueFlow::class.java to setOf(Amount::class.java, OpaqueBytes::class.java, Party::class.java),
                 CashPaymentFlow::class.java to setOf(Amount::class.java, Party::class.java),
                 FinalityFlow::class.java to emptySet(),
-                ContractUpgradeFlow.Instigator::class.java to emptySet()
+                ContractUpgradeFlow::class.java to emptySet()
         )
     }
 
@@ -270,8 +271,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
         installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
-        installCoreFlow(NotaryChangeFlow.Instigator::class) { otherParty, _ -> NotaryChangeFlow.Acceptor(otherParty) }
-        installCoreFlow(ContractUpgradeFlow.Instigator::class) { otherParty, _ -> ContractUpgradeFlow.Acceptor(otherParty) }
+        installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
+        installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
     }
 
     /**

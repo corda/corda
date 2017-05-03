@@ -13,6 +13,10 @@ UNRELEASED
     * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
       manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
 
+    * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
+
+    * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
+
 Milestone 11.0
 --------------
 

@@ -84,7 +84,7 @@ To change the notary for an input state, use the ``NotaryChangeFlow``. For examp
     @Suspendable
     fun changeNotary(originalState: StateAndRef<ContractState>,
                      newNotary: Party): StateAndRef<ContractState> {
-        val flow = NotaryChangeFlow.Instigator(originalState, newNotary)
+        val flow = NotaryChangeFlow(originalState, newNotary)
         return subFlow(flow)
     }
 

@@ -21,12 +21,12 @@ import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import java.security.*
 
 class ContractUpgradeFlowTest {
     lateinit var mockNet: MockNetwork
@@ -66,7 +66,7 @@ class ContractUpgradeFlowTest {
         requireNotNull(btx)
 
         // The request is expected to be rejected because party B haven't authorise the upgrade yet.
-        val rejectedFuture = a.services.startFlow(ContractUpgradeFlow.Instigator(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val rejectedFuture = a.services.startFlow(ContractUpgradeFlow(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
         mockNet.runNetwork()
         assertFailsWith(ExecutionException::class) { rejectedFuture.get() }
 
@@ -74,7 +74,7 @@ class ContractUpgradeFlowTest {
         b.services.vaultService.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        val resultFuture = a.services.startFlow(ContractUpgradeFlow.Instigator(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
+        val resultFuture = a.services.startFlow(ContractUpgradeFlow(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
         mockNet.runNetwork()
 
         val result = resultFuture.get()
@@ -121,10 +121,10 @@ class ContractUpgradeFlowTest {
         val rpcB = CordaRPCOpsImpl(b.services, b.smm, b.database)
 
         CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(
-                startFlowPermission<ContractUpgradeFlow.Instigator<*, *>>()
+                startFlowPermission<ContractUpgradeFlow<*, *>>()
         )))
 
-        val rejectedFuture = rpcA.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Instigator(stateAndRef, upgrade) },
+        val rejectedFuture = rpcA.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow(stateAndRef, upgrade) },
                 atx!!.tx.outRef<DummyContract.State>(0),
                 DummyContractV2::class.java).returnValue
 
@@ -135,7 +135,7 @@ class ContractUpgradeFlowTest {
         rpcB.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
-        val resultFuture = rpcA.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow.Instigator(stateAndRef, upgrade) },
+        val resultFuture = rpcA.startFlow({ stateAndRef, upgrade -> ContractUpgradeFlow(stateAndRef, upgrade) },
                 atx.tx.outRef<DummyContract.State>(0),
                 DummyContractV2::class.java).returnValue
 
@@ -165,7 +165,7 @@ class ContractUpgradeFlowTest {
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
         val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
         // Starts contract upgrade flow.
-        a.services.startFlow(ContractUpgradeFlow.Instigator(stateAndRef, CashV2::class.java))
+        a.services.startFlow(ContractUpgradeFlow(stateAndRef, CashV2::class.java))
         mockNet.runNetwork()
         // Get contract state from the vault.
         val firstState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
