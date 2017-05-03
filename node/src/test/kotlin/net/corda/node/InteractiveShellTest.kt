@@ -36,7 +36,7 @@ class InteractiveShellTest {
     }
 
     private val someCorpLegalName = MEGA_CORP.name
-    private val ids = InMemoryIdentityService().apply { registerIdentity(Party(MEGA_CORP.name, DUMMY_PUBKEY_1)) }
+    private val ids = InMemoryIdentityService().apply { registerIdentity(Party(someCorpLegalName, DUMMY_PUBKEY_1)) }
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {

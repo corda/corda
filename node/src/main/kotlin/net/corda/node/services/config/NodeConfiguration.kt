@@ -13,6 +13,7 @@ import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.OldConfig
 import net.corda.nodeapi.config.SSLConfiguration
+import org.bouncycastle.asn1.x500.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
@@ -20,7 +21,7 @@ import java.util.*
 interface NodeConfiguration : SSLConfiguration {
     val baseDirectory: Path
     override val certificatesDirectory: Path get() = baseDirectory / "certificates"
-    val myLegalName: String
+    val myLegalName: X500Name
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int
     val nearestCity: String
@@ -40,7 +41,7 @@ data class FullNodeConfiguration(
                 "This is a subsitution value which points to the baseDirectory and is manually added into the config before parsing",
                 ReplaceWith("baseDirectory"))
         val basedir: Path,
-        override val myLegalName: String,
+        override val myLegalName: X500Name,
         override val nearestCity: String,
         override val emailAddress: String,
         override val keyStorePassword: String,

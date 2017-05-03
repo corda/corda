@@ -110,6 +110,8 @@ object X509Utilities {
      * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
      */
     fun getDevX509Name(commonName: String): X500Name {
+        // Check that we haven't been accidentally given a full X500 distinguished name
+        require(!commonName.startsWith("CN=")) { "Provided common name must not start \"CN=\"" }
         val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
         nameBuilder.addRDN(BCStyle.CN, commonName)
         nameBuilder.addRDN(BCStyle.O, "R3")

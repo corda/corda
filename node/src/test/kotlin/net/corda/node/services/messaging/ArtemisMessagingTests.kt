@@ -31,6 +31,7 @@ import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
@@ -75,7 +76,7 @@ class ArtemisMessagingTests {
         userService = RPCUserServiceImpl(emptyList())
         config = TestNodeConfiguration(
                 baseDirectory = baseDirectory,
-                myLegalName = ALICE.name,
+                myLegalName = X500Name(ALICE.name),
                 networkMapService = null)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())

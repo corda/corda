@@ -2,6 +2,8 @@ package net.corda.demobench.model
 
 import com.typesafe.config.*
 import net.corda.nodeapi.User
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -9,10 +11,9 @@ import java.nio.file.StandardCopyOption
 
 class NodeConfig(
         baseDir: Path,
-        legalName: String,
+        legalName: X500Name,
         p2pPort: Int,
         val rpcPort: Int,
-        val nearestCity: String,
         val webPort: Int,
         val h2Port: Int,
         val extraServices: List<String>,
@@ -25,6 +26,7 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
+    val nearestCity: String? = legalName.getRDNs(BCStyle.L).singleOrNull()?.typesAndValues?.singleOrNull()?.value?.toString()
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
@@ -42,14 +44,13 @@ class NodeConfig(
      * which is mutable.
      */
     fun toFileConfig(): Config = ConfigFactory.empty()
-            .withValue("myLegalName", valueFor(legalName))
+            .withValue("myLegalName", valueFor(legalName.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
-            .withValue("nearestCity", valueFor(nearestCity))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
             .withFallback(optional("networkMapService", networkMap, {
                 c, n ->
                 c.withValue("address", addressValueFor(n.p2pPort))
-                        .withValue("legalName", valueFor(n.legalName))
+                        .withValue("legalName", valueFor(n.legalName.toString()))
             }))
             .withValue("webAddress", addressValueFor(webPort))
             .withValue("rpcAddress", addressValueFor(rpcPort))
@@ -60,7 +61,7 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-            baseDir, legalName, p2pPort, rpcPort, nearestCity, webPort, h2Port, extraServices, users, networkMap
+            baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {
