@@ -6,6 +6,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.CordaPluginRegistry
 import org.glassfish.jersey.server.model.Resource
 import org.glassfish.jersey.server.model.ResourceMethod
+import java.io.IOException
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse
  */
 class CorDappInfoServlet(val plugins: List<CordaPluginRegistry>, val rpc: CordaRPCOps): HttpServlet() {
 
+    @Throws(IOException::class)
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         resp.writer.appendHTML().html {
             head {

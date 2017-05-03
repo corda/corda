@@ -3,6 +3,7 @@ package net.corda.webserver.servlets
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import org.apache.commons.fileupload.servlet.ServletFileUpload
+import java.io.IOException
 import java.util.*
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -14,6 +15,7 @@ import javax.servlet.http.HttpServletResponse
 class DataUploadServlet : HttpServlet() {
     private val log = loggerFor<DataUploadServlet>()
 
+    @Throws(IOException::class)
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         @Suppress("DEPRECATION") // Bogus warning due to superclass static method being deprecated.
         val isMultipart = ServletFileUpload.isMultipartContent(req)
