@@ -11,6 +11,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
@@ -19,7 +20,7 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    val host = HostAndPort.fromString("localhost:10003")
+    val host = HostAndPort.fromString("localhost:10002")
     println("Connecting to the recipient node ($host)")
     CordaRPCClient(host).use("demo", "demo") {
         val api = NotaryDemoClientApi(this)
@@ -38,7 +39,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val counterpartyNode by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        parties.first { it.legalIdentity.name == "CN=Counterparty,O=R3,OU=corda,L=London,C=UK" }
+        parties.first { it.legalIdentity.name == BOB.name }
     }
 
     private companion object {

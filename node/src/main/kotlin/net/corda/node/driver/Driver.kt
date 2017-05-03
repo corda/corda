@@ -33,8 +33,6 @@ import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -122,7 +120,7 @@ interface DriverDSLExposedInterface {
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
-     * to set automaticallyStartNetworkMap to false in your [driver] call.
+     * to set networkMapStrategy to FalseNetworkMap in your [driver] call.
      */
     fun startNetworkMapService()
 
@@ -201,7 +199,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = true,
+        networkMapStrategy: NetworkMapStrategy = DedicatedNetworkMap,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -210,7 +208,7 @@ fun <A> driver(
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
-                automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                networkMapStrategy = networkMapStrategy,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -381,10 +379,9 @@ class DriverDSL(
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
-        val automaticallyStartNetworkMap: Boolean
+        val networkMapStrategy: NetworkMapStrategy
 ) : DriverDSLInternalInterface {
-    private val networkMapLegalName = DUMMY_MAP.name
-    private val networkMapAddress = portAllocation.nextHostAndPort()
+    private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(2))
     val shutdownManager = ShutdownManager(executorService)
 
@@ -420,7 +417,7 @@ class DriverDSL(
         shutdownManager.shutdown()
 
         // Check that we shut down properly
-        addressMustNotBeBound(executorService, networkMapAddress).get()
+        addressMustNotBeBound(executorService, dedicatedNetworkMapAddress).get()
         executorService.shutdown()
     }
 
@@ -456,7 +453,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName.toString() ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}").toString()
+        val name = providedName.toString() ?: X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}").toString()
         val commonName = try {
             X500Name(name).commonName
         } catch(ex: IllegalArgumentException) {
@@ -469,10 +466,7 @@ class DriverDSL(
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to mapOf(
-                        "address" to networkMapAddress.toString(),
-                        "legalName" to networkMapLegalName
-                ),
+                "networkMapService" to networkMapStrategy.serviceConfig(dedicatedNetworkMapAddress, name, p2pAddress),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -509,7 +503,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { "Notary Node $it" }
+        val nodeNames = (1..clusterSize).map { notaryNodeName(it) }
         val paths = nodeNames.map { driverDirectory / it }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
@@ -559,7 +553,7 @@ class DriverDSL(
     }
 
     override fun start() {
-        if (automaticallyStartNetworkMap) {
+        if (networkMapStrategy.startDedicated) {
             startNetworkMapService()
         }
     }
@@ -567,6 +561,7 @@ class DriverDSL(
     override fun startNetworkMapService() {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
+        val networkMapLegalName = networkMapStrategy.legalName
         val nodeDirectoryName = try {
             X500Name(networkMapLegalName).commonName
         } catch(ex: IllegalArgumentException) {
@@ -581,7 +576,7 @@ class DriverDSL(
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
-                        "p2pAddress" to networkMapAddress.toString(),
+                        "p2pAddress" to dedicatedNetworkMapAddress.toString(),
                         "useTestClock" to useTestClock
                 )
         )
@@ -651,6 +646,8 @@ class DriverDSL(
                 )
             }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
         }
+
+        fun notaryNodeName(number: Int) = "Notary Node ${number}"
     }
 }
 

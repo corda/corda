@@ -75,7 +75,7 @@ fun <A> verifierDriver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = true,
+        networkMapStrategy: NetworkMapStrategy = DedicatedNetworkMap,
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -85,7 +85,7 @@ fun <A> verifierDriver(
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                        networkMapStrategy = networkMapStrategy,
                         isDebug = isDebug
                 )
         ),
