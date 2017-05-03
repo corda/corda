@@ -5,9 +5,6 @@ import java.io.File
 import java.nio.file.Files
 import java.util.*
 
-private val nodeJarName = "corda.jar"
-private val webJarName = "corda-webserver.jar"
-private val nodeConfName = "node.conf"
 private val HEADLESS_FLAG = "--headless"
 
 private val os: OS by lazy {
@@ -30,33 +27,36 @@ fun main(args: Array<String>) {
     val workingDir = File(System.getProperty("user.dir"))
     val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
-    workingDir.listFiles().forEach nodeDir@ {
-        val jarName = if (isNode(it)) nodeJarName else if (isWebserver(it)) webJarName else return@nodeDir
-        startedProcesses += startJarProcess(headless, it, jarName, javaArgs)
+    workingDir.listFiles { file -> file.isDirectory }.forEach { dir ->
+        listOf(NodeJar, WebJar).forEach { jar ->
+            jar.maybeStartProcess(headless, dir, javaArgs)?.let { startedProcesses += it }
+        }
     }
     println("Started ${startedProcesses.size} processes")
     println("Finished starting nodes")
 }
 
-private fun startJarProcess(headless: Boolean, dir: File, jarName: String, javaArgs: List<String>): Process {
-    val debugPort = debugPortAlloc.next()
-    println("Starting $jarName in $dir on debug port $debugPort")
-    val proc = (if (headless) ::execJar else ::execJarInTerminalWindow)(jarName, dir, javaArgs, debugPort)
-    if (os == OS.MACOS) Thread.sleep(1000)
-    return proc
+private abstract class Jar(private val jarName: String) {
+    internal abstract fun acceptNodeConf(nodeConf: File): Boolean
+    internal fun maybeStartProcess(headless: Boolean, dir: File, javaArgs: List<String>): Process? {
+        File(dir, jarName).exists() || return null
+        File(dir, "node.conf").let { it.exists() && acceptNodeConf(it) } || return null
+        val debugPort = debugPortAlloc.next()
+        println("Starting $jarName in $dir on debug port $debugPort")
+        val proc = (if (headless) ::execJar else ::execJarInTerminalWindow)(jarName, dir, javaArgs, debugPort)
+        if (os == OS.MACOS) Thread.sleep(1000)
+        return proc
+    }
 }
 
-private fun isNode(maybeNodeDir: File) = maybeNodeDir.isDirectory
-        && File(maybeNodeDir, nodeJarName).exists()
-        && File(maybeNodeDir, nodeConfName).exists()
+private object NodeJar : Jar("corda.jar") {
+    override fun acceptNodeConf(nodeConf: File) = true
+}
 
-private fun isWebserver(maybeWebserverDir: File) = maybeWebserverDir.isDirectory
-        && File(maybeWebserverDir, webJarName).exists()
-        && File(maybeWebserverDir, nodeConfName).exists()
-        && hasWebserverPort(maybeWebserverDir)
-
-// TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
-private fun hasWebserverPort(nodeConfDir: File) = Files.lines(File(nodeConfDir, nodeConfName).toPath()).anyMatch { "webAddress" in it }
+private object WebJar : Jar("corda-webserver.jar") {
+    // TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
+    override fun acceptNodeConf(nodeConf: File) = Files.lines(nodeConf.toPath()).anyMatch { "webAddress" in it }
+}
 
 private class JavaCommand(jarName: String, debugPort: Int?, nodeName: String, init: MutableList<String>.() -> Unit) {
     private val words = mutableListOf<String>().apply {
