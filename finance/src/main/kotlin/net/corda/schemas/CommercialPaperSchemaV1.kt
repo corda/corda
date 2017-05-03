@@ -5,6 +5,7 @@ import net.corda.core.schemas.PersistentState
 import java.time.Instant
 import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.Index
 import javax.persistence.Table
 
 /**
@@ -16,10 +17,13 @@ object CommercialPaperSchema
  * First version of a commercial paper contract ORM schema that maps all fields of the [CommercialPaper] contract state
  * as it stood at the time of writing.
  */
-object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommericalPaperState::class.java)) {
+object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
-    @Table(name = "cp_states")
-    class PersistentCommericalPaperState(
+    @Table(name = "cp_states",
+           indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "currency"),
+                             Index(name = "maturity_idx", columnList = "maturity"),
+                             Index(name = "face_value_idx", columnList = "faceValue")))
+    class PersistentCommercialPaperState(
             @Column(name = "issuance_key")
             var issuanceParty: String,
 

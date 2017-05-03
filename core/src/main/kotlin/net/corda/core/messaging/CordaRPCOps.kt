@@ -68,7 +68,6 @@ interface CordaRPCOps : RPCOps {
     @RPCReturnsObservables
     fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
 
-    // DOCSTART VaultQueryAPI
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
      *
@@ -83,9 +82,11 @@ interface CordaRPCOps : RPCOps {
      * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
      */
+    // DOCSTART VaultQueryByAPI
     fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                          paging: PageSpecification = PageSpecification(),
                                          sorting: Sort = Sort(emptySet())): Vault.Page<T>
+    // DOCEND VaultQueryByAPI
 
     /**
      * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
@@ -99,14 +100,17 @@ interface CordaRPCOps : RPCOps {
      * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
     */
+    // DOCSTART VaultTrackByAPI
     @RPCReturnsObservables
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                          paging: PageSpecification = PageSpecification(),
                                          sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
-    // DOCEND VaultQueryAPI
+    // DOCEND VaultTrackByAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
+
+    // DOCSTART VaultQueryAPIJavaHelpers
     fun <T : ContractState> vaultQueryBy(): Vault.Page<T> = vaultQueryBy()
     fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria)
     fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging)
@@ -116,6 +120,7 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria)
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging)
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, Sort(emptySet()))
+    // DOCEND VaultQueryAPIJavaHelpers
 
     /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.

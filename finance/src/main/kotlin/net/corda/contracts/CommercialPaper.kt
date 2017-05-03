@@ -18,11 +18,6 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchema
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_NUMERIC_1
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_STRING_1
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_TIME_1
 import net.corda.schemas.CommercialPaperSchemaV1
 import java.security.PublicKey
 import java.time.Instant
@@ -88,12 +83,12 @@ class CommercialPaper : Contract {
 
         // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
-        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1, GenericVaultIndexSchemaV1)
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
                         issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.toBase58String(),
@@ -103,25 +98,10 @@ class CommercialPaper : Contract {
                         faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
-                is GenericVaultIndexSchemaV1 -> GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState(
-                        contractStateClassName = this.javaClass.name,
-                        timeIndex1 = this.maturityDate,
-                        stringIndex1 = this.faceValue.token.product.currencyCode,
-                        longIndex1 = this.faceValue.quantity
-                )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
         // DOCEND VaultIndexedQueryCriteria
-    }
-
-    /**
-     * Object Relational Mapping support: define constants for Queryable Indexes for ease of use in Vault Queries
-     */
-    companion object {
-        val currencyIndexColumn = INDEX_STRING_1
-        val quantityIndexColumn = INDEX_NUMERIC_1
-        val maturityDateIndexColumn = INDEX_TIME_1
     }
 
     interface Clauses {

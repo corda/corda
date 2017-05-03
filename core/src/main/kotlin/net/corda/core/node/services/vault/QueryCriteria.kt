@@ -57,18 +57,17 @@ sealed class QueryCriteria {
             val exitKeyIdentity: List<String>? = null) : QueryCriteria()
 
     /**
-     * VaultIndexedQueryCriteria: provides query by custom attributes defined in a contracts
-     * [QueryableState] implementation. A custom state must defined its own state attribute mappings
-     * to a versioned generic Vault Index schema [PersistentGenericVaultIndexSchemaState]
+     * VaultCustomQueryCriteria: provides query by custom attributes defined in a contracts
+     * [QueryableState] implementation.
      * (see Persistence documentation for more information)
      *
      * Params
-     *  [indexExpression] refers to a (composable) SQL like expression of the form:
+     *  [indexExpression] refers to a (composable) JPA Query like WHERE expression clauses of the form:
      *      [JPA entityAttributeName] [Operand] [Value]
      *
      * Refer to [CommercialPaper.State] for a concrete example.
      */
-    data class VaultIndexedQueryCriteria<L,R>(val indexExpression: Logical<L,R>? = null) : QueryCriteria()
+    data class VaultCustomQueryCriteria<L,R>(val indexExpression: Logical<L,R>? = null) : QueryCriteria()
 
     // enable composition of [QueryCriteria]
     data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()

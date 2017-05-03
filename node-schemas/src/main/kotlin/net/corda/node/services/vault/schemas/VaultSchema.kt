@@ -75,10 +75,6 @@ object VaultSchema {
         var lockUpdateTime: Instant?
     }
 
-    const val INDEX_LINEAR_STATE_EXTERNAL_ID = "external_id_index"
-    const val INDEX_LINEAR_STATE_UUID = "uuid_index"
-    const val INDEX_DEAL_STATE_DEAL_REFERENCE = "deal_reference_index"
-
     @Table(name = "vault_linear_states")
     @Entity(model = "vault")
     interface VaultLinearState : Persistable {
@@ -95,12 +91,11 @@ object VaultSchema {
         /**
          * [LinearState] attributes
          */
-
-        @get:Index(INDEX_LINEAR_STATE_EXTERNAL_ID)
+        @get:Index("external_id_idx")
         @get:Column(name = "external_id")
         var externalId: String
 
-        @get:Index(INDEX_LINEAR_STATE_UUID)
+        @get:Index("uuid_idx")
         @get:Column(name = "uuid", unique = true, nullable = false)
         var uuid: UUID
 
@@ -108,7 +103,7 @@ object VaultSchema {
          * [DealState] attributes
          */
 
-        @get:Index(INDEX_DEAL_STATE_DEAL_REFERENCE)
+        @get:Index("deal_reference_idx")
         @get:Column(name = "deal_reference")
         var dealRef: String
 

@@ -20,8 +20,20 @@ and via ``CordaRPCOps`` for use by RPC client applications:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
     :language: kotlin
-    :start-after: DOCSTART VaultQueryAPI
-    :end-before: DOCEND VaultQueryAPI
+    :start-after: DOCSTART VaultQueryByAPI
+    :end-before: DOCEND VaultQueryByAPI
+
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultTrackByAPI
+    :end-before: DOCEND VaultTrackByAPI
+
+Java helper methods are also provided with default values for arguments:
+
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryAPIJavaHelpers
+    :end-before: DOCEND VaultQueryAPIJavaHelpers
 
 The API provides both static (snapshot) and dynamic (snapshot with streaming updates) methods for a defined set of filter criteria.
 
@@ -45,49 +57,19 @@ The ``QueryCriteria`` interface provides a flexible mechanism for specifying dif
 	   
 	   .. note:: Contract states that extend the ``LinearState`` or ``DealState`` interfaces now automatically persist associated state attributes. 
 
-	4. ``VaultIndexedQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the Persistence_ documentation and associated examples. Specifically, index queryable attributes must be explicitly mapped to the ``GenericVaultIndexSchema`` internal table when implementing the ``generateMappedObject`` schema mapping function of ``QueryableState`` in your custom Contract state.
+	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the Persistence_ documentation and associated examples. 
+	Custom criteria expressions are expressed as JPA Query like WHERE clauses as follows: [JPA entityAttributeName] [Operand] [Value]
+
+	An example is illustrated here:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample16
+    :end-before: DOCEND VaultQueryExample16
+
+All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
 	   
-	An example snippet of code extracted from the ``CommercialPaper`` contract is presented here:
-
-.. literalinclude:: ../../finance/src/main/kotlin/net/corda/contracts/CommercialPaper.kt
-	:language: kotlin
-	:start-after: DOCSTART VaultIndexedQueryCriteria
-	:end-before: DOCEND VaultIndexedQueryCriteria
-
-In a future iteration of this API, we may adopt an annotation based approach, whereby custom contract state attributes are directly annotated using ``@CordaVaultIndex`` in their schema definition as shown in the following snippet::
-
-    class PersistentCommericalPaperState(
-            @Column(name = "issuance_key")
-            var issuanceParty: String,
-
-            @Column(name = "issuance_ref")
-            var issuanceRef: ByteArray,
-
-            @Column(name = "owner_key")
-            var owner: String,
-
-            @CordaVaultIndex(mapToTableName= "GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState", mapToColumn = "timeIndex1")
-            @Column(name = "maturity_instant")
-            var maturity: Instant,
-
-            @CordaVaultIndex(mapToTableName= "GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState", mapToColumn = "longIndex1")
-            @Column(name = "face_value")
-            var faceValue: Long,
-
-            @CordaVaultIndex(mapToTableName= "GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState", mapToColumn = "stringIndex1")
-            @Column(name = "ccy_code", length = 3)
-            var currency: String,
-
-            @Column(name = "face_value_issuer_key")
-            var faceValueIssuerParty: String,
-
-            @Column(name = "face_value_issuer_ref")
-            var faceValueIssuerRef: ByteArray
-    ) : PersistentState()	
-	
 Additional notes
-
-	.. note:: the ``GenericVaultIndexSchema`` entity is versioned as per other contract schemas (to enable extensibility) and provides a set of re-usable index attribute field definitions for primary types (eg. String, Instant, Long).
 
 	.. note:: Custom contract states that implement the ``Queryable`` interface may now extend the ``FungiblePersistentState``, ``LinearPersistentState`` or ``DealPersistentState`` classes when implementing their ``MappedSchema``. Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset``, ``LinearState`` and ``DealState`` attributes.
 
@@ -235,15 +217,6 @@ Query for consumed fungible assets with a specific exit key:
     :start-after: DOCSTART VaultQueryExample15
     :end-before: DOCEND VaultQueryExample15
 
-**Indexed custom contract state queries using** ``VaultIndexedQueryCriteria``
-
-Query for custom attributes (mapped explicitly to the ``GenericVaultIndexSchema`` table as described above) of the Commercial paper contract:
-
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
-    :language: kotlin
-    :start-after: DOCSTART VaultQueryExample16
-    :end-before: DOCEND VaultQueryExample16
-
 Java examples
 ^^^^^^^^^^^^^
 
@@ -334,7 +307,7 @@ The query returns a ``Vault.Page`` result containing:
 		val iouStates = serviceHub.vaultService.linearHeadsOfType<IOUState>()
 		val iouToSettle = iouStates[linearId] ?: throw Exception("IOUState with linearId $linearId not found.")
 
-   Now::
+   Now:
 
 .. container:: codeset
 
@@ -348,7 +321,7 @@ The query returns a ``Vault.Page`` result containing:
 3. RPC usage was limited to using the ``vaultAndUpdates`` RPC method, which returned a snapshot and streaming updates as an Observable. 
    In many cases, queries were not interested in the streaming updates. 
 
-   Previously::
+   Previously:
 
 .. container:: codeset
 
@@ -356,7 +329,7 @@ The query returns a ``Vault.Page`` result containing:
 
 		val iouStates = services.vaultAndUpdates().first.filter { it.state.data is IOUState }
 
-   Now::
+   Now:
 
 .. container:: codeset
 
