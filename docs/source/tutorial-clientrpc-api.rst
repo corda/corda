@@ -27,7 +27,7 @@ Now we can connect to the node itself using a valid RPC login. We login using th
 
 We start generating transactions in a different thread (``generateTransactions`` to be defined later) using ``proxy``, which exposes the full RPC interface of the node:
 
-.. literalinclude:: ../../node/src/main/kotlin/net/corda/node/services/messaging/CordaRPCOps.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
     :language: kotlin
     :start-after: interface CordaRPCOps
     :end-before: }
