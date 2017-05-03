@@ -7,10 +7,10 @@ import java.util.*
 
 private val HEADLESS_FLAG = "--headless"
 
-private val os: OS by lazy {
+private val os by lazy {
     val osName = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH)
-    if ((osName.indexOf("mac") >= 0) || (osName.indexOf("darwin") >= 0)) OS.MACOS
-    else if (osName.indexOf("win") >= 0) OS.WINDOWS
+    if ("mac" in osName || "darwin" in osName) OS.MACOS
+    else if ("win" in osName) OS.WINDOWS
     else OS.LINUX
 }
 
@@ -43,7 +43,7 @@ private abstract class Jar(private val jarName: String) {
         File(dir, "node.conf").let { it.exists() && acceptNodeConf(it) } || return null
         val debugPort = debugPortAlloc.next()
         println("Starting $jarName in $dir on debug port $debugPort")
-        val proc = (if (headless) ::execJar else ::execJarInTerminalWindow)(jarName, dir, javaArgs, debugPort)
+        val proc = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs).start()
         if (os == OS.MACOS) Thread.sleep(1000)
         return proc
     }
@@ -58,51 +58,49 @@ private object WebJar : Jar("corda-webserver.jar") {
     override fun acceptNodeConf(nodeConf: File) = Files.lines(nodeConf.toPath()).anyMatch { "webAddress" in it }
 }
 
-private class JavaCommand(jarName: String, debugPort: Int?, nodeName: String, init: MutableList<String>.() -> Unit) {
-    private val words = mutableListOf<String>().apply {
+private abstract class JavaCommand(jarName: String, internal val dir: File, debugPort: Int?, internal val nodeName: String, init: MutableList<String>.() -> Unit, args: List<String>) {
+    internal val command: List<String> = mutableListOf<String>().apply {
         add(File(File(System.getProperty("java.home"), "bin"), "java").path)
         add("-Dname=$nodeName")
         null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
         add("-jar"); add(jarName)
         init()
+        addAll(args)
     }
 
-    internal fun processBuilder() = ProcessBuilder(words)
-    internal fun joinToString() = words.joinToString(" ")
+    internal abstract fun processBuilder(): ProcessBuilder
+    internal fun start() = processBuilder().directory(dir).start()
 }
 
-private fun execJar(jarName: String, dir: File, args: List<String>, debugPort: Int?) = run {
-    val nodeName = dir.name
-    JavaCommand(jarName, debugPort, nodeName) { add("--no-local-shell"); addAll(args) }.processBuilder().apply {
-        redirectError(File("error.${nodeName}.log"))
-        inheritIO()
-        directory(dir)
-    }.start()
+private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args) {
+    override fun processBuilder() = ProcessBuilder(command).redirectError(File("error.$nodeName.log")).inheritIO()
 }
 
-private fun execJarInTerminalWindow(jarName: String, dir: File, args: List<String>, debugPort: Int?) = run {
-    val nodeName = "${dir.name}-$jarName"
-    val javaCmd = JavaCommand(jarName, debugPort, nodeName) { addAll(args) }.joinToString()
-    ProcessBuilder(when (os) {
-        OS.MACOS -> listOf(
-                "osascript", "-e",
-                """tell app "Terminal"
+private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, "${dir.name}-$jarName", {}, args) {
+    override fun processBuilder() = ProcessBuilder(when (os) {
+        OS.MACOS -> {
+            listOf("osascript", "-e", """tell app "Terminal"
     activate
     tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
     delay 0.5
-    do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec $javaCmd && exit'" in selected tab of the front window
-end tell"""
-        )
-        OS.WINDOWS -> listOf("cmd", "/C", "start $javaCmd")
+    do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec ${command.joinToString(" ")} && exit'" in selected tab of the front window
+end tell""")
+        }
+        OS.WINDOWS -> {
+            listOf("cmd", "/C", "start ${command.joinToString(" ")}")
+        }
         OS.LINUX -> {
-            val isTmux = System.getenv("TMUX")?.isNotEmpty() ?: false
-            "$javaCmd || sh".let { javaCmd ->
-                if (isTmux) {
-                    listOf("tmux", "new-window", "-n", nodeName, javaCmd)
-                } else {
-                    listOf("xterm", "-T", nodeName, "-e", javaCmd)
-                }
+            val command = "${unixCommand()} || sh"
+            if (isTmux()) {
+                listOf("tmux", "new-window", "-n", nodeName, command)
+            } else {
+                listOf("xterm", "-T", nodeName, "-e", command)
             }
         }
-    }).directory(dir).start()
+    })
+
+    private fun unixCommand() = command.map(::quotedFormOf).joinToString(" ")
 }
+
+private fun quotedFormOf(text: String) = "'${text.replace("'", "'\\''")}'" // Suitable for UNIX shells.
+private fun isTmux() = System.getenv("TMUX")?.isNotEmpty() ?: false
