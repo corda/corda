@@ -29,6 +29,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.NodeInfo
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
 import tornadofx.*
 
@@ -84,7 +85,7 @@ class Network : CordaView() {
 
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
-        val mapLabel = label(node.legalIdentity.name) {
+        val mapLabel = label(PartyNameFormatter.short.format(node.legalIdentity.name)) {
             graphic = FontAwesomeIconView(FontAwesomeIcon.DOT_CIRCLE_ALT)
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
@@ -98,10 +99,11 @@ class Network : CordaView() {
 
         val button = button {
             graphic = vbox {
-                label(node.legalIdentity.name) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
+                label(PartyNameFormatter.short.format(node.legalIdentity.name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
                 gridpane {
                     hgap = 5.0
                     vgap = 5.0
+                    row("Full X500 name :") { label(PartyNameFormatter.full.format(node.legalIdentity.name)) }
                     row("Pub Key :") { copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())) }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
                     node.physicalLocation?.apply { row("Location :") { label(this@apply.description) } }

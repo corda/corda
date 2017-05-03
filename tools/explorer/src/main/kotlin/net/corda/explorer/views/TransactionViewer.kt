@@ -30,6 +30,7 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
@@ -132,8 +133,26 @@ class TransactionViewer : CordaView("Transactions") {
                 }
             }
             column("Output", Transaction::outputs).cellFormat { text = it.toText() }
-            column("Input Party", Transaction::inputParties).cellFormat { text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString() }
-            column("Output Party", Transaction::outputParties).cellFormat { text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString() }
+            column("Input Party", Transaction::inputParties).setCustomCellFactory {
+                label {
+                    text = it.flatten().map {
+                        it.value?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) }
+                    }.filterNotNull().toSet().joinToString()
+                    tooltip {
+                        text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString("\n")
+                    }
+                }
+            }
+            column("Output Party", Transaction::outputParties).setCustomCellFactory {
+                label {
+                    text = it.flatten().map {
+                        it.value?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) }
+                    }.filterNotNull().toSet().joinToString()
+                    tooltip {
+                        text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString("\n")
+                    }
+                }
+            }
             column("Command type", Transaction::commandTypes).cellFormat { text = it.map { it.simpleName }.joinToString() }
             column("Total value", Transaction::totalValueEquiv).cellFormat {
                 text = "${it.positivity.sign}${AmountFormatter.boring.format(it.amount)}"
@@ -196,7 +215,7 @@ class TransactionViewer : CordaView("Transactions") {
 
             signatures.children.addAll(signatureData.map { signature ->
                 val nodeInfo = getModel<NetworkIdentityModel>().lookup(signature)
-                copyableLabel(nodeInfo.map { "${signature.toStringShort()} (${it?.legalIdentity?.name ?: "???"})" })
+                copyableLabel(nodeInfo.map { "${signature.toStringShort()} (${it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name)} ?: "???"})" })
             })
         }
 
@@ -225,7 +244,7 @@ class TransactionViewer : CordaView("Transactions") {
                                 val anonymousIssuer: AnonymousParty = data.amount.token.issuer.party
                                 val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
                                 // TODO: Anonymous should probably be italicised or similar
-                                label(issuer.nameOrNull() ?: "Anonymous") {
+                                label(issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
                                     tooltip(anonymousIssuer.owningKey.toBase58String())
                                 }
                             }
@@ -233,7 +252,7 @@ class TransactionViewer : CordaView("Transactions") {
                                 label("Owner :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
                                 val owner = data.owner
                                 val nodeInfo = getModel<NetworkIdentityModel>().lookup(owner)
-                                label(nodeInfo.map { it?.legalIdentity?.name ?: "???" }) {
+                                label(nodeInfo.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } ?: "???" }) {
                                     tooltip(data.owner.toBase58String())
                                 }
                             }
