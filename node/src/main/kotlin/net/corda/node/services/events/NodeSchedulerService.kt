@@ -10,15 +10,14 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.node.services.SchedulerService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.time.Instant

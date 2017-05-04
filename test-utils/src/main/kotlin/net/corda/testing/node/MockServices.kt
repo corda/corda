@@ -59,7 +59,6 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val schedulerService: SchedulerService get() = throw UnsupportedOperationException()
     override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
