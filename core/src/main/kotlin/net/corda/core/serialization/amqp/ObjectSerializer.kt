@@ -4,7 +4,6 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Constructor
-import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
@@ -23,7 +22,7 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
     }
     private val typeName = clazz.name
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
-    private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations to restrict.
+    private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 
@@ -65,24 +64,6 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
         return interfaces.map { it.typeName }
     }
 
-    private fun generateInterfaces(clazz: Class<*>): List<Type> {
-        val interfaces = mutableSetOf<Type>()
-        exploreType(clazz, interfaces)
-        return interfaces.toList()
-    }
-
-    private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
-        val clazz = (type as? Class<*>) ?: (type as? ParameterizedType)?.rawType as? Class<*>
-        if (clazz != null) {
-            for (newInterface in clazz.genericInterfaces) {
-                if (newInterface !in interfaces) {
-                    interfaces += newInterface
-                    exploreType(newInterface, interfaces)
-                }
-            }
-            exploreType(clazz.genericSuperclass, interfaces)
-        }
-    }
 
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {

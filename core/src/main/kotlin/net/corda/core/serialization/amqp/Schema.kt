@@ -320,7 +320,7 @@ private val ANY_TYPE_HASH: String = "Any type = true"
  * different.
  */
 // TODO: write tests
-fun fingerprintForType(type: Type): String = Base58.encode(fingerprintForType(type, HashSet(), Hashing.murmur3_128().newHasher()).hash().asBytes())
+internal fun fingerprintForType(type: Type): String = Base58.encode(fingerprintForType(type, HashSet(), Hashing.murmur3_128().newHasher()).hash().asBytes())
 
 private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher: Hasher): Hasher {
     return if (type in alreadySeen) {
@@ -337,10 +337,12 @@ private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher
             } else if (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) {
                 hasher.putUnencodedChars(type.name)
             } else {
-                // Hash the class + properties
+                // Hash the class + properties + interfaces
                 propertiesForSerialization(constructorForDeserialization(type), type).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
                     fingerprintForType(param.readMethod.genericReturnType, alreadySeen, orig).putUnencodedChars(param.name).putUnencodedChars(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
                 }
+                interfacesForSerialization(type).map { fingerprintForType(it, alreadySeen, hasher) }
+                hasher
             }
         } else if (type is ParameterizedType) {
             // Hash the rawType + params
@@ -352,28 +354,4 @@ private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher
             throw NotSerializableException("Don't know how to hash $type")
         }
     }
-}
-
-/**
- * Extension helper for writing described objects.
- */
-fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
-    // Write described
-    putDescribed()
-    enter()
-    // Write descriptor
-    putObject(descriptor.code ?: descriptor.name)
-    block()
-    exit() // exit described
-}
-
-/**
- * Extension helper for writing lists.
- */
-fun Data.withList(block: Data.() -> Unit) {
-    // Write list
-    putList()
-    enter()
-    block()
-    exit() // exit list
 }

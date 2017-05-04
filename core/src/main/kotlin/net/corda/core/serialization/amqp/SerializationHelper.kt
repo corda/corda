@@ -1,9 +1,12 @@
 package net.corda.core.serialization.amqp
 
+import org.apache.qpid.proton.codec.Data
 import java.beans.Introspector
 import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
 import java.lang.reflect.Modifier
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
@@ -35,7 +38,7 @@ annotation class SerializedName(val value: String)
  * Otherwise it starts with the primary constructor in kotlin, if there is one, and then will override this with any that is
  * annotated with [@CordaConstructor].  It will report an error if more than one constructor is annotated.
  */
-fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction<T>? {
+internal fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction<T>? {
     if (isConcrete(clazz)) {
         var preferredCandidate: KFunction<T>? = clazz.kotlin.primaryConstructor
         var annotatedCount = 0
@@ -65,7 +68,7 @@ fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction<T>? {
  *
  * It's possible to effectively rename a constructor parameter so it matches a property using the [@CordaParam] annotation.
  */
-fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>?, clazz: Class<*>): Collection<PropertySerializer> {
+internal fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>?, clazz: Class<*>): Collection<PropertySerializer> {
     return if (kotlinConstructor != null) propertiesForSerialization(kotlinConstructor) else propertiesForSerialization(clazz)
 }
 
@@ -100,4 +103,47 @@ private fun propertiesForSerialization(clazz: Class<*>): Collection<PropertySeri
         rc += PropertySerializer.make(property.name, getter)
     }
     return rc
+}
+
+internal fun interfacesForSerialization(clazz: Class<*>): List<Type> {
+    val interfaces = LinkedHashSet<Type>()
+    exploreType(clazz, interfaces)
+    return interfaces.toList()
+}
+
+private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
+    val clazz = (type as? Class<*>) ?: (type as? ParameterizedType)?.rawType as? Class<*>
+    if (clazz != null) {
+        for (newInterface in clazz.genericInterfaces) {
+            if (newInterface !in interfaces) {
+                interfaces += newInterface
+                exploreType(newInterface, interfaces)
+            }
+        }
+        exploreType(clazz.genericSuperclass, interfaces)
+    }
+}
+
+/**
+ * Extension helper for writing described objects.
+ */
+fun Data.withDescribed(descriptor: Descriptor, block: Data.() -> Unit) {
+    // Write described
+    putDescribed()
+    enter()
+    // Write descriptor
+    putObject(descriptor.code ?: descriptor.name)
+    block()
+    exit() // exit described
+}
+
+/**
+ * Extension helper for writing lists.
+ */
+fun Data.withList(block: Data.() -> Unit) {
+    // Write list
+    putList()
+    enter()
+    block()
+    exit() // exit list
 }
