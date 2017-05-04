@@ -2,6 +2,7 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
+import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -63,8 +64,7 @@ object TwoPartyDealFlow {
             }
         }
 
-        @Suspendable
-        override fun call(): SignedTransaction {
+        @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
             val hello = Handshake(payload, serviceHub.myInfo.legalIdentity.owningKey)
@@ -72,9 +72,7 @@ object TwoPartyDealFlow {
             send(otherParty, hello)
 
             val signTransactionFlow = object : SignTransactionFlow(otherParty) {
-                override fun checkTransaction(stx: SignedTransaction) {
-                    //TODO: "Perform some checks here."
-                }
+                override fun checkTransaction(stx: SignedTransaction) = checkProposal(stx)
             }
 
             subFlow(signTransactionFlow, shareParentSessions = true)
@@ -83,6 +81,8 @@ object TwoPartyDealFlow {
 
             return waitForLedgerCommit(txHash)
         }
+
+        @Suspendable abstract fun checkProposal(stx: SignedTransaction)
     }
 
     /**
@@ -177,6 +177,10 @@ object TwoPartyDealFlow {
 
         override val notaryNode: NodeInfo get() =
         serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
+
+        @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
+            // Add some constraints here.
+        }
     }
 
     /**
