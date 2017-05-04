@@ -126,7 +126,8 @@ interface CordaRPCOps : RPCOps {
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**

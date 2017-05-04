@@ -164,7 +164,7 @@ interface VaultService {
      * first subscriber is registered so as to avoid racing with early updates.
      */
     // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
 
     // DOCSTART VaultQueryAPI
@@ -214,7 +214,7 @@ interface VaultService {
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
      */
     // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
 
     /**
@@ -293,7 +293,7 @@ interface VaultService {
      * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
     // TODO: Remove this from the interface
-    @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
     fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
     // DOCEND VaultStatesQuery
 
@@ -340,24 +340,24 @@ interface VaultService {
 }
 
 // TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
 inline fun <reified T : ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
 
 // TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
 inline fun <reified T : ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
 
 /** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
 // TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
                 .associateBy { it.state.data.linearId }.mapValues { it.value }
 
 // TODO: Remove this from the interface
-@Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }
