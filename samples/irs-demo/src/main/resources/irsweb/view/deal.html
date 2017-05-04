@@ -200,6 +200,26 @@
                         </div>
                     </td>
                 </tr>
+                <tr class="center aligned">
+                    <td colspan="2">
+                        <div class="ui accordion">
+                            <div class="title">
+                                <i class="dropdown icon"></i>
+                                Fixings
+                            </div>
+                            <div class="content">
+                                <table class="ui celled small table">
+                                    <tbody>
+                                    <tr class="center aligned" ng-repeat="fixing in deal.calculation.floatingLegPaymentSchedule">
+                                        <td>{{fixing.fixingDate[0]}}-{{fixing.fixingDate[1]}}-{{fixing.fixingDate[2]}}</td>
+                                        <td>{{fixing.ratePercent}}</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>
