@@ -144,7 +144,7 @@ object TwoPartyDealFlow {
 
         open fun computeOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
-            return myKeyPair.signWithECDSA(partialTX.id)
+            return myKeyPair.sign(partialTX.id)
         }
 
         @Suspendable

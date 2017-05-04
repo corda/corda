@@ -207,7 +207,7 @@ object JacksonSupport {
 
     object PublicKeySerializer : JsonSerializer<EdDSAPublicKey>() {
         override fun serialize(obj: EdDSAPublicKey, generator: JsonGenerator, provider: SerializerProvider) {
-            check(obj.params == ed25519Curve)
+            check(obj.params == Crypto.EDDSA_ED25519_SHA512.algSpec)
             generator.writeString(obj.toBase58String())
         }
     }

@@ -97,7 +97,7 @@ open class TransactionBuilder(
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
-        addSignatureUnchecked(key.signWithECDSA(data.bytes))
+        addSignatureUnchecked(key.sign(data.bytes))
         return this
     }
 
@@ -121,7 +121,7 @@ open class TransactionBuilder(
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {
         require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
-        sig.verifyWithECDSA(toWireTransaction().id)
+        sig.verify(toWireTransaction().id)
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */

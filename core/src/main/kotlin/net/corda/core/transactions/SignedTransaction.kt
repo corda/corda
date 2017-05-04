@@ -7,7 +7,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.sign
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
@@ -93,7 +93,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     @Throws(SignatureException::class)
     fun checkSignaturesAreValid() {
         for (sig in sigs) {
-            sig.verifyWithECDSA(id.bytes)
+            sig.verify(id.bytes)
         }
     }
 
@@ -153,7 +153,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      *
      * @return a digital signature of the transaction.
      */
-    fun signWithECDSA(keyPair: KeyPair) = keyPair.signWithECDSA(this.id.bytes)
+    fun signWithECDSA(keyPair: KeyPair) = keyPair.sign(this.id.bytes)
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }
