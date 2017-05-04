@@ -9,7 +9,6 @@ import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
-import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaType
 
@@ -68,14 +67,14 @@ class FlowLogicRefFactory(val flowWhitelist: Map<String, Set<String>>) : Singlet
      */
     fun create(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         // If it's not a Kotlin class, do the Java path.
-        if (type.kotlin.primaryConstructor == null)
-            return createJava(type, *args)
+        //if (type.kotlin.primaryConstructor == null)
+        //    return createJava(type, *args)
 
         // Find the right constructor to use, based on passed argument types. This is for when we don't know
         // the right argument names.
         //
         // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
-        // to avoid guessing which constructor too use.
+        // to avoid guessing which constructor to use.
         val argTypes = args.map { it?.javaClass }
         val constructor = try {
             type.kotlin.constructors.single { ctor ->

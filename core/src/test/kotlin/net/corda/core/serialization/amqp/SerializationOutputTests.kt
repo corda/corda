@@ -40,7 +40,7 @@ class SerializationOutputTests {
     }
 
     data class Woo2(val fred: Int, val bob: String = "Bob") {
-        @ConstructorForDeserialization constructor(@SerializedName("fred") foo: Int) : this(foo, "Ginger")
+        @ConstructorForDeserialization constructor(fred: Int) : this(fred, "Ginger")
     }
 
     @CordaSerializable
@@ -71,13 +71,6 @@ class SerializationOutputTests {
         val ginger: Int = fred.toInt()
 
         override fun equals(other: Any?): Boolean = (other as? MismatchType)?.ginger == ginger
-        override fun hashCode(): Int = ginger
-    }
-
-    class MismatchRename(@SerializedName("ginger") fred: Int) {
-        val ginger: Int = fred
-
-        override fun equals(other: Any?): Boolean = (other as? MismatchRename)?.ginger == ginger
         override fun hashCode(): Int = ginger
     }
 
@@ -235,12 +228,6 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
-        serdes(obj)
-    }
-
-    @Test
-    fun `test mismatched property and constructor renamed`() {
-        val obj = MismatchRename(456)
         serdes(obj)
     }
 }

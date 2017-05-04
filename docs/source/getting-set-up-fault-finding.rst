@@ -23,6 +23,13 @@ JavaFX is not bundled with OpenJDK. If you are using OpenJDK and get an 'Unresol
 
 If you have APT installed and OpenJFX is part of your Unix distribution's package list, you can do this by running ``sudo apt install openjfx``, and possibly ``sudo apt install libopenjfx-jav``. Other users will want to refer to the guide `here <https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX>`_, or to the list of Community Builds `here <https://wiki.openjdk.java.net/display/OpenJFX/Community+Builds>`_.
 
+"Check that you have the -parameters option specified in the Java compiler"
+***************************************************************************
+
+Some of the unit tests, and our serialization framework in general, rely on the constructor parameter names being visible
+to Java reflection.  Make sure you have specified the `-parameters` option to the Java compiler.  We attempt to set this globally
+for gradle and IntelliJ, but it's possible this option is not present in your environment for some reason.
+
 IDEA issues
 -----------
 
@@ -80,6 +87,11 @@ identify the latest version of the Kotlin plugin on `this page <https://plugins.
 ***************************************************************************************************************************
 
 This can usually be solved by updating IDEA. Check that you have the latest version `here <https://www.jetbrains.com/idea/download/>`_.
+
+"Check that you have the -parameters option specified in the Java compiler"
+***************************************************************************
+
+See entry under Java (above).
 
 Other common issues
 -------------------

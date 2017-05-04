@@ -18,9 +18,14 @@ public class JavaSerializationOutputTests {
         private final String bob;
         private final int count;
 
-        @ConstructorForDeserialization
-        public Foo(@SerializedName("fred") String msg, @SerializedName("count") int count) {
+        public Foo(String msg, long count) {
             this.bob = msg;
+            this.count = (int) count;
+        }
+
+        @ConstructorForDeserialization
+        public Foo(String fred, int count) {
+            this.bob = fred;
             this.count = count;
         }
 
@@ -51,12 +56,47 @@ public class JavaSerializationOutputTests {
         }
     }
 
+    static class UnAnnotatedFoo {
+        private final String bob;
+        private final int count;
+
+        public UnAnnotatedFoo(String fred, int count) {
+            this.bob = fred;
+            this.count = count;
+        }
+
+        public String getFred() {
+            return bob;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            UnAnnotatedFoo foo = (UnAnnotatedFoo) o;
+
+            if (count != foo.count) return false;
+            return bob != null ? bob.equals(foo.bob) : foo.bob == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = bob != null ? bob.hashCode() : 0;
+            result = 31 * result + count;
+            return result;
+        }
+    }
+
     static class BoxedFoo {
         private final String fred;
         private final Integer count;
 
-        @ConstructorForDeserialization
-        public BoxedFoo(@SerializedName("fred") String fred, @SerializedName("count") Integer count) {
+        public BoxedFoo(String fred, Integer count) {
             this.fred = fred;
             this.count = count;
         }
@@ -93,8 +133,7 @@ public class JavaSerializationOutputTests {
         private final String fred;
         private final Integer count;
 
-        @ConstructorForDeserialization
-        public BoxedFooNotNull(@SerializedName("fred") String fred, @SerializedName("count") Integer count) {
+        public BoxedFooNotNull(String fred, Integer count) {
             this.fred = fred;
             this.count = count;
         }
@@ -165,6 +204,13 @@ public class JavaSerializationOutputTests {
         Foo obj = new Foo("Hello World!", 123);
         serdes(obj);
     }
+
+    @Test
+    public void testJavaConstructorWithoutAnnotations() throws NotSerializableException {
+        UnAnnotatedFoo obj = new UnAnnotatedFoo("Hello World!", 123);
+        serdes(obj);
+    }
+
 
     @Test
     public void testBoxedTypes() throws NotSerializableException {

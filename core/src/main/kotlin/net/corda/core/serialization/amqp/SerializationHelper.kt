@@ -21,17 +21,6 @@ import kotlin.reflect.jvm.javaType
 annotation class ConstructorForDeserialization
 
 /**
- * Annotation renaming a constructor parameter name, so that it matches a property used during serialization.
- *
- * This annotation is primarily aimed at Java developers to work around if they haven't added -parameters to the compiler
- * and thus the parameters can't be matched to the properties/getters. It will also rename a constructor parameter for
- * any other reason, but it doesn't influence what goes into the schema.
- */
-@Target(AnnotationTarget.VALUE_PARAMETER)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class SerializedName(val value: String)
-
-/**
  * Code for finding the constructor we will use for deserialization.
  *
  * If there's only one constructor, it selects that.  If there are two and one is the default, it selects the other.
@@ -66,7 +55,8 @@ internal fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction
  * Identifies the properties to be used during serialization by attempting to find those that match the parameters to the
  * deserialization constructor, if the class is concrete.  If it is abstract, or an interface, then use all the properties.
  *
- * It's possible to effectively rename a constructor parameter so it matches a property using the [@CordaParam] annotation.
+ * Note, you will need any Java classes to be compiled with the `-parameters` option to ensure constructor parameters have
+ * names accessible via reflection.
  */
 internal fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>?, clazz: Class<*>): Collection<PropertySerializer> {
     return if (kotlinConstructor != null) propertiesForSerialization(kotlinConstructor) else propertiesForSerialization(clazz)
@@ -80,10 +70,10 @@ private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>
     val properties: Map<String, PropertyDescriptor> = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {
-        val name = param.findAnnotation<SerializedName>()?.value ?: param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name. See the documentation for @SerializedName.")
-        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz. See the documentation for @SerializedName.")
+        val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
+        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz. If using Java, check that you have the -parameters option specified in the Java compiler.")
         // Check that the method has a getter in java.
-        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz.")
+        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz. If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
         if (getter.genericReturnType == param.type.javaType) {
             rc += PropertySerializer.make(name, getter)
         } else {
