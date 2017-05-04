@@ -153,6 +153,9 @@ dependencies {
     // FastClasspathScanner: classpath scanning
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
 
+    // CommonCordform for Driver:
+    compile "net.corda.plugins:cordformation:$gradle_plugins_version"
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
 }
