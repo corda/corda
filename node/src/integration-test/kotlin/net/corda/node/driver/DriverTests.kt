@@ -75,8 +75,10 @@ class DriverTests {
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val baseDirectory = startNode(DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
             val logFile = (baseDirectory / LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
+            println("ASD $logFile")
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
+            println("hmm.")
         }
     }
 
