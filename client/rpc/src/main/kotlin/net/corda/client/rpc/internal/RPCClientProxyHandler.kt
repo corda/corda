@@ -165,8 +165,8 @@ class RPCClientProxyHandler(
         lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         reaperScheduledFuture = reaperExecutor.scheduleAtFixedRate(
                 this::reapObservables,
-                rpcConfiguration.reapIntervalMs,
-                rpcConfiguration.reapIntervalMs,
+                rpcConfiguration.reapInterval.toMillis(),
+                rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
         sessionAndProducerPool.run {

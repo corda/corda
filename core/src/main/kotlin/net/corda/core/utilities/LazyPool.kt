@@ -1,23 +1,28 @@
 package net.corda.core.utilities
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.Semaphore
 
 /**
  * A lazy pool of resources [A].
  *
  * @param clear If specified this function will be run on each borrowed instance before handing it over.
+ * @param shouldReturnToPool If specified this function will be run on each release to determine whether the instance
+ *     should be returned to the pool for reuse. This may be useful for pooled resources that dynamically grow during
+ *     usage, and we may not want to retain them forever.
  * @param bound If specified the pool will be bounded. Once all instances are borrowed subsequent borrows will block until an
  *     instance is released.
- * @param create The function to call to lazily create a pooled resource.
+ * @param newInstance The function to call to lazily newInstance a pooled resource.
  */
 class LazyPool<A>(
         private val clear: ((A) -> Unit)? = null,
+        private val shouldReturnToPool: ((A) -> Boolean)? = null,
         private val bound: Int? = null,
-        private val create: () -> A
+        private val newInstance: () -> A
 ) {
-    private val poolQueue = LinkedBlockingQueue<A>()
-    private var poolSize = 0
+    private val poolQueue = ConcurrentLinkedQueue<A>()
+    private val poolSemaphore = Semaphore(bound ?: Int.MAX_VALUE)
 
     private enum class State {
         STARTED,
@@ -32,23 +37,10 @@ class LazyPool<A>(
 
     fun borrow(): A {
         lifeCycle.requireState(State.STARTED)
+        poolSemaphore.acquire()
         val pooled = poolQueue.poll()
         if (pooled == null) {
-            if (bound != null) {
-                val waitForRelease = synchronized(this) {
-                    if (poolSize < bound) {
-                        poolSize++
-                        false
-                    } else {
-                        true
-                    }
-                }
-                if (waitForRelease) {
-                    // Wait until one is released
-                    return clearIfNeeded(poolQueue.take())
-                }
-            }
-            return create()
+            return newInstance()
         } else {
             return clearIfNeeded(pooled)
         }
@@ -56,7 +48,10 @@ class LazyPool<A>(
 
     fun release(instance: A) {
         lifeCycle.requireState(State.STARTED)
-        poolQueue.add(instance)
+        if (shouldReturnToPool == null || shouldReturnToPool.invoke(instance)) {
+            poolQueue.add(instance)
+        }
+        poolSemaphore.release()
     }
 
     /**

@@ -1,31 +1,25 @@
 package net.corda.client.rpc
 
+import com.codahale.metrics.ConsoleReporter
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.JmxReporter
 import com.codahale.metrics.MetricRegistry
-import com.esotericsoftware.kryo.Kryo
-import com.esotericsoftware.kryo.Serializer
-import com.esotericsoftware.kryo.io.Input
-import com.esotericsoftware.kryo.io.Output
-import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.base.Stopwatch
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.RPCOps
-import net.corda.core.millis
-import net.corda.core.random63BitValue
+import net.corda.core.minutes
+import net.corda.core.seconds
+import net.corda.core.utilities.Rate
+import net.corda.core.utilities.div
 import net.corda.node.driver.ShutdownManager
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.RPCApi
-import net.corda.nodeapi.RPCKryo
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.measure
 import net.corda.testing.rpcDriver
-import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import rx.Observable
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.*
@@ -140,23 +134,24 @@ class RPCPerformanceTests : AbstractRPCTest() {
     @Test
     fun `consumption rate`() {
         rpcDriver {
-            val metricRegistry = startJmxReporter()
+            val metricRegistry = startReporter()
             val proxy = testProxy(
                     RPCClientConfiguration.default.copy(
-                            reapIntervalMs = 100,
-                            cacheConcurrencyLevel = 16
+                            reapInterval = 1.seconds,
+                            cacheConcurrencyLevel = 16,
+                            producerPoolBound = 8
                     ),
                     RPCServerConfiguration.default.copy(
-                            rpcThreadPoolSize = 4,
-                            consumerPoolSize = 4,
-                            producerPoolBound = 4
+                            rpcThreadPoolSize = 8,
+                            consumerPoolSize = 1,
+                            producerPoolBound = 8
                     )
             )
             measurePerformancePublishMetrics(
                     metricRegistry = metricRegistry,
-                    parallelism = 4,
-                    overallDurationSecond = 120.0,
-                    injectionRatePerSecond = 20000.0,
+                    parallelism = 8,
+                    overallDuration = 5.minutes,
+                    injectionRate = 20000L / TimeUnit.SECONDS,
                     queueSizeMetricName = "$mode.QueueSize",
                     workDurationMetricName = "$mode.WorkDuration",
                     shutdownManager = this.shutdownManager,
@@ -205,8 +200,8 @@ class RPCPerformanceTests : AbstractRPCTest() {
 fun measurePerformancePublishMetrics(
         metricRegistry: MetricRegistry,
         parallelism: Int,
-        overallDurationSecond: Double,
-        injectionRatePerSecond: Double,
+        overallDuration: Duration,
+        injectionRate: Rate,
         queueSizeMetricName: String,
         workDurationMetricName: String,
         shutdownManager: ShutdownManager,
@@ -238,7 +233,7 @@ fun measurePerformancePublishMetrics(
     }
     val injector = executor.scheduleAtFixedRate(
             {
-                workSemaphore.release(injectionRatePerSecond.toInt())
+                workSemaphore.release((injectionRate * TimeUnit.SECONDS).toInt())
             },
             0,
             1,
@@ -251,7 +246,7 @@ fun measurePerformancePublishMetrics(
         workExecutor.awaitTermination(1, TimeUnit.SECONDS)
         executor.awaitTermination(1, TimeUnit.SECONDS)
     }
-    Thread.sleep((overallDurationSecond * 1000).toLong())
+    Thread.sleep(overallDuration.toMillis())
 }
 
 fun startInjectorWithBoundedQueue(
@@ -289,7 +284,7 @@ fun startInjectorWithBoundedQueue(
     injector.join()
 }
 
-fun RPCDriverExposedDSLInterface.startJmxReporter(): MetricRegistry {
+fun RPCDriverExposedDSLInterface.startReporter(): MetricRegistry {
     val metricRegistry = MetricRegistry()
     val jmxReporter = thread {
         JmxReporter.
@@ -307,9 +302,14 @@ fun RPCDriverExposedDSLInterface.startJmxReporter(): MetricRegistry {
                 build().
                 start()
     }
+    val consoleReporter = thread {
+        ConsoleReporter.forRegistry(metricRegistry).build().start(1, TimeUnit.SECONDS)
+    }
     shutdownManager.registerShutdown {
         jmxReporter.interrupt()
+        consoleReporter.interrupt()
         jmxReporter.join()
+        consoleReporter.join()
     }
     return metricRegistry
 }

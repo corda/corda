@@ -32,11 +32,11 @@ data class RPCClientConfiguration(
          */
         val trackRpcCallSites: Boolean,
         /**
-         * The interval of unused observable reaping in milliseconds. Leaked Observables (unused ones) are
-         * detected using weak references and are cleaned up in batches in this interval. If set too large it will waste
-         * server side resources for this duration. If set too low it wastes client side cycles.
+         * The interval of unused observable reaping. Leaked Observables (unused ones) are detected using weak references
+         * and are cleaned up in batches in this interval. If set too large it will waste server side resources for this
+         * duration. If set too low it wastes client side cycles.
          */
-        val reapIntervalMs: Long,
+        val reapInterval: Duration,
         /** The number of threads to use for observations (for executing [Observable.onNext]) */
         val observationExecutorPoolSize: Int,
         /** The maximum number of producers to create to handle outgoing messages */
@@ -61,7 +61,7 @@ data class RPCClientConfiguration(
         val default = RPCClientConfiguration(
                 minimumServerProtocolVersion = 0,
                 trackRpcCallSites = false,
-                reapIntervalMs = 1000,
+                reapInterval = 1.seconds,
                 observationExecutorPoolSize = 4,
                 producerPoolBound = 1,
                 cacheConcurrencyLevel = 8,

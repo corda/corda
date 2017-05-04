@@ -148,13 +148,19 @@ fun <T : Any> T.serialize(kryo: KryoPool = p2PKryo(), internalOnly: Boolean = fa
 }
 
 
-private val serializeBufferPool = LazyPool { ByteArray(64 * 1024) }
-private val serializeOutputStreamPool = LazyPool(ByteArrayOutputStream::reset) { ByteArrayOutputStream(64 * 1024) }
+private val serializeBufferPool = LazyPool(
+        newInstance = { ByteArray(64 * 1024) }
+)
+private val serializeOutputStreamPool = LazyPool(
+        clear = ByteArrayOutputStream::reset,
+        shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
+        newInstance = { ByteArrayOutputStream(64 * 1024) }
+)
 fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): SerializedBytes<T> {
     return serializeOutputStreamPool.run { stream ->
         serializeBufferPool.run { buffer ->
             Output(buffer).use {
-                it.setOutputStream(stream)
+                it.outputStream = stream
                 it.writeBytes(KryoHeaderV0_1.bytes)
                 kryo.writeClassAndObject(it, this)
             }

@@ -1,34 +1,22 @@
 package net.corda.client.rpc
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.future
 import net.corda.core.messaging.RPCOps
+import net.corda.core.millis
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.loggerFor
-import net.corda.node.driver.poll
 import net.corda.node.services.messaging.RPCServerConfiguration
-import net.corda.nodeapi.RPCApi
 import net.corda.testing.RPCDriverExposedDSLInterface
 import net.corda.testing.rpcDriver
-import net.corda.testing.startRandomRpcClient
-import net.corda.testing.startRpcClient
-import org.apache.activemq.artemis.api.core.SimpleString
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import rx.Observable
-import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(Parameterized::class)
 class RPCConcurrencyTests : AbstractRPCTest() {
@@ -98,7 +86,7 @@ class RPCConcurrencyTests : AbstractRPCTest() {
         return testProxy<TestOps>(
                 testOpsImpl,
                 clientConfiguration = RPCClientConfiguration.default.copy(
-                        reapIntervalMs = 100,
+                        reapInterval = 100.millis,
                         cacheConcurrencyLevel = 16
                 ),
                 serverConfiguration = RPCServerConfiguration.default.copy(
