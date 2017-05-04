@@ -63,18 +63,11 @@ class FlowLogicRefFactory(val flowWhitelist: Map<String, Set<String>>) : Singlet
     }
 
     /**
-     * Create a [FlowLogicRef] by matching against the available constructors and the given args.
+     * Create a [FlowLogicRef] by assuming a single constructor and the given args.
      */
     fun create(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
-        // If it's not a Kotlin class, do the Java path.
-        //if (type.kotlin.primaryConstructor == null)
-        //    return createJava(type, *args)
-
-        // Find the right constructor to use, based on passed argument types. This is for when we don't know
-        // the right argument names.
-        //
         // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
-        // to avoid guessing which constructor to use.
+        // to avoid requiring only a single constructor.
         val argTypes = args.map { it?.javaClass }
         val constructor = try {
             type.kotlin.constructors.single { ctor ->
