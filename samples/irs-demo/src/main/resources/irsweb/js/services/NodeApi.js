@@ -5,6 +5,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
         return new (function() {
             let date = new Date(2016, 0, 1, 0, 0, 0);
             let curLoading = {};
+            let serverAddr = ''; // Leave empty to target the same host this page is served from
 
             let load = (type, promise) => {
                 curLoading[type] = true;
@@ -17,19 +18,20 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
                 });
             };
 
+            let endpoint = (target) => serverAddr + target;
+
             let changeDateOnNode = (newDate) => {
                 const dateStr = formatDateForNode(newDate);
-                let endpoint = '/api/irs/demodate';
-                return load('date', $http.put(endpoint, "\"" + dateStr + "\"")).then((resp) => {
+                return load('date', $http.put(endpoint('/api/irs/demodate'), "\"" + dateStr + "\"")).then((resp) => {
                     date = newDate;
                     return this.getDateModel(date);
                 });
             };
 
             this.getDate = () => {
-                return load('date', $http.get('/api/irs/demodate')).then((resp) => {
-                    const parts = resp.data.split("-");
-                    date = new Date(parts[0], parts[1] - 1, parts[2]); // JS uses 0 based months
+                return load('date', $http.get(endpoint('/api/irs/demodate'))).then((resp) => {
+                    const dateParts = resp.data;
+                    date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]); // JS uses 0 based months
                     return this.getDateModel(date);
                 });
             };
@@ -54,13 +56,13 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             };
 
             this.getDeals = () => {
-                return load('deals', $http.get('/api/irs/deals')).then((resp) => {
+                return load('deals', $http.get(endpoint('/api/irs/deals'))).then((resp) => {
                     return resp.data.reverse();
                 });
             };
 
             this.getDeal = (dealId) => {
-                return load('deal' + dealId, $http.get('/api/irs/deals/' + dealId)).then((resp) => {
+                return load('deal' + dealId, $http.get(endpoint('/api/irs/deals/' + dealId))).then((resp) => {
                     // Do some data modification to simplify the model
                     let deal = resp.data;
                     deal.fixedLeg.fixedRate.value = (deal.fixedLeg.fixedRate.ratioUnit.value * 100).toString().slice(0, 6);
@@ -87,7 +89,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
             };
 
             this.createDeal = (deal) => {
-                return load('create-deal', $http.post('/api/irs/deals', deal.toJson()))
+                return load('create-deal', $http.post(endpoint('/api/irs/deals'), deal.toJson()))
                 .then((resp) => {
                     return deal.tradeId;
                 }, (resp) => {
