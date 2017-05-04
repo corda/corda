@@ -32,6 +32,7 @@ import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.node.MockServicesKt.*;
 import static org.assertj.core.api.Assertions.*;
 
+@Ignore
 public class VaultQueryJavaTests {
 
     private MockServices services;

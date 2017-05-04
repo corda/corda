@@ -15,10 +15,6 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchema
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_NUMERIC_1
-import net.corda.node.services.vault.schemas.GenericVaultIndexSchemaV1.INDEX_STRING_1
 import net.corda.schemas.CashSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
@@ -115,25 +111,12 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
-                is GenericVaultIndexSchemaV1 -> GenericVaultIndexSchemaV1.PersistentGenericVaultIndexSchemaState(
-                        contractStateClassName = this.javaClass.name,
-                        stringIndex1 = this.amount.token.product.currencyCode,
-                        longIndex1 = this.amount.quantity
-                )
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
 
         /** Object Relational Mapping support. */
-        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1, GenericVaultIndexSchemaV1)
-    }
-
-    /**
-     * Object Relational Mapping support: define constants for Queryable Indexes for ease of use in Vault Queries
-     */
-    companion object {
-        val currencyIndexColumn = INDEX_STRING_1
-        val quantityIndexColumn = INDEX_NUMERIC_1
+        override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1)
     }
 
     // Just for grouping

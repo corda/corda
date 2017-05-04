@@ -79,18 +79,49 @@ object VaultSchema {
     @Entity(model = "vault")
     interface VaultLinearState : Persistable {
 
+        // Temporary PK used to successfully test 1:M with VaultParty entity
         @get:Key
         @get:Generated
         @get:Column(name = "id")
         var id: Int
 
-        /** refers to one or many Anonymous parties who may be able to consume a state in a transaction */
-//        @get:OneToMany(mappedBy = "key")
-//        var participants: Set<VaultParty>
+        /** [ContractState] attributes */
+        @get:OneToMany(mappedBy = "linear_state_parties")
+        var participants: Set<VaultParty>
 
         /**
          * [LinearState] attributes
          */
+        @get:Index("external_id_index")     // NOTE: won't allow to use external_id_idx as seems to automatically create one!
+        @get:Column(name = "external_id")
+        var externalId: String
+
+        // @get:Index("uuid_idx")
+        // generates a run-time error stating:
+        // io.requery.PersistenceException: org.h2.jdbc.JdbcSQLException: Index "UUID_IDX" already exists; SQL statement:
+        // create unique index uuid_idx on vault_deal_states (uuid) [42111-194]
+        @get:Index("uuid_index")
+        @get:Column(name = "uuid", unique = true, nullable = false)
+        var uuid: UUID
+    }
+
+    // NOTE:
+    // Requery does not define an equivalent of the JPA Inheritance annotation (and associated inheritance type strategies
+    // defined by InheritanceType: SINGLE_TABLE, JOINED, TABLE_PER_CLASS)
+    // Using Requery @Superclass (in parent) failed as codegen fails to generate all attributes (compilation error)
+    @Table(name = "vault_deal_states")
+    @Entity(model = "vault")
+//    interface VaultDealState : VaultLinearState {
+//    interface VaultDealState : Requery.PersistentState {
+    interface VaultDealState : Persistable {
+
+        // Temporary PK used to successfully test 1:M with VaultParty entity
+        @get:Key
+        @get:Generated
+        @get:Column(name = "id")
+        var id: Int
+
+        /** DUPLICATE attributes from LinearState **/
         @get:Index("external_id_idx")
         @get:Column(name = "external_id")
         var externalId: String
@@ -99,35 +130,29 @@ object VaultSchema {
         @get:Column(name = "uuid", unique = true, nullable = false)
         var uuid: UUID
 
-        /**
-         * [DealState] attributes
-         */
-
+        /** Deal State attributes **/
         @get:Index("deal_reference_idx")
         @get:Column(name = "deal_reference")
-        var dealRef: String
+        var ref: String
 
-        @get:OneToMany(mappedBy = "linear_state_parties")
-        var dealParties: Set<VaultParty>
-
-//        @get:ForeignKey
-//        @get:OneToOne
-//        var owner: VaultParty
-
+        @get:OneToMany(mappedBy = "deal_state_parties")
+        var parties: Set<VaultParty>
     }
 
     @Table(name = "vault_fungible_states")
     @Entity(model = "vault")
     interface VaultFungibleState : Requery.PersistentState {
 
+        /** [ContractState] attributes */
+//        @get:OneToMany(mappedBy = "fungible_state_parties")
+//        var participants: Set<VaultParty>
+
         /** [OwnableState] attributes */
         @get:ForeignKey
-        @get:OneToOne
+        @get:OneToOne(mappedBy = "id")
         var owner: VaultParty
 
-        /**
-         * [FungibleAsset] attributes
-         */
+        /** [FungibleAsset] attributes */
 
         /** Amount attributes */
 
@@ -145,7 +170,7 @@ object VaultSchema {
         /** Issuer attributes */
 
         @get:ForeignKey
-        @get:OneToOne
+        @get:OneToOne(mappedBy = "id")
         var issuerParty: VaultParty
 
         @get:Column(name = "issuer_reference")
@@ -157,8 +182,8 @@ object VaultSchema {
         var issuedProductType: String
 
         /** refers to keys used to destroy amount in Exit command */
-//        @get:OneToMany(mappedBy = "key")
-        var exitKeys: Set<VaultParty>
+//        @get:OneToMany(mappedBy = "fungible_state_parties")
+//        var exitKeys: Set<VaultParty>
     }
 
     @Table(name = "vault_party")
@@ -175,6 +200,16 @@ object VaultSchema {
         @get:Column(name = "linear_state_parties")
         val linearStateParties: VaultLinearState
 
+        // NOTE: remove this back reference when Requery supports Unidirectional relationships
+        @get:ManyToOne
+        @get:Column(name = "deal_state_parties")
+        val dealStateParties: VaultDealState
+
+        // NOTE: remove this back reference when Requery supports Unidirectional relationships
+//        @get:ManyToOne
+//        @get:Column(name = "fungible_state_parties")
+//        val fungibleStateParties: VaultFungibleState
+
         /**
          * [Party] attributes
          */
@@ -183,9 +218,5 @@ object VaultSchema {
 
         @get:Column(name = "party_key")
         var key: String
-
-        // NOTE: remove this back reference when Requery supports Unidirectional relationships
-//        @get:OneToOne
-//        val owner: VaultLinearState
     }
 }

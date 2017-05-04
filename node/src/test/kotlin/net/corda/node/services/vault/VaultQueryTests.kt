@@ -32,6 +32,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.io.Closeable
 import java.math.BigInteger
@@ -39,6 +40,7 @@ import java.security.KeyPair
 import java.time.temporal.ChronoUnit
 import java.util.*
 
+@Ignore
 class VaultQueryTests {
     lateinit var services: MockServices
     val vaultSvc: VaultService get() = services.vaultService

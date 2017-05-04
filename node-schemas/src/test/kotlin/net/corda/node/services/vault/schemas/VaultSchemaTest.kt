@@ -1,5 +1,7 @@
 package net.corda.node.services.vault.schemas
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.requery.Persistable
 import io.requery.TransactionIsolation
 import io.requery.kotlin.`in`
@@ -21,7 +23,9 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.*
-import org.h2.jdbcx.JdbcDataSource
+import net.corda.testing.ALICE_PUBKEY
+import net.corda.testing.BOB_PUBKEY
+import net.corda.testing.node.makeTestDataSourceProperties
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -47,10 +51,17 @@ class VaultSchemaTest {
 
     var transaction: LedgerTransaction? = null
 
+    lateinit var dataSource: HikariDataSource
+
+    val TEST_UUID1 = UUID.randomUUID()
+    val TEST_UUID2 = UUID.randomUUID()
+
     @Before
     fun setup() {
-        val dataSource = JdbcDataSource()
-        dataSource.setURL("jdbc:h2:mem:vault_persistence;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1")
+
+        val config = HikariConfig(makeTestDataSourceProperties())
+        dataSource = HikariDataSource(config)
+
         val configuration = KotlinConfiguration(dataSource = dataSource, model = Models.VAULT, mapping = setupCustomMapping())
         instance = KotlinEntityDataStore<Persistable>(configuration)
         oinstance = KotlinRxEntityStore(KotlinEntityDataStore<Persistable>(configuration))
@@ -74,6 +85,7 @@ class VaultSchemaTest {
     @After
     fun tearDown() {
         data.close()
+        dataSource.close()
     }
 
     private class VaultNoopContract : Contract {
@@ -101,17 +113,22 @@ class VaultSchemaTest {
         // 1. SingleOwnerState
         // 2. MultiOwnerState
         // 3. VaultNoopState
-        // 4. DummyLinearContract.State
-        // 5. DummyDealContract.State
+        // 4. DummyLinearContract.State 1
+        // 5. DummyLinearContract.State 2
+        // 6. DummyDealContract.State 1
+        // 7. DummyDealContract.State 2
         val notary: Party = DUMMY_NOTARY
         val inState1 = TransactionState(DummyContract.SingleOwnerState(0, DUMMY_PUBKEY_1), notary)
         val inState2 = TransactionState(DummyContract.MultiOwnerState(0,
                 listOf(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2)), notary)
         val inState3 = TransactionState(VaultNoopContract.VaultNoopState(DUMMY_PUBKEY_1), notary)
-        val inState4 = TransactionState(DummyLinearContract.State(), notary)
-        val inState5 = TransactionState(DummyDealContract.State(ref = "DEAL#12345",
+        val inState4 = TransactionState(DummyLinearContract.State(linearId = UniqueIdentifier("EXT_REF#12345", TEST_UUID1),
+                                                                  participants = listOf(ALICE_PUBKEY, BOB_PUBKEY)), notary)
+        val inState5 = TransactionState(DummyLinearContract.State(linearId = UniqueIdentifier("EXT_REF#67890", TEST_UUID2),
+                                                                  participants = listOf(ALICE_PUBKEY, BOB_PUBKEY)), notary)
+        val inState6 = TransactionState(DummyDealContract.State(ref = "DEAL#12345",
                                                                 parties = listOf(ALICE.toAnonymous(), BOB.toAnonymous())), notary)
-        val inState6 = TransactionState(DummyDealContract.State(ref = "DEAL#67890",
+        val inState7 = TransactionState(DummyDealContract.State(ref = "DEAL#67890",
                                                                 parties = listOf(BOB.toAnonymous(), CHARLIE.toAnonymous())), notary)
         val outState1 = inState1.copy()
         val outState2 = inState2.copy()
@@ -119,13 +136,15 @@ class VaultSchemaTest {
         val outState4 = inState4.copy()
         val outState5 = inState5.copy()
         val outState6 = inState6.copy()
+        val outState7 = inState7.copy()
         val inputs = listOf(StateAndRef(inState1, StateRef(SecureHash.randomSHA256(), 0)),
                 StateAndRef(inState2, StateRef(SecureHash.randomSHA256(), 0)),
                 StateAndRef(inState3, StateRef(SecureHash.randomSHA256(), 0)),
                             StateAndRef(inState4, StateRef(SecureHash.randomSHA256(), 0)),
                             StateAndRef(inState5, StateRef(SecureHash.randomSHA256(), 0)),
-                            StateAndRef(inState6, StateRef(SecureHash.randomSHA256(), 0)))
-        val outputs = listOf(outState1, outState2, outState3, outState4, outState5, outState6)
+                            StateAndRef(inState6, StateRef(SecureHash.randomSHA256(), 0)),
+                            StateAndRef(inState7, StateRef(SecureHash.randomSHA256(), 0)))
+        val outputs = listOf(outState1, outState2, outState3, outState4, outState5, outState6,  outState7)
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
@@ -289,12 +308,10 @@ class VaultSchemaTest {
                 val stateEntity = createStateEntity(it)
                 insert(stateEntity)
             }
-            val result = select(VaultSchema.VaultStates::class)
-            Assert.assertSame(3, result().toList().size)
         }
         data.invoke {
             val result = select(VaultSchema.VaultStates::class)
-            Assert.assertSame(3, result().toList().size)
+            Assert.assertSame(7, result().toList().size)
         }
     }
 
@@ -316,35 +333,95 @@ class VaultSchemaTest {
     /**
      *  Vault Schema: Linear States
      */
+
     @Test
-    fun testQueryLinearStateByDealReference() {
-        val linearStateEntity = createLinearStateEntity(transaction!!.inputs[4])
+    fun testQueryLinearStateByUuid() {
+//        val inState4 = TransactionState(DummyLinearContract.State(linearId = UniqueIdentifier("EXT_REF#12345", UUID.fromString("12345"))), notary)
+//        val inState5 = TransactionState(DummyLinearContract.State(linearId = UniqueIdentifier("EXT_REF#67890", UUID.fromString("67890"))), notary)
+        val linearStateEntity1 = createLinearStateEntity(transaction!!.inputs[3])
+        val linearStateEntity2 = createLinearStateEntity(transaction!!.inputs[4])
 
         data.invoke {
-            insert(linearStateEntity)
+            insert(linearStateEntity1)
+            insert(linearStateEntity2)
             val result = select(VaultSchema.VaultLinearState::class)
-                    .where (VaultSchema.VaultLinearState::dealRef eq "DEAL#12345")
-            Assert.assertSame(linearStateEntity, result().first())
+                            .where(VaultSchema.VaultLinearState::uuid.eq(TEST_UUID1))
+            Assert.assertSame(linearStateEntity1, result().first())
         }
     }
 
     @Test
-    fun testQueryLinearStateByDealOwner() {
-        val linearStateEntity = createLinearStateEntity(transaction!!.inputs[4])
+    fun testQueryLinearStateByExternalId() {
+        val linearStateEntity1 = createLinearStateEntity(transaction!!.inputs[3])
+        val linearStateEntity2 = createLinearStateEntity(transaction!!.inputs[4])
 
         data.invoke {
-            insert(linearStateEntity)
+            insert(linearStateEntity1)
+            insert(linearStateEntity2)
+            val result = select(VaultSchema.VaultLinearState::class)
+                            .where(VaultSchema.VaultLinearState::externalId.eq("EXT_REF#12345"))
+            Assert.assertSame(linearStateEntity1, result().first())
+        }
+    }
+
+    @Test
+    fun testQueryLinearStateByUniqueIdentifier() {
+        val linearStateEntity1 = createLinearStateEntity(transaction!!.inputs[3])
+        val linearStateEntity2 = createLinearStateEntity(transaction!!.inputs[4])
+
+        data.invoke {
+            insert(linearStateEntity1)
+            insert(linearStateEntity2)
+            val result = select(VaultSchema.VaultLinearState::class)
+                    .where(VaultSchema.VaultLinearState::uuid.eq(TEST_UUID1)
+                            .and(VaultSchema.VaultLinearState::externalId.eq("EXT_REF#12345")))
+            assertEquals(1, result.get().count())
+            Assert.assertSame(linearStateEntity1, result().first())
+        }
+    }
+
+    @Test
+    fun testQueryLinearStateByParticipant() {
+        val linearStateEntity1 = createLinearStateEntity(transaction!!.inputs[3])
+        val linearStateEntity2 = createLinearStateEntity(transaction!!.inputs[4])
+
+        val participant = VaultPartyEntity()
+        participant.name = BOB.name
+        participant.key = BOB.owningKey.toBase58String()
+
+        data.invoke {
+            insert(linearStateEntity1)
+            insert(linearStateEntity2)
             val result = select(VaultSchema.VaultLinearState::class)
                     .join(VaultSchema.VaultParty::class)
-                    .on(VaultSchema.VaultParty::name.eq("Alice"))
-            Assert.assertSame(linearStateEntity, result().first())
+                    .on(VaultSchema.VaultParty::linearStateParties.eq(VaultSchema.VaultParty::id))
+            // TODO: Requery throws "java.lang.UnsupportedOperationException: VaultSchema.VaultLinearState::participants cannot be used in query"
+//                    .where(VaultSchema.VaultLinearState::participants.eq(participant))
+            assertEquals(2, result.get().count())
+            Assert.assertSame(linearStateEntity1, result().first())
+        }
+    }
+
+    /**
+     *  Vault Schema: Deal States
+     */
+
+    @Test
+    fun testQueryDealStateByDealReference() {
+        val dealStateEntity = createDealStateEntity(transaction!!.inputs[5])
+
+        data.invoke {
+            insert(dealStateEntity)
+            val result = select(VaultSchema.VaultDealState::class)
+                    .where (VaultSchema.VaultDealState::ref eq "DEAL#12345")
+            Assert.assertSame(dealStateEntity, result().first())
         }
     }
 
     @Test
-    fun testQueryLinearStateByDealParties() {
-        val linearStateEntity1 = createLinearStateEntity(transaction!!.inputs[4])
-        val linearStateEntity2 = createLinearStateEntity(transaction!!.inputs[5])
+    fun testQueryDealStateByDealParties() {
+        val dealStateEntity1 = createDealStateEntity(transaction!!.inputs[5])
+        val dealStateEntity2 = createDealStateEntity(transaction!!.inputs[6])
 
         // counterparty
         val cpty = VaultPartyEntity()
@@ -352,52 +429,74 @@ class VaultSchemaTest {
         cpty.key = BOB.owningKey.toBase58String()
 
         data.invoke {
-            insert(linearStateEntity1)
-            insert(linearStateEntity2)
-            val query = select(VaultSchema.VaultLinearState::class)
+            insert(dealStateEntity1)
+            insert(dealStateEntity2)
+            val query = select(VaultSchema.VaultDealState::class)
                     .join(VaultSchema.VaultParty::class)
-                    .on(VaultSchema.VaultParty::linearStateParties.eq(VaultSchema.VaultParty::id))
-//                    .where(VaultSchema.VaultLinearState::dealParties.eq(linearStateEntity1.dealParties))
-//                    .where(VaultSchema.VaultLinearState::dealParties `in` linearStateEntity1.dealParties)
+                    .on(VaultSchema.VaultParty::dealStateParties.eq(VaultSchema.VaultParty::id))
+                    // TODO: Requery throws "java.lang.UnsupportedOperationException: VaultDealState.dealParties cannot be used in query"
+//                    .where(VaultSchema.VaultDealState::dealParties.eq(setOf(cpty)))
+//                    .where(VaultSchema.VaultDealState::dealParties `in` dealStateEntity1.dealParties)
 
             val result = query.get()
             println(result.count())
             result.forEach {
-                println("${it.dealRef}, ${it.uuid}, ${it.dealParties.forEach { println(it.name)} }")
+                println("${it.ref}, ${it.uuid}, ${it.parties.forEach { println(it.name)} }")
             }
-            assertEquals(1, result.count())
-            Assert.assertSame(linearStateEntity1.dealParties, result.first().dealParties)
+            assertEquals(2, result.count())
+            Assert.assertSame(dealStateEntity1.parties, result.first().parties)
         }
     }
 
     private fun createLinearStateEntity(stateAndRef: StateAndRef<*>): VaultLinearStateEntity {
         val stateRef = stateAndRef.ref
-        val state = stateAndRef.state.data as DealState
+        val state = stateAndRef.state.data as LinearState
 
-        // owner & deal party
-//        val party1 = VaultPartyEntity()
-//        party1.name = ALICE.name
-//        party1.key = ALICE.owningKey.toBase58String()
+        // participant parties
+        val party1 = VaultPartyEntity()
+        party1.name = ALICE.name
+        party1.key = ALICE.owningKey.toBase58String()
 
-        // deal counterparty
-//        val party2 = VaultPartyEntity()
-//        party2.name = BOB.name
-//        party2.key = BOB.owningKey.toBase58String()
+        val party2 = VaultPartyEntity()
+        party2.name = BOB.name
+        party2.key = BOB.owningKey.toBase58String()
 
         return VaultLinearStateEntity().apply {
 //            txId = stateRef.txhash.toString()
 //            index = stateRef.index
             uuid = state.linearId.id
             externalId = state.linearId.externalId
-            dealRef = state.ref
-//            owner = party1
-//            dealParties = setOf(party1, party2)
-            dealParties = state.parties.map {
-                VaultPartyEntity().apply {
-                    name = it.toString()
-                    key = it.owningKey.toBase58String()
-                }
-            }.toSet()
+            participants = setOf(party1, party2)
+        }
+    }
+
+    private fun createDealStateEntity(stateAndRef: StateAndRef<*>): VaultDealStateEntity {
+        val stateRef = stateAndRef.ref
+        val state = stateAndRef.state.data as DealState
+
+        // owner & deal party
+        val party1 = VaultPartyEntity()
+        party1.name = ALICE.name
+        party1.key = ALICE.owningKey.toBase58String()
+
+        // deal counterparty
+        val party2 = VaultPartyEntity()
+        party2.name = BOB.name
+        party2.key = BOB.owningKey.toBase58String()
+
+        return VaultDealStateEntity().apply {
+//            txId = stateRef.txhash.toString()
+//            index = stateRef.index
+            uuid = state.linearId.id
+            externalId = state.linearId.externalId
+            ref = state.ref
+            parties = setOf(party1, party2)
+//            dealParties = state.parties.map {
+//                VaultPartyEntity().apply {
+//                    name = it.toString()
+//                    key = it.owningKey.toBase58String()
+//                }
+//            }.toSet()
         }
     }
 
@@ -494,7 +593,7 @@ class VaultSchemaTest {
         }
         val stateAndRefs = unconsumedStates<ContractState>()
         assertNotNull(stateAndRefs)
-        assertTrue { stateAndRefs.size == 3 }
+        Assert.assertSame(7, stateAndRefs.size)
     }
 
     @Test
@@ -592,7 +691,7 @@ class VaultSchemaTest {
         odata.select(VaultSchema.VaultStates::class).get()
                 .toObservable()
                 .subscribe { it -> states.add(it as VaultStatesEntity) }
-        Assert.assertEquals(3, states.size)
+        Assert.assertEquals(7, states.size)
     }
 
     /**
@@ -689,8 +788,6 @@ class VaultSchemaTest {
                 val stateEntity = createStateEntity(it)
                 insert(stateEntity)
             }
-            val result = select(VaultSchema.VaultStates::class)
-            Assert.assertSame(3, result().toList().size)
         }
 
         // reserve soft locks on states
@@ -724,14 +821,14 @@ class VaultSchemaTest {
                     .set(VaultStatesEntity.LOCK_UPDATE_TIME, Instant.now())
                     .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
                     .and(expression.`in`(stateRefs)).get()
-            assertEquals(3, update.value())
+            assertEquals(7, update.value())
         }
 
         // select unlocked states
         data.invoke {
             val result = select(VaultSchema.VaultStates::class) where (VaultSchema.VaultStates::txId `in` txnIds)
                     .and(VaultSchema.VaultStates::lockId eq "")
-            assertEquals(3, result.get().count())
+            assertEquals(7, result.get().count())
         }
     }
 

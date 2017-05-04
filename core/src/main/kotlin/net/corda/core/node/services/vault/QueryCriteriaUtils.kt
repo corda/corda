@@ -37,8 +37,17 @@ sealed class Logical<L, R> : Condition<L, R>, AndOr<Logical<*, *>>
 
 class LogicalExpression<L, R>(leftOperand: L,
                               operator: Operator,
-                              rightOperand: R?) : Logical<L, R>() {
-
+                              rightOperand: R? = null) : Logical<L, R>() {
+    init {
+        if (rightOperand == null) {
+            check(operator in setOf(Operator.NOT_NULL, Operator.IS_NULL),
+                    { "Must use a unary operator (${Operator.IS_NULL}, ${Operator.NOT_NULL}) if right operand is null"} )
+        }
+        else {
+            check(operator !in setOf(Operator.NOT_NULL, Operator.IS_NULL),
+                    { "Cannot use a unary operator (${Operator.IS_NULL}, ${Operator.NOT_NULL}) if right operand is not null"} )
+        }
+    }
     override fun <V> and(condition: Condition<V, *>): Logical<*, *> = LogicalExpression(this, Operator.AND, condition)
     override fun <V> or(condition: Condition<V, *>): Logical<*, *> = LogicalExpression(this, Operator.OR, condition)
 

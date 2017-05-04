@@ -20,9 +20,9 @@ object CommercialPaperSchema
 object CommercialPaperSchemaV1 : MappedSchema(schemaFamily = CommercialPaperSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCommercialPaperState::class.java)) {
     @Entity
     @Table(name = "cp_states",
-           indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "currency"),
-                             Index(name = "maturity_idx", columnList = "maturity"),
-                             Index(name = "face_value_idx", columnList = "faceValue")))
+           indexes = arrayOf(Index(name = "ccy_code_idx", columnList = "ccy_code"),
+                             Index(name = "maturity_idx", columnList = "maturity_instant"),
+                             Index(name = "face_value_idx", columnList = "face_value")))
     class PersistentCommercialPaperState(
             @Column(name = "issuance_key")
             var issuanceParty: String,
