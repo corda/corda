@@ -5,7 +5,7 @@ define(['angular', 'lodash', 'viewmodel/Deal'], (angular, _, dealViewModel) => {
         return new (function() {
             let date = new Date(2016, 0, 1, 0, 0, 0);
             let curLoading = {};
-            let serverAddr = ''; // Leave empty to target the same host this page is served from
+            let serverAddr = 'http://localhost:10007'; // Leave empty to target the same host this page is served from
 
             let load = (type, promise) => {
                 curLoading[type] = true;
