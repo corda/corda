@@ -145,6 +145,7 @@ public class JavaSerializationOutputTests {
         new EncoderImpl(decoder);
         decoder.setByteBuffer(ByteBuffer.wrap(bytes.getBytes(), 8, bytes.getSize() - 8));
         Envelope result = (Envelope) decoder.readObject();
+        assertTrue(result != null);
 
         DeserializationInput des = new DeserializationInput();
         Object desObj = des.deserialize(bytes, Object.class);

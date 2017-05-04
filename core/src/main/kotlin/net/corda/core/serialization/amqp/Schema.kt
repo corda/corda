@@ -1,6 +1,8 @@
 package net.corda.core.serialization.amqp
 
-import net.corda.core.crypto.SecureHash
+import com.google.common.hash.Hasher
+import com.google.common.hash.Hashing
+import net.corda.core.crypto.Base58
 import net.corda.core.serialization.OpaqueBytes
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
@@ -303,14 +305,14 @@ data class Choice(val name: String, val value: String) : DescribedType {
     }
 }
 
-private val ARRAY_HASH: SecureHash = SecureHash.sha256("Array = true")
-private val ALREADY_SEEN_HASH: SecureHash = SecureHash.sha256("Already seen = true")
-private val NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = true")
-private val NOT_NULLABLE_HASH: SecureHash = SecureHash.sha256("Nullable = false")
-private val ANY_TYPE_HASH: SecureHash = SecureHash.sha256("Any type = true")
+private val ARRAY_HASH: String = "Array = true"
+private val ALREADY_SEEN_HASH: String = "Already seen = true"
+private val NULLABLE_HASH: String = "Nullable = true"
+private val NOT_NULLABLE_HASH: String = "Nullable = false"
+private val ANY_TYPE_HASH: String = "Any type = true"
 
 /**
- * The method generates a SHA256 [SecureHash] for a given JVM [Type] that should be unique to the schema representation.
+ * The method generates a fingerprint for a given JVM [Type] that should be unique to the schema representation.
  * Thus it only takes into account properties and types and only supports the same object graph subset as the overall
  * serialization code.
  *
@@ -318,30 +320,34 @@ private val ANY_TYPE_HASH: SecureHash = SecureHash.sha256("Any type = true")
  * different.
  */
 // TODO: write tests
-fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type> = mutableSetOf()): SecureHash {
+fun fingerprintForType(type: Type): String = Base58.encode(fingerprintForType(type, HashSet(), Hashing.murmur3_128().newHasher()).hash().asBytes())
+
+private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher: Hasher): Hasher {
     return if (type in alreadySeen) {
-        ALREADY_SEEN_HASH
+        hasher.putUnencodedChars(ALREADY_SEEN_HASH)
     } else {
         alreadySeen += type
         if (type is SerializerFactory.AnyType) {
-            ANY_TYPE_HASH
+            hasher.putUnencodedChars(ANY_TYPE_HASH)
         } else if (type is Class<*>) {
             if (type.isArray) {
-                fingerprintForType(type.componentType).hashConcat(ARRAY_HASH)
+                fingerprintForType(type.componentType, alreadySeen, hasher).putUnencodedChars(ARRAY_HASH)
             } else if (SerializerFactory.isPrimitive(type)) {
-                SecureHash.sha256(type.name)
+                hasher.putUnencodedChars(type.name)
             } else if (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) {
-                SecureHash.sha256(type.name)
+                hasher.putUnencodedChars(type.name)
             } else {
                 // Hash the class + properties
-                propertiesForSerialization(constructorForDeserialization(type), type).fold(SecureHash.sha256(type.name)) { orig, param -> orig.hashConcat(fingerprintForType(param.readMethod.genericReturnType, alreadySeen)).hashConcat(SecureHash.sha256(param.name)).hashConcat(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH) }
+                propertiesForSerialization(constructorForDeserialization(type), type).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
+                    fingerprintForType(param.readMethod.genericReturnType, alreadySeen, orig).putUnencodedChars(param.name).putUnencodedChars(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                }
             }
         } else if (type is ParameterizedType) {
             // Hash the rawType + params
-            type.actualTypeArguments.fold(fingerprintForType(type.rawType, alreadySeen)) { orig, paramType -> orig.hashConcat(fingerprintForType(paramType, alreadySeen)) }
+            type.actualTypeArguments.fold(fingerprintForType(type.rawType, alreadySeen, hasher)) { orig, paramType -> fingerprintForType(paramType, alreadySeen, orig) }
         } else if (type is GenericArrayType) {
             // Hash the element type + some array hash
-            fingerprintForType(type.genericComponentType, alreadySeen).hashConcat(ARRAY_HASH)
+            fingerprintForType(type.genericComponentType, alreadySeen, hasher).putUnencodedChars(ARRAY_HASH)
         } else {
             throw NotSerializableException("Don't know how to hash $type")
         }
