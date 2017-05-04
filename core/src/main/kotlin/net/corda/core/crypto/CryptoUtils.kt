@@ -76,7 +76,6 @@ fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.Legally
         is CompositeKey -> throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
         else -> party.owningKey
     }
-    sigKey.verify(bytesToSign, sig) // TODO: this is not required!
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 
@@ -86,11 +85,10 @@ fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.Legally
  * @throws InvalidKeyException if the key to verify the signature with is not valid (i.e. wrong key type for the
  * signature).
  * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
+ * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
  */
 // TODO: SignatureException should be used only for a damaged signature, as per `java.security.Signature.verify()`,
-// we should use another exception (perhaps IllegalArgumentException) for indicating the signature is valid but does
-// not match.
-@Throws(IllegalStateException::class, SignatureException::class)
+@Throws(SignatureException::class, IllegalArgumentException::class, InvalidKeyException::class)
 fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.doVerify(this, signature.bytes, content)
 
 /**

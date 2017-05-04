@@ -110,7 +110,6 @@ object Crypto {
     /**
      * Supported digital signature schemes.
      * Note: Only the schemes added in this map will be supported (see [Crypto]).
-     * Do not forget to add the DEFAULT_SIGNATURE_SCHEME as well.
      */
     val supportedSignatureSchemes = listOf(
             RSA_SHA256,
