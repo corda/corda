@@ -360,7 +360,7 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
 
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
         val A = input.readBytesWithLength()
-        return EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))
+        return PublicKeyCache.get(EdDSAPublicKey(EdDSAPublicKeySpec(A, ed25519Curve))) as EdDSAPublicKey
     }
 }
 
