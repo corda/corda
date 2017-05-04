@@ -1,6 +1,7 @@
 package net.corda.core.identity
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.CertificateAndKey
 import net.corda.core.crypto.toBase58String
 import net.corda.core.serialization.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
@@ -27,6 +28,7 @@ import java.security.PublicKey
  */
 // TODO: Remove "open" from [Party] once deprecated crypto.Party class is removed
 open class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
+    constructor(certAndKey: CertificateAndKey) : this(X500Name(certAndKey.certificate.subjectDN.name), certAndKey.keyPair.public)
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} ($name)"
     override fun nameOrNull(): X500Name? = name

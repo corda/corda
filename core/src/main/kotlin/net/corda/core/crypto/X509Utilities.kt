@@ -17,11 +17,11 @@ import java.io.FileWriter
 import java.io.InputStream
 import java.net.InetAddress
 import java.nio.file.Path
+import java.security.InvalidAlgorithmParameterException
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -64,7 +64,7 @@ object X509Utilities {
     }
 
     /**
-     * Return a bogus X509 for dev purposes.
+     * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
      */
     @Deprecated("Full legal names should be specified in all configurations")
     fun getDevX509Name(commonName: String): X500Name {
@@ -155,6 +155,34 @@ object X509Utilities {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
         }.map { GeneralName(GeneralName.iPAddress, it) }
         return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CLIENT_KEY_USAGE, CLIENT_KEY_PURPOSES, signatureScheme, window, subjectAlternativeName = dnsNames + ipAddresses)
+    }
+
+    /**
+     * Build a certificate path from a trusted root certificate to a target certificate. This will always return a path
+     * directly from the root to the target, with no intermediate certificates (presuming that path is valid).
+     *
+     * @param rootCertAndKey trusted root certificate that will be the start of the path.
+     * @param targetCertAndKey certificate the path ends at.
+     * @param revocationEnabled whether revocation of certificates in the path should be checked.
+     */
+    fun createCertificatePath(rootCertAndKey: CertificateAndKey,
+                              targetCertAndKey: CertificateAndKey,
+                              revocationEnabled: Boolean): CertPathBuilderResult {
+        val intermediateCertificates = setOf(targetCertAndKey.certificate)
+        val certStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(intermediateCertificates))
+        val certPathFactory = CertPathBuilder.getInstance("PKIX")
+        val trustAnchor = TrustAnchor(rootCertAndKey.certificate, null)
+        val certPathParameters = try {
+            PKIXBuilderParameters(setOf(trustAnchor), X509CertSelector().apply {
+                certificate = targetCertAndKey.certificate
+            })
+        } catch (ex: InvalidAlgorithmParameterException) {
+            throw RuntimeException(ex)
+        }.apply {
+            addCertStore(certStore)
+            isRevocationEnabled = revocationEnabled
+        }
+        return certPathFactory.build(certPathParameters)
     }
 
     /**
