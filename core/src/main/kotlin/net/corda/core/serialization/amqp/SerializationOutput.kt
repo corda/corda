@@ -10,6 +10,9 @@ import kotlin.collections.LinkedHashSet
 
 /**
  * Main entry point for serializing an object to AMQP.
+ *
+ * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
+ * instances and threads.
  */
 class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
@@ -17,6 +20,11 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
     private val serializerHistory: MutableSet<AMQPSerializer> = LinkedHashSet()
     private val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
 
+    /**
+     * Serialize the given object to AMQP, wrapped in our [Envelope] wrapper which carries an AMQP 1.0 schema, and prefixed
+     * with a header to indicate that this is serialized with AMQP and not [Kryo], and what version of the Corda implementation
+     * of AMQP serialization contructed the serialized form.
+     */
     @Throws(NotSerializableException::class)
     fun <T : Any> serialize(obj: T): SerializedBytes<T> {
         try {

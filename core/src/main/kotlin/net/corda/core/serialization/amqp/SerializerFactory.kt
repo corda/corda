@@ -28,11 +28,18 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: use guava caches etc so not unbounded
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: incorporate the class carpenter for classes not on the classpath.
+// TODO: apply class loader logic and an "app context" throughout this code.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer>()
 
+    /**
+     * Look up, and manufacture if necessary, a serializer for the given type.
+     *
+     * @param actualType Will be null if there isn't an actual object instance available (e.g. for
+     * restricted type processing).
+     */
     @Throws(NotSerializableException::class)
     fun get(actualType: Class<*>?, declaredType: Type): AMQPSerializer {
         if (declaredType is ParameterizedType) {
@@ -99,6 +106,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun processRestrictedType(typeNotation: RestrictedType) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            // TODO: class loader logic, and compare the schema.
             val type = restrictedTypeForName(typeNotation.name)
             get(null, type)
         }
@@ -106,6 +114,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun processCompositeType(typeNotation: CompositeType) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            // TODO: class loader logic, and compare the schema.
             val clazz = Class.forName(typeNotation.name)
             get(clazz, clazz)
         }

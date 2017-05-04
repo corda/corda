@@ -22,7 +22,7 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz)
     }
     private val typeName = clazz.name
-    override val typeDescriptor = "net.corda:${hashType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
     private val interfaces = generateInterfaces(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
     private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())

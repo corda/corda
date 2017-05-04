@@ -11,6 +11,9 @@ import java.util.*
 
 /**
  * Main entry point for deserializing an AMQP encoded object.
+ *
+ * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
+ * instances and threads.
  */
 class DeserializationInput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
@@ -19,6 +22,11 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
 
+    /**
+     * This is the main entry point for deserialization of AMQP payloads, and expects a byte sequence involving a header
+     * indicating what version of Corda serialization was used, followed by an [Envelope] which carries the object to
+     * be deserialized and a schema describing the types of the objects.
+     */
     @Throws(NotSerializableException::class)
     fun <T : Any> deserialize(bytes: SerializedBytes<T>, clazz: Class<T>): T {
         try {

@@ -12,7 +12,7 @@ import java.lang.reflect.Type
 class ArraySerializer(override val type: Type) : AMQPSerializer {
     private val typeName = type.typeName
 
-    override val typeDescriptor = "net.corda:${hashType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
 
     private val elementType: Type = makeElementType()
 
