@@ -429,7 +429,7 @@ class VaultQueryTests {
         database.transaction {
 
             val id = UniqueIdentifier("TEST")
-            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+            services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference
@@ -450,7 +450,7 @@ class VaultQueryTests {
         database.transaction {
 
             val linearUid = UniqueIdentifier("TEST")
-            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+            services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference
@@ -470,7 +470,7 @@ class VaultQueryTests {
         database.transaction {
 
             val linearUid = UniqueIdentifier("TEST")
-            val issuedStates = services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
+            services.fillWithSomeTestLinearStates(1, UniqueIdentifier("TEST"))
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference
 //            services.processLinearState(id)  // consume current and produce new state reference

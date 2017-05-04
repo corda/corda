@@ -86,7 +86,7 @@ public class VaultQueryJavaTests {
     public void consumedStates() {
         transaction(database, tx -> {
             fillWithSomeTestCash(services,
-                                 new Amount(100, Currency.getInstance("USD")),
+                                 new Amount<>(100, Currency.getInstance("USD")),
                                  getDUMMY_NOTARY(),
                                 3,
                                 3,
@@ -97,10 +97,11 @@ public class VaultQueryJavaTests {
                                  getDUMMY_CASH_ISSUER_KEY() );
 
             // DOCSTART VaultJavaQueryExample1
-            List contractStateTypes = Arrays.asList(Cash.State.class);
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
 
-            VaultQueryCriteria criteria = new VaultQueryCriteria(status, contractStateTypes);
+            VaultQueryCriteria criteria = new VaultQueryCriteria(status, null, contractStateTypes);
             Vault.Page<ContractState> results = vaultSvc.queryBy(criteria);
             // DOCEND VaultJavaQueryExample1
 
@@ -122,8 +123,10 @@ public class VaultQueryJavaTests {
 
             // DOCSTART VaultJavaQueryExample2
             Vault.StateStatus status = Vault.StateStatus.CONSUMED;
-            List contractStateTypes = Arrays.asList(DealState.class);
-            QueryCriteria vaultCriteria = new VaultQueryCriteria(status, contractStateTypes);
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
+
+            QueryCriteria vaultCriteria = new VaultQueryCriteria(status, null, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
             List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
@@ -152,7 +155,7 @@ public class VaultQueryJavaTests {
 
         transaction(database, tx -> {
             fillWithSomeTestCash(services,
-                    new Amount(100, Currency.getInstance("USD")),
+                    new Amount<>(100, Currency.getInstance("USD")),
                     getDUMMY_NOTARY(),
                     3,
                     3,
@@ -163,9 +166,10 @@ public class VaultQueryJavaTests {
                     getDUMMY_CASH_ISSUER_KEY() );
 
             // DOCSTART VaultJavaQueryExample1
-            List contractStateTypes = Arrays.asList(Cash.State.class);
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
 
-            VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
+            VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, contractStateTypes);
             Vault.PageAndUpdates<ContractState> results = vaultSvc.trackBy(criteria);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();
@@ -189,8 +193,9 @@ public class VaultQueryJavaTests {
             fillWithSomeTestDeals(services, dealIds, 0);
 
             // DOCSTART VaultJavaQueryExample2
-            List contractStateTypes = Arrays.asList(DealState.class);
-            QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(DealState.class));
+            QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
             List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
@@ -221,7 +226,7 @@ public class VaultQueryJavaTests {
     public void consumedStatesDeprecated() {
         transaction(database, tx -> {
             fillWithSomeTestCash(services,
-                    new Amount(100, Currency.getInstance("USD")),
+                    new Amount<>(100, Currency.getInstance("USD")),
                     getDUMMY_NOTARY(),
                     3,
                     3,
@@ -232,7 +237,8 @@ public class VaultQueryJavaTests {
                     getDUMMY_CASH_ISSUER_KEY() );
 
             // DOCSTART VaultDeprecatedJavaQueryExample1
-            Set contractStateTypes = new HashSet(Arrays.asList(Cash.State.class));
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
             EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
@@ -254,7 +260,8 @@ public class VaultQueryJavaTests {
             fillWithSomeTestLinearStates(services, 4, new UniqueIdentifier());
 
             // DOCSTART VaultDeprecatedJavaQueryExample2
-            Set contractStateTypes = new HashSet(Arrays.asList(LinearState.class));
+            @SuppressWarnings("unchecked")
+            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(LinearState.class));
             EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.

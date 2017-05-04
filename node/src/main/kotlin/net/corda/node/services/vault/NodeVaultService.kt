@@ -221,7 +221,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
 
-        TODO("not implemented")
+        TODO("Under construction")
 
         // If [VaultQueryCriteria.PageSpecification] specified
         // must return (CloseableIterator) result.get().iterator(skip, take)
@@ -231,12 +231,12 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
-        TODO("not implemented")
+        TODO("Under construction")
 
-        return mutex.locked {
-            Vault.PageAndUpdates(queryBy(criteria),
-                              _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-        }
+//        return mutex.locked {
+//            Vault.PageAndUpdates(queryBy(criteria),
+//                              _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+//        }
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {
