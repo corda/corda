@@ -14,7 +14,6 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.bouncycastle.crypto.tls.ConnectionEnd.server
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -80,7 +79,7 @@ class RPCStabilityTests {
             }
             val server = startRpcServer<TrackSubscriberOps>(
                     configuration = RPCServerConfiguration.default.copy(
-                            reapIntervalMs = 100
+                            reapInterval = 100.millis
                     ),
                     ops = trackSubscriberOpsImpl
             ).get()

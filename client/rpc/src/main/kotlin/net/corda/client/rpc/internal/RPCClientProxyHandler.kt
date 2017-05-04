@@ -162,7 +162,6 @@ class RPCClientProxyHandler(
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
      */
     fun start() {
-        lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
         reaperScheduledFuture = reaperExecutor.scheduleAtFixedRate(
                 this::reapObservables,
                 rpcConfiguration.reapInterval.toMillis(),
@@ -176,12 +175,12 @@ class RPCClientProxyHandler(
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         val consumer = session.createConsumer(clientAddress)
         consumer.setMessageHandler(this@RPCClientProxyHandler::artemisMessageHandler)
-        session.start()
         sessionAndConsumer = ArtemisConsumer(sessionFactory, session, consumer)
+        lifeCycle.transition(State.UNSTARTED, State.SERVER_VERSION_NOT_SET)
+        session.start()
     }
 
     // This is the general function that transforms a client side RPC to internal Artemis messages.
-    @CallerSensitive
     override fun invoke(proxy: Any, method: Method, arguments: Array<out Any?>?): Any? {
         lifeCycle.requireState { it == State.STARTED || it == State.SERVER_VERSION_NOT_SET }
         checkProtocolVersion(method)
@@ -269,7 +268,6 @@ class RPCClientProxyHandler(
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
      */
     fun close() {
-        lifeCycle.transition(State.STARTED, State.FINISHED)
         sessionAndConsumer.consumer.close()
         sessionAndConsumer.session.close()
         sessionAndConsumer.sessionFactory.close()
@@ -287,6 +285,7 @@ class RPCClientProxyHandler(
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
         observationExecutors.forEach { it.awaitTermination(100, TimeUnit.MILLISECONDS) }
+        lifeCycle.transition(State.STARTED, State.FINISHED)
     }
 
     /**
@@ -310,12 +309,12 @@ class RPCClientProxyHandler(
      * RPCs already may be called with it.
      */
     internal fun setServerProtocolVersion(version: Int) {
-        lifeCycle.transition(State.SERVER_VERSION_NOT_SET, State.STARTED)
         if (serverProtocolVersion == null) {
             serverProtocolVersion = version
         } else {
             throw IllegalStateException("setServerProtocolVersion called, but the protocol version was already set!")
         }
+        lifeCycle.transition(State.SERVER_VERSION_NOT_SET, State.STARTED)
     }
 
     private fun reapObservables() {

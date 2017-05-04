@@ -16,6 +16,7 @@ import net.corda.core.ErrorOr
 import net.corda.core.crypto.commonName
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
+import net.corda.core.seconds
 import net.corda.core.serialization.KryoPoolWithContext
 import net.corda.core.utilities.LazyStickyPool
 import net.corda.core.utilities.LifeCycle
@@ -40,6 +41,7 @@ import rx.Observable
 import rx.Subscriber
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
+import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -52,15 +54,15 @@ data class RPCServerConfiguration(
         val consumerPoolSize: Int,
         /** The maximum number of producers to create to handle outgoing messages */
         val producerPoolBound: Int,
-        /** The interval of subscription reaping in milliseconds */
-        val reapIntervalMs: Long
+        /** The interval of subscription reaping */
+        val reapInterval: Duration
 ) {
     companion object {
         val default = RPCServerConfiguration(
                 rpcThreadPoolSize = 4,
                 consumerPoolSize = 2,
                 producerPoolBound = 4,
-                reapIntervalMs = 1000
+                reapInterval = 1.seconds
         )
     }
 }
@@ -138,8 +140,8 @@ class RPCServer(
         log.info("Starting RPC server with configuration $rpcConfiguration")
         reaperScheduledFuture = reaperExecutor.scheduleAtFixedRate(
                 this::reapSubscriptions,
-                rpcConfiguration.reapIntervalMs,
-                rpcConfiguration.reapIntervalMs,
+                rpcConfiguration.reapInterval.toMillis(),
+                rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
         val sessions = ArrayList<ClientSession>()
@@ -274,6 +276,11 @@ class RPCServer(
 
 @JvmField
 internal val CURRENT_RPC_CONTEXT: ThreadLocal<RpcContext> = ThreadLocal()
+/**
+ * Returns a context specific to the current RPC call. Note that trying to call this function outside of an RPC will
+ * throw. If you'd like to use the context outside of the call (e.g. in another thread) then pass the returned reference
+ * around explicitly.
+ */
 fun getRpcContext(): RpcContext = CURRENT_RPC_CONTEXT.get()
 
 /**

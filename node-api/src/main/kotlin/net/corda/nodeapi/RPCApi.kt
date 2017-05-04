@@ -54,7 +54,7 @@ import java.util.*
  * Note that multiple sessions like the above may interleave in an arbitrary fashion.
  *
  * Additionally the server may listen on client binding removals for cleanup using [RPC_CLIENT_BINDING_REMOVALS]. This
- * requires the server to create a filter on the artemis notification address using
+ * requires the server to create a filter on the artemis notification address using [RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION]
  */
 object RPCApi {
     private val TAG_FIELD_NAME = "tag"
