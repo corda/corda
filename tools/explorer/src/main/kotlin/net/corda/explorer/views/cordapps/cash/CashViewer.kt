@@ -25,6 +25,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.AbstractParty
 import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
@@ -126,7 +127,10 @@ class CashViewer : CordaView("Cash") {
             }
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
             // TODO: Anonymous should probably be italicised or similar
-            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull() ?: "Anonymous"))
+            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull()?.let {
+                PartyNameFormatter.short.format(it)
+            } ?: "Anonymous"))
+            issuerValueLabel.apply { tooltip(resolvedIssuer.nameOrNull()?.let { PartyNameFormatter.full.format(it) } ?: "Anonymous") }
             originatedValueLabel.text = stateRow.originated.toString()
             amountValueLabel.text = amountFormatter.format(amountNoIssuer)
             equivValueLabel.textProperty().bind(equivAmount.map { equivFormatter.format(it) })
@@ -230,7 +234,7 @@ class CashViewer : CordaView("Cash") {
             val node = it.value.value
             when (node) {
             // TODO: Anonymous should probably be italicised or similar
-                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull() ?: "Anonymous")
+                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous")
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
         }
