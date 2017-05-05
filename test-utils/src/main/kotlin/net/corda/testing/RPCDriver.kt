@@ -10,6 +10,7 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.div
 import net.corda.core.messaging.RPCOps
+import net.corda.core.random63BitValue
 import net.corda.core.utilities.ProcessUtilities
 import net.corda.node.driver.*
 import net.corda.node.services.RPCUserService
@@ -101,7 +102,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      * @param ops The server-side implementation of the RPC interface.
      */
     fun <I : RPCOps> startRpcServer(
-            serverName: String = "driver-rpc-server",
+            serverName: String = "driver-rpc-server-${random63BitValue()}",
             rpcUser: User = rpcTestUser,
             nodeLegalName: X500Name = fakeNodeLegalName,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
@@ -182,11 +183,14 @@ data class RpcServerHandle(
 val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = X500Name("not:a:valid:name")
 
+// Use a global pool so that we can run RPC tests in parallel
+private val globalPortAllocation = PortAllocation.Incremental(10000)
+private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
 fun <A> rpcDriver(
         isDebug: Boolean = false,
         driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        portAllocation: PortAllocation = globalPortAllocation,
+        debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         automaticallyStartNetworkMap: Boolean = false,
@@ -339,6 +343,7 @@ data class RPCDriverDSL(
             ops: I
     ): ListenableFuture<RpcServerHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
+        addressMustNotBeBound(driverDSL.executorService, hostAndPort)
         return driverDSL.executorService.submit<RpcServerHandle> {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
             val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
