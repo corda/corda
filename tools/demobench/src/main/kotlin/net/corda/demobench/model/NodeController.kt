@@ -2,6 +2,7 @@ package net.corda.demobench.model
 
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
+import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
@@ -51,10 +52,9 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
     fun validate(nodeData: NodeData): NodeConfig? {
         val config = NodeConfig(
                 baseDir,
-                nodeData.legalName.value.trim(),
+                X500Name(nodeData.legalName.value.trim()),
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,
-                nodeData.nearestCity.value.description.trim(),
                 nodeData.webPort.value,
                 nodeData.h2Port.value,
                 nodeData.extraServices.value

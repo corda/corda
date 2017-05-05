@@ -281,8 +281,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionMessage(message: ReceivedMessage) {
         val sessionMessage = message.data.deserialize<SessionMessage>()
-        // TODO Look up the party with the full X.500 name instead of just the legal name
-        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
+        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer)?.legalIdentity
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
@@ -297,6 +296,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
             session.fiber.logger.trace { "Received $message on $session from $sender" }
+            if (session.retryable) {
+                if (message is SessionConfirm && session.state is FlowSessionState.Initiated) {
+                    session.fiber.logger.trace { "Ignoring duplicate confirmation for session ${session.ourSessionId} – session is idempotent" }
+                    return
+                }
+                if (message !is SessionConfirm) {
+                    serviceHub.networkService.cancelRedelivery(session.ourSessionId)
+                }
+            }
             if (message is SessionEnd) {
                 openSessions.remove(message.recipientSessionId)
             }
@@ -319,7 +327,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                     logger.trace { "Ignoring session end message for already closed session: $message" }
                 }
             } else {
-                logger.warn("Received a session message for unknown session: $message")
+                logger.warn("Received a session message for unknown session: $message, from $sender")
             }
         }
     }
@@ -476,7 +484,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T> {
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
@@ -523,42 +531,52 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun processIORequest(ioRequest: FlowIORequest) {
         executor.checkOnThread()
-        if (ioRequest is SendRequest) {
-            if (ioRequest.message is SessionInit) {
-                openSessions[ioRequest.session.ourSessionId] = ioRequest.session
+        when (ioRequest) {
+            is SendRequest -> processSendRequest(ioRequest)
+            is WaitForLedgerCommit -> processWaitForCommitRequest(ioRequest)
+        }
+    }
+
+    private fun processSendRequest(ioRequest: SendRequest) {
+        val retryId = if (ioRequest.message is SessionInit) {
+            with(ioRequest.session) {
+                openSessions[ourSessionId] = this
+                if (retryable) ourSessionId else null
             }
-            sendSessionMessage(ioRequest.session.state.sendToParty, ioRequest.message, ioRequest.session.fiber)
-            if (ioRequest !is ReceiveRequest<*>) {
-                // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                resumeFiber(ioRequest.session.fiber)
-            }
-        } else if (ioRequest is WaitForLedgerCommit) {
-            // Is it already committed?
-            val stx = database.transaction {
-                serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
-            }
-            if (stx != null) {
-                resumeFiber(ioRequest.fiber)
-            } else {
-                // No, then register to wait.
-                //
-                // We assume this code runs on the server thread, which is the only place transactions are committed
-                // currently. When we liberalise our threading somewhat, handing of wait requests will need to be
-                // reworked to make the wait atomic in another way. Otherwise there is a race between checking the
-                // database and updating the waiting list.
-                mutex.locked {
-                    fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
-                }
+        } else null
+        sendSessionMessage(ioRequest.session.state.sendToParty, ioRequest.message, ioRequest.session.fiber, retryId)
+        if (ioRequest !is ReceiveRequest<*>) {
+            // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
+            resumeFiber(ioRequest.session.fiber)
+        }
+    }
+
+    private fun processWaitForCommitRequest(ioRequest: WaitForLedgerCommit) {
+        // Is it already committed?
+        val stx = database.transaction {
+            serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
+        }
+        if (stx != null) {
+            resumeFiber(ioRequest.fiber)
+        } else {
+            // No, then register to wait.
+            //
+            // We assume this code runs on the server thread, which is the only place transactions are committed
+            // currently. When we liberalise our threading somewhat, handing of wait requests will need to be
+            // reworked to make the wait atomic in another way. Otherwise there is a race between checking the
+            // database and updating the waiting list.
+            mutex.locked {
+                fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
             }
         }
     }
 
-    private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null) {
+    private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null, retryId: Long? = null) {
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val logger = fiber?.logger ?: logger
-        logger.trace { "Sending $message to party $party @ $address" }
-        serviceHub.networkService.send(sessionTopic, message, address)
+        logger.trace { "Sending $message to party $party @ $address" + if (retryId != null) " with retry $retryId" else "" }
+        serviceHub.networkService.send(sessionTopic, message, address, retryId = retryId)
     }
 }

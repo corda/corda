@@ -6,16 +6,12 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.client.rpc.notUsed
 import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowProgressHandle
 import net.corda.core.random63BitValue
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -29,7 +25,6 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import rx.Observable
 import java.lang.reflect.Modifier
 import java.sql.Connection
 import java.sql.SQLException
@@ -102,15 +97,6 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logic.stateMachine = this
     }
 
-    override fun createHandle(hasProgress: Boolean): FlowHandle<R> = if (hasProgress)
-        FlowProgressHandleImpl(
-            id = id,
-            returnValue = resultFuture,
-            progress = logic.track()?.second ?: Observable.empty()
-        )
-    else
-        FlowHandleImpl(id = id, returnValue = resultFuture)
-
     @Suspendable
     override fun run() {
         createTransaction()
@@ -174,11 +160,12 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun <T : Any> sendAndReceive(receiveType: Class<T>,
                                           otherParty: Party,
                                           payload: Any,
-                                          sessionFlow: FlowLogic<*>): UntrustworthyData<T> {
+                                          sessionFlow: FlowLogic<*>,
+                                          retrySend: Boolean): UntrustworthyData<T> {
         logger.debug { "sendAndReceive(${receiveType.name}, $otherParty, ${payload.toString().abbreviate(300)}) ..." }
         val session = getConfirmedSession(otherParty, sessionFlow)
         val sessionData = if (session == null) {
-            val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true)
+            val newSession = startNewSession(otherParty, sessionFlow, payload, waitForConfirmation = true, retryable = retrySend)
             // Only do a receive here as the session init has carried the payload
             receiveInternal<SessionData>(newSession, receiveType)
         } else {
@@ -292,9 +279,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      * multiple public keys, but we **don't support multiple nodes advertising the same legal identity**.
      */
     @Suspendable
-    private fun startNewSession(otherParty: Party, sessionFlow: FlowLogic<*>, firstPayload: Any?, waitForConfirmation: Boolean): FlowSession {
+    private fun startNewSession(otherParty: Party,
+                                sessionFlow: FlowLogic<*>,
+                                firstPayload: Any?,
+                                waitForConfirmation: Boolean,
+                                retryable: Boolean = false): FlowSession {
         logger.trace { "Initiating a new session with $otherParty" }
-        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty))
+        val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
         // We get the top-most concrete class object to cater for the case where the client flow is customised via a sub-class
         val clientFlowClass = sessionFlow.topConcreteFlowClass
@@ -438,36 +429,4 @@ val Class<out FlowLogic<*>>.flowVersion: Int get() {
     val flowVersion = getDeclaredAnnotation(FlowVersion::class.java) ?: return 1
     require(flowVersion.value > 0) { "Flow versions have to be greater or equal to 1" }
     return flowVersion.value
-}
-
-// I would prefer for [FlowProgressHandleImpl] to extend [FlowHandleImpl],
-// but Kotlin doesn't allow this for data classes, not even to create
-// another data class!
-@CordaSerializable
-private data class FlowHandleImpl<A>(
-        override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
-
-    /**
-     * Use this function for flows whose returnValue is not going to be used, so as to free up server resources.
-     */
-    override fun close() {
-        returnValue.cancel(false)
-    }
-}
-
-@CordaSerializable
-private data class FlowProgressHandleImpl<A>(
-        override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>,
-        override val progress: Observable<String>) : FlowProgressHandle<A> {
-
-    /**
-     * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up server resources.
-     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
-     */
-    override fun close() {
-        progress.notUsed()
-        returnValue.cancel(false)
-    }
 }

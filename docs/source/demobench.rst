@@ -14,18 +14,14 @@ Running DemoBench
 -----------------
 
 Configuring a Node
-  Each node must have a unique name to identify it to the network map service. DemoBench will suggest local port numbers to use.
+  Each node must have a unique name to identify it to the network map service. DemoBench will suggest node names, nearest cities and local port numbers to use.
 
   The first node will host the network map service, and we are forcing that node also to be a notary. Hence only notary services will be available to be selected in the ``Services`` list. For subsequent nodes you may also select any of Corda's other built-in services.
 
-.. note:: Press ``Ctrl``/``Cmd`` and then click with the mouse to select multiple services, and also to deselect a service again.
-
-..
-
-  Press the ``Create Node`` button to launch the Corda node with your configuration.
+  Press the ``Start node`` button to launch the Corda node with your configuration.
 
 Running Nodes
-  DemoBench launches each new node in a terminal emulator. The ``View Database``, ``Launch Explorer`` and ``Launch WebServer`` buttons will all be disabled until the node has finished booting. DemoBench will then display simple statistics about the node such as its cash balance.
+  DemoBench launches each new node in a terminal emulator. The ``View Database``, ``Launch Explorer`` and ``Launch Web Server`` buttons will all be disabled until the node has finished booting. DemoBench will then display simple statistics about the node such as its cash balance.
 
 ..
 

@@ -16,6 +16,7 @@ import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -49,7 +50,7 @@ class SimmValuationTest : IntegrationTestCategory {
         }
     }
 
-    private fun getPartyWithName(partyApi: HttpApi, counterparty: String): PortfolioApi.ApiParty =
+    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty =
             getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {

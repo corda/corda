@@ -13,6 +13,11 @@ import rx.Observable
 interface FlowHandle<A> : AutoCloseable {
     val id: StateMachineRunId
     val returnValue: ListenableFuture<A>
+
+    /**
+     * Use this function for flows whose returnValue is not going to be used, so as to free up server resources.
+     */
+    override fun close()
 }
 
 /**
@@ -22,4 +27,11 @@ interface FlowHandle<A> : AutoCloseable {
  */
 interface FlowProgressHandle<A> : FlowHandle<A> {
     val progress: Observable<String>
+
+    /**
+     * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up
+     * server resources.
+     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
+     */
+    override fun close()
 }

@@ -5,7 +5,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -16,12 +15,11 @@ import java.util.*
 /**
  * FlowInitiator holds information on who started the flow. We have different ways of doing that: via RPC [FlowInitiator.RPC],
  * communication started by peer node [FlowInitiator.Peer], scheduled flows [FlowInitiator.Scheduled]
- * or manual [FlowInitiator.Manual]. The last case is for all flows started in tests, shell etc. It was added
- * because we can start flow directly using [StateMachineManager.add] or [ServiceHubInternal.startFlow].
+ * or via the Corda Shell [FlowInitiator.Shell].
  */
 @CordaSerializable
 sealed class FlowInitiator {
-    /** Started using [CordaRPCOps.startFlowDynamic]. */
+    /** Started using [net.corda.core.messaging.CordaRPCOps.startFlowDynamic]. */
     data class RPC(val username: String) : FlowInitiator()
     /** Started when we get new session initiation request. */
     data class Peer(val party: Party) : FlowInitiator()
@@ -49,7 +47,8 @@ interface FlowStateMachine<R> {
     fun <T : Any> sendAndReceive(receiveType: Class<T>,
                                  otherParty: Party,
                                  payload: Any,
-                                 sessionFlow: FlowLogic<*>): UntrustworthyData<T>
+                                 sessionFlow: FlowLogic<*>,
+                                 retrySend: Boolean = false): UntrustworthyData<T>
 
     @Suspendable
     fun <T : Any> receive(receiveType: Class<T>, otherParty: Party, sessionFlow: FlowLogic<*>): UntrustworthyData<T>
@@ -59,8 +58,6 @@ interface FlowStateMachine<R> {
 
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction
-
-    fun createHandle(hasProgress: Boolean): FlowHandle<R>
 
     val serviceHub: ServiceHub
     val logger: Logger

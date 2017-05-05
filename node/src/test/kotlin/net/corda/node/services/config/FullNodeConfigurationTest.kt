@@ -4,6 +4,7 @@ import net.corda.core.utilities.ALICE
 import net.corda.nodeapi.User
 import net.corda.testing.testConfiguration
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Paths
 

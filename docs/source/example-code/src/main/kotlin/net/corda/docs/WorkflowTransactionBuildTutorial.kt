@@ -250,7 +250,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         }
         // DOCEND 3
         // Having verified the SignedTransaction passed to us we can sign it too
-        val ourSignature = serviceHub.legalIdentityKey.signWithECDSA(completeTx.tx.id)
+        val ourSignature = serviceHub.legalIdentityKey.sign(completeTx.tx.id)
         // Send our signature to the other party.
         send(source, ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction

@@ -11,9 +11,6 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
-import java.security.KeyFactory
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -32,11 +29,11 @@ class CryptoUtilsTest {
     @Test
     fun `Generate key pairs`() {
         // testing supported algorithms
-        val rsaKeyPair = Crypto.generateKeyPair("RSA_SHA256")
-        val ecdsaKKeyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val ecdsaRKeyPair = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
-        val eddsaKeyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
-        val sphincsKeyPair = Crypto.generateKeyPair("SPHINCS-256_SHA512")
+        val rsaKeyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val ecdsaKKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val ecdsaRKeyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val eddsaKeyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val sphincsKeyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
 
         // not null private keys
         assertNotNull(rsaKeyPair.private)
@@ -65,17 +62,16 @@ class CryptoUtilsTest {
 
     @Test
     fun `RSA full process keygen-sign-verify`() {
-
-        val keyPair = Crypto.generateKeyPair("RSA_SHA256")
-
+        val keyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val (privKey, pubKey) = keyPair
         // test for some data
-        val signedData = keyPair.sign(testBytes)
-        val verification = keyPair.verify(signedData, testBytes)
+        val signedData = Crypto.doSign(privKey, testBytes)
+        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
         assertTrue(verification)
 
         // test for empty data signing
         try {
-            keyPair.sign(ByteArray(0))
+            Crypto.doSign(privKey, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -83,7 +79,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            keyPair.verify(testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -91,88 +87,83 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            keyPair.verify(ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
             fail()
         } catch (e: Exception) {
             // expected
         }
 
         // test for zero bytes data
-        val signedDataZeros = keyPair.sign(ByteArray(100))
-        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
         Random().nextBytes(MBbyte)
-        val signedDataBig = keyPair.sign(MBbyte)
-        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
-        assertTrue(verificationBig)
-
-        // test on malformed signatures (even if they change for 1 bit)
-        for (i in 0..signedData.size - 1) {
-            val b = signedData[i]
-            signedData[i] = b.inc()
-            try {
-                keyPair.verify(signedData, testBytes)
-                fail()
-            } catch (e: Exception) {
-                // expected
-            }
-            signedData[i] = b.dec()
-        }
-    }
-
-    @Test
-    fun `ECDSA secp256k1 full process keygen-sign-verify`() {
-
-        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-
-        // test for some data
-        val signedData = keyPair.sign(testBytes)
-        val verification = keyPair.verify(signedData, testBytes)
-        assertTrue(verification)
-
-        // test for empty data signing
-        try {
-            keyPair.sign(ByteArray(0))
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for empty source data when verifying
-        try {
-            keyPair.verify(testBytes, ByteArray(0))
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for empty signed data when verifying
-        try {
-            keyPair.verify(ByteArray(0), testBytes)
-            fail()
-        } catch (e: Exception) {
-            // expected
-        }
-
-        // test for zero bytes data
-        val signedDataZeros = keyPair.sign(ByteArray(100))
-        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
-        assertTrue(verificationZeros)
-
-        // test for 1MB of data (I successfully tested it locally for 1GB as well)
-        val MBbyte = ByteArray(1000000) // 1.000.000
-        Random().nextBytes(MBbyte)
-        val signedDataBig = keyPair.sign(MBbyte)
-        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
+        val signedDataBig = Crypto.doSign(privKey, MBbyte)
+        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
         try {
-            keyPair.verify(signedData, testBytes)
+            Crypto.doVerify(pubKey, signedData, testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+    }
+
+    @Test
+    fun `ECDSA secp256k1 full process keygen-sign-verify`() {
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (privKey, pubKey) = keyPair
+        // test for some data
+        val signedData = Crypto.doSign(privKey, testBytes)
+        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
+        assertTrue(verification)
+
+        // test for empty data signing
+        try {
+            Crypto.doSign(privKey, ByteArray(0))
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for empty source data when verifying
+        try {
+            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for empty signed data when verifying
+        try {
+            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
+            fail()
+        } catch (e: Exception) {
+            // expected
+        }
+
+        // test for zero bytes data
+        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
+        assertTrue(verificationZeros)
+
+        // test for 1MB of data (I successfully tested it locally for 1GB as well)
+        val MBbyte = ByteArray(1000000) // 1.000.000
+        Random().nextBytes(MBbyte)
+        val signedDataBig = Crypto.doSign(privKey, MBbyte)
+        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
+        assertTrue(verificationBig)
+
+        // test on malformed signatures (even if they change for 1 bit)
+        signedData[0] = signedData[0].inc()
+        try {
+            Crypto.doVerify(pubKey, signedData, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -181,17 +172,16 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256r1 full process keygen-sign-verify`() {
-
-        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
-
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val (privKey, pubKey) = keyPair
         // test for some data
-        val signedData = keyPair.sign(testBytes)
-        val verification = keyPair.verify(signedData, testBytes)
+        val signedData = Crypto.doSign(privKey, testBytes)
+        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
         assertTrue(verification)
 
         // test for empty data signing
         try {
-            keyPair.sign(ByteArray(0))
+            Crypto.doSign(privKey, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -199,7 +189,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            keyPair.verify(testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -207,28 +197,28 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            keyPair.verify(ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
             fail()
         } catch (e: Exception) {
             // expected
         }
 
         // test for zero bytes data
-        val signedDataZeros = keyPair.sign(ByteArray(100))
-        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
         Random().nextBytes(MBbyte)
-        val signedDataBig = keyPair.sign(MBbyte)
-        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
+        val signedDataBig = Crypto.doSign(privKey, MBbyte)
+        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
         try {
-            keyPair.verify(signedData, testBytes)
+            Crypto.doVerify(pubKey, signedData, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -237,17 +227,16 @@ class CryptoUtilsTest {
 
     @Test
     fun `EDDSA ed25519 full process keygen-sign-verify`() {
-
-        val keyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
-
+        val keyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (privKey, pubKey) = keyPair
         // test for some data
-        val signedData = keyPair.sign(testBytes)
-        val verification = keyPair.verify(signedData, testBytes)
+        val signedData = Crypto.doSign(privKey, testBytes)
+        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
         assertTrue(verification)
 
         // test for empty data signing
         try {
-            keyPair.sign(ByteArray(0))
+            Crypto.doSign(privKey, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -255,7 +244,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            keyPair.verify(testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -263,28 +252,28 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            keyPair.verify(ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
             fail()
         } catch (e: Exception) {
             // expected
         }
 
         // test for zero bytes data
-        val signedDataZeros = keyPair.sign(ByteArray(100))
-        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
         Random().nextBytes(MBbyte)
-        val signedDataBig = keyPair.sign(MBbyte)
-        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
+        val signedDataBig = Crypto.doSign(privKey, MBbyte)
+        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
         try {
-            keyPair.verify(signedData, testBytes)
+            Crypto.doVerify(pubKey, signedData, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -293,17 +282,16 @@ class CryptoUtilsTest {
 
     @Test
     fun `SPHINCS-256 full process keygen-sign-verify`() {
-
-        val keyPair = Crypto.generateKeyPair("SPHINCS-256_SHA512")
-
+        val keyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val (privKey, pubKey) = keyPair
         // test for some data
-        val signedData = keyPair.sign(testBytes)
-        val verification = keyPair.verify(signedData, testBytes)
+        val signedData = Crypto.doSign(privKey, testBytes)
+        val verification = Crypto.doVerify(pubKey, signedData, testBytes)
         assertTrue(verification)
 
         // test for empty data signing
         try {
-            keyPair.sign(ByteArray(0))
+            Crypto.doSign(privKey, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -311,7 +299,7 @@ class CryptoUtilsTest {
 
         // test for empty source data when verifying
         try {
-            keyPair.verify(testBytes, ByteArray(0))
+            Crypto.doVerify(pubKey, testBytes, ByteArray(0))
             fail()
         } catch (e: Exception) {
             // expected
@@ -319,28 +307,28 @@ class CryptoUtilsTest {
 
         // test for empty signed data when verifying
         try {
-            keyPair.verify(ByteArray(0), testBytes)
+            Crypto.doVerify(pubKey, ByteArray(0), testBytes)
             fail()
         } catch (e: Exception) {
             // expected
         }
 
         // test for zero bytes data
-        val signedDataZeros = keyPair.sign(ByteArray(100))
-        val verificationZeros = keyPair.verify(signedDataZeros, ByteArray(100))
+        val signedDataZeros = Crypto.doSign(privKey, ByteArray(100))
+        val verificationZeros = Crypto.doVerify(pubKey, signedDataZeros, ByteArray(100))
         assertTrue(verificationZeros)
 
         // test for 1MB of data (I successfully tested it locally for 1GB as well)
         val MBbyte = ByteArray(1000000) // 1.000.000
         Random().nextBytes(MBbyte)
-        val signedDataBig = keyPair.sign(MBbyte)
-        val verificationBig = keyPair.verify(signedDataBig, MBbyte)
+        val signedDataBig = Crypto.doSign(privKey, MBbyte)
+        val verificationBig = Crypto.doVerify(pubKey, signedDataBig, MBbyte)
         assertTrue(verificationBig)
 
         // test on malformed signatures (even if they change for 1 bit)
         signedData[0] = signedData[0].inc()
         try {
-            keyPair.verify(signedData, testBytes)
+            Crypto.doVerify(pubKey, signedData, testBytes)
             fail()
         } catch (e: Exception) {
             // expected
@@ -350,7 +338,7 @@ class CryptoUtilsTest {
     // test list of supported algorithms
     @Test
     fun `Check supported algorithms`() {
-        val algList: List<String> = Crypto.listSupportedSignatureSchemes()
+        val algList: List<String> = Crypto.supportedSignatureSchemes.keys.toList()
         val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512")
         assertTrue { Sets.symmetricDifference(expectedAlgSet, algList.toSet()).isEmpty(); }
     }
@@ -359,88 +347,76 @@ class CryptoUtilsTest {
     @Test
     fun `RSA encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair("RSA_SHA256")
+        val keyPair = Crypto.generateKeyPair(Crypto.RSA_SHA256)
         val (privKey, pubKey) = keyPair
 
-        val keyFactory = KeyFactory.getInstance("RSA", "BC")
-
         // Encode and decode private key.
-        val privKey2 = keyFactory.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = keyFactory.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
         assertEquals(pubKey2, pubKey)
     }
 
     @Test
     fun `ECDSA secp256k1 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val (privKey, pubKey) = keyPair
 
-        val kf = KeyFactory.getInstance("ECDSA", "BC")
-
         // Encode and decode private key.
-        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
         assertEquals(pubKey2, pubKey)
     }
 
     @Test
     fun `ECDSA secp256r1 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val (privKey, pubKey) = keyPair
 
-        val kf = KeyFactory.getInstance("ECDSA", "BC")
-
         // Encode and decode private key.
-        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
         assertEquals(pubKey2, pubKey)
     }
 
     @Test
     fun `EdDSA encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
+        val keyPair = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
         val (privKey, pubKey) = keyPair
 
-        val kf = KeyFactory.getInstance("EDDSA", "I2P")
-
         // Encode and decode private key.
-        val privKey2 = kf.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = kf.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
         assertEquals(pubKey2, pubKey)
     }
 
     @Test
     fun `SPHINCS-256 encode decode keys - required for serialization`() {
         // Generate key pair.
-        val keyPair = Crypto.generateKeyPair("SPHINCS-256_SHA512")
+        val keyPair = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
         val privKey: BCSphincs256PrivateKey = keyPair.private as BCSphincs256PrivateKey
         val pubKey: BCSphincs256PublicKey = keyPair.public as BCSphincs256PublicKey
 
         //1st method for encoding/decoding
-
-        val keyFactory = KeyFactory.getInstance("SPHINCS256", "BCPQC")
-
-        // Encode and decode private key.
-        val privKey2 = keyFactory.generatePrivate(PKCS8EncodedKeySpec(privKey.encoded))
+        val privKey2 = Crypto.decodePrivateKey(privKey.encoded)
         assertEquals(privKey2, privKey)
 
         // Encode and decode public key.
-        val pubKey2 = keyFactory.generatePublic(X509EncodedKeySpec(pubKey.encoded))
+        val pubKey2 = Crypto.decodePublicKey(pubKey.encoded)
         assertEquals(pubKey2, pubKey)
 
         //2nd method for encoding/decoding
@@ -453,14 +429,14 @@ class CryptoUtilsTest {
 
         // Encode and decode public key.
         val pubKeyInfo: SubjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(pubKey.encoded)
-        val extractedPubKey = BCSphincs256PublicKey(pubKeyInfo)
+        val decodedPubKey = BCSphincs256PublicKey(pubKeyInfo)
         // Check that decoded private key is equal to the initial one.
-        assertEquals(extractedPubKey, pubKey)
+        assertEquals(decodedPubKey, pubKey)
     }
 
     @Test
     fun `RSA scheme finder by key type`() {
-        val keyPairRSA = Crypto.generateKeyPair("RSA_SHA256")
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
         val (privRSA, pubRSA) = keyPairRSA
         assertEquals(privRSA.algorithm, "RSA")
         assertEquals(pubRSA.algorithm, "RSA")
@@ -468,23 +444,22 @@ class CryptoUtilsTest {
 
     @Test
     fun `ECDSA secp256k1 scheme finder by key type`() {
-        val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
-        val (privK1, pubK1) = keyPairK1
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (privKey, pubKey) = keyPair
 
-        // Encode and decode keys as they would be transferred.
-        val kf = KeyFactory.getInstance("ECDSA", "BC")
-        val privK1Decoded = kf.generatePrivate(PKCS8EncodedKeySpec(privK1.encoded))
-        val pubK1Decoded = kf.generatePublic(X509EncodedKeySpec(pubK1.encoded))
+        // Encode and decode private key.
+        val privKeyDecoded = Crypto.decodePrivateKey(privKey.encoded)
+        val pubKeyDecoded = Crypto.decodePublicKey(pubKey.encoded)
 
-        assertEquals(privK1Decoded.algorithm, "ECDSA")
-        assertEquals((privK1Decoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
-        assertEquals(pubK1Decoded.algorithm, "ECDSA")
-        assertEquals((pubK1Decoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
+        assertEquals(privKeyDecoded.algorithm, "ECDSA")
+        assertEquals((privKeyDecoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
+        assertEquals(pubKeyDecoded.algorithm, "ECDSA")
+        assertEquals((pubKeyDecoded as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
     }
 
     @Test
     fun `ECDSA secp256r1 scheme finder by key type`() {
-        val keyPairR1 = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val (privR1, pubR1) = keyPairR1
         assertEquals(privR1.algorithm, "ECDSA")
         assertEquals((privR1 as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
@@ -494,7 +469,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `EdDSA scheme finder by key type`() {
-        val keyPairEd = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
         val (privEd, pubEd) = keyPairEd
 
         assertEquals(privEd.algorithm, "EdDSA")
@@ -505,7 +480,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `SPHINCS-256 scheme finder by key type`() {
-        val keyPairSP = Crypto.generateKeyPair("SPHINCS-256_SHA512")
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
         val (privSP, pubSP) = keyPairSP
         assertEquals(privSP.algorithm, "SPHINCS-256")
         assertEquals(pubSP.algorithm, "SPHINCS-256")
@@ -513,7 +488,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic EdDSA key-type detection and decoding`() {
-        val keyPairEd = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
+        val keyPairEd = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
         val (privEd, pubEd) = keyPairEd
         val encodedPrivEd = privEd.encoded
         val encodedPubEd = pubEd.encoded
@@ -529,7 +504,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic ECDSA secp256k1 key-type detection and decoding`() {
-        val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val (privK1, pubK1) = keyPairK1
         val encodedPrivK1 = privK1.encoded
         val encodedPubK1 = pubK1.encoded
@@ -545,7 +520,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic ECDSA secp256r1 key-type detection and decoding`() {
-        val keyPairR1 = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val (privR1, pubR1) = keyPairR1
         val encodedPrivR1 = privR1.encoded
         val encodedPubR1 = pubR1.encoded
@@ -561,7 +536,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic RSA key-type detection and decoding`() {
-        val keyPairRSA = Crypto.generateKeyPair("RSA_SHA256")
+        val keyPairRSA = Crypto.generateKeyPair(Crypto.RSA_SHA256)
         val (privRSA, pubRSA) = keyPairRSA
         val encodedPrivRSA = privRSA.encoded
         val encodedPubRSA = pubRSA.encoded
@@ -577,7 +552,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Automatic SPHINCS-256 key-type detection and decoding`() {
-        val keyPairSP = Crypto.generateKeyPair("SPHINCS-256_SHA512")
+        val keyPairSP = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
         val (privSP, pubSP) = keyPairSP
         val encodedPrivSP = privSP.encoded
         val encodedPubSP = pubSP.encoded
@@ -593,12 +568,12 @@ class CryptoUtilsTest {
 
     @Test
     fun `Failure test between K1 and R1 keys`() {
-        val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
         val decodedPrivK1 = Crypto.decodePrivateKey(encodedPrivK1)
 
-        val keyPairR1 = Crypto.generateKeyPair("ECDSA_SECP256R1_SHA256")
+        val keyPairR1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val privR1 = keyPairR1.private
         val encodedPrivR1 = privR1.encoded
         val decodedPrivR1 = Crypto.decodePrivateKey(encodedPrivR1)
@@ -608,7 +583,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Decoding Failure on randomdata as key`() {
-        val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 
@@ -628,7 +603,7 @@ class CryptoUtilsTest {
 
     @Test
     fun `Decoding Failure on malformed keys`() {
-        val keyPairK1 = Crypto.generateKeyPair("ECDSA_SECP256K1_SHA256")
+        val keyPairK1 = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
         val privK1 = keyPairK1.private
         val encodedPrivK1 = privK1.encoded
 

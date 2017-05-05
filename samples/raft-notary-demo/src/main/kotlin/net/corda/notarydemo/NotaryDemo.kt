@@ -15,6 +15,7 @@ import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess

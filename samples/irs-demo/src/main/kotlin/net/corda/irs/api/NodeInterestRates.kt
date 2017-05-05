@@ -7,7 +7,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.keys
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
@@ -224,7 +224,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return signingKey.signWithECDSA(ftx.rootHash.bytes, identity)
+            return signingKey.sign(ftx.rootHash.bytes, identity)
         }
         // DOCEND 1
     }

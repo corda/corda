@@ -127,10 +127,10 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: String? = null,
+            description: X500Name? = null,
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, PeerHandle(id, description ?: "In memory node $id"), advertisedServices.map(::ServiceHandle), executor, database = database)
+        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getDevX509Name("In memory node $id")), advertisedServices.map(::ServiceHandle), executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -198,8 +198,8 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
-        override fun toString() = description
+    data class PeerHandle(val id: Int, val description: X500Name) : SingleMessageRecipient {
+        override fun toString() = description.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
@@ -359,7 +359,7 @@ class InMemoryMessagingNetwork(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -375,6 +375,8 @@ class InMemoryMessagingNetwork(
             running = false
             netNodeHasShutdown(peerHandle)
         }
+
+        override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
         override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
@@ -466,6 +468,6 @@ class InMemoryMessagingNetwork(
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                X509Utilities.getDevX509Name(sender.description))
+                sender.description)
     }
 }

@@ -66,7 +66,7 @@ object UpdateBusinessDayFlow {
          */
         private fun getRecipients(): Iterable<NodeInfo> {
             val notaryNodes = serviceHub.networkMapCache.notaryNodes
-            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name }
+            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name.toString() }
             return notaryNodes + partyNodes
         }
 

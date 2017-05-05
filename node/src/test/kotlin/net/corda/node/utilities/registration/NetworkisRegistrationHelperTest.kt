@@ -8,6 +8,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.exists
 import net.corda.core.utilities.ALICE
 import net.corda.testing.TestNodeConfiguration
+import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
 import org.junit.Test
@@ -28,7 +29,7 @@ class NetworkRegistrationHelperTest {
         val identities = listOf("CORDA_CLIENT_CA",
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
-                .map { X500Name("CN=${it},O=R3,OU=corda,L=London,C=UK") }
+                .map { getTestX509Name(it) }
         val certs = identities.map { X509Utilities.createSelfSignedCACert(it).certificate }
                 .toTypedArray()
 

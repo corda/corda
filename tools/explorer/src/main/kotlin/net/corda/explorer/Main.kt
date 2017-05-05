@@ -266,7 +266,7 @@ fun main(args: Array<String>) {
                 // Party pay requests.
                 eventGenerator.moveCashGenerator.combine(Generator.pickOne(parties)) { command, (party, rpc) ->
                     println("${Instant.now()} [$i] SENDING ${command.amount} from $party to ${command.recipient}")
-                    command.startFlow(rpc).log(i, party.name)
+                    command.startFlow(rpc).log(i, party.name.toString())
                 }.generate(SplittableRandom())
 
             }

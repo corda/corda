@@ -266,7 +266,7 @@ class TwoPartyTradeFlowTests {
 
     // Creates a mock node with an overridden storage service that uses a RecordingMap, that lets us test the order
     // of gets and puts.
-    private fun makeNodeWithTracking(networkMapAddr: SingleMessageRecipient?, name: String, overrideServices: Map<ServiceInfo, KeyPair>? = null): MockNetwork.MockNode {
+    private fun makeNodeWithTracking(networkMapAddr: SingleMessageRecipient?, name: X500Name, overrideServices: Map<ServiceInfo, KeyPair>? = null): MockNetwork.MockNode {
         // Create a node in the mock network ...
         return net.createNode(networkMapAddr, -1, object : MockNetwork.Factory {
             override fun create(config: NodeConfiguration,

@@ -96,7 +96,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
-            val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name, fixOf.forDay).end
+            val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name.toString(), fixOf.forDay).end
             // TODO: add deadline to receive
             val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf), deadline))
 
