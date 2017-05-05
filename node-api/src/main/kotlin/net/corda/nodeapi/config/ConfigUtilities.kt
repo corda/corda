@@ -98,6 +98,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         HostAndPort::class -> getStringList(path).map(HostAndPort::fromString)
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
+        X500Name::class -> getStringList(path).map(::X500Name)
         Properties::class -> getConfigList(path).map(Config::toProperties)
         else -> if (elementClass.java.isEnum) {
             getStringList(path).map { parseEnum(elementClass.java, it) }

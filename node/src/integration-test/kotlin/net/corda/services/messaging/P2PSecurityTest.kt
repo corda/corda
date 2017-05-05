@@ -2,6 +2,7 @@ package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.getOrThrow
@@ -33,22 +34,22 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = random63BitValue().toString()
+        val incorrectNetworkMapName = X509Utilities.getDevX509Name(random63BitValue().toString())
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),
-                        "legalName" to incorrectNetworkMapName
+                        "legalName" to incorrectNetworkMapName.toString()
                 )
         ))
         // The connection will be rejected as the legal name doesn't match
-        assertThatThrownBy { node.getOrThrow() }.hasMessageContaining(incorrectNetworkMapName)
+        assertThatThrownBy { node.getOrThrow() }.hasMessageContaining(incorrectNetworkMapName.toString())
     }
 
     @Test
     fun `register with the network map service using a legal name different from the TLS CN`() {
-        startSimpleNode(X500Name(DUMMY_BANK_A.name)).use {
+        startSimpleNode(DUMMY_BANK_A.name).use {
             // Register with the network map using a different legal name
-            val response = it.registerWithNetworkMap(X500Name(DUMMY_BANK_B.name))
+            val response = it.registerWithNetworkMap(DUMMY_BANK_B.name)
             // We don't expect a response because the network map's host verification will prevent a connection back
             // to the attacker as the TLS CN will not match the legal name it has just provided
             assertThatExceptionOfType(TimeoutException::class.java).isThrownBy {

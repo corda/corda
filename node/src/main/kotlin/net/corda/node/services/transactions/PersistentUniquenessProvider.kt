@@ -54,7 +54,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                                       finalizables: MutableList<() -> Unit>) {
             insert[table.consumingTxHash] = entry.value.id
             insert[table.consumingIndex] = entry.value.inputIndex
-            insert[table.requestingParty.name] = entry.value.requestingParty.name
+            insert[table.requestingParty.name] = entry.value.requestingParty.name.toString()
             insert[table.requestingParty.owningKey] = entry.value.requestingParty.owningKey
         }
     })

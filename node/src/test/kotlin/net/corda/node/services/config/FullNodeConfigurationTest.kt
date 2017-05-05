@@ -12,7 +12,7 @@ class FullNodeConfigurationTest {
     @Test
     fun `Artemis special characters not permitted in RPC usernames`() {
         fun configWithRPCUsername(username: String): FullNodeConfiguration {
-            return testConfiguration(Paths.get("."), X500Name(ALICE.name), 0).copy(
+            return testConfiguration(Paths.get("."), ALICE.name, 0).copy(
                     rpcUsers = listOf(User(username, "pass", emptySet())))
         }
 

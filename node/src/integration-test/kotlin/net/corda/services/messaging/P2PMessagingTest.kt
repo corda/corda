@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -18,6 +19,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.freeLocalHostAndPort
+import net.corda.testing.getTestX509Name
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -30,8 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
     private companion object {
-        val DISTRIBUTED_SERVICE_NAME = X509Utilities.getDevX509Name("DistributedService")
-        val SERVICE_2_NAME = X509Utilities.getDevX509Name("Service Node 2")
+        val DISTRIBUTED_SERVICE_NAME = getTestX509Name("DistributedService")
+        val SERVICE_2_NAME = getTestX509Name("Service Node 2")
     }
 
     @Test
@@ -65,7 +67,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
         val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
-                listOf(root / DUMMY_MAP.name.toString(), root / SERVICE_2_NAME.toString()),
+                listOf(root / DUMMY_MAP.name.commonName, root / SERVICE_2_NAME.commonName),
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 
@@ -96,7 +98,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
     @Test
     fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
-        val distributedServiceNodes = startNotaryCluster("DistributedService", 2).getOrThrow()
+        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
             alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
@@ -121,7 +123,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
     @Test
     fun `distributed service request retries are persisted across client node restarts`() {
-        val distributedServiceNodes = startNotaryCluster("DistributedService", 2).getOrThrow()
+        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
             alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
@@ -194,7 +196,7 @@ class P2PMessagingTest : NodeBasedTest() {
             node.respondWith(node.info)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.net.getAddressOfParty(getPartyInfo(getNotary(serviceName.toString())!!)!!)
+            originatingNode.net.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection

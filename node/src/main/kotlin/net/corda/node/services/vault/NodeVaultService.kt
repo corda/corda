@@ -91,7 +91,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         stateStatus = Vault.StateStatus.UNCONSUMED
                         contractStateClassName = it.value.state.data.javaClass.name
                         contractState = it.value.state.serialize(storageKryo()).bytes
-                        notaryName = it.value.state.notary.name
+                        notaryName = it.value.state.notary.name.toString()
                         notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
                     }

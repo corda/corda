@@ -12,6 +12,7 @@ import net.corda.core.serialization.*;
 import net.corda.core.transactions.*;
 import net.corda.node.services.vault.schemas.*;
 import net.corda.testing.node.*;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.jetbrains.annotations.*;
 import org.jetbrains.exposed.sql.*;
 import org.junit.*;
@@ -129,7 +130,7 @@ public class VaultQueryJavaTests {
             QueryCriteria vaultCriteria = new VaultQueryCriteria(status, null, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
-            List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
+            List<X500Name> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
             QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealPartyNames);
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);
@@ -198,7 +199,7 @@ public class VaultQueryJavaTests {
             QueryCriteria vaultCriteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, contractStateTypes);
 
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
-            List<String> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
+            List<X500Name> dealPartyNames = Arrays.asList(getMEGA_CORP().getName());
             QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(linearIds, false, dealIds, dealPartyNames);
 
             QueryCriteria compositeCriteria = and(dealCriteriaAll, vaultCriteria);

@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.serialization.OpaqueBytes
+import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 
 /**
@@ -13,7 +14,7 @@ class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
     // can put in the key and actual name
     override fun toString() = "${owningKey.toBase58String()} <Anonymous>"
 
-    override fun nameOrNull(): String? = null
+    override fun nameOrNull(): X500Name? = null
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toAnonymous() = this

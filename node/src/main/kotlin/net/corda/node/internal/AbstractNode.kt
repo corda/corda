@@ -58,6 +58,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
@@ -338,7 +339,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: "ou=$serviceId,${configuration.myLegalName}"
+            val serviceName = it.name ?: X500Name("CN=$serviceId,${configuration.myLegalName}")
             val identity = obtainKeyPair(configuration.baseDirectory, serviceId + "-private-key", serviceId + "-public", serviceName).first
             ServiceEntry(it, identity)
         }
@@ -558,7 +559,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
     protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
 
-    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party, KeyPair> {
+    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: X500Name? = null): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -566,13 +567,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
         val privKeyFile = dir / privateKeyFileName
         val pubIdentityFile = dir / publicKeyFileName
-        val identityName = serviceName ?: configuration.myLegalName.toString()
+        val identityPrincipal: X500Name = serviceName ?: configuration.myLegalName
 
         val identityAndKey = if (!privKeyFile.exists()) {
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             keyPair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party(identityName, keyPair.public)
+            val myIdentity = Party(identityPrincipal, keyPair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
             myIdentity.serialize().writeToFile(pubIdentityFile)
@@ -582,9 +583,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
             val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-            if (myIdentity.name != identityName)
+            if (myIdentity.name != identityPrincipal)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "$identityName vs ${myIdentity.name}")
+                        "$identityPrincipal vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
             Pair(myIdentity, keyPair)

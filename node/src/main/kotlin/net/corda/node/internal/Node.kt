@@ -30,6 +30,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
@@ -317,4 +318,4 @@ class Node(override val configuration: FullNodeConfiguration,
 
 class ConfigurationException(message: String) : Exception(message)
 
-data class NetworkMapInfo(val address: HostAndPort, val legalName: String)
+data class NetworkMapInfo(val address: HostAndPort, val legalName: X500Name)

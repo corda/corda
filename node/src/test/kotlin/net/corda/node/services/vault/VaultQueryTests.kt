@@ -184,7 +184,7 @@ class VaultQueryTests {
 
 
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
-    val CASH_NOTARY: Party get() = Party("Notary Service", CASH_NOTARY_KEY.public)
+    val CASH_NOTARY: Party get() = Party(DUMMY_NOTARY.name, CASH_NOTARY_KEY.public)
 
     @Test
     fun `unconsumed states by notary`() {

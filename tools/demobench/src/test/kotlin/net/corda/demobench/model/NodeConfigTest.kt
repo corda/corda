@@ -144,7 +144,7 @@ class NodeConfigTest {
         assertEquals(prettyPrint("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"My Name\","
+                + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
                 + "\"rpcUsers\":["
@@ -166,12 +166,12 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         assertEquals(prettyPrint("{"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
-                + "\"myLegalName\":\"My Name\","
+                + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
                 + "\"networkMapService\":{\"address\":\"localhost:12345\",\"legalName\":\"CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH\"},"
                 + "\"p2pAddress\":\"localhost:10001\","
                 + "\"rpcAddress\":\"localhost:40002\","
@@ -194,7 +194,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))
@@ -203,7 +203,6 @@ class NodeConfigTest {
         val fullConfig = nodeConfig.parseAs<FullNodeConfiguration>()
 
         assertEquals(myLegalName, fullConfig.myLegalName)
-        assertEquals("London", fullConfig.nearestCity)
         assertEquals(localPort(40002), fullConfig.rpcAddress)
         assertEquals(localPort(10001), fullConfig.p2pAddress)
         assertEquals(listOf("my.service"), fullConfig.extraAdvertisedServiceIds)
@@ -224,7 +223,7 @@ class NodeConfigTest {
                 services = listOf("my.service"),
                 users = listOf(user("jenny"))
         )
-        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 12345)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         val nodeConfig = config.toFileConfig()
                 .withValue("basedir", ConfigValueFactory.fromAnyRef(baseDir.toString()))

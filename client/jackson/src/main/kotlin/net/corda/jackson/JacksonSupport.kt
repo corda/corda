@@ -17,6 +17,8 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.asn1.ASN1InputStream
+import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -32,22 +34,27 @@ object JacksonSupport {
     // If you change this API please update the docs in the docsite (json.rst)
 
     interface PartyObjectMapper {
+        @Deprecated("Use partyFromX500Name instead")
         fun partyFromName(partyName: String): Party?
+        fun partyFromPrincipal(principal: X500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
+        override fun partyFromPrincipal(principal: X500Name): Party? = rpc.partyFromX500Name(principal)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
     }
 
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
+        override fun partyFromPrincipal(principal: X500Name): Party? = identityService.partyFromX500Name(principal)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
+        override fun partyFromPrincipal(principal: X500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
     }
 
@@ -85,6 +92,10 @@ object JacksonSupport {
             // For OpaqueBytes
             addDeserializer(OpaqueBytes::class.java, OpaqueBytesDeserializer)
             addSerializer(OpaqueBytes::class.java, OpaqueBytesSerializer)
+
+            // For X.500 distinguished names
+            addDeserializer(X500Name::class.java, X500NameDeserializer)
+            addSerializer(X500Name::class.java, X500NameSerializer)
         }
     }
 
@@ -136,7 +147,7 @@ object JacksonSupport {
 
     object PartySerializer : JsonSerializer<Party>() {
         override fun serialize(obj: Party, generator: JsonGenerator, provider: SerializerProvider) {
-            generator.writeString(obj.name)
+            generator.writeString(obj.name.toString())
         }
     }
 
@@ -147,8 +158,28 @@ object JacksonSupport {
             }
 
             val mapper = parser.codec as PartyObjectMapper
-            // TODO this needs to use some industry identifier(s) not just these human readable names
-            return mapper.partyFromName(parser.text) ?: throw JsonParseException(parser, "Could not find a Party with name ${parser.text}")
+            val principal = X500Name(parser.text)
+            return mapper.partyFromPrincipal(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
+        }
+    }
+
+    object X500NameSerializer : JsonSerializer<X500Name>() {
+        override fun serialize(obj: X500Name, generator: JsonGenerator, provider: SerializerProvider) {
+            generator.writeString(obj.toString())
+        }
+    }
+
+    object X500NameDeserializer : JsonDeserializer<X500Name>() {
+        override fun deserialize(parser: JsonParser, context: DeserializationContext): X500Name {
+            if (parser.currentToken == JsonToken.FIELD_NAME) {
+                parser.nextToken()
+            }
+
+            return try {
+                X500Name(parser.text)
+            } catch(ex: IllegalArgumentException) {
+                throw JsonParseException(parser, "Invalid X.500 name ${parser.text}: ${ex.message}", ex)
+            }
         }
     }
 

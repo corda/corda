@@ -24,6 +24,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.crypto.AbstractParty
+import net.corda.core.crypto.commonName
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
@@ -147,7 +148,7 @@ class CashViewer : CordaView("Cash") {
          */
         val searchField = SearchField(cashStates,
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.contains(text, true) ?: false }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.commonName?.contains(text, true) ?: false }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {

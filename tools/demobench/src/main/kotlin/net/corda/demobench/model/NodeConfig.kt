@@ -1,6 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
+import net.corda.core.crypto.location
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -26,7 +27,7 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String? = legalName.getRDNs(BCStyle.L).singleOrNull()?.typesAndValues?.singleOrNull()?.value?.toString()
+    val nearestCity: String? = legalName.location
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
