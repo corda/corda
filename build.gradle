@@ -97,10 +97,6 @@ allprojects {
 
     // Use manual resource copying of log4j2.xml rather than source sets.
     // This prevents problems in IntelliJ with regard to duplicate source roots.
-    processResources {
-        from file("$rootDir/config/dev/log4j2.xml")
-    }
-
     processTestResources {
         from file("$rootDir/config/test/log4j2.xml")
     }
