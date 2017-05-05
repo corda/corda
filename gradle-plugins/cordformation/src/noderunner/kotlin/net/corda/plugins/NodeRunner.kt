@@ -39,13 +39,17 @@ fun main(args: Array<String>) {
 private abstract class JarType(private val jarName: String) {
     internal abstract fun acceptNodeConf(nodeConf: File): Boolean
     internal fun acceptDirAndStartProcess(dir: File, headless: Boolean, javaArgs: List<String>): Process? {
-        File(dir, jarName).exists() || return null
-        File(dir, "node.conf").let { it.exists() && acceptNodeConf(it) } || return null
+        if (!File(dir, jarName).exists()) {
+            return null
+        }
+        if (!File(dir, "node.conf").let { it.exists() && acceptNodeConf(it) }) {
+            return null
+        }
         val debugPort = debugPortAlloc.next()
         println("Starting $jarName in $dir on debug port $debugPort")
-        val proc = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs).start()
+        val process = (if (headless) ::HeadlessJavaCommand else ::TerminalWindowJavaCommand)(jarName, dir, debugPort, javaArgs).start()
         if (os == OS.MACOS) Thread.sleep(1000)
-        return proc
+        return process
     }
 }
 
