@@ -292,7 +292,7 @@ class VaultSchemaTest {
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = state.data.javaClass.name
             contractState = state.serialize().bytes
-            notaryName = state.notary.name
+            notaryName = state.notary.name.toString()
             notaryKey = state.notary.owningKey.toBase58String()
             recordedTime = Instant.now()
         }

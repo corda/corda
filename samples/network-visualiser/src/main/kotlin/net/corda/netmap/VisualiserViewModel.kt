@@ -7,9 +7,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
-import net.corda.core.crypto.commonName
 import net.corda.core.utilities.ProgressTracker
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
@@ -117,13 +115,13 @@ class VisualiserViewModel {
         bankCount = simulation.banks.size
         serviceCount = simulation.serviceProviders.size + simulation.regulators.size
         for ((index, bank) in simulation.banks.withIndex()) {
-            nodesToWidgets[bank] = makeNodeWidget(bank, "bank", bank.configuration.displayName, NetworkMapVisualiser.NodeType.BANK, index)
+            nodesToWidgets[bank] = makeNodeWidget(bank, "bank", bank.configuration.myLegalName, NetworkMapVisualiser.NodeType.BANK, index)
         }
         for ((index, service) in simulation.serviceProviders.withIndex()) {
-            nodesToWidgets[service] = makeNodeWidget(service, "network-service", service.configuration.displayName, NetworkMapVisualiser.NodeType.SERVICE, index)
+            nodesToWidgets[service] = makeNodeWidget(service, "network-service", service.configuration.myLegalName, NetworkMapVisualiser.NodeType.SERVICE, index)
         }
         for ((index, service) in simulation.regulators.withIndex()) {
-            nodesToWidgets[service] = makeNodeWidget(service, "regulator", service.configuration.displayName, NetworkMapVisualiser.NodeType.SERVICE, index + simulation.serviceProviders.size)
+            nodesToWidgets[service] = makeNodeWidget(service, "regulator", service.configuration.myLegalName, NetworkMapVisualiser.NodeType.SERVICE, index + simulation.serviceProviders.size)
         }
     }
 
@@ -221,10 +219,4 @@ class VisualiserViewModel {
         view.root.children.add(bullet)
     }
 
-}
-
-private val NodeConfiguration.displayName: String get() = try {
-    X500Name(myLegalName).commonName
-} catch(ex: IllegalArgumentException) {
-    myLegalName
 }

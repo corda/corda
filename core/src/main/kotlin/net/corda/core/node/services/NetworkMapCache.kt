@@ -6,6 +6,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.security.PublicKey
 
@@ -62,7 +63,7 @@ interface NetworkMapCache {
     fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = getNodesWithService(type).firstOrNull()
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(name: String): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == name }
+    fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
 
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of
@@ -82,9 +83,9 @@ interface NetworkMapCache {
     fun getPartyInfo(party: Party): PartyInfo?
 
     /** Gets a notary identity by the given name. */
-    fun getNotary(name: String): Party? {
+    fun getNotary(principal: X500Name): Party? {
         val notaryNode = notaryNodes.randomOrNull {
-            it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == name }
+            it.advertisedServices.any { it.info.type.isSubTypeOf(ServiceType.notary) && it.info.name == principal }
         }
         return notaryNode?.notaryIdentity
     }

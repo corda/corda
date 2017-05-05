@@ -9,6 +9,7 @@ import net.corda.core.node.services.vault.QueryCriteria.AndComposition
 import net.corda.core.node.services.vault.QueryCriteria.OrComposition
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
+import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 
@@ -26,10 +27,10 @@ sealed class QueryCriteria {
             val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             val stateRefs: List<StateRef>? = null,
             val contractStateTypes: Set<Class<out ContractState>>? = null,
-            val notaryName: List<String>? = null,
+            val notaryName: List<X500Name>? = null,
             val includeSoftlockedStates: Boolean? = true,
             val timeCondition: Logical<TimeInstantType, Array<Instant>>? = null,
-            val participantIdentities: List<String>? = null) : QueryCriteria()
+            val participantIdentities: List<X500Name>? = null) : QueryCriteria()
 
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
@@ -38,7 +39,7 @@ sealed class QueryCriteria {
             val linearId: List<UniqueIdentifier>? = null,
             val latestOnly: Boolean? = true,
             val dealRef: List<String>? = null,
-            val dealPartyName: List<String>? = null) : QueryCriteria()
+            val dealPartyName: List<X500Name>? = null) : QueryCriteria()
 
    /**
     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
@@ -48,11 +49,11 @@ sealed class QueryCriteria {
     *   [Commodity] as used in [CommodityContract] state
     */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
-            val ownerIdentity: List<String>? = null,
+            val ownerIdentity: List<X500Name>? = null,
             val quantity: Logical<*,Long>? = null,
             val tokenType: List<Class<out Any>>? = null,
             val tokenValue: List<String>? = null,
-            val issuerPartyName: List<String>? = null,
+            val issuerPartyName: List<X500Name>? = null,
             val issuerRef: List<OpaqueBytes>? = null,
             val exitKeyIdentity: List<String>? = null) : QueryCriteria()
 

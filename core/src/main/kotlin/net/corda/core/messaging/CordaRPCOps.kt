@@ -236,6 +236,7 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] with the given name as it's [Party.name]
      */
+    @Deprecated("Use partyFromX500Name instead")
     fun partyFromName(name: String): Party?
 
     /**

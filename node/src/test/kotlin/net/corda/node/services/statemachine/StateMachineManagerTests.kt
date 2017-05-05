@@ -33,6 +33,7 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
+import net.corda.testing.getTestX509Name
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
@@ -43,6 +44,7 @@ import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -74,7 +76,7 @@ class StateMachineManagerTests {
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
-        val notaryService = ServiceInfo(ValidatingNotaryService.type, "CN=notary-service-2000,O=R3,OU=corda,L=London,C=UK")
+        val notaryService = ServiceInfo(ValidatingNotaryService.type, getTestX509Name("notary-service-2000"))
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.

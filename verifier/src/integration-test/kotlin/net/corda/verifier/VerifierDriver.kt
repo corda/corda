@@ -7,6 +7,8 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService
 import com.google.common.util.concurrent.SettableFuture
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.map
 import net.corda.core.random63BitValue
@@ -32,6 +34,7 @@ import org.apache.activemq.artemis.core.security.CheckType
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.spi.core.security.ActiveMQSecurityManager
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -43,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
     /** Starts a lightweight verification requestor that implements the Node's Verifier API */
-    fun startVerificationRequestor(name: String): ListenableFuture<VerificationRequestorHandle>
+    fun startVerificationRequestor(name: X500Name): ListenableFuture<VerificationRequestorHandle>
 
     /** Starts an out of process verifier connected to [address] */
     fun startVerifier(address: HostAndPort): ListenableFuture<VerifierHandle>
@@ -170,15 +173,15 @@ data class VerifierDriverDSL(
         }
     }
 
-    override fun startVerificationRequestor(name: String): ListenableFuture<VerificationRequestorHandle> {
+    override fun startVerificationRequestor(name: X500Name): ListenableFuture<VerificationRequestorHandle> {
         val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
         return driverDSL.executorService.submit<VerificationRequestorHandle> {
             startVerificationRequestorInternal(name, hostAndPort)
         }
     }
 
-    private fun startVerificationRequestorInternal(name: String, hostAndPort: HostAndPort): VerificationRequestorHandle {
-        val baseDir = driverDSL.driverDirectory / name
+    private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: HostAndPort): VerificationRequestorHandle {
+        val baseDir = driverDSL.driverDirectory / name.commonName
         val sslConfig = object : SSLConfiguration {
             override val certificatesDirectory = baseDir / "certificates"
             override val keyStorePassword: String get() = "cordacadevpass"
@@ -246,8 +249,8 @@ data class VerifierDriverDSL(
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val processFuture = driverDSL.executorService.submit<Process> {
-            val verifierName = "verifier$id"
-            val baseDirectory = driverDSL.driverDirectory / verifierName
+            val verifierName = X509Utilities.getDevX509Name("verifier$id")
+            val baseDirectory = driverDSL.driverDirectory / verifierName.commonName
             val config = createConfiguration(baseDirectory, address)
             val configFilename = "verifier.conf"
             writeConfig(baseDirectory, configFilename, config)

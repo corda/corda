@@ -1,6 +1,7 @@
 package net.corda.testing.messaging
 
 import com.google.common.net.HostAndPort
+import net.corda.core.crypto.X509Utilities
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection

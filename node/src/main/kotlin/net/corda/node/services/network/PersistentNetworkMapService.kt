@@ -5,6 +5,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.util.Collections.synchronizedMap
@@ -26,12 +27,13 @@ class PersistentNetworkMapService(services: ServiceHubInternal, minimumPlatformV
     }
 
     override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = synchronizedMap(object : AbstractJDBCHashMap<Party, NodeRegistrationInfo, Table>(Table, loadOnInit = true) {
-        override fun keyFromRow(row: ResultRow): Party = Party(row[table.nodeParty.name], row[table.nodeParty.owningKey])
+        // TODO: We should understand an X500Name database field type, rather than manually doing the conversion ourselves
+        override fun keyFromRow(row: ResultRow): Party = Party(X500Name(row[table.nodeParty.name]), row[table.nodeParty.owningKey])
 
         override fun valueFromRow(row: ResultRow): NodeRegistrationInfo = deserializeFromBlob(row[table.registrationInfo])
 
         override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<Party, NodeRegistrationInfo>, finalizables: MutableList<() -> Unit>) {
-            insert[table.nodeParty.name] = entry.key.name
+            insert[table.nodeParty.name] = entry.key.name.toString()
             insert[table.nodeParty.owningKey] = entry.key.owningKey
         }
 

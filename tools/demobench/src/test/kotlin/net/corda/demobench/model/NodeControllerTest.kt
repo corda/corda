@@ -101,7 +101,7 @@ class NodeControllerTest {
     @Test
     fun `test register non-network-map node`() {
         val config = createConfig(legalName = X500Name("CN=Node is not Network Map,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"))
-        config.networkMap = NetworkMapConfig(X500Name(DUMMY_NOTARY.name), 10000)
+        config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 10000)
         assertFalse(config.isNetworkMap())
 
         assertFalse(controller.hasNetworkMap())

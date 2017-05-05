@@ -19,14 +19,8 @@ import javax.ws.rs.core.Response
 @Path("bank")
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: String, val issueToPartyRefAsString: String,
-                                  val issuerBankName: String) {
-        constructor(amount: Long, currency: String,
-                    issueToPartyName: X500Name, issueToPartyRefAsString: String,
-                    issuerBankName: X500Name) : this(amount, currency,
-                issueToPartyName.toString(), issueToPartyRefAsString,
-                issuerBankName.toString())
-    }
+                                  val issueToPartyName: X500Name, val issueToPartyRefAsString: String,
+                                  val issuerBankName: X500Name)
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
@@ -47,9 +41,9 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     @Consumes(MediaType.APPLICATION_JSON)
     fun issueAssetRequest(params: IssueRequestParams): Response {
         // Resolve parties via RPC
-        val issueToParty = rpc.partyFromName(params.issueToPartyName)
+        val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
                 ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-        val issuerBankParty = rpc.partyFromName(params.issuerBankName)
+        val issuerBankParty = rpc.partyFromX500Name(params.issuerBankName)
                 ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
 
         val amount = Amount(params.amount, currency(params.currency))

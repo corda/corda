@@ -36,9 +36,9 @@ class BankOfCordaClientApi(val hostAndPort: HostAndPort) {
         val proxy = client.proxy()
 
         // Resolve parties via RPC
-        val issueToParty = proxy.partyFromName(params.issueToPartyName)
+        val issueToParty = proxy.partyFromX500Name(params.issueToPartyName)
                 ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-        val issuerBankParty = proxy.partyFromName(params.issuerBankName)
+        val issuerBankParty = proxy.partyFromX500Name(params.issuerBankName)
                 ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
 
         val amount = Amount(params.amount, currency(params.currency))

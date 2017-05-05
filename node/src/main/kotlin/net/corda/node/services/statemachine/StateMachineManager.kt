@@ -281,8 +281,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionMessage(message: ReceivedMessage) {
         val sessionMessage = message.data.deserialize<SessionMessage>()
-        // TODO Look up the party with the full X.500 name instead of just the legal name
-        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
+        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer)?.legalIdentity
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)

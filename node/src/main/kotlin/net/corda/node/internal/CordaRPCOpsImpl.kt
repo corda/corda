@@ -173,6 +173,7 @@ class CordaRPCOpsImpl(
 
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
+    @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name)= services.identityService.partyFromX500Name(x500Name)
 

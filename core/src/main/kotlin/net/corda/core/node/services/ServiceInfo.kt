@@ -11,15 +11,15 @@ import org.bouncycastle.asn1.x500.X500Name
  *             grouping identifier for nodes collectively running a distributed service.
  */
 @CordaSerializable
-data class ServiceInfo(val type: ServiceType, val name: String? = null) {
-    constructor(type: ServiceType, name: X500Name?) : this(type, name?.toString())
+data class ServiceInfo(val type: ServiceType, val name: X500Name? = null) {
     companion object {
         fun parse(encoded: String): ServiceInfo {
             val parts = encoded.split("|")
             require(parts.size in 1..2) { "Invalid number of elements found" }
             val type = ServiceType.parse(parts[0])
             val name = parts.getOrNull(1)
-            return ServiceInfo(type, name)
+            val principal = name?.let { X500Name(it) }
+            return ServiceInfo(type, principal)
         }
     }
 

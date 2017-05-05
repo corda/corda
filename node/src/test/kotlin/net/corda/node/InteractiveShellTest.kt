@@ -29,7 +29,7 @@ class InteractiveShellTest {
         constructor(b: Int, c: String) : this(b.toString() + c)
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
-        constructor(party: Party) : this(party.name)
+        constructor(party: Party) : this(party.name.toString())
         override fun call() = a
     }
 
@@ -67,7 +67,7 @@ class InteractiveShellTest {
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
-    fun party() = check("party: \"$someCorpLegalName\"", someCorpLegalName)
+    fun party() = check("party: \"$someCorpLegalName\"", someCorpLegalName.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> {
         override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, retrySend: Boolean): UntrustworthyData<T> {

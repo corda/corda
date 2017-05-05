@@ -3,8 +3,8 @@ package net.corda.core.node.services
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.AnonymousParty
 import net.corda.core.crypto.Party
-import java.security.PublicKey
 import org.bouncycastle.asn1.x500.X500Name
+import java.security.PublicKey
 
 /**
  * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
@@ -25,6 +25,7 @@ interface IdentityService {
     // but for now this is not supported.
 
     fun partyFromKey(key: PublicKey): Party?
+    @Deprecated("Use partyFromX500Name")
     fun partyFromName(name: String): Party?
     fun partyFromX500Name(principal: X500Name): Party?
 

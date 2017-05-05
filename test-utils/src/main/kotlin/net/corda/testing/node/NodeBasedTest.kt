@@ -3,6 +3,8 @@ package net.corda.testing.node
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.createDirectories
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.flatMap
 import net.corda.core.map
@@ -19,6 +21,7 @@ import net.corda.nodeapi.config.parseAs
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -59,7 +62,7 @@ abstract class NodeBasedTest {
      * You can use this method to start the network map node in a more customised manner. Otherwise it
      * will automatically be started with the default parameters.
      */
-    fun startNetworkMapNode(legalName: String = DUMMY_MAP.name,
+    fun startNetworkMapNode(legalName: X500Name = DUMMY_MAP.name,
                             platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
@@ -70,7 +73,7 @@ abstract class NodeBasedTest {
         }
     }
 
-    fun startNode(legalName: String,
+    fun startNode(legalName: X500Name,
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
@@ -83,18 +86,18 @@ abstract class NodeBasedTest {
                 mapOf(
                         "networkMapService" to mapOf(
                                 "address" to networkMapNode.configuration.p2pAddress.toString(),
-                                "legalName" to networkMapNode.info.legalIdentity.name
+                                "legalName" to networkMapNode.info.legalIdentity.name.toString()
                         )
                 ) + configOverrides
         )
         return node.networkMapRegistrationFuture.map { node }
     }
 
-    fun startNotaryCluster(notaryName: String,
+    fun startNotaryCluster(notaryName: X500Name,
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
+                (0 until clusterSize).map { tempFolder.root.toPath() / "${notaryName.commonName}-$it" },
                 serviceType.id,
                 notaryName)
 
@@ -102,13 +105,13 @@ abstract class NodeBasedTest {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                "$notaryName-0",
+                X509Utilities.getDevX509Name("${notaryName.commonName}-0"),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    "$notaryName-$it",
+                    X509Utilities.getDevX509Name("${notaryName.commonName}-$it"),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],
@@ -120,18 +123,18 @@ abstract class NodeBasedTest {
         }
     }
 
-    private fun startNodeInternal(legalName: String,
+    private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
-        val baseDirectory = (tempFolder.root.toPath() / legalName).createDirectories()
+        val baseDirectory = (tempFolder.root.toPath() / legalName.commonName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to legalName,
+                        "myLegalName" to legalName.toString(),
                         "p2pAddress" to localPort[0].toString(),
                         "rpcAddress" to localPort[1].toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
@@ -148,7 +151,7 @@ abstract class NodeBasedTest {
         val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
         node.start()
         nodes += node
-        thread(name = legalName) {
+        thread(name = legalName.commonName) {
             node.run()
         }
         return node

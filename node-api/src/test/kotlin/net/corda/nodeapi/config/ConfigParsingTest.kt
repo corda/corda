@@ -6,7 +6,9 @@ import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
+import net.corda.testing.getTestX509Name
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
@@ -15,6 +17,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.full.primaryConstructor
+import kotlin.test.assertEquals
 
 class ConfigParsingTest {
     @Test
@@ -107,6 +110,11 @@ class ConfigParsingTest {
         val config = config("values" to listOf("a", "a", "b"))
         assertThat(config.parseAs<StringSetData>().values).containsOnly("a", "b")
         assertThat(empty().parseAs<StringSetData>().values).isEmpty()
+    }
+
+    @Test
+    fun x500Name() {
+        testPropertyType<X500NameData, X500NameListData, X500Name>(getTestX509Name("Mock Node"), getTestX509Name("Mock Node 2"), valuesToString = true)
     }
 
     @Test
@@ -223,6 +231,8 @@ class ConfigParsingTest {
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>
     data class URLListData(override val values: List<URL>) : ListData<URL>
+    data class X500NameData(override val value: X500Name) : SingleData<X500Name>
+    data class X500NameListData(override val values: List<X500Name>) : ListData<X500Name>
     data class PropertiesData(override val value: Properties) : SingleData<Properties>
     data class PropertiesListData(override val values: List<Properties>) : ListData<Properties>
     data class MultiPropertyData(val i: Int, val b: Boolean, val l: List<String>)
