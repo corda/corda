@@ -28,17 +28,17 @@ fun main(args: Array<String>) {
     val javaArgs = args.filter { it != HEADLESS_FLAG }
     println("Starting nodes in $workingDir")
     workingDir.listFiles { file -> file.isDirectory }.forEach { dir ->
-        listOf(NodeJar, WebJar).forEach { jar ->
-            jar.maybeStartProcess(headless, dir, javaArgs)?.let { startedProcesses += it }
+        listOf(NodeJarType, WebJarType).forEach { jarType ->
+            jarType.acceptDirAndStartProcess(dir, headless, javaArgs)?.let { startedProcesses += it }
         }
     }
     println("Started ${startedProcesses.size} processes")
     println("Finished starting nodes")
 }
 
-private abstract class Jar(private val jarName: String) {
+private abstract class JarType(private val jarName: String) {
     internal abstract fun acceptNodeConf(nodeConf: File): Boolean
-    internal fun maybeStartProcess(headless: Boolean, dir: File, javaArgs: List<String>): Process? {
+    internal fun acceptDirAndStartProcess(dir: File, headless: Boolean, javaArgs: List<String>): Process? {
         File(dir, jarName).exists() || return null
         File(dir, "node.conf").let { it.exists() && acceptNodeConf(it) } || return null
         val debugPort = debugPortAlloc.next()
@@ -49,11 +49,11 @@ private abstract class Jar(private val jarName: String) {
     }
 }
 
-private object NodeJar : Jar("corda.jar") {
+private object NodeJarType : JarType("corda.jar") {
     override fun acceptNodeConf(nodeConf: File) = true
 }
 
-private object WebJar : Jar("corda-webserver.jar") {
+private object WebJarType : JarType("corda-webserver.jar") {
     // TODO: Add a webserver.conf, or use TypeSafe config instead of this hack
     override fun acceptNodeConf(nodeConf: File) = Files.lines(nodeConf.toPath()).anyMatch { "webAddress" in it }
 }
