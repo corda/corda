@@ -111,15 +111,13 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultQueryAPIJavaHelpers
-    fun <T : ContractState> vaultQueryBy(): Vault.Page<T> = vaultQueryBy()
-    fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria)
-    fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging)
-    fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting)
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria = criteria)
+    fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging = paging)
+    fun <T : ContractState> vaultQueryByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting = sorting)
 
-    fun <T : ContractState> vaultTrackBy(): Vault.PageAndUpdates<T> = vaultTrackBy()
-    fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria)
-    fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging)
-    fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, Sort(emptySet()))
+    fun <T : ContractState> vaultTrackByCriteria(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria = criteria)
+    fun <T : ContractState> vaultTrackByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging = paging)
+    fun <T : ContractState> vaultTrackByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, sorting = sorting)
     // DOCEND VaultQueryAPIJavaHelpers
 
     /**
