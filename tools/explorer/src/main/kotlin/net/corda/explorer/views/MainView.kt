@@ -23,6 +23,7 @@ import net.corda.client.jfx.model.observableList
 import net.corda.client.jfx.model.observableValue
 import net.corda.client.jfx.utils.ChosenList
 import net.corda.client.jfx.utils.map
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaViewModel
 import tornadofx.*
 
@@ -49,7 +50,7 @@ class MainView : View() {
 
     init {
         // Header
-        userButton.textProperty().bind(myIdentity.map { it?.legalIdentity?.name })
+        userButton.textProperty().bind(myIdentity.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } })
         exit.setOnAction {
             (root.scene.window as Stage).fireEvent(WindowEvent(root.scene.window, WindowEvent.WINDOW_CLOSE_REQUEST))
         }
