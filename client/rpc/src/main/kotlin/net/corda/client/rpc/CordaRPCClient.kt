@@ -147,7 +147,7 @@ class CordaRPCClient(val host: HostAndPort, override val config: SSLConfiguratio
      */
     @JvmOverloads
     @Throws(RPCException::class)
-    fun proxy(timeout: Duration? = null, minVersion: Int = 0): CordaRPCOps {
+    fun proxy(timeout: Duration? = Duration.ofSeconds(30), minVersion: Int = 0): CordaRPCOps {
         return state.locked {
             check(running) { "Client must have been started first" }
             log.logElapsedTime("Proxy build") {
