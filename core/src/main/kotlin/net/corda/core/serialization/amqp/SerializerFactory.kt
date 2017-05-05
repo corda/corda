@@ -29,6 +29,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: do we need to support a transient annotation to exclude certain properties?
 // TODO: incorporate the class carpenter for classes not on the classpath.
 // TODO: apply class loader logic and an "app context" throughout this code.
+// TODO: schema evolution solution when the fingerprints do not line up.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
