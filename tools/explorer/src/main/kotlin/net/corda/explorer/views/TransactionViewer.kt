@@ -30,6 +30,7 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.formatters.Formatter
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
@@ -135,21 +136,17 @@ class TransactionViewer : CordaView("Transactions") {
             column("Output", Transaction::outputs).cellFormat { text = it.toText() }
             column("Input Party", Transaction::inputParties).setCustomCellFactory {
                 label {
-                    text = it.flatten().map {
-                        it.value?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) }
-                    }.filterNotNull().toSet().joinToString()
+                    text = it.formatJoinPartyNames(formatter = PartyNameFormatter.short)
                     tooltip {
-                        text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString("\n")
+                        text = it.formatJoinPartyNames("\n", PartyNameFormatter.full)
                     }
                 }
             }
             column("Output Party", Transaction::outputParties).setCustomCellFactory {
                 label {
-                    text = it.flatten().map {
-                        it.value?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) }
-                    }.filterNotNull().toSet().joinToString()
+                    text = it.formatJoinPartyNames(formatter = PartyNameFormatter.short)
                     tooltip {
-                        text = it.flatten().map { it.value?.legalIdentity?.name }.filterNotNull().toSet().joinToString("\n")
+                        text = it.formatJoinPartyNames("\n", PartyNameFormatter.full)
                     }
                 }
             }
@@ -171,6 +168,12 @@ class TransactionViewer : CordaView("Transactions") {
         matchingTransactionsLabel.textProperty().bind(Bindings.size(transactionViewTable.items).map {
             "$it matching transaction${if (it == 1) "" else "s"}"
         })
+    }
+
+    private fun ObservableList<List<ObservableValue<NodeInfo?>>>.formatJoinPartyNames(separator: String = "", formatter: Formatter<String>): String {
+        return flatten().map {
+            it.value?.legalIdentity?.let { formatter.format(it.name) }
+        }.filterNotNull().toSet().joinToString(separator)
     }
 
     private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }
