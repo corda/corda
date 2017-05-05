@@ -5,10 +5,8 @@ package net.corda.contracts.testing
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.*
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -20,12 +18,16 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
-fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>) {
+@JvmOverloads
+fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
+                                     revisions: Int? = 0,
+                                     participants: List<PublicKey> = emptyList()) : Vault<DealState> {
     val freshKey = keyManagementService.freshKey()
+
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = listOf(freshKey.public)))
+            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
@@ -33,19 +35,40 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>) {
     }
 
     recordTransactions(transactions)
+
+    // Get all the StateAndRefs of all the generated transactions.
+    val states = transactions.flatMap { stx ->
+        stx.tx.outputs.indices.map { i -> stx.tx.outRef<DealState>(i) }
+    }
+
+    return Vault(states)
 }
 
-fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int) {
+@JvmOverloads
+fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
+                                            uid: UniqueIdentifier = UniqueIdentifier(),
+                                            participants: List<PublicKey> = emptyList()) : Vault<LinearState> {
     val freshKey = keyManagementService.freshKey()
-    for (i in 1..numberToCreate) {
-        // Issue a deal state
+
+    val transactions: List<SignedTransaction> = (1..numberToCreate).map {
+        // Issue a Linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(participants = listOf(freshKey.public)))
+            addOutputState(DummyLinearContract.State(linearId = uid, participants = participants.plus(freshKey.public)))
             signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
-        recordTransactions(dummyIssue.toSignedTransaction())
+
+        return@map dummyIssue.toSignedTransaction(true)
     }
+
+    recordTransactions(transactions)
+
+    // Get all the StateAndRefs of all the generated transactions.
+    val states = transactions.flatMap { stx ->
+        stx.tx.outputs.indices.map { i -> stx.tx.outRef<LinearState>(i) }
+    }
+
+    return Vault(states)
 }
 
 /**

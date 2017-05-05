@@ -81,13 +81,14 @@ class CommercialPaper : Contract {
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
+        // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
                         issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.toBase58String(),
@@ -100,6 +101,7 @@ class CommercialPaper : Contract {
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
+        // DOCEND VaultIndexedQueryCriteria
     }
 
     interface Clauses {
