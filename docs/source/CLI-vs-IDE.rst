@@ -1,7 +1,7 @@
 CLI vs IDE
 ==========
 
-We have tried to make every demo, example, tutorial and sample usable via both the command line and the IntelliJ IDE.
+We have tried to make every example, tutorial and sample usable via both the command line and the IntelliJ IDE.
 Most developers will find writing, editing and debugging code more easy with tools such as an IDE. But when a production node 
 is deployed, it will be controlled via the command line - no organisation allows their systems to be running via
 a developer environment.
