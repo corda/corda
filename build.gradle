@@ -123,6 +123,11 @@ allprojects {
         }
     }
 
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperties['java.io.tmpdir'] = buildDir
+    }
+
     group 'net.corda'
     version "$corda_release_version"
 

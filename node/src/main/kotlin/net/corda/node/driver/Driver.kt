@@ -614,7 +614,8 @@ class DriverDSL(
 
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}"
+                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                        "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"
@@ -646,7 +647,10 @@ class DriverDSL(
                         className = className, // cannot directly get class for this, so just use string
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
-                        extraJvmArguments = listOf("-Dname=node-${handle.configuration.p2pAddress}-webserver"),
+                        extraJvmArguments = listOf(
+                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                        ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
             }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
