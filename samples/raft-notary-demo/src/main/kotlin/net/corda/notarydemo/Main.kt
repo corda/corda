@@ -12,6 +12,7 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Paths
 
 /** Creates and starts all nodes required for the demo. */
@@ -21,7 +22,7 @@ fun main(args: Array<String>) {
     driver(isDebug = true, driverDirectory = Paths.get("build") / "notary-demo-nodes", networkMapStrategy = networkMap) {
         startNode(ALICE.name, rpcUsers = demoUser)
         startNode(BOB.name)
-        startNotaryCluster("Raft", clusterSize = 3, type = RaftValidatingNotaryService.type)
+        startNotaryCluster(X500Name("CN=Raft,O=R3,OU=corda,L=Zurich,C=CH"), clusterSize = 3, type = RaftValidatingNotaryService.type)
         waitForAllNodesToFinish()
     }
 }
