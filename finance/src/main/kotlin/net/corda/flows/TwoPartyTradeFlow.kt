@@ -3,7 +3,10 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.Party
+import net.corda.core.crypto.expandedCompositeKeys
+import net.corda.core.crypto.signWithECDSA
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -36,6 +39,8 @@ import java.util.*
  * that represents an atomic asset swap.
  *
  * Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
+ *
+ * TODO: Refactor this using the [CollectSignaturesFlow]. Note. It requires a large docsite update!
  */
 object TwoPartyTradeFlow {
     // TODO: Common elements in multi-party transaction consensus and signing should be refactored into a superclass of this

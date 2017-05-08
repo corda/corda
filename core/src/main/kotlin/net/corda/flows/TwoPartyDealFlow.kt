@@ -27,7 +27,7 @@ import java.security.PublicKey
  *
  * TODO: Also, the term Deal is used here where we might prefer Agreement.
  *
- * TODO: Consider whether we can merge this with [TwoPartyTradeFlow]
+ * TODO: Make this flow more generic.
  *
  */
 object TwoPartyDealFlow {

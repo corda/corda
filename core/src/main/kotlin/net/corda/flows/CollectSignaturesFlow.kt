@@ -159,8 +159,6 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  *              val flow = object : SignTransactionFlow(otherParty) {
  *                  @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {
  *                      val tx = stx.tx
- *                      "There should only be one output state" using (tx.outputs.size == 1)
- *                      "There should only be one output state" using (tx.inputs.isEmpty())
  *                      val magicNumberState = tx.outputs.single().data as DummyContract.MultiOwnerState
  *                      "Must be 1337 or greater" using (magicNumberState.magicNumber >= 1337)
  *                  }
