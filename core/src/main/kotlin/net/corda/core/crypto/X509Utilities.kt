@@ -40,6 +40,8 @@ object X509Utilities {
     private val CLIENT_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
     private val CA_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage)
     private val CLIENT_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth)
+
+    private val DEFAULT_VALIDITY_WINDOW = Pair(0, 365 * 10)
     /**
      * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range
      * @param daysBefore number of days to roll back returned start date relative to current date
@@ -78,12 +80,13 @@ object X509Utilities {
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
      * @param subject the cert Subject will be populated with the domain string
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
+     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
-    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): CertificateAndKey {
+    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
         val keyPair = generateKeyPair(signatureScheme)
-        val window = getCertificateValidityWindow(0, 365 * 10)
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
         val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, signatureScheme, window, pathLength = 2)
         return CertificateAndKey(cert, keyPair)
     }
@@ -93,13 +96,14 @@ object X509Utilities {
      * @param subject subject of the generated certificate.
      * @param ca The Public certificate and KeyPair of the root CA certificate above this used to sign it
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
+     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
      */
-    fun createIntermediateCert(subject: X500Name, ca: CertificateAndKey, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): CertificateAndKey {
+    fun createIntermediateCert(subject: X500Name, ca: CertificateAndKey, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(0, 365 * 10, ca.certificate.notBefore, ca.certificate.notAfter)
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
         val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, signatureScheme, window, pathLength = 1)
         return CertificateAndKey(cert, keyPair)
     }
@@ -112,6 +116,7 @@ object X509Utilities {
      * @param subjectAlternativeNameDomains A set of alternate DNS names to be supported by the certificate during validation of the TLS handshakes
      * @param subjectAlternativeNameIps A set of alternate IP addresses to be supported by the certificate during validation of the TLS handshakes
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
+     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return The generated X509Certificate suitable for use as a Server/Client certificate in TLS.
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
@@ -119,10 +124,11 @@ object X509Utilities {
                          ca: CertificateAndKey,
                          subjectAlternativeNameDomains: List<String>,
                          subjectAlternativeNameIps: List<String>,
-                         signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): X509Certificate {
+                         signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
+                         validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
 
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(0, 365 * 10, ca.certificate.notBefore, ca.certificate.notAfter)
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
         val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
         val ipAddresses = subjectAlternativeNameIps.filter {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
