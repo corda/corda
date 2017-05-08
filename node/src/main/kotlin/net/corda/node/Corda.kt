@@ -3,7 +3,6 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
-import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -25,7 +24,6 @@ import java.net.InetAddress
 import java.nio.file.Paths
 import java.util.*
 import kotlin.system.exitProcess
-import kotlin.system.measureTimeMillis
 
 private var renderBasicInfoToConsole = true
 
@@ -125,7 +123,7 @@ fun main(args: Array<String>) {
     log.info("bootclasspath: ${info.bootClassPath}")
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
-    checkForSlowLocalhostResolution()
+    log.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
     val agentProperties = sun.misc.VMSupport.getAgentProperties()
     if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
@@ -166,7 +164,7 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
-private fun checkForSlowLocalhostResolution() {
+private fun lookupMachineNameAndMaybeWarn(): String {
     val start = System.currentTimeMillis()
     val hostName: String = InetAddress.getLocalHost().hostName
     val elapsed = System.currentTimeMillis() - start
@@ -188,6 +186,7 @@ private fun checkForSlowLocalhostResolution() {
             print(Ansi.ansi().reset())
         }
     }
+    return hostName
 }
 
 private fun assertCanNormalizeEmptyPath() {
