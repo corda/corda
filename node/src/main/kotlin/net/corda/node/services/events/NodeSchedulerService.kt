@@ -9,11 +9,11 @@ import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.FlowLogicRefFactoryInternal
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
@@ -44,7 +44,7 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class NodeSchedulerService(private val services: ServiceHubInternal,
-                           private val flowLogicRefFactory: FlowLogicRefFactory,
+                           private val flowLogicRefFactory: FlowLogicRefFactoryInternal,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch())
     : SchedulerService, SingletonSerializeAsToken() {
