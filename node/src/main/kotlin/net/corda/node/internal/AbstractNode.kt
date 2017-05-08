@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.KeyStoreUtilities
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowInitiator
@@ -71,7 +72,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -351,7 +351,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            X509Utilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+            KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
         } catch (e: IOException) {
             null
         } catch (e: KeyStoreException) {
