@@ -368,10 +368,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 is ServiceFlowInfo.Core -> serviceFlowInfo.factory(sender, receivedMessage.platformVersion)
             }
 
-            if (flow.javaClass.isAnnotationPresent(FlowVersion::class.java)) {
-                logger.warn("${FlowVersion::class.java.name} is not applicable for service flows: ${flow.javaClass.name}")
-            }
-
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {

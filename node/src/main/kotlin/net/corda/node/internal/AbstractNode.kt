@@ -13,7 +13,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowVersion
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -140,12 +140,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
         }
 
-        override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) {
-            require(clientFlowClass !in serviceFlowFactories) { "${clientFlowClass.name} has already been used to register a service flow" }
-            val version = clientFlowClass.flowVersion
-            val info = ServiceFlowInfo.CorDapp(version, serviceFlowFactory)
-            log.info("Registering service flow for ${clientFlowClass.name}: $info")
-            serviceFlowFactories[clientFlowClass] = info
+        override fun registerServiceFlow(initiatingFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) {
+            require(initiatingFlowClass !in serviceFlowFactories) {
+                "${initiatingFlowClass.name} has already been used to register a service flow"
+            }
+            val info = ServiceFlowInfo.CorDapp(initiatingFlowClass.flowVersion, serviceFlowFactory)
+            log.info("Registering service flow for ${initiatingFlowClass.name}: $info")
+            serviceFlowFactories[initiatingFlowClass] = info
         }
 
         override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? {
@@ -258,15 +259,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     /**
-     * @suppress
      * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
-     * [FlowVersion], core flows have the same version as the node's platform version. To cater for backwards compatibility
-     * [serviceFlowFactory] provides a second parameter which is the platform version of the initiating party.
+     * [InitiatingFlow.version], core flows have the same version as the node's platform version. To cater for backwards
+     * compatibility [serviceFlowFactory] provides a second parameter which is the platform version of the initiating party.
+     * @suppress
      */
     @VisibleForTesting
     fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, serviceFlowFactory: (Party, Int) -> FlowLogic<*>) {
-        require(!clientFlowClass.java.isAnnotationPresent(FlowVersion::class.java)) {
-            "${FlowVersion::class.java.name} not applicable for core flows; their version is the node's platform version"
+        require(clientFlowClass.java.flowVersion == 1) {
+            "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
         serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.Core(serviceFlowFactory)
         log.debug { "Installed core flow ${clientFlowClass.java.name}" }
@@ -301,7 +302,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the identity key. But the infrastructure to make that easy isn't here yet.
         keyManagement = makeKeyManagementService()
         flowLogicFactory = initialiseFlowLogicFactory()
-        scheduler = NodeSchedulerService(services, flowLogicFactory, unfinishedSchedules = busyNodeLatch)
+        scheduler = NodeSchedulerService(services, database, flowLogicFactory, unfinishedSchedules = busyNodeLatch)
 
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)

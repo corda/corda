@@ -5,6 +5,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -86,6 +87,7 @@ class AttachmentSerializationTest {
 
     private class ClientResult(internal val attachmentContent: String)
 
+    @InitiatingFlow
     private abstract class ClientLogic(server: MockNetwork.MockNode) : FlowLogic<ClientResult>() {
         internal val server = server.info.legalIdentity
 
@@ -134,7 +136,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int) {
-        server.services.registerFlowInitiator(clientLogic.javaClass, ::ServerLogic)
+        server.services.registerServiceFlow(clientLogic.javaClass, ::ServerLogic)
         client.services.startFlow(clientLogic)
         network.runNetwork(rounds)
     }

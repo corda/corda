@@ -9,10 +9,10 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.days
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_BANK_C
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.NotaryFlow
 import net.corda.flows.TwoPartyTradeFlow
@@ -21,6 +21,7 @@ import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
+@InitiatingFlow
 class SellerFlow(val otherParty: Party,
                  val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
@@ -60,7 +61,7 @@ class SellerFlow(val otherParty: Party,
                 amount,
                 cpOwnerKey,
                 progressTracker.getChildProgressTracker(TRADING)!!)
-        return subFlow(seller, shareParentSessions = true)
+        return subFlow(seller)
     }
 
     @Suspendable

@@ -35,10 +35,10 @@ A platform which can be extended with CorDapps also requires the ability to vers
 release to release. This allows users of these apps, whether they're other nodes or RPC users, to select which version
 they wish to use and enables nodes to control which app versions they support. Flows have their own version numbers,
 independent of other versioning, for example of the platform. In particular it is the initiating flow that can be versioned
-using the ``FlowVersion`` annotation. This assigns an integer version number, similar in concept to the platform version,
-which is used in the session handshake process when a flow communicates with another party for the first time. The other
-party will only accept the session request if it, firstly, has that flow loaded, and secondly, for the same version (see
-:doc:`flow-state-machine`).
+using the ``version`` property of the ``InitiatingFlow`` annotation. This assigns an integer version number, similar in
+concept to the platform version, which is used in the session handshake process when a flow communicates with another party
+for the first time. The other party will only accept the session request if it, firstly, has that flow loaded, and secondly,
+for the same version (see also :doc:`flow-state-machine`).
 
 .. note:: Currently we don't support multiple versions of the same flow loaded in the same node. This will be possible
    once we start loading CorDapps in separate class loaders.

@@ -8,10 +8,11 @@ import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowVersion
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -56,7 +57,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class StateMachineManagerTests {
+class FlowFrameworkTests {
     companion object {
         init {
             LogHelper.setLevel("+net.corda.flow")
@@ -468,13 +469,6 @@ class StateMachineManagerTests {
                 .withMessage("Chain")
     }
 
-    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            sendAndReceive<Any>(otherParty, payload)
-        }
-    }
-
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
         val node3 = net.createNode(node1.info.address)
@@ -521,6 +515,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `retry subFlow due to receiving FlowException`() {
+        @InitiatingFlow
         class AskForExceptionFlow(val otherParty: Party, val throwException: Boolean) : FlowLogic<String>() {
             @Suspendable
             override fun call(): String = sendAndReceive<String>(otherParty, throwException).unwrap { it }
@@ -577,7 +572,7 @@ class StateMachineManagerTests {
 
     @Test
     fun `lazy db iterator left on stack during checkpointing`() {
-        val result = node2.services.startFlow(VaultAccessFlow(node1.info.legalIdentity)).resultFuture
+        val result = node2.services.startFlow(VaultAccessFlow()).resultFuture
         net.runNetwork()
         assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
     }
@@ -609,10 +604,20 @@ class StateMachineManagerTests {
         }.withMessageContaining("Version")
     }
 
-    @FlowVersion(2)
-    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Any>() {
-        @Suspendable
-        override fun call(): Any = receive<Any>(otherParty).unwrap { it }
+    @Test
+    fun `single inlined sub-flow`() {
+        node2.registerServiceFlow(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
+        net.runNetwork()
+        assertThat(result.getOrThrow()).isEqualTo("HelloHello")
+    }
+
+    @Test
+    fun `double inlined sub-flow`() {
+        node2.registerServiceFlow(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
+        val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
+        net.runNetwork()
+        assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
 
@@ -664,15 +669,13 @@ class StateMachineManagerTests {
         }
     }
 
-    private fun sanitise(message: SessionMessage): SessionMessage {
-        return when (message) {
-            is SessionData -> message.copy(recipientSessionId = 0)
-            is SessionInit -> message.copy(initiatorSessionId = 0)
-            is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0)
-            is NormalSessionEnd -> message.copy(recipientSessionId = 0)
-            is ErrorSessionEnd -> message.copy(recipientSessionId = 0)
-            else -> message
-        }
+    private fun sanitise(message: SessionMessage) = when (message) {
+        is SessionData -> message.copy(recipientSessionId = 0)
+        is SessionInit -> message.copy(initiatorSessionId = 0)
+        is SessionConfirm -> message.copy(initiatorSessionId = 0, initiatedSessionId = 0)
+        is NormalSessionEnd -> message.copy(recipientSessionId = 0)
+        is ErrorSessionEnd -> message.copy(recipientSessionId = 0)
+        else -> message
     }
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
@@ -700,6 +703,7 @@ class StateMachineManagerTests {
     }
 
 
+    @InitiatingFlow
     private open class SendFlow(val payload: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
@@ -712,6 +716,7 @@ class StateMachineManagerTests {
     private interface CustomInterface
     private class CustomSendFlow(payload: String, otherParty: Party) : CustomInterface, SendFlow(payload, otherParty)
 
+    @InitiatingFlow
     private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
         object START_STEP : ProgressTracker.Step("Starting")
         object RECEIVED_STEP : ProgressTracker.Step("Received")
@@ -740,6 +745,18 @@ class StateMachineManagerTests {
         }
     }
 
+    @InitiatingFlow
+    private class SendAndReceiveFlow(val otherParty: Party, val payload: Any) : FlowLogic<Any>() {
+        @Suspendable
+        override fun call(): Any = sendAndReceive<Any>(otherParty, payload).unwrap { it }
+    }
+
+    private class InlinedSendFlow(val payload: String, val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = send(otherParty, payload)
+    }
+
+    @InitiatingFlow
     private class PingPongFlow(val otherParty: Party, val payload: Long) : FlowLogic<Unit>() {
         @Transient var receivedPayload: Long? = null
         @Transient var receivedPayload2: Long? = null
@@ -770,6 +787,7 @@ class StateMachineManagerTests {
     }
 
     private object WaitingFlows {
+        @InitiatingFlow
         class Waiter(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
@@ -788,11 +806,32 @@ class StateMachineManagerTests {
         }
     }
 
-    private class VaultAccessFlow(val otherParty: Party) : FlowLogic<Unit>() {
+    private class VaultAccessFlow : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             serviceHub.vaultService.unconsumedStates<Cash.State>().filter { true }
-            send(otherParty, "Hello")
+            waitForLedgerCommit(SecureHash.zeroHash)
+        }
+    }
+
+    @InitiatingFlow(version = 2)
+    private class UpgradedFlow(val otherParty: Party) : FlowLogic<Any>() {
+        @Suspendable
+        override fun call(): Any = receive<Any>(otherParty).unwrap { it }
+    }
+
+    private class SingleInlinedSubFlow(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val payload = receive<String>(otherParty).unwrap { it }
+            subFlow(InlinedSendFlow(payload + payload, otherParty))
+        }
+    }
+
+    private class DoubleInlinedSubFlow(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(SingleInlinedSubFlow(otherParty))
         }
     }
 

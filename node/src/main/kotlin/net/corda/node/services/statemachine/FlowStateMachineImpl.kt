@@ -426,7 +426,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 }
 
 val Class<out FlowLogic<*>>.flowVersion: Int get() {
-    val flowVersion = getDeclaredAnnotation(FlowVersion::class.java) ?: return 1
-    require(flowVersion.value > 0) { "Flow versions have to be greater or equal to 1" }
-    return flowVersion.value
+    val annotation = requireNotNull(getAnnotation(InitiatingFlow::class.java)) {
+        "$name as the initiating flow must be annotated with ${InitiatingFlow::class.java.name}"
+    }
+    require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
+    return annotation.version
 }

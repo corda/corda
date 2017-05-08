@@ -49,7 +49,7 @@ class BuyerFlow(val otherParty: Party,
                 CommercialPaper.State::class.java)
 
         // This invokes the trading flow and out pops our finished transaction.
-        val tradeTX: SignedTransaction = subFlow(buyer, shareParentSessions = true)
+        val tradeTX: SignedTransaction = subFlow(buyer)
         // TODO: This should be moved into the flow itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
