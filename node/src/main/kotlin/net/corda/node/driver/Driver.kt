@@ -10,6 +10,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
@@ -30,8 +31,6 @@ import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
@@ -503,16 +502,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map {
-            val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
-            nameBuilder.addRDN(BCStyle.CN, "${DUMMY_NOTARY.name.commonName} $it")
-            DUMMY_NOTARY.name.rdNs.forEach { rdn ->
-                if (rdn.first.type != BCStyle.CN) {
-                    nameBuilder.addRDN(rdn.first)
-                }
-            }
-            nameBuilder.build()
-        }
+        val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
         val paths = nodeNames.map { driverDirectory / it.commonName }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
