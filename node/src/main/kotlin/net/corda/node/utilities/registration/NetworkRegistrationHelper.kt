@@ -5,7 +5,6 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.node.services.config.NodeConfiguration
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -37,7 +36,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
             // Create or load self signed keypair from the key store.
             // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
             if (!caKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
-                val selfSignCert = X509Utilities.createSelfSignedCACert(X500Name(config.myLegalName))
+                val selfSignCert = X509Utilities.createSelfSignedCACert(config.myLegalName)
                 // Save to the key store.
                 caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, selfSignCert.keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
                 caKeyStore.save(config.keyStoreFile, keystorePassword)
