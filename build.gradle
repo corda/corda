@@ -1,3 +1,4 @@
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -121,6 +122,11 @@ allprojects {
             attributes('Corda-Revision': corda_revision)
             attributes('Corda-Vendor': 'Corda Open Source')
         }
+    }
+
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperties['java.io.tmpdir'] = buildDir
     }
 
     group 'net.corda'

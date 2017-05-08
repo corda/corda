@@ -2,15 +2,13 @@ package net.corda.testing.node
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.createDirectories
+import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
-import net.corda.core.div
-import net.corda.core.flatMap
-import net.corda.core.map
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.DUMMY_MAP
+import net.corda.node.driver.addressMustNotBeBound
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -26,6 +24,7 @@ import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import java.util.*
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 /**
@@ -53,9 +52,18 @@ abstract class NodeBasedTest {
      */
     @After
     fun stopAllNodes() {
+        val shutdownExecutor = Executors.newScheduledThreadPool(1)
         nodes.forEach(Node::stop)
+        // Wait until ports are released
+        val portNotBoundChecks = nodes.flatMap {
+            listOf(
+                    it.configuration.p2pAddress.let { addressMustNotBeBound(shutdownExecutor, it) },
+                    it.configuration.rpcAddress?.let { addressMustNotBeBound(shutdownExecutor, it) }
+            )
+        }.filterNotNull()
         nodes.clear()
         _networkMapNode = null
+        Futures.allAsList(portNotBoundChecks).getOrThrow()
     }
 
     /**

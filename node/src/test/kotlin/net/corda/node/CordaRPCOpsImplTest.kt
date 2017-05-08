@@ -15,11 +15,12 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.transaction
-import net.corda.nodeapi.CURRENT_RPC_USER
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.expect
@@ -57,10 +58,10 @@ class CordaRPCOpsImplTest {
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
         notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
-        )))
+        ))))
 
         aliceNode.database.transaction {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
@@ -194,7 +195,7 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash command by user not permissioned for cash`() {
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = emptySet()))
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
             rpc.startFlow(::CashIssueFlow,
                     Amount(100, USD),

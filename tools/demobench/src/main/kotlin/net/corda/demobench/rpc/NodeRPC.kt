@@ -2,6 +2,7 @@ package net.corda.demobench.rpc
 
 import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
@@ -17,14 +18,16 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
 
     private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.rpcPort))
     private val timer = Timer()
+    private val connections = Collections.synchronizedCollection(ArrayList<CordaRPCConnection>())
 
     init {
         val setupTask = object : TimerTask() {
             override fun run() {
                 try {
                     val user = config.users.elementAt(0)
-                    rpcClient.start(user.username, user.password)
-                    val ops = rpcClient.proxy()
+                    val connection = rpcClient.start(user.username, user.password)
+                    connections.add(connection)
+                    val ops = connection.proxy
 
                     // Cancel the "setup" task now that we've created the RPC client.
                     this.cancel()
@@ -50,7 +53,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
 
     override fun close() {
         timer.cancel()
-        rpcClient.close()
+        connections.forEach(CordaRPCConnection::close)
     }
 
 }

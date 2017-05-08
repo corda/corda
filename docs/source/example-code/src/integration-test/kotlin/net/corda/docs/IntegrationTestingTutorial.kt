@@ -18,7 +18,10 @@ import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.*
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
+import net.corda.testing.parallel
+import net.corda.testing.sequence
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
@@ -44,12 +47,10 @@ class IntegrationTestingTutorial {
 
             // START 2
             val aliceClient = alice.rpcClientToNode()
-            aliceClient.start("aliceUser", "testPassword1")
-            val aliceProxy = aliceClient.proxy()
+            val aliceProxy = aliceClient.start("aliceUser", "testPassword1").proxy
 
             val bobClient = bob.rpcClientToNode()
-            bobClient.start("bobUser", "testPassword2")
-            val bobProxy = bobClient.proxy()
+            val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
             // END 2
 
             // START 3

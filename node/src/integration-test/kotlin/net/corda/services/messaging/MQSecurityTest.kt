@@ -2,7 +2,7 @@ package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
-import net.corda.client.rpc.CordaRPCClientImpl
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
@@ -10,19 +10,16 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
-import net.corda.core.seconds
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NETWORK_MAP_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NOTIFICATIONS_ADDRESS
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.P2P_QUEUE
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEERS_PREFIX
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_QUEUE_REMOVALS_QUEUE
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
+import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.configureTestSSL
@@ -36,7 +33,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.test.assertEquals
 
 /**
@@ -108,7 +104,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `consume message from RPC requests queue`() {
-        assertConsumeAttackFails(RPC_REQUESTS_QUEUE)
+        assertConsumeAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
     @Test
@@ -119,19 +115,14 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     @Test
     fun `create queue for valid RPC user`() {
-        val user1Queue = "$CLIENTS_PREFIX${rpcUser.username}.rpc.${random63BitValue()}"
+        val user1Queue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.${random63BitValue()}"
         assertTempQueueCreationAttackFails(user1Queue)
     }
 
     @Test
     fun `create queue for invalid RPC user`() {
-        val invalidRPCQueue = "$CLIENTS_PREFIX${random63BitValue()}.rpc.${random63BitValue()}"
+        val invalidRPCQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${random63BitValue()}.${random63BitValue()}"
         assertTempQueueCreationAttackFails(invalidRPCQueue)
-    }
-
-    @Test
-    fun `consume message from RPC queue removals queue`() {
-        assertConsumeAttackFails(RPC_QUEUE_REMOVALS_QUEUE)
     }
 
     @Test
@@ -157,22 +148,16 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return client
     }
 
-    fun loginToRPC(target: HostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): SimpleMQClient {
-        val client = clientTo(target, sslConfiguration)
-        client.loginToRPC(rpcUser)
-        return client
-    }
-
-    fun SimpleMQClient.loginToRPC(rpcUser: User, enableSSL: Boolean = false): CordaRPCOps {
-        start(rpcUser.username, rpcUser.password, enableSSL)
-        val clientImpl = CordaRPCClientImpl(session, ReentrantLock(), rpcUser.username)
-        return clientImpl.proxyFor(CordaRPCOps::class.java, timeout = 1.seconds)
+    fun loginToRPC(target: HostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
+        return CordaRPCClient(target, sslConfiguration).start(rpcUser.username, rpcUser.password).proxy
     }
 
     fun loginToRPCAndGetClientQueue(): String {
-        val rpcClient = loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
-        val clientQueueQuery = SimpleString("$CLIENTS_PREFIX${rpcUser.username}.rpc.*")
-        return rpcClient.session.addressQuery(clientQueueQuery).queueNames.single().toString()
+        loginToRPC(alice.configuration.rpcAddress!!, rpcUser)
+        val clientQueueQuery = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.${rpcUser.username}.*")
+        val client = clientTo(alice.configuration.rpcAddress!!)
+        client.start(rpcUser.username, rpcUser.password, false)
+        return client.session.addressQuery(clientQueueQuery).queueNames.single().toString()
     }
 
     fun assertAllQueueCreationAttacksFail(queue: String) {
