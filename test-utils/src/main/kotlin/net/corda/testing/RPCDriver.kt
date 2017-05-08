@@ -193,7 +193,7 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = false,
+        networkMapStrategy: NetworkMapStrategy = FalseNetworkMap,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -203,7 +203,7 @@ fun <A> rpcDriver(
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                        networkMapStrategy = networkMapStrategy,
                         isDebug = isDebug
                 )
         ),
