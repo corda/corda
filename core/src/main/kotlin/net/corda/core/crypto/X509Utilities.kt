@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.Crypto.generateKeyPair
+import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
@@ -67,16 +68,33 @@ object X509Utilities {
      */
     @Deprecated("Full legal names should be specified in all configurations")
     fun getDevX509Name(commonName: String): X500Name {
-        return X500NameBuilder(BCStyle.INSTANCE)
-                .addRDN(BCStyle.CN, commonName)
-                .addRDN(BCStyle.O, "R3")
-                .addRDN(BCStyle.OU, "corda")
-                .addRDN(BCStyle.L, "London")
-                .addRDN(BCStyle.C, "UK")
-                .build()
+        val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
+        nameBuilder.addRDN(BCStyle.CN, commonName)
+        nameBuilder.addRDN(BCStyle.O, "R3")
+        nameBuilder.addRDN(BCStyle.OU, "corda")
+        nameBuilder.addRDN(BCStyle.L, "London")
+        nameBuilder.addRDN(BCStyle.C, "UK")
+        return nameBuilder.build()
     }
 
     /**
+     * Generate a distinguished name from the provided values.
+     *
+     * @see [CoreTestUtils.getTestX509Name] for generating distinguished names for test cases.
+     */
+    @JvmOverloads
+    @JvmStatic
+    fun getX509Name(myLegalName: String, nearestCity: String, email: String, country: String? = null): X500Name {
+        return X500NameBuilder(BCStyle.INSTANCE).let { builder ->
+            builder.addRDN(BCStyle.CN, myLegalName)
+            builder.addRDN(BCStyle.L, nearestCity)
+            country?.let { builder.addRDN(BCStyle.C, it) }
+            builder.addRDN(BCStyle.E, email)
+            builder.build()
+        }
+    }
+
+    /*
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
      * @param subject the cert Subject will be populated with the domain string
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
@@ -84,6 +102,7 @@ object X509Utilities {
      * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
+    @JvmStatic
     fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
         val keyPair = generateKeyPair(signatureScheme)
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
@@ -100,6 +119,7 @@ object X509Utilities {
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
      */
+    @JvmStatic
     fun createIntermediateCert(subject: X500Name, ca: CertificateAndKey, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
@@ -120,6 +140,7 @@ object X509Utilities {
      * @return The generated X509Certificate suitable for use as a Server/Client certificate in TLS.
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
+    @JvmStatic
     fun createServerCert(subject: X500Name, publicKey: PublicKey,
                          ca: CertificateAndKey,
                          subjectAlternativeNameDomains: List<String>,
@@ -141,6 +162,7 @@ object X509Utilities {
      * @param x509Certificate certificate to save
      * @param filename Target filename
      */
+    @JvmStatic
     fun saveCertificateAsPEMFile(x509Certificate: X509Certificate, filename: Path) {
         FileWriter(filename.toFile()).use {
             JcaPEMWriter(it).use {
@@ -154,6 +176,7 @@ object X509Utilities {
      * @param filename Source filename
      * @return The X509Certificate that was encoded in the file
      */
+    @JvmStatic
     fun loadCertificateFromPEMFile(filename: Path): X509Certificate {
         val reader = PemReader(FileReader(filename.toFile()))
         val pemObject = reader.readPemObject()
@@ -201,6 +224,46 @@ object X509Utilities {
     }
 
     fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) = Crypto.createCertificateSigningRequest(subject, keyPair, signatureScheme)
+}
+
+/**
+ * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present, this throws an
+ * exception
+ */
+@Throws(IllegalArgumentException::class)
+fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName { attr -> attr.toString() + commonName }
+
+/**
+ * Rebuild the distinguished name, replacing the common name with the given value. If no common name is present, this
+ * adds one.
+ */
+@Throws(IllegalArgumentException::class)
+fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { attr -> commonName }
+
+/**
+ * Rebuild the distinguished name, replacing the common name with a value generated from the provided function.
+ *
+ * @param mutator a function to generate the new value from the previous one.
+ */
+@Throws(IllegalArgumentException::class)
+private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500Name {
+    val builder = X500NameBuilder(BCStyle.INSTANCE)
+    var matched = false
+    this.rdNs.forEach { rdn ->
+        rdn.typesAndValues.forEach { typeAndValue ->
+            when (typeAndValue.type) {
+                BCStyle.CN -> {
+                    matched = true
+                    builder.addRDN(typeAndValue.type, mutator(typeAndValue.value))
+                }
+                else -> {
+                    builder.addRDN(typeAndValue)
+                }
+            }
+        }
+    }
+    require(matched) { "Input X.500 name must include a common name (CN) attribute: ${this}" }
+    return builder.build()
 }
 
 val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()

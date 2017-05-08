@@ -5,6 +5,7 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.Party
+import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.getOrThrow
@@ -21,8 +22,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
@@ -34,15 +33,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         val notaryCommonName = X500Name("CN=BFT Notary Server,O=R3,OU=corda,L=Zurich,C=CH")
 
         fun buildNodeName(it: Int, notaryName: X500Name): X500Name {
-            val builder = X500NameBuilder()
-            notaryName.rdNs.map { it.first }.forEach { attr ->
-                if (attr.type == BCStyle.CN) {
-                    builder.addRDN(BCStyle.CN, "${attr.value}-$it")
-                } else {
-                    builder.addRDN(attr)
-                }
-            }
-            return builder.build()
+            return notaryName.appendToCommonName("-$it")
         }
     }
 
