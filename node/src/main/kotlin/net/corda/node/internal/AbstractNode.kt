@@ -12,7 +12,6 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowVersion
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -46,6 +45,7 @@ import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersion
@@ -134,7 +134,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-        override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
+        override val flowLogicRefFactory: FlowLogicRefFactoryInternal get() = flowLogicFactory
 
         override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
@@ -173,7 +173,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var net: MessagingService
     lateinit var netMapCache: NetworkMapCacheInternal
     lateinit var scheduler: NodeSchedulerService
-    lateinit var flowLogicFactory: FlowLogicRefFactory
+    lateinit var flowLogicFactory: FlowLogicRefFactoryInternal
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
@@ -381,7 +381,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun initialiseFlowLogicFactory(): FlowLogicRefFactory {
+    private fun initialiseFlowLogicFactory(): FlowLogicRefFactoryInternal {
         val flowWhitelist = HashMap<String, Set<String>>()
 
         for ((flowClass, extraArgumentTypes) in defaultFlowWhiteList) {
@@ -398,7 +398,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        return FlowLogicRefFactory(flowWhitelist)
+        return FlowLogicRefFactoryImpl(flowWhitelist)
     }
 
     private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {

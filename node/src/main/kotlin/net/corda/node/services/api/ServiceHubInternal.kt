@@ -2,10 +2,7 @@ package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.*
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -50,6 +47,11 @@ interface NetworkMapCacheInternal : NetworkMapCache {
 
 }
 
+interface FlowLogicRefFactoryInternal : FlowLogicRefFactory {
+    val flowWhitelist: Map<String, Set<String>>
+    fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*>
+}
+
 @CordaSerializable
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
@@ -62,7 +64,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     abstract val monitoringService: MonitoringService
-    abstract val flowLogicRefFactory: FlowLogicRefFactory
+    abstract val flowLogicRefFactory: FlowLogicRefFactoryInternal
     abstract val schemaService: SchemaService
     abstract override val networkMapCache: NetworkMapCacheInternal
     abstract val schedulerService: SchedulerService

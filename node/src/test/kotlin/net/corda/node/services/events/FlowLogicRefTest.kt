@@ -1,6 +1,8 @@
-package net.corda.core.flows
+package net.corda.node.services.events
 
 import net.corda.core.days
+import net.corda.core.flows.FlowLogic
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import org.junit.Before
 import org.junit.Test
 import java.time.Duration
@@ -34,12 +36,12 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
-    lateinit var factory: FlowLogicRefFactory
+    lateinit var factory: FlowLogicRefFactoryImpl
 
     @Before
     fun setup() {
         // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
-        factory = FlowLogicRefFactory(mapOf(Pair(KotlinFlowLogic::class.java.name, setOf(ParamType1::class.java.name, ParamType2::class.java.name)),
+        factory = FlowLogicRefFactoryImpl(mapOf(Pair(KotlinFlowLogic::class.java.name, setOf(ParamType1::class.java.name, ParamType2::class.java.name)),
                 Pair(KotlinNoArgFlowLogic::class.java.name, setOf())))
     }
 
