@@ -113,6 +113,32 @@ This can usually be solved by updating IDEA. Check that you have the latest vers
 Other common issues
 -------------------
 
+Slow localhost resolution
+*************************
+
+Out of the box, Apple Mac's have machine names that end in ".local", by default something like "MacBook-Pro.local".
+This can cause long delays with starting Corda nodes as every attempt to look up the name of the local computer triggers
+a five second pause. This is not a bug in Corda but rather `a problem with the macOS networking stack <http://stackoverflow.com/questions/39636792/jvm-takes-a-long-time-to-resolve-ip-address-for-localhost>`_.
+
+To fix it, you will need to use the Terminal app and edit your ``/etc/hosts`` file. For instance, you can do this by
+typing:
+
+``sudo nano /etc/hosts``
+
+then typing in your own password, assuming you are an administrator user of the computer.
+
+You will need to ensure there are two lines for the name of your machine (which you can find in the Sharing section
+of System Preferences), which look like this:
+
+.. parsed-literal::
+
+   127.0.0.1 MacBook-Pro.local
+   fe80::1%lo0 MacBook-Pro.local
+
+
+If you've changed the name of your computer in Sharing or via the ``hostname`` command, obviously ensure you replace
+``MacBook-Pro.local`` with the correct name. Then press Ctrl-O to save the file and Ctrl-X to exit.
+
 “xterm: command not found”
 **************************
 
