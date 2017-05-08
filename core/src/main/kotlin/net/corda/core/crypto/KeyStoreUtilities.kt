@@ -108,8 +108,6 @@ fun KeyStore.store(out: OutputStream, password: String) = store(out, password.to
 
 /**
  * Extract public and private keys from a KeyStore file assuming storage alias is known.
- * @param keyStoreFilePath Path to load KeyStore from
- * @param storePassword Password to unlock the KeyStore
  * @param keyPassword Password to unlock the private key entries
  * @param alias The name to lookup the Key and Certificate chain from
  * @return The KeyPair found in the KeyStore under the specified alias
@@ -119,7 +117,6 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
 /**
  * Helper method to load a Certificate and KeyPair from their KeyStore.
  * The access details should match those of the createCAKeyStoreAndTrustStore call used to manufacture the keys.
- * @param keyStore Source KeyStore to look in for the data
  * @param keyPassword The password for the PrivateKey (not the store access password)
  * @param alias The name to search for the data. Typically if generated with the methods here this will be one of
  * CERT_PRIVATE_KEY_ALIAS, ROOT_CA_CERT_PRIVATE_KEY_ALIAS, INTERMEDIATE_CA_PRIVATE_KEY_ALIAS defined above
