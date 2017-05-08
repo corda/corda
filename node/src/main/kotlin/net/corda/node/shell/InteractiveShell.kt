@@ -19,10 +19,11 @@ import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
 import net.corda.node.printBasicNodeInfo
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.CURRENT_RPC_USER
 import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
@@ -120,7 +121,7 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            CURRENT_RPC_USER.set(User(ArtemisMessagingComponent.NODE_USER, "", setOf()))
+            CURRENT_RPC_CONTEXT.set(RpcContext(User(ArtemisMessagingComponent.NODE_USER, "", setOf())))
             Emoji.renderIfSupported {
                 jlineProcessor.run()
             }

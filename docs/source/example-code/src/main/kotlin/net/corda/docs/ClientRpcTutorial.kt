@@ -55,8 +55,7 @@ fun main(args: Array<String>) {
 
         // START 2
         val client = node.rpcClientToNode()
-        client.start("user", "password")
-        val proxy = client.proxy()
+        val proxy = client.start("user", "password").proxy
 
         thread {
             generateTransactions(proxy)

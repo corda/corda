@@ -60,8 +60,7 @@ class DistributedServiceTests : DriverBasedTest() {
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()
-            client.start("test", "test")
-            return client.proxy()
+            return client.start("test", "test").proxy
         }
         aliceProxy = connectRpc(alice)
         val rpcClientsToNotaries = notaries.map(::connectRpc)

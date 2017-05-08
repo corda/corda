@@ -198,20 +198,20 @@ fun main(args: Array<String>) {
 
             // Register with alice to use alice's RPC proxy to create random events.
             val aliceClient = aliceNode.rpcClientToNode()
-            aliceClient.start(user.username, user.password)
-            val aliceRPC = aliceClient.proxy()
+            val aliceConnection = aliceClient.start(user.username, user.password)
+            val aliceRPC = aliceConnection.proxy
 
             val bobClient = bobNode.rpcClientToNode()
-            bobClient.start(user.username, user.password)
-            val bobRPC = bobClient.proxy()
+            val bobConnection = bobClient.start(user.username, user.password)
+            val bobRPC = bobConnection.proxy
 
             val issuerClientGBP = issuerNodeGBP.rpcClientToNode()
-            issuerClientGBP.start(manager.username, manager.password)
-            val issuerRPCGBP = issuerClientGBP.proxy()
+            val issuerGBPConnection = issuerClientGBP.start(manager.username, manager.password)
+            val issuerRPCGBP = issuerGBPConnection.proxy
 
             val issuerClientUSD = issuerNodeUSD.rpcClientToNode()
-            issuerClientUSD.start(manager.username, manager.password)
-            val issuerRPCUSD = issuerClientUSD.proxy()
+            val issuerUSDConnection = issuerClientUSD.start(manager.username, manager.password)
+            val issuerRPCUSD = issuerUSDConnection.proxy
 
             val issuers = mapOf(USD to issuerRPCUSD, GBP to issuerRPCGBP)
 
@@ -272,10 +272,10 @@ fun main(args: Array<String>) {
             }
             println("Simulation completed")
 
-            aliceClient.close()
-            bobClient.close()
-            issuerClientGBP.close()
-            issuerClientUSD.close()
+            aliceConnection.close()
+            bobConnection.close()
+            issuerGBPConnection.close()
+            issuerUSDConnection.close()
         }
         waitForAllNodesToFinish()
     }

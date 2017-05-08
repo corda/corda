@@ -3,6 +3,7 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.*
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.pool.KryoCallback
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
@@ -10,6 +11,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.LazyPool
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -19,7 +21,9 @@ import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -143,13 +147,26 @@ fun <T : Any> T.serialize(kryo: KryoPool = p2PKryo(), internalOnly: Boolean = fa
     return kryo.run { k -> serialize(k, internalOnly) }
 }
 
+
+private val serializeBufferPool = LazyPool(
+        newInstance = { ByteArray(64 * 1024) }
+)
+private val serializeOutputStreamPool = LazyPool(
+        clear = ByteArrayOutputStream::reset,
+        shouldReturnToPool = { it.size() < 256 * 1024 }, // Discard if it grew too large
+        newInstance = { ByteArrayOutputStream(64 * 1024) }
+)
 fun <T : Any> T.serialize(kryo: Kryo, internalOnly: Boolean = false): SerializedBytes<T> {
-    val stream = ByteArrayOutputStream()
-    Output(stream).use {
-        it.writeBytes(KryoHeaderV0_1.bytes)
-        kryo.writeClassAndObject(it, this)
+    return serializeOutputStreamPool.run { stream ->
+        serializeBufferPool.run { buffer ->
+            Output(buffer).use {
+                it.outputStream = stream
+                it.writeBytes(KryoHeaderV0_1.bytes)
+                kryo.writeClassAndObject(it, this)
+            }
+            SerializedBytes(stream.toByteArray(), internalOnly)
+        }
     }
-    return SerializedBytes(stream.toByteArray(), internalOnly)
 }
 
 /**
@@ -591,5 +608,27 @@ object X500NameSerializer : Serializer<X500Name>() {
 
     override fun write(kryo: Kryo, output: Output, obj: X500Name) {
         output.writeBytes(obj.encoded)
+    }
+}
+
+class KryoPoolWithContext(val baseKryoPool: KryoPool, val contextKey: Any, val context: Any) : KryoPool {
+    override fun <T : Any?> run(callback: KryoCallback<T>): T {
+        val kryo = borrow()
+        try {
+            return callback.execute(kryo)
+        } finally {
+            release(kryo)
+        }
+    }
+
+    override fun borrow(): Kryo {
+        val kryo = baseKryoPool.borrow()
+        require(kryo.context.put(contextKey, context) == null) { "KryoPool already has context" }
+        return kryo
+    }
+
+    override fun release(kryo: Kryo) {
+        requireNotNull(kryo.context.remove(contextKey)) { "Kryo instance lost context while borrowed" }
+        baseKryoPool.release(kryo)
     }
 }

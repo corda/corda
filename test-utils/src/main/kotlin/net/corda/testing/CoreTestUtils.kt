@@ -35,6 +35,7 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
 /**
@@ -90,6 +91,7 @@ val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Ve
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
+private val freePortCounter = AtomicInteger(30000)
 /**
  * Returns a free port.
  *
@@ -97,7 +99,7 @@ fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
 fun freeLocalHostAndPort(): HostAndPort {
-    val freePort = ServerSocket(0).use { it.localPort }
+    val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + 1) % 10000 }
     return HostAndPort.fromParts("localhost", freePort)
 }
 
@@ -108,12 +110,8 @@ fun freeLocalHostAndPort(): HostAndPort {
  * to the Node, some other process else could allocate the returned ports.
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
-    // Create a bunch of sockets up front.
-    val sockets = Array(numberToAlloc) { ServerSocket(0) }
-    val result = sockets.map { HostAndPort.fromParts(hostName, it.localPort) }
-    // Close sockets only once we've grabbed all the ports we need.
-    sockets.forEach(ServerSocket::close)
-    return result
+    val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
+    return (freePort .. freePort + numberToAlloc - 1).map { HostAndPort.fromParts(hostName, it) }
 }
 
 /**

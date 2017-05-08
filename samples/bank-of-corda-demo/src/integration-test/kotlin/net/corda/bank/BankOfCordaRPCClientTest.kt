@@ -26,13 +26,11 @@ class BankOfCordaRPCClientTest {
 
             // Bank of Corda RPC Client
             val bocClient = nodeBankOfCorda.rpcClientToNode()
-            bocClient.start("bocManager", "password1")
-            val bocProxy = bocClient.proxy()
+            val bocProxy = bocClient.start("bocManager", "password1").proxy
 
             // Big Corporation RPC Client
             val bigCorpClient = nodeBigCorporation.rpcClientToNode()
-            bigCorpClient.start("bigCorpCFO", "password2")
-            val bigCorpProxy = bigCorpClient.proxy()
+            val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
 
             // Register for Bank of Corda Vault updates
             val vaultUpdatesBoc = bocProxy.vaultAndUpdates().second

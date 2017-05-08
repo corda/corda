@@ -214,7 +214,7 @@ class ArtemisMessagingTests {
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run() }
+        thread { messagingClient.run(messagingServer!!.serverControl) }
         return messagingClient
     }
 
