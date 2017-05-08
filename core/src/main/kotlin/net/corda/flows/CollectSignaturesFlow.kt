@@ -21,15 +21,15 @@ import java.security.PublicKey
  * [SignedTransaction] which can then be passed to the [FinalityFlow] for notarisation. The other side of this flow is
  * the [SignTransactionFlow].
  *
- * **WARNING**: This Flow ONLY works with [ServiceHub.legalIdentityKey]s and WILL break if used with randomly generated
+ * **WARNING**: This flow ONLY works with [ServiceHub.legalIdentityKey]s and WILL break if used with randomly generated
  * keys by the [ServiceHub.keyManagementService].
  *
  * **IMPORTANT** This flow NEEDS to be called with the 'shareParentSessions" parameter of [subFlow] set to true.
  *
  * Usage:
  *
- * - Call this flow as a [subFlow] and pass it a [SignedTransaction] which has at least been signed by the
- *   transaction creator (and possibly an oracle, if required)
+ * - Call the [CollectSignaturesFlow] flow as a [subFlow] and pass it a [SignedTransaction] which has at least been
+ *   signed by the transaction creator (and possibly an oracle, if required)
  * - The flow expects that the calling node has signed the provided transaction, if not the flow will fail
  * - The flow will also fail if:
  *   1. The provided transaction is invalid
@@ -58,9 +58,9 @@ import java.security.PublicKey
  *
  * @param partiallySignedTx Transaction to collect the remaining signatures for
  *
- * TODO: Update this flow to handle randomly generated keys when that works is complete.
  */
 
+// TODO: Update this flow to handle randomly generated keys when that works is complete.
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
                             override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
 
@@ -83,7 +83,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         val notSigned = partiallySignedTx.tx.mustSign - signed
 
         // One of the signatures collected so far MUST be from the initiator of this flow.
-        check(partiallySignedTx.sigs.any { it.by == myKey }) {
+        require(partiallySignedTx.sigs.any { it.by == myKey }) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
         }
 
@@ -127,7 +127,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
      */
     @Suspendable private fun collectSignature(counterparty: Party): DigitalSignature.WithKey {
         return sendAndReceive<DigitalSignature.WithKey>(counterparty, partiallySignedTx).unwrap {
-            check(counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required Party." }
+            require(counterparty.owningKey.isFulfilledBy(it.by)) { "Not signed by the required Party." }
             it
         }
     }
@@ -212,7 +212,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
     }
 
     @Suspendable private fun checkSignatures(stx: SignedTransaction) {
-        check(stx.sigs.any { it.by == otherParty.owningKey }) {
+        require(stx.sigs.any { it.by == otherParty.owningKey }) {
             "The Initiator of CollectSignaturesFlow must have signed the transaction."
         }
         val signed = stx.sigs.map { it.by }
