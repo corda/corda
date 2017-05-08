@@ -5,7 +5,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.div
 import net.corda.core.flatMap
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
@@ -32,9 +31,6 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
-import java.io.RandomAccessFile
-import java.lang.management.ManagementFactory
-import java.nio.channels.FileLock
 import java.time.Clock
 import javax.management.ObjectName
 import kotlin.concurrent.thread
@@ -101,10 +97,6 @@ class Node(override val configuration: FullNodeConfiguration,
     override val serverThread = AffinityExecutor.ServiceAffinityExecutor("Node thread", 1)
 
     var messageBroker: ArtemisMessagingServer? = null
-
-    // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
-    // when our process shuts down, but we try in stop() anyway just to be nice.
-    private var nodeFileLock: FileLock? = null
 
     private var shutdownThread: Thread? = null
 
@@ -221,7 +213,6 @@ class Node(override val configuration: FullNodeConfiguration,
     val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
 
     override fun start(): Node {
-        alreadyRunningNodeCheck()
         super.start()
 
         networkMapRegistrationFuture.success(serverThread) {
@@ -286,33 +277,7 @@ class Node(override val configuration: FullNodeConfiguration,
         // In particular this prevents premature shutdown of the Database by AbstractNode whilst the serverThread is active
         super.stop()
 
-        nodeFileLock!!.release()
         log.info("Shutdown complete")
-    }
-
-    private fun alreadyRunningNodeCheck() {
-        // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
-        // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
-        // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
-        // twice with the same directory: that's a user error and we should bail out.
-        val pidPath = configuration.baseDirectory / "process-id"
-        val file = pidPath.toFile()
-        if (!file.exists()) {
-            file.createNewFile()
-        }
-        file.deleteOnExit()
-        val f = RandomAccessFile(file, "rw")
-        val l = f.channel.tryLock()
-        if (l == null) {
-            log.error("It appears there is already a node running with the specified data directory ${configuration.baseDirectory}")
-            log.error("Shut that other node down and try again. It may have process ID ${file.readText()}")
-            System.exit(1)
-        }
-
-        nodeFileLock = l
-        val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
-        f.setLength(0)
-        f.write(ourProcessID.toByteArray())
     }
 }
 

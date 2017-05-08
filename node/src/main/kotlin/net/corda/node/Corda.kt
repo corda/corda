@@ -3,13 +3,13 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
-import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
 import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.LogHelper.withLevel
+import net.corda.node.internal.EnforceSingleNodeIsRunning
 import net.corda.node.internal.Node
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.shell.InteractiveShell
@@ -25,7 +25,6 @@ import java.net.InetAddress
 import java.nio.file.Paths
 import java.util.*
 import kotlin.system.exitProcess
-import kotlin.system.measureTimeMillis
 
 private var renderBasicInfoToConsole = true
 
@@ -64,6 +63,11 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    val enforceSingleNodeIsRunning = EnforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+    // We do the single node check before we initialise logging so that in case of a double-node start it doesn't mess
+    // with the running node's logs.
+    enforceSingleNodeIsRunning.start()
 
     initLogging(cmdlineOptions)
     disableJavaDeserialization() // Should be after initLogging to avoid TMI.
