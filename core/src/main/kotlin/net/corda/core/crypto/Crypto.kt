@@ -1,10 +1,11 @@
 package net.corda.core.crypto
 
 import net.corda.core.random63BitValue
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
+import net.i2p.crypto.eddsa.*
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERSequence
@@ -27,6 +28,8 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
@@ -509,6 +512,38 @@ object Crypto {
         else
             keyPairGenerator.initialize(signatureScheme.keySize, newSecureRandom())
         return keyPairGenerator.generateKeyPair()
+    }
+
+    /**
+     * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
+     * and other cases where you want hard-coded private keys.
+     * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
+     * @param signatureScheme a supported [SignatureScheme], see [Crypto].
+     * @param entropy a [BigInteger] value.
+     * @return a new [KeyPair] from an entropy input.
+     * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
+     */
+    fun generateKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+        when (signatureScheme) {
+            EDDSA_ED25519_SHA512 -> return generateEdDSAKeyPairFromEntropy(entropy)
+        }
+        throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: $signatureScheme.schemeCodeName")
+    }
+
+    /**
+     * Returns a [DEFAULT_SIGNATURE_SCHEME] key pair derived from the given [BigInteger] entropy.
+     * @param entropy a [BigInteger] value.
+     * @return a new [KeyPair] from an entropy input.
+     */
+    fun generateKeyPairFromEntropy(entropy: BigInteger): KeyPair = generateKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
+
+    // custom key pair generator from entropy.
+    private fun generateEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
+        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
+        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // need to pad the entropy to the valid seed length.
+        val priv = EdDSAPrivateKeySpec(bytes, params)
+        val pub = EdDSAPublicKeySpec(priv.a, params)
+        return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     }
 
     /** Check if the requested signature scheme is supported by the system. */
