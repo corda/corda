@@ -4,6 +4,8 @@ import net.corda.core.random63BitValue
 import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERSequence
@@ -17,8 +19,6 @@ import org.bouncycastle.cert.bc.BcX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -28,9 +28,9 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
-import java.security.cert.X509Certificate
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
+import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -515,12 +515,6 @@ object Crypto {
     }
 
     /**
-     * Generate a [KeyPair] using the default signature scheme.
-     * @return a new [KeyPair].
-     */
-    fun generateKeyPair(): KeyPair = generateKeyPair(DEFAULT_SIGNATURE_SCHEME)
-
-    /**
      * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
      * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
@@ -535,7 +529,7 @@ object Crypto {
         }
         throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: $signatureScheme.schemeCodeName")
     }
-    
+
     /**
      * Returns a [DEFAULT_SIGNATURE_SCHEME] key pair derived from the given [BigInteger] entropy.
      * @param entropy a [BigInteger] value.
