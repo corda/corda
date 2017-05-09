@@ -226,7 +226,7 @@ These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` 
 ``progress`` field.
 
 .. note:: The developer `must` then either subscribe to this ``progress`` observable or invoke the ``notUsed()`` extension
-function for it. Otherwise the unused observable will waste resources back in the node.
+   function for it. Otherwise the unused observable will waste resources back in the node.
 
 Implementing the seller
 -----------------------
