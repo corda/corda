@@ -92,6 +92,7 @@ class RPCClient<I : RPCOps>(
 
     companion object {
         private val log = loggerFor<RPCClient<*>>()
+        private val unlimitedReconnectAttempts = -1
     }
 
     /**
@@ -139,6 +140,7 @@ class RPCClient<I : RPCOps>(
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
+                reconnectAttempts = unlimitedReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
             }
 

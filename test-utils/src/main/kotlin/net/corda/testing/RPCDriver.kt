@@ -108,7 +108,8 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            ops : I
+            ops : I,
+            customPort: HostAndPort? = null
     ) : ListenableFuture<RpcServerHandle>
 
     /**
@@ -340,9 +341,10 @@ data class RPCDriverDSL(
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
-            ops: I
+            ops: I,
+            customPort: HostAndPort?
     ): ListenableFuture<RpcServerHandle> {
-        val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
+        val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
         return driverDSL.executorService.submit<RpcServerHandle> {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)

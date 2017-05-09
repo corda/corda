@@ -377,6 +377,26 @@ class ShutdownManager(private val executorService: ExecutorService) {
         }
         registerShutdown(processShutdown)
     }
+
+    inner class Follower(private val start: Int) {
+        private var end: Int? = null
+        fun unfollow() {
+            end = state.locked { registeredShutdowns.size }
+        }
+
+        fun shutdown() = end?.let { end ->
+            state.locked {
+                registeredShutdowns.subList(start, end).listIterator(end - start).run {
+                    while (hasPrevious()) {
+                        previous().getOrThrow().invoke()
+                        set(Futures.immediateFuture {}) // Don't break other followers by doing a remove.
+                    }
+                }
+            }
+        } ?: throw IllegalStateException("You haven't called unfollow.")
+    }
+
+    fun follower() = Follower(state.locked { registeredShutdowns.size })
 }
 
 class DriverDSL(
