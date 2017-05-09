@@ -5,15 +5,12 @@ package net.corda.nodeapi
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.nodeapi.config.OldConfig
 import rx.Observable
 import java.io.InputStream
-import java.io.PrintWriter
-import java.io.StringWriter
 
 data class User(
         @OldConfig("user")
@@ -55,20 +52,6 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
                 read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java as Class<Observable<Any>>).toFuture() },
                 write = { kryo, output, obj -> observableSerializer.write(kryo, output, obj.toObservable()) }
         )
-        register(
-                FlowException::class,
-                read = { kryo, input ->
-                    val message = input.readString()
-                    val cause = kryo.readObjectOrNull(input, Throwable::class.java)
-                    FlowException(message, cause)
-                },
-                write = { kryo, output, obj ->
-                    // The subclass may have overridden toString so we use that
-                    val message = if (obj.javaClass != FlowException::class.java) obj.toString() else obj.message
-                    output.writeString(message)
-                    kryo.writeObjectOrNull(output, obj.cause, Throwable::class.java)
-                }
-        )
     }
 
     override fun getRegistration(type: Class<*>): Registration {
@@ -81,8 +64,6 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
         if (ListenableFuture::class.java != type && ListenableFuture::class.java.isAssignableFrom(type)) {
             return super.getRegistration(ListenableFuture::class.java)
         }
-        if (FlowException::class.java.isAssignableFrom(type))
-            return super.getRegistration(FlowException::class.java)
         return super.getRegistration(type)
     }
 }

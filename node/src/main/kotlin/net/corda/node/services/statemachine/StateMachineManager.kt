@@ -6,6 +6,7 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
@@ -16,7 +17,6 @@ import io.requery.util.CloseableIterator
 import net.corda.core.*
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.commonName
 import net.corda.core.flows.*
 import net.corda.core.serialization.*
 import net.corda.core.utilities.debug
@@ -28,7 +28,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.messaging.TopicSession
-import net.corda.node.services.messaging.send
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
@@ -573,6 +572,20 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val logger = fiber?.logger ?: logger
         logger.trace { "Sending $message to party $party @ $address" + if (retryId != null) " with retry $retryId" else "" }
-        serviceHub.networkService.send(sessionTopic, message, address, retryId = retryId)
+
+        val serialized = try {
+            message.serialize()
+        } catch (e: KryoException) {
+            if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
+            logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
+                    "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
+            // The subclass may have overridden toString so we use that
+            val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
+            message.copy(errorResponse = FlowException(exMessage)).serialize()
+        }
+
+        serviceHub.networkService.apply {
+            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId)
+        }
     }
 }

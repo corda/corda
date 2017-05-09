@@ -20,16 +20,16 @@ sealed class TransactionType {
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
         val duplicates = detectDuplicateInputs(tx)
-        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx, duplicates)
+        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates)
         val missing = verifySigners(tx)
-        if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
+        if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx.id, missing.toList())
         verifyTransaction(tx)
     }
 
     /** Check that the list of signers includes all the necessary keys */
     fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
         val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
-        if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
+        if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx.id)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
         val missing = requiredKeys - tx.mustSign
@@ -81,7 +81,7 @@ sealed class TransactionType {
             if (tx.notary != null && tx.inputs.isNotEmpty()) {
                 tx.outputs.forEach {
                     if (it.notary != tx.notary) {
-                        throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx, it.notary)
+                        throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx.id, tx.notary, it.notary)
                     }
                 }
             }
@@ -90,13 +90,14 @@ sealed class TransactionType {
         private fun verifyEncumbrances(tx: LedgerTransaction) {
             // Validate that all encumbrances exist within the set of input states.
             val encumberedInputs = tx.inputs.filter { it.state.encumbrance != null }
-            encumberedInputs.forEach { encumberedInput ->
+            encumberedInputs.forEach { (state, ref) ->
                 val encumbranceStateExists = tx.inputs.any {
-                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.encumbrance
+                    it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
                 }
                 if (!encumbranceStateExists) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumberedInput.state.encumbrance!!,
+                            tx.id,
+                            state.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT
                     )
                 }
@@ -108,7 +109,8 @@ sealed class TransactionType {
                 val encumbranceIndex = output.encumbrance ?: continue
                 if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumbranceIndex,
+                            tx.id,
+                            encumbranceIndex,
                             TransactionVerificationException.Direction.OUTPUT)
                 }
             }
@@ -126,7 +128,7 @@ sealed class TransactionType {
                 try {
                     contract.verify(ctx)
                 } catch(e: Throwable) {
-                    throw TransactionVerificationException.ContractRejection(tx, contract, e)
+                    throw TransactionVerificationException.ContractRejection(tx.id, contract, e)
                 }
             }
         }
@@ -164,7 +166,7 @@ sealed class TransactionType {
                 }
                 check(tx.commands.isEmpty())
             } catch (e: IllegalStateException) {
-                throw TransactionVerificationException.InvalidNotaryChange(tx)
+                throw TransactionVerificationException.InvalidNotaryChange(tx.id)
             }
         }
 

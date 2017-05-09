@@ -17,6 +17,8 @@ import java.security.PublicKey
  *
  * All the above refer to inputs using a (txhash, output index) pair.
  */
+// TODO LedgerTransaction is not supposed to be serialisable as it references attachments, etc. The verification logic
+// currently sends this across to out-of-process verifiers. We'll need to change that first.
 @CordaSerializable
 class LedgerTransaction(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */

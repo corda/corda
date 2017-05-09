@@ -33,16 +33,12 @@ import net.corda.flows.NotaryFlow
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.getTestX509Name
-import net.corda.testing.initiateSingleShotFlow
+import net.corda.testing.*
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -539,6 +535,28 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun `serialisation issue in counterparty`() {
+        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow(NonSerialisableData(1), it) }
+        val result = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
+            result.getOrThrow()
+        }
+    }
+
+    @Test
+    fun `FlowException has non-serialisable object`() {
+        node2.initiateSingleShotFlow(ReceiveFlow::class) {
+            ExceptionFlow { NonSerialisableFlowException(NonSerialisableData(1)) }
+        }
+        val result = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
+        net.runNetwork()
+        assertThatExceptionOfType(FlowException::class.java).isThrownBy {
+            result.getOrThrow()
+        }
+    }
+
+    @Test
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
         ptx.addOutputState(DummyState())
@@ -704,7 +722,7 @@ class FlowFrameworkTests {
 
 
     @InitiatingFlow
-    private open class SendFlow(val payload: String, vararg val otherParties: Party) : FlowLogic<Unit>() {
+    private open class SendFlow(val payload: Any, vararg val otherParties: Party) : FlowLogic<Unit>() {
         init {
             require(otherParties.isNotEmpty())
         }
@@ -834,6 +852,9 @@ class FlowFrameworkTests {
             subFlow(SingleInlinedSubFlow(otherParty))
         }
     }
+
+    private data class NonSerialisableData(val a: Int)
+    private class NonSerialisableFlowException(val data: NonSerialisableData) : FlowException()
 
     //endregion Helpers
 }
