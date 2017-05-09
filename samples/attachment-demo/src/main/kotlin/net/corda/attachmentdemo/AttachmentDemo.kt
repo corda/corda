@@ -18,10 +18,17 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
+import net.corda.node.driver.poll
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.PublicKey
+import java.util.concurrent.Executors
+import java.util.jar.JarInputStream
+import javax.servlet.http.HttpServletResponse.SC_OK
+import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
+import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 import kotlin.system.exitProcess
-import kotlin.test.assertEquals
 
 internal enum class Role {
     SENDER,
@@ -45,15 +52,15 @@ fun main(args: Array<String>) {
         Role.SENDER -> {
             val host = HostAndPort.fromString("localhost:10006")
             println("Connecting to sender node ($host)")
-            CordaRPCClient(host).use("demo", "demo") {
-                sender(this)
+            CordaRPCClient(host).start("demo", "demo").use {
+                sender(it.proxy)
             }
         }
         Role.RECIPIENT -> {
             val host = HostAndPort.fromString("localhost:10009")
             println("Connecting to the recipient node ($host)")
-            CordaRPCClient(host).use("demo", "demo") {
-                recipient(this)
+            CordaRPCClient(host).start("demo", "demo").use {
+                recipient(it.proxy)
             }
         }
     }
@@ -67,13 +74,14 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 
 fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
     // Get the identity key of the other side (the recipient).
-    val otherSide: Party = rpc.partyFromName(DUMMY_BANK_B.name) ?: throw IllegalStateException("Could not find counterparty \"${DUMMY_BANK_B.name}\"")
+    val executor = Executors.newScheduledThreadPool(1)
+    val otherSide: Party = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
 
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
         inputStream.use {
             val id = rpc.uploadAttachment(it)
-            assertEquals(hash, id)
+            require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
     }
 
@@ -92,6 +100,7 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
     val flowHandle = rpc.startTrackedFlow(::FinalityFlow, stx, setOf(otherSide))
     flowHandle.progress.subscribe(::println)
     flowHandle.returnValue.getOrThrow()
+    println("Sent ${stx.id}")
 }
 
 fun recipient(rpc: CordaRPCOps) {
@@ -102,6 +111,29 @@ fun recipient(rpc: CordaRPCOps) {
         if (wtx.outputs.isNotEmpty()) {
             val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
             require(rpc.attachmentExists(state.hash))
+
+            // Download the attachment via the Web endpoint.
+            val connection = URL("http://localhost:10010/attachments/${state.hash}").openConnection() as HttpURLConnection
+            try {
+                require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
+                require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
+                require(connection.contentLength > 1024) { "Attachment contains only ${connection.contentLength} bytes" }
+                require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
+                    "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
+                }
+
+                // Write out the entries inside this jar.
+                println("Attachment JAR contains these entries:")
+                JarInputStream(connection.inputStream).use { it ->
+                    while (true) {
+                        val e = it.nextJarEntry ?: break
+                        println("Entry> ${e.name}")
+                        it.closeEntry()
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
             println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
         } else {
             println("Error: no output state found in ${wtx.id}")

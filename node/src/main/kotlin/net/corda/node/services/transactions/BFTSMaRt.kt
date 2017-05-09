@@ -198,7 +198,7 @@ object BFTSMaRt {
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = db.transaction { services.notaryIdentityKey }
-            return mySigningKey.signWithECDSA(bytes)
+            return mySigningKey.sign(bytes)
         }
 
         // TODO:

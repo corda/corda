@@ -5,7 +5,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.flows.NonValidatingNotaryFlow
 
 /** A simple Notary service that does not perform transaction validation */
 class SimpleNotaryService(val timestampChecker: TimestampChecker,

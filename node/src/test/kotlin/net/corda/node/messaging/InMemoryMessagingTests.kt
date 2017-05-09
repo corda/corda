@@ -1,10 +1,10 @@
 package net.corda.node.messaging
 
-import net.corda.core.messaging.Message
-import net.corda.core.messaging.TopicStringValidator
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.TopicStringValidator
+import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
 import org.junit.Test

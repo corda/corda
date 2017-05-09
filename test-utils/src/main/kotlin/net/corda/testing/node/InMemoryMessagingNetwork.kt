@@ -6,14 +6,16 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.*
+import net.corda.core.messaging.AllPossibleRecipients
+import net.corda.core.messaging.MessageRecipientGroup
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.MessagingServiceBuilder
-import net.corda.node.services.api.MessagingServiceInternal
+import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JDBCHashSet
 import net.corda.node.utilities.transaction
@@ -125,10 +127,10 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: String? = null,
+            description: X500Name? = null,
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, PeerHandle(id, description ?: "In memory node $id"), advertisedServices.map(::ServiceHandle), executor, database = database)
+        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getDevX509Name("In memory node $id")), advertisedServices.map(::ServiceHandle), executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -196,8 +198,8 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
-        override fun toString() = description
+    data class PeerHandle(val id: Int, val description: X500Name) : SingleMessageRecipient {
+        override fun toString() = description.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
@@ -298,7 +300,7 @@ class InMemoryMessagingNetwork(
     inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
-                                  private val database: Database) : SingletonSerializeAsToken(), MessagingServiceInternal {
+                                  private val database: Database) : SingletonSerializeAsToken(), MessagingService {
         inner class Handler(val topicSession: TopicSession,
                             val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
@@ -357,7 +359,7 @@ class InMemoryMessagingNetwork(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -373,6 +375,8 @@ class InMemoryMessagingNetwork(
             running = false
             netNodeHasShutdown(peerHandle)
         }
+
+        override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
         override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
@@ -464,6 +468,6 @@ class InMemoryMessagingNetwork(
                 1,
                 message.uniqueMessageId,
                 message.debugTimestamp,
-                X509Utilities.getDevX509Name(sender.description))
+                sender.description)
     }
 }

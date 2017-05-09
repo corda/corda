@@ -1,16 +1,19 @@
 package net.corda.node.services.network
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.send
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.flows.sendRequest
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.CHARLIE
+import net.corda.core.utilities.DUMMY_MAP
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.messaging.send
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Added
 import net.corda.node.services.network.AbstractNetworkMapServiceTest.Changed.Removed
 import net.corda.node.services.network.NetworkMapService.*
@@ -20,11 +23,6 @@ import net.corda.node.services.network.NetworkMapService.Companion.PUSH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.QUERY_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.REGISTER_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_TOPIC
-import net.corda.node.services.network.NodeRegistration
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.CHARLIE
-import net.corda.core.utilities.DUMMY_MAP
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
@@ -46,7 +44,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     lateinit var alice: MockNode
 
     companion object {
-        val subscriberLegalName = "CN=Subscriber,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"
+        val subscriberLegalName = X500Name("CN=Subscriber,OU=Corda QA Department,O=R3 CEV,L=New York,C=US")
     }
 
     @Before
@@ -249,14 +247,14 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         network.runNetwork()
     }
 
-    private fun addNewNodeToNetworkMap(legalName: String): MockNode {
+    private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
         val node = network.createNode(networkMapAddress = mapServiceNode.info.address, legalName = legalName)
         network.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node
     }
 
-    private fun newNodeSeparateFromNetworkMap(legalName: String): MockNode {
+    private fun newNodeSeparateFromNetworkMap(legalName: X500Name): MockNode {
         return network.createNode(legalName = legalName, nodeFactory = NoNMSNodeFactory)
     }
 

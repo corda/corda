@@ -5,7 +5,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.sign
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -26,7 +26,7 @@ class TransactionTests {
 
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair): SignedTransaction {
         val bytes: SerializedBytes<WireTransaction> = wtx.serialized
-        return SignedTransaction(bytes, keys.map { it.signWithECDSA(wtx.id.bytes) })
+        return SignedTransaction(bytes, keys.map { it.sign(wtx.id.bytes) })
     }
 
     @Test

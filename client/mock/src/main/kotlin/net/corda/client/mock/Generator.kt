@@ -144,6 +144,23 @@ fun Generator.Companion.doubleRange(from: Double, to: Double): Generator<Double>
     from + it.nextDouble() * (to - from)
 }
 
+fun Generator.Companion.char() = Generator {
+    val codePoint = Math.abs(it.nextInt()) % (17 * (1 shl 16))
+    if (Character.isValidCodePoint(codePoint)) {
+        return@Generator ErrorOr(codePoint.toChar())
+    } else {
+        ErrorOr.of(IllegalStateException("Could not generate valid codepoint"))
+    }
+}
+
+fun Generator.Companion.string(meanSize: Double = 16.0) = replicatePoisson(meanSize, char()).map {
+    val builder = StringBuilder()
+    it.forEach {
+        builder.append(it)
+    }
+    builder.toString()
+}
+
 fun <A> Generator.Companion.replicate(number: Int, generator: Generator<A>): Generator<List<A>> {
     val generators = mutableListOf<Generator<A>>()
     for (i in 1..number) {

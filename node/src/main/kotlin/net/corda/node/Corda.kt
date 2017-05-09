@@ -3,6 +3,7 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
+import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -22,8 +23,9 @@ import java.io.*
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
-import java.util.Locale
+import java.util.*
 import kotlin.system.exitProcess
+import kotlin.system.measureTimeMillis
 
 private var renderBasicInfoToConsole = true
 
@@ -35,6 +37,7 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 val LOGS_DIRECTORY_NAME = "logs"
+private val log by lazy { LoggerFactory.getLogger("Main") }
 
 private fun initLogging(cmdlineOptions: CmdLineOptions) {
     val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
@@ -90,7 +93,6 @@ fun main(args: Array<String>) {
 
     drawBanner(versionInfo)
 
-    val log = LoggerFactory.getLogger("Main")
     printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
 
     val conf = try {
@@ -123,7 +125,7 @@ fun main(args: Array<String>) {
     log.info("bootclasspath: ${info.bootClassPath}")
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
-    log.info("Machine: ${InetAddress.getLocalHost().hostName}")
+    checkForSlowLocalhostResolution()
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
     val agentProperties = sun.misc.VMSupport.getAgentProperties()
     if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
@@ -162,6 +164,30 @@ fun main(args: Array<String>) {
     }
 
     exitProcess(0)
+}
+
+private fun checkForSlowLocalhostResolution() {
+    val start = System.currentTimeMillis()
+    val hostName: String = InetAddress.getLocalHost().hostName
+    val elapsed = System.currentTimeMillis() - start
+    if (elapsed > 1000 && hostName.endsWith(".local")) {
+        // User is probably on macOS and experiencing this problem: http://stackoverflow.com/questions/10064581/how-can-i-eliminate-slow-resolving-loading-of-localhost-virtualhost-a-2-3-secon
+        //
+        // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
+        val messages = listOf(
+                "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
+                "Please see https://docs.corda.net/getting-set-up-fault-finding.html#slow-localhost-resolution for information on how to fix this. ",
+                "It will only take a few seconds for you to resolve."
+        )
+        log.warn(messages.joinToString(""))
+        Emoji.renderIfSupported {
+            print(Ansi.ansi().fgBrightRed())
+            messages.forEach {
+                println("${Emoji.sleepingFace}$it")
+            }
+            print(Ansi.ansi().reset())
+        }
+    }
 }
 
 private fun assertCanNormalizeEmptyPath() {

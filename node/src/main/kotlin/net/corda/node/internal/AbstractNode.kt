@@ -8,9 +8,13 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.KeyStoreUtilities
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.flows.*
+import net.corda.core.crypto.replaceCommonName
+import net.corda.core.flows.FlowInitiator
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowVersion
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -24,6 +28,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.flows.*
+import net.corda.node.services.*
 import net.corda.node.services.api.*
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
@@ -32,6 +37,8 @@ import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
@@ -40,6 +47,8 @@ import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersion
 import net.corda.node.services.transactions.*
@@ -51,6 +60,7 @@ import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
@@ -63,7 +73,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -89,8 +98,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 CashExitFlow::class.java to setOf(Amount::class.java, PartyAndReference::class.java),
                 CashIssueFlow::class.java to setOf(Amount::class.java, OpaqueBytes::class.java, Party::class.java),
                 CashPaymentFlow::class.java to setOf(Amount::class.java, Party::class.java),
-                FinalityFlow::class.java to emptySet(),
-                ContractUpgradeFlow.Instigator::class.java to emptySet()
+                FinalityFlow::class.java to setOf(LinkedHashSet::class.java),
+                ContractUpgradeFlow::class.java to emptySet()
         )
     }
 
@@ -112,8 +121,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
-        override val networkService: MessagingServiceInternal get() = net
-        override val networkMapCache: NetworkMapCache get() = netMapCache
+        override val networkService: MessagingService get() = net
+        override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -126,9 +135,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-        override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
+        override val flowLogicRefFactory: FlowLogicRefFactoryInternal get() = flowLogicFactory
 
-        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T> {
+        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
         }
 
@@ -162,10 +171,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var txVerifierService: TransactionVerifierService
     lateinit var identity: IdentityService
-    lateinit var net: MessagingServiceInternal
-    lateinit var netMapCache: NetworkMapCache
+    lateinit var net: MessagingService
+    lateinit var netMapCache: NetworkMapCacheInternal
     lateinit var scheduler: NodeSchedulerService
-    lateinit var flowLogicFactory: FlowLogicRefFactory
+    lateinit var flowLogicFactory: FlowLogicRefFactoryInternal
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
@@ -268,8 +277,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(FetchTransactionsFlow::class) { otherParty, _ -> FetchTransactionsHandler(otherParty) }
         installCoreFlow(FetchAttachmentsFlow::class) { otherParty, _ -> FetchAttachmentsHandler(otherParty) }
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
-        installCoreFlow(NotaryChangeFlow.Instigator::class) { otherParty, _ -> NotaryChangeFlow.Acceptor(otherParty) }
-        installCoreFlow(ContractUpgradeFlow.Instigator::class) { otherParty, _ -> ContractUpgradeFlow.Acceptor(otherParty) }
+        installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
+        installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
     }
 
     /**
@@ -331,7 +340,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: "ou=$serviceId,${configuration.myLegalName}"
+            val serviceName = it.name ?: configuration.myLegalName.replaceCommonName(serviceId)
             val identity = obtainKeyPair(configuration.baseDirectory, serviceId + "-private-key", serviceId + "-public", serviceName).first
             ServiceEntry(it, identity)
         }
@@ -343,7 +352,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            X509Utilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+            KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
         } catch (e: IOException) {
             null
         } catch (e: KeyStoreException) {
@@ -373,7 +382,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun initialiseFlowLogicFactory(): FlowLogicRefFactory {
+    private fun initialiseFlowLogicFactory(): FlowLogicRefFactoryInternal {
         val flowWhitelist = HashMap<String, Set<String>>()
 
         for ((flowClass, extraArgumentTypes) in defaultFlowWhiteList) {
@@ -390,7 +399,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        return FlowLogicRefFactory(flowWhitelist)
+        return FlowLogicRefFactoryImpl(flowWhitelist)
     }
 
     private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {
@@ -528,7 +537,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         runOnStop.clear()
     }
 
-    protected abstract fun makeMessagingService(): MessagingServiceInternal
+    protected abstract fun makeMessagingService(): MessagingService
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
@@ -551,7 +560,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
     protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
 
-    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: String? = null): Pair<Party, KeyPair> {
+    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: X500Name? = null): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -559,13 +568,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
         val privKeyFile = dir / privateKeyFileName
         val pubIdentityFile = dir / publicKeyFileName
-        val identityName = serviceName ?: configuration.myLegalName
+        val identityPrincipal: X500Name = serviceName ?: configuration.myLegalName
 
         val identityAndKey = if (!privKeyFile.exists()) {
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             keyPair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party(identityName, keyPair.public)
+            val myIdentity = Party(identityPrincipal, keyPair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
             // wrong type by mistake.
             myIdentity.serialize().writeToFile(pubIdentityFile)
@@ -575,9 +584,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
             val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-            if (myIdentity.name != identityName)
+            if (myIdentity.name != identityPrincipal)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "$identityName vs ${myIdentity.name}")
+                        "$identityPrincipal vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
             Pair(myIdentity, keyPair)

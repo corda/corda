@@ -46,7 +46,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `get identity by name with no registered identities`() {
         val service = InMemoryIdentityService()
-        assertNull(service.partyFromName(ALICE.name))
+        assertNull(service.partyFromX500Name(ALICE.name))
     }
 
     @Test
@@ -54,8 +54,8 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService()
         val identities = listOf("Node A", "Node B", "Node C")
                 .map { Party(X500Name("CN=$it,O=R3,OU=corda,L=London,C=UK"), generateKeyPair().public) }
-        assertNull(service.partyFromName(identities.first().name))
+        assertNull(service.partyFromX500Name(identities.first().name))
         identities.forEach { service.registerIdentity(it) }
-        identities.forEach { assertEquals(it, service.partyFromName(it.name)) }
+        identities.forEach { assertEquals(it, service.partyFromX500Name(it.name)) }
     }
 }

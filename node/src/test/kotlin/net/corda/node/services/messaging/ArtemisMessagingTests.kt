@@ -5,12 +5,8 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.typesafe.config.ConfigFactory.empty
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.messaging.Message
 import net.corda.core.messaging.RPCOps
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.LogHelper
@@ -31,6 +27,7 @@ import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
@@ -217,7 +214,7 @@ class ArtemisMessagingTests {
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run() }
+        thread { messagingClient.run(messagingServer!!.serverControl) }
         return messagingClient
     }
 

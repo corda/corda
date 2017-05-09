@@ -1,7 +1,8 @@
-package net.corda.flows
+package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.messaging.*
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.serialization.CordaSerializable
 

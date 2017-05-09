@@ -14,6 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.NotaryFlow
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -21,8 +22,8 @@ import kotlin.system.exitProcess
 fun main(args: Array<String>) {
     val host = HostAndPort.fromString("localhost:10003")
     println("Connecting to the recipient node ($host)")
-    CordaRPCClient(host).use("demo", "demo") {
-        val api = NotaryDemoClientApi(this)
+    CordaRPCClient(host).start("demo", "demo").use {
+        val api = NotaryDemoClientApi(it.proxy)
         api.startNotarisation()
     }
 }
@@ -38,7 +39,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val counterpartyNode by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        parties.first { it.legalIdentity.name == "CN=Counterparty,O=R3,OU=corda,L=London,C=UK" }
+        parties.first { it.legalIdentity.name == X500Name("CN=Counterparty,O=R3,OU=corda,L=London,C=UK") }
     }
 
     private companion object {

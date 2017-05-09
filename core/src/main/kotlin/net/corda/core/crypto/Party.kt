@@ -12,7 +12,8 @@ import java.security.PublicKey
  * cryptographic public key primitives into a tree structure.
  *
  * For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
- * Her advertised [Party] then has a legal [name] "Alice" and an [owningKey] "pub1 or pub2".
+ * Her advertised [Party] then has a legal X.500 [name] "CN=Alice Corp,O=Alice Corp,L=London,C=UK" and an [owningKey]
+ * "pub1 or pub2".
  *
  * [Party] is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,
  * which requires a separate signing key (and an identifying name). Services can also be distributed – run by a coordinated
@@ -23,11 +24,10 @@ import java.security.PublicKey
  *
  * @see CompositeKey
  */
-class Party(val name: String, owningKey: PublicKey) : AbstractParty(owningKey) {
-    constructor(name: X500Name, owningKey: PublicKey) : this(name.toString(), owningKey)
+class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} ($name)"
-    override fun nameOrNull(): String? = name
+    override fun nameOrNull(): X500Name? = name
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this.toAnonymous(), bytes)
 }

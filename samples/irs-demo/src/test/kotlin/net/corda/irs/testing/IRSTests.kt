@@ -14,6 +14,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
+import kotlin.test.assertEquals
 
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
     return when (irsSelect) {
@@ -326,7 +327,7 @@ class IRSTests {
     @Test
     fun `test some rate objects 100 * FixedRate(5%)`() {
         val r1 = FixedRate(PercentageRatioUnit("5"))
-        assert(100 * r1 == 5)
+        assertEquals(5, 100 * r1)
     }
 
     @Test

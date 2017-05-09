@@ -216,7 +216,7 @@ is a three node example;
             cordapps []
         }
         node {
-            name "CN=NodeB,O=R3,OU=corda,L=New York,C=USA"
+            name "CN=NodeB,O=R3,OU=corda,L=New York,C=US"
             nearestCity "New York"
             advertisedServices = []
             p2pPort 10008

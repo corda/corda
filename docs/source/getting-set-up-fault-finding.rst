@@ -23,6 +23,13 @@ JavaFX is not bundled with OpenJDK. If you are using OpenJDK and get an 'Unresol
 
 If you have APT installed and OpenJFX is part of your Unix distribution's package list, you can do this by running ``sudo apt install openjfx``, and possibly ``sudo apt install libopenjfx-jav``. Other users will want to refer to the guide `here <https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX>`_, or to the list of Community Builds `here <https://wiki.openjdk.java.net/display/OpenJFX/Community+Builds>`_.
 
+"Check that you have the -parameters option specified in the Java compiler"
+***************************************************************************
+
+Some of the unit tests, and our serialization framework in general, rely on the constructor parameter names being visible
+to Java reflection.  Make sure you have specified the `-parameters` option to the Java compiler.  We attempt to set this globally
+for gradle and IntelliJ, but it's possible this option is not present in your environment for some reason.
+
 IDEA issues
 -----------
 
@@ -60,6 +67,35 @@ If IDEA refuses to open a project because an SDK has not been selected, you may 
 
 If you are having trouble selecting the correct JDK, the JetBrains website provides the `following guidelines <https://intellij-support.jetbrains.com/hc/en-us/articles/206544879-Selecting-the-JDK-version-the-IDE-will-run-under>`_.
 
+IDEA fails to compile Corda because it refuses to find some dependencies
+************************************************************************
+
+First check that Corda compiles successfully from the command line using ``gradlew clean build``. If this succeeds then IntelliJ may just have imported the project's Gradle files incorrectly. Try opening the
+
+.. parsed-literal::
+
+    View/Tool Windows/Gradle
+
+..
+
+pane and clicking the "Refresh all Gradle projects" button. Then retry compiling Corda within IntelliJ. If this still fails then try
+
+.. parsed-literal::
+
+    File/Invalidate Caches, Restart...
+
+..
+
+or checking the
+
+.. parsed-literal::
+
+    Settings/Build,Execution,Deployment/Build Tools/Gradle/Runner/Delegate IDE build-run actions to gradle
+
+..
+
+checkbox, and then refreshing Gradle again.
+
 IDEA fails to compile in VaultSchemaTest.kt
 *******************************************
 
@@ -81,8 +117,39 @@ identify the latest version of the Kotlin plugin on `this page <https://plugins.
 
 This can usually be solved by updating IDEA. Check that you have the latest version `here <https://www.jetbrains.com/idea/download/>`_.
 
+"Check that you have the -parameters option specified in the Java compiler"
+***************************************************************************
+
+See entry under Java (above).
+
 Other common issues
 -------------------
+
+Slow localhost resolution
+*************************
+
+Out of the box, Apple Mac's have machine names that end in ".local", by default something like "MacBook-Pro.local".
+This can cause long delays with starting Corda nodes as every attempt to look up the name of the local computer triggers
+a five second pause. This is not a bug in Corda but rather `a problem with the macOS networking stack <http://stackoverflow.com/questions/39636792/jvm-takes-a-long-time-to-resolve-ip-address-for-localhost>`_.
+
+To fix it, you will need to use the Terminal app and edit your ``/etc/hosts`` file. For instance, you can do this by
+typing:
+
+``sudo nano /etc/hosts``
+
+then typing in your own password, assuming you are an administrator user of the computer.
+
+You will need to ensure there are two lines for the name of your machine (which you can find in the Sharing section
+of System Preferences), which look like this:
+
+.. parsed-literal::
+
+   127.0.0.1 MacBook-Pro.local
+   fe80::1%lo0 MacBook-Pro.local
+
+
+If you've changed the name of your computer in Sharing or via the ``hostname`` command, obviously ensure you replace
+``MacBook-Pro.local`` with the correct name. Then press Ctrl-O to save the file and Ctrl-X to exit.
 
 “xterm: command not found”
 **************************

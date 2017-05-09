@@ -3,7 +3,7 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
-import net.corda.core.messaging.Ack
+import net.corda.node.services.messaging.Ack
 import net.corda.node.services.persistence.NodeAttachmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -76,15 +76,14 @@ class KryoTests {
         val keyPair = generateKeyPair()
         val bitsToSign: ByteArray = Ints.toByteArray(0x01234567)
         val wrongBits: ByteArray = Ints.toByteArray(0x76543210)
-        val signature = keyPair.signWithECDSA(bitsToSign)
-        signature.verifyWithECDSA(bitsToSign)
-        assertThatThrownBy { signature.verifyWithECDSA(wrongBits) }
+        val signature = keyPair.sign(bitsToSign)
+        signature.verify(bitsToSign)
+        assertThatThrownBy { signature.verify(wrongBits) }
 
         val deserialisedKeyPair = keyPair.serialize(kryo).deserialize(kryo)
-        val deserialisedSignature = deserialisedKeyPair.signWithECDSA(bitsToSign)
-        assertThat(deserialisedSignature).isEqualTo(signature)
-        deserialisedSignature.verifyWithECDSA(bitsToSign)
-        assertThatThrownBy { deserialisedSignature.verifyWithECDSA(wrongBits) }
+        val deserialisedSignature = deserialisedKeyPair.sign(bitsToSign)
+        deserialisedSignature.verify(bitsToSign)
+        assertThatThrownBy { deserialisedSignature.verify(wrongBits) }
     }
 
     @Test

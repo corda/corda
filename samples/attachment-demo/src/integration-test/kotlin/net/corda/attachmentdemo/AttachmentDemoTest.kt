@@ -25,14 +25,14 @@ class AttachmentDemoTest {
             ).getOrThrow()
 
             val senderThread = CompletableFuture.supplyAsync {
-                nodeA.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
-                    sender(this, numOfExpectedBytes)
+                nodeA.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
+                    sender(it.proxy, numOfExpectedBytes)
                 }
             }.exceptionally { it.printStackTrace() }
 
             val recipientThread = CompletableFuture.supplyAsync {
-                nodeB.rpcClientToNode().use(demoUser[0].username, demoUser[0].password) {
-                    recipient(this)
+                nodeB.rpcClientToNode().start(demoUser[0].username, demoUser[0].password).use {
+                    recipient(it.proxy)
                 }
             }.exceptionally { it.printStackTrace() }
 

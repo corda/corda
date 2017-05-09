@@ -1,16 +1,27 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each snapshot release.
+Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code from the previous milestone release.
 
 UNRELEASED
 ----------
 
 * API changes:
-    * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
+    * ``PluginServiceHub.registerServiceFlow`` has been deprecated and replaced by ``registerServiceFlow`` with the
+      marker Class restricted to ``FlowLogic``.
 
-    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
-      composite keys and signatures.
+    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
+      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+
+    * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
+
+    * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
+
+Milestone 11.0
+--------------
+
+* API changes:
+    * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
 
     * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using
       one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable``
@@ -20,11 +31,38 @@ UNRELEASED
     * Moved ``generateSpend`` and ``generateExit`` functions into ``OnLedgerAsset`` from the vault and
       ``AbstractConserveAmount`` clauses respectively.
 
-    * ``PluginServiceHub.registerServiceFlow`` has been deprecated and replaced by ``registerServiceFlow`` with the
-      marker Class restricted to ``FlowLogic``.
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
+      composite keys and signatures.
 
-    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
-      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+    * ``CompositeKey`` now implements ``java.security.PublicKey`` interface, so that keys can be used on standard classes such as ``Certificate``. 
+
+        * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is imposible to create ``CompositeKey`` with only one leaf.
+
+        * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key. Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node. (Long chains of single nodes are shortened.)
+
+        * Use extension function ``PublicKeys.keys`` to access all keys belonging to an instance of ``PublicKey``. For a ``CompositeKey``, this is equivalent to ``CompositeKey.leafKeys``.
+
+        * Introduced ``containsAny``, ``isFulfilledBy``, ``keys`` extension functions on ``PublicKey`` - ``CompositeKey`` type checking is done there.
+
+* Corda now requires JDK 8u131 or above in order to run. Our Kotlin now also compiles to JDK8 bytecode, and so you'll need to update your CorDapp projects to do the same. E.g. by adding this to ``build.gradle``:
+
+.. parsed-literal::
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.1"
+            apiVersion = "1.1"
+            jvmTarget = "1.8"
+        }
+    }
+
+..
+
+ or by adjusting ``Settings/Build,Execution,Deployment/Compiler/KotlinCompiler`` in IntelliJ::
+
+ -  Language Version: 1.1
+ -  API Version: 1.1
+ -  Target JVM Version: 1.8
 
 * DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
 
@@ -51,8 +89,8 @@ to Corda in M10.
    processor.
 
 * Corda DemoBench:
-    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate
-      to your colleagues the fundamentals of Corda in real-time. It has the following features:
+    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
+
         * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node
           before launch, such as its legal name and which CorDapps will be loaded.
         * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
@@ -61,6 +99,7 @@ to Corda in M10.
         * Some basic statistics are shown about each node, informed via the RPC connection.
         * Another button launches a database viewer in the system browser.
         * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+
     * You can download Corda DemoBench from `here <https://www.corda.net/downloads/>`_
 
 * Vault:
@@ -397,7 +436,7 @@ New features in this release:
       are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
       boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
       is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
-      key trees in the ":doc:`transaction-data-types`" article.
+      key trees in the ":doc:`key-concepts-core-types`" article.
     * A new tutorial has been added showing how to use transaction attachments in more detail.
 
 * Testnet
@@ -572,8 +611,8 @@ Highlights of this release:
 We have new documentation on:
 
 * :doc:`event-scheduling`
-* :doc:`transaction-data-types`
-* :doc:`consensus`
+* :doc:`key-concepts-core-types`
+* :doc:`key-concepts-consensus-notaries`
 
 Summary of API changes (not exhaustive):
 

@@ -3,10 +3,8 @@ package net.corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.*
-import net.corda.core.messaging.MessageHandlerRegistration
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkMapCache
@@ -17,9 +15,11 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.ServiceRequestMessage
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.MessageHandlerRegistration
+import net.corda.node.services.messaging.ServiceRequestMessage
+import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService.*
 import net.corda.node.services.network.NetworkMapService.Companion.FETCH_TOPIC
 import net.corda.node.services.network.NetworkMapService.Companion.PUSH_ACK_TOPIC
@@ -323,7 +323,7 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
      */
     fun toWire(privateKey: PrivateKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.signWithECDSA(regSerialized.bytes, node.legalIdentity.owningKey)
+        val regSig = privateKey.sign(regSerialized.bytes, node.legalIdentity.owningKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }

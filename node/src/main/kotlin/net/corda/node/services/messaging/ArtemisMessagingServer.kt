@@ -21,10 +21,10 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
 import net.corda.nodeapi.*
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.CLIENTS_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.apache.activemq.artemis.api.core.management.ActiveMQServerControl
 import org.apache.activemq.artemis.core.config.BridgeConfiguration
 import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
@@ -37,6 +37,8 @@ import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactor
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
+import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
+import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.remoting.*
 import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
@@ -97,6 +99,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
+    val serverControl: ActiveMQServerControl get() = activeMQServer.activeMQServerControl
     private val _networkMapConnectionFuture = config.networkMapService?.let { SettableFuture.create<Unit>() }
     /**
      * A [ListenableFuture] which completes when the server successfully connects to the network map node. If a
@@ -185,10 +188,19 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 // Create an RPC queue: this will service locally connected clients only (not via a bridge) and those
                 // clients must have authenticated. We could use a single consumer for everything and perhaps we should,
                 // but these queues are not worth persisting.
-                queueConfig(RPC_REQUESTS_QUEUE, durable = false),
-                // The custom name for the queue is intentional - we may wish other things to subscribe to the
-                // NOTIFICATIONS_ADDRESS with different filters in future
-                queueConfig(RPC_QUEUE_REMOVALS_QUEUE, address = NOTIFICATIONS_ADDRESS, filter = "_AMQ_NotifType = 1", durable = false)
+                queueConfig(RPCApi.RPC_SERVER_QUEUE_NAME, durable = false),
+                queueConfig(
+                        name = RPCApi.RPC_CLIENT_BINDING_REMOVALS,
+                        address = NOTIFICATIONS_ADDRESS,
+                        filter = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION,
+                        durable = false
+                )
+        )
+        addressesSettings = mapOf(
+                "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.#" to AddressSettings().apply {
+                    maxSizeBytes = 10L * MAX_FILE_SIZE
+                    addressFullMessagePolicy = AddressFullMessagePolicy.FAIL
+                }
         )
         configureAddressSecurity()
     }
@@ -213,16 +225,16 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         val nodeInternalRole = Role(NODE_ROLE, true, true, true, true, true, true, true, true)
         securityRoles["$INTERNAL_PREFIX#"] = setOf(nodeInternalRole)  // Do not add any other roles here as it's only for the node
         securityRoles[P2P_QUEUE] = setOf(nodeInternalRole, restrictedRole(PEER_ROLE, send = true))
-        securityRoles[RPC_REQUESTS_QUEUE] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
+        securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
-        securityRoles["$CLIENTS_PREFIX$NODE_USER.rpc.*"] = setOf(nodeInternalRole)
+        securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
         for ((username) in userService.users) {
-            securityRoles["$CLIENTS_PREFIX$username.rpc.*"] = setOf(
+            securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
                     nodeInternalRole,
-                    restrictedRole("$CLIENTS_PREFIX$username", consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
+                    restrictedRole("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username", consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true))
         }
         securityRoles[VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, consume = true))
-        securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.*"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
+        securityRoles["${VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX}.#"] = setOf(nodeInternalRole, restrictedRole(VERIFIER_ROLE, send = true))
     }
 
     private fun restrictedRole(name: String, send: Boolean = false, consume: Boolean = false, createDurableQueue: Boolean = false,
@@ -234,11 +246,13 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val ourCertificate = X509Utilities
-                .loadCertificateFromKeyStore(config.keyStoreFile, config.keyStorePassword, CORDA_CLIENT_CA)
+        val keyStore = KeyStoreUtilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
+        val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_CA)
+
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourSubjectDN.commonName == config.myLegalName) {
+        require(ourSubjectDN == config.myLegalName) {
             "Legal name does not match with our subject CN: $ourSubjectDN"
         }
         val defaultCertPolicies = mapOf(
@@ -246,8 +260,6 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                 NODE_ROLE to CertificateChainCheckPolicy.LeafMustMatch,
                 VERIFIER_ROLE to CertificateChainCheckPolicy.RootMustMatch
         )
-        val keyStore = X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
-        val trustStore = X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
         val certChecks = defaultCertPolicies.mapValues { (role, defaultPolicy) ->
             val configPolicy = config.certificateChainCheckPolicies.noneOrSingle { it.role == role }?.certificateChainCheckPolicy
             (configPolicy ?: defaultPolicy).createCheck(keyStore, trustStore)
@@ -346,7 +358,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         }
     }
 
-    private fun deployBridge(address: ArtemisPeerAddress, legalName: String) {
+    private fun deployBridge(address: ArtemisPeerAddress, legalName: X500Name) {
         deployBridge(address.queueName, address.hostAndPort, legalName)
     }
 
@@ -359,7 +371,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
      */
-    private fun deployBridge(queueName: String, target: HostAndPort, legalName: String) {
+    private fun deployBridge(queueName: String, target: HostAndPort, legalName: X500Name) {
         val connectionDirection = ConnectionDirection.Outbound(
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
                 expectedCommonName = legalName
@@ -398,17 +410,17 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun getBridgeName(queueName: String, hostAndPort: HostAndPort): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(peerLegalName: String, expectedCommonName: String) {
-        log.error("Peer has wrong CN - expected $expectedCommonName but got $peerLegalName. This is either a fatal " +
+    internal fun hostVerificationFail(peerLegalName: X500Name, expectedLegalName: X500Name) {
+        log.error("Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
                 "misconfiguration by the remote peer or an SSL man-in-the-middle attack!")
-        if (expectedCommonName == config.networkMapService?.legalName) {
+        if (expectedLegalName == config.networkMapService?.legalName) {
             // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
             _networkMapConnectionFuture!!.setException(IOException("${config.networkMapService} failed host verification check"))
         }
     }
 
     // This is called on one of Artemis' background threads
-    internal fun onTcpConnection(peerLegalName: String) {
+    internal fun onTcpConnection(peerLegalName: X500Name) {
         if (peerLegalName == config.networkMapService?.legalName) {
             _networkMapConnectionFuture!!.set(Unit)
         }
@@ -437,12 +449,12 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
     private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expectedCommonName = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_COMMON_NAME) as? String
+    private val expecteLegalName: X500Name? = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME) as X500Name?
 
     override fun createConnection(): Connection? {
         val connection = super.createConnection() as NettyConnection?
-        if (connection != null && expectedCommonName != null) {
-            val peerLegalName = connection
+        if (connection != null && expecteLegalName != null) {
+            val peerLegalName: X500Name = connection
                     .channel
                     .pipeline()
                     .get(SslHandler::class.java)
@@ -451,11 +463,9 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                     .peerPrincipal
                     .name
                     .let(::X500Name)
-                    .commonName
-            // TODO Verify on the entire principle (subject)
-            if (peerLegalName != expectedCommonName) {
+            if (peerLegalName != expecteLegalName) {
                 connection.close()
-                server!!.hostVerificationFail(peerLegalName, expectedCommonName)
+                server!!.hostVerificationFail(peerLegalName, expecteLegalName)
                 return null  // Artemis will keep trying to reconnect until it's told otherwise
             } else {
                 server!!.onTcpConnection(peerLegalName)
@@ -631,7 +641,7 @@ class NodeLoginModule : LoginModule {
             throw FailedLoginException("Password for user $username does not match")
         }
         principals += RolePrincipal(RPC_ROLE)  // This enables the RPC client to send requests
-        principals += RolePrincipal("$CLIENTS_PREFIX$username")  // This enables the RPC client to receive responses
+        principals += RolePrincipal("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username")  // This enables the RPC client to receive responses
         return username
     }
 

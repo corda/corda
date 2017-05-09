@@ -199,8 +199,8 @@ class NodeWebServer(val config: WebServerConfig) {
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
         log.info("Connecting to node at ${config.p2pAddress} as node user")
         val client = CordaRPCClient(config.p2pAddress, config)
-        client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-        return client.proxy()
+        val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+        return connection.proxy
     }
 
     /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */

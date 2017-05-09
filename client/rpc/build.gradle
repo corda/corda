@@ -36,6 +36,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     testCompile project(':test-utils')
+    testCompile project(':client:mock')
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

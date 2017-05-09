@@ -1,15 +1,10 @@
 package net.corda.client.rpc
 
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
@@ -27,7 +22,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CordaRPCClientTest : NodeBasedTest() {
     private val rpcUser = User("user1", "test", permissions = setOf(
@@ -36,6 +33,11 @@ class CordaRPCClientTest : NodeBasedTest() {
     ))
     private lateinit var node: Node
     private lateinit var client: CordaRPCClient
+    private var connection: CordaRPCConnection? = null
+
+    private fun login(username: String, password: String) {
+        connection = client.start(username, password)
+    }
 
     @Before
     fun setUp() {
@@ -45,33 +47,35 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @After
     fun done() {
-        client.close()
+        connection?.close()
     }
 
     @Test
     fun `log in with valid username and password`() {
-        client.start(rpcUser.username, rpcUser.password)
+        login(rpcUser.username, rpcUser.password)
     }
 
     @Test
     fun `log in with unknown user`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            client.start(random63BitValue().toString(), rpcUser.password)
+            login(random63BitValue().toString(), rpcUser.password)
         }
     }
 
     @Test
     fun `log in with incorrect password`() {
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
-            client.start(rpcUser.username, random63BitValue().toString())
+            login(rpcUser.username, random63BitValue().toString())
         }
     }
 
     @Test
     fun `close-send deadlock and premature shutdown on empty observable`() {
-        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
+        println("Starting client")
+        login(rpcUser.username, rpcUser.password)
+        println("Creating proxy")
         println("Starting flow")
-        val flowHandle = proxy.startTrackedFlow(
+        val flowHandle = connection!!.proxy.startTrackedFlow(
                 ::CashIssueFlow,
                 20.DOLLARS, OpaqueBytes.of(0), node.info.legalIdentity, node.info.legalIdentity)
         println("Started flow, waiting on result")
@@ -83,9 +87,8 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `FlowException thrown by flow`() {
-        client.start(rpcUser.username, rpcUser.password)
-        val proxy = client.proxy()
-        val handle = proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity)
+        login(rpcUser.username, rpcUser.password)
+        val handle = connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity)
         // TODO Restrict this to CashException once RPC serialisation has been fixed
         assertThatExceptionOfType(FlowException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()
@@ -94,9 +97,8 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `check basic flow has no progress`() {
-        client.start(rpcUser.username, rpcUser.password)
-        val proxy = client.proxy()
-        proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity).use {
+        login(rpcUser.username, rpcUser.password)
+        connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity).use {
             assertFalse(it is FlowProgressHandle<*>)
             assertTrue(it is FlowHandle<*>)
         }
@@ -104,7 +106,8 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `get cash balances`() {
-        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
+        login(rpcUser.username, rpcUser.password)
+        val proxy = connection!!.proxy
         val startCash = proxy.getCashBalances()
         assertTrue(startCash.isEmpty(), "Should not start with any cash")
 
@@ -123,7 +126,8 @@ class CordaRPCClientTest : NodeBasedTest() {
 
     @Test
     fun `flow initiator via RPC`() {
-        val proxy = createRpcProxy(rpcUser.username, rpcUser.password)
+        login(rpcUser.username, rpcUser.password)
+        val proxy = connection!!.proxy
         val smUpdates = proxy.stateMachinesAndUpdates()
         var countRpcFlows = 0
         var countShellFlows = 0
@@ -147,12 +151,5 @@ class CordaRPCClientTest : NodeBasedTest() {
                 nodeIdentity, nodeIdentity).returnValue.getOrThrow()
         assertEquals(2, countRpcFlows)
         assertEquals(1, countShellFlows)
-    }
-
-    private fun createRpcProxy(username: String, password: String): CordaRPCOps {
-        println("Starting client")
-        client.start(username, password)
-        println("Creating proxy")
-        return client.proxy()
     }
 }

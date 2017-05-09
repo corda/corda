@@ -75,7 +75,7 @@ class CompositeSignature : Signature(ALGORITHM) {
             val sig = sigBytes.deserialize<CompositeSignaturesWithKeys>()
             return if (verifyKey.isFulfilledBy(sig.sigs.map { it.by })) {
                 val clearData = buffer.toByteArray()
-                sig.sigs.all { it.isValidForECDSA(clearData) }
+                sig.sigs.all { it.isValid(clearData) }
             } else {
                 false
             }

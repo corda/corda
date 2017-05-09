@@ -29,7 +29,6 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.security.PublicKey
-import sun.misc.MessageUtils.where
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -293,7 +292,7 @@ class VaultSchemaTest {
             stateStatus = Vault.StateStatus.UNCONSUMED
             contractStateClassName = state.data.javaClass.name
             contractState = state.serialize().bytes
-            notaryName = state.notary.name
+            notaryName = state.notary.name.toString()
             notaryKey = state.notary.owningKey.toBase58String()
             recordedTime = Instant.now()
         }

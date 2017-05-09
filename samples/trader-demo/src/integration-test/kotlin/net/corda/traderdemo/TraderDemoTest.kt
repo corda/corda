@@ -4,11 +4,13 @@ import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.getOrThrow
+import net.corda.core.millis
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow
+import net.corda.node.driver.poll
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -17,6 +19,7 @@ import net.corda.testing.node.NodeBasedTest
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.concurrent.Executors
 
 class TraderDemoTest : NodeBasedTest() {
     @Test
@@ -35,7 +38,7 @@ class TraderDemoTest : NodeBasedTest() {
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
             val client = CordaRPCClient(it.configuration.rpcAddress!!)
-            client.start(demoUser[0].username, demoUser[0].password).proxy()
+            client.start(demoUser[0].username, demoUser[0].password).proxy
         }
 
         val clientA = TraderDemoClientApi(nodeARpc)
@@ -48,10 +51,19 @@ class TraderDemoTest : NodeBasedTest() {
         clientA.runBuyer(amount = 100.DOLLARS)
         clientB.runSeller(counterparty = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
 
-        val actualPaper = listOf(clientA.commercialPaperCount, clientB.commercialPaperCount)
         assertThat(clientA.cashCount).isGreaterThan(originalACash)
         assertThat(clientB.cashCount).isEqualTo(expectedBCash)
-        assertThat(actualPaper).isEqualTo(expectedPaper)
+        // Wait until A receives the commercial paper
+        val executor = Executors.newScheduledThreadPool(1)
+        poll(executor, "A to be notified of the commercial paper", pollInterval = 100.millis) {
+            val actualPaper = listOf(clientA.commercialPaperCount, clientB.commercialPaperCount)
+            if (actualPaper == expectedPaper) {
+                Unit
+            } else {
+                null
+            }
+        }.get()
+        executor.shutdown()
         assertThat(clientA.dollarCashBalance).isEqualTo(95.DOLLARS)
         assertThat(clientB.dollarCashBalance).isEqualTo(5.DOLLARS)
     }

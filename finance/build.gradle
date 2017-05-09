@@ -10,6 +10,7 @@ description 'Corda finance modules'
 
 dependencies {
     compile project(':core')
+    compile project(':node-schemas')
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

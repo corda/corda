@@ -1,3 +1,4 @@
+
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -97,16 +98,12 @@ allprojects {
 
     // Use manual resource copying of log4j2.xml rather than source sets.
     // This prevents problems in IntelliJ with regard to duplicate source roots.
-    processResources {
-        from file("$rootDir/config/dev/log4j2.xml")
-    }
-
     processTestResources {
         from file("$rootDir/config/test/log4j2.xml")
     }
 
     tasks.withType(JavaCompile) {
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options"
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
     }
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
@@ -125,6 +122,11 @@ allprojects {
             attributes('Corda-Revision': corda_revision)
             attributes('Corda-Vendor': 'Corda Open Source')
         }
+    }
+
+    tasks.withType(Test) {
+        // Prevent the project from creating temporary files outside of the build directory.
+        systemProperties['java.io.tmpdir'] = buildDir
     }
 
     group 'net.corda'

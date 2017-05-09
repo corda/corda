@@ -61,7 +61,7 @@ object NotaryFlow {
             }
 
             val response = try {
-                sendAndReceive<List<DigitalSignature.WithKey>>(notaryParty, payload)
+                sendAndReceiveWithRetry<List<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -77,7 +77,7 @@ object NotaryFlow {
 
         private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verifyWithECDSA(data)
+            sig.verify(data)
         }
     }
 
@@ -142,7 +142,7 @@ object NotaryFlow {
 
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
-            return mySigningKey.signWithECDSA(bits)
+            return mySigningKey.sign(bits)
         }
 
         private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {
