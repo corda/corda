@@ -11,6 +11,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.unconsumedStates
@@ -104,6 +105,7 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
 
 // A flow representing creating a transaction that
 // carries out exchange of cash assets.
+@InitiatingFlow
 class ForeignExchangeFlow(val tradeId: String,
                           val baseCurrencyAmount: Amount<Issued<Currency>>,
                           val quoteCurrencyAmount: Amount<Issued<Currency>>,

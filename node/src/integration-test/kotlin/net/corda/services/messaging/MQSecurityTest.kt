@@ -7,6 +7,7 @@ import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
@@ -222,6 +223,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         return bobParty
     }
 
+    @InitiatingFlow
     private class SendFlow(val otherParty: Party, val payload: Any) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = send(otherParty, payload)

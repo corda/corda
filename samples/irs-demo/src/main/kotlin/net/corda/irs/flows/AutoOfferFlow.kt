@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
 import net.corda.core.crypto.AbstractParty
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -31,10 +32,11 @@ object AutoOfferFlow {
 
     class Service(services: PluginServiceHub) : SingletonSerializeAsToken() {
         init {
-            services.registerServiceFlow(Instigator::class.java) { Acceptor(it) }
+            services.registerServiceFlow(Requester::class.java) { Acceptor(it) }
         }
     }
 
+    @InitiatingFlow
     class Requester(val dealToBeOffered: DealState) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -74,14 +76,7 @@ object AutoOfferFlow {
         }
 
         private fun <T : AbstractParty> notUs(parties: List<T>): List<T> {
-            val notUsParties: MutableList<T> = arrayListOf()
-            for (party in parties) {
-                if (serviceHub.myInfo.legalIdentity != party) {
-                    notUsParties.add(party)
-                }
-            }
-            return notUsParties
+            return parties.filter { serviceHub.myInfo.legalIdentity != it }
         }
-
     }
 }
