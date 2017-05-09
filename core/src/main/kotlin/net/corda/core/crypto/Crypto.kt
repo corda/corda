@@ -547,13 +547,8 @@ object Crypto {
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     }
 
-    /** Check if the requested signature scheme is supported by the system. */
-    fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = schemeCodeName in supportedSignatureSchemes
-
-    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = signatureScheme.schemeCodeName in supportedSignatureSchemes
-
     /**
-     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key
+     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key.
      */
     fun createCertificate(issuer: X500Name, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
@@ -622,8 +617,7 @@ object Crypto {
     // return true if EdDSA publicKey is point at infinity.
     // For EdDSA a custom function is required as it is not supported by the I2P implementation.
     private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey) = publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
-    /** Check if the requested signature scheme's codeName is supported by the system. */
-    fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = schemeCodeName in supportedSignatureSchemes
+
     /** Check if the requested [SignatureScheme] is supported by the system. */
     fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes.getOrElse(signatureScheme.schemeCodeName, { false }) == signatureScheme
 }
