@@ -340,15 +340,18 @@ class ShutdownManager(private val executorService: ExecutorService) {
         }
         val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
         shutdowns.reversed().forEach { errorOrShutdown ->
-            try {
-                if (errorOrShutdown.error == null) {
-                    errorOrShutdown.value?.invoke()
-                } else {
-                    log.error("Exception while getting shutdown method, disregarding", errorOrShutdown.error)
-                }
-            } catch (throwable: Throwable) {
-                log.error("Exception while shutting down", throwable)
-            }
+            errorOrShutdown.match(
+                    onValue = { shutdown ->
+                        try {
+                            shutdown()
+                        } catch (throwable: Throwable) {
+                            log.error("Exception while shutting down", throwable)
+                        }
+                    },
+                    onError = { error ->
+                        log.error("Exception while getting shutdown method, disregarding", error)
+                    }
+            )
         }
     }
 

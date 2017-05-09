@@ -42,7 +42,7 @@ class BootTests {
                 startNode(ALICE.name).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { it.contains("Logs can be found in") }.count()
+            val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { it.contains(LOGS_CAN_BE_FOUND_IN_STRING) }.count()
             assertEquals(1, numberOfNodesThatLogged)
         }
     }
