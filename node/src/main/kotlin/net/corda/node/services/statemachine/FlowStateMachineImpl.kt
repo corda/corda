@@ -6,7 +6,6 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.client.rpc.notUsed
 import net.corda.core.abbreviate
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
@@ -16,9 +15,9 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
-import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.FlowProgressHandleImpl
 import net.corda.core.random63BitValue
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -428,37 +427,5 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // Start time gets serialized along with the fiber when it suspends
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
-    }
-}
-
-// I would prefer for [FlowProgressHandleImpl] to extend [FlowHandleImpl],
-// but Kotlin doesn't allow this for data classes, not even to create
-// another data class!
-@CordaSerializable
-private data class FlowHandleImpl<A>(
-        override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
-
-    /**
-     * Use this function for flows whose returnValue is not going to be used, so as to free up server resources.
-     */
-    override fun close() {
-        returnValue.cancel(false)
-    }
-}
-
-@CordaSerializable
-private data class FlowProgressHandleImpl<A> (
-        override val id: StateMachineRunId,
-        override val returnValue: ListenableFuture<A>,
-        override val progress: Observable<String>) : FlowProgressHandle<A> {
-
-    /**
-     * Use this function for flows whose returnValue and progress are not going to be used or tracked, so as to free up server resources.
-     * Note that it won't really close if one subscribes on progress [Observable], but then forgets to unsubscribe.
-     */
-    override fun close() {
-        progress.notUsed()
-        returnValue.cancel(false)
     }
 }
