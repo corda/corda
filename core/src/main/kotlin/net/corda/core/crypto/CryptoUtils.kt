@@ -106,12 +106,8 @@ fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean
     return Crypto.isValid(this, signature.bytes, content)
 }
 
-/** Render a public key to a string, using a short form if it's an elliptic curve public key */
-fun PublicKey.toStringShort(): String {
-    return (this as? EdDSAPublicKey)?.let { key ->
-        "DL" + key.abyte.toBase58()   // DL -> Distributed Ledger
-    } ?: toString()
-}
+/** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
+fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
 
 val PublicKey.keys: Set<PublicKey> get() {
     return if (this is CompositeKey) this.leafKeys

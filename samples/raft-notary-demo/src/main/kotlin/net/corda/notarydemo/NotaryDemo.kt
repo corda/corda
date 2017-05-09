@@ -59,7 +59,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
             "Tx [${tx.tx.id.prefixChars()}..] signed by $signer"
         }.joinToString("\n")
 
-        println("Notary: \"${notary.name}\", with composite key: ${notary.owningKey}\n" +
+        println("Notary: \"${notary.name}\", with composite key: ${notary.owningKey.toStringShort()}\n" +
                 "Notarised ${transactions.size} transactions:\n" + transactionSigners)
     }
 
