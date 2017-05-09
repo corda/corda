@@ -5,6 +5,7 @@ package net.corda.nodeapi
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.requireExternal
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
@@ -60,6 +61,7 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
     }
 
     override fun getRegistration(type: Class<*>): Registration {
+        type.requireExternal("RPC not allowed to deserialise internal classes")
         if (Observable::class.java != type && Observable::class.java.isAssignableFrom(type)) {
             return super.getRegistration(Observable::class.java)
         }
