@@ -12,6 +12,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSessionException
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
@@ -45,7 +46,6 @@ import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
