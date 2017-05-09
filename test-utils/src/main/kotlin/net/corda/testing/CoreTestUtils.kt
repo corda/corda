@@ -7,7 +7,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
-import net.corda.core.crypto.X509Utilities.getX509Name
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo

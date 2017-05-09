@@ -8,11 +8,12 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.KeyStoreUtilities
 import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.replaceCommonName
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowVersion
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -46,6 +47,7 @@ import net.corda.node.services.network.PersistentNetworkMapService
 import net.corda.node.services.persistence.*
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersion
@@ -71,7 +73,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -134,7 +135,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Internal only
         override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-        override val flowLogicRefFactory: FlowLogicRefFactory get() = flowLogicFactory
+        override val flowLogicRefFactory: FlowLogicRefFactoryInternal get() = flowLogicFactory
 
         override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
@@ -173,7 +174,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var net: MessagingService
     lateinit var netMapCache: NetworkMapCacheInternal
     lateinit var scheduler: NodeSchedulerService
-    lateinit var flowLogicFactory: FlowLogicRefFactory
+    lateinit var flowLogicFactory: FlowLogicRefFactoryInternal
     lateinit var schemas: SchemaService
     val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
@@ -339,7 +340,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: X500Name("CN=$serviceId,${configuration.myLegalName}")
+            val serviceName = it.name ?: configuration.myLegalName.replaceCommonName(serviceId)
             val identity = obtainKeyPair(configuration.baseDirectory, serviceId + "-private-key", serviceId + "-public", serviceName).first
             ServiceEntry(it, identity)
         }
@@ -351,7 +352,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun hasSSLCertificates(): Boolean {
         val keyStore = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            X509Utilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+            KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
         } catch (e: IOException) {
             null
         } catch (e: KeyStoreException) {
@@ -381,7 +382,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    private fun initialiseFlowLogicFactory(): FlowLogicRefFactory {
+    private fun initialiseFlowLogicFactory(): FlowLogicRefFactoryInternal {
         val flowWhitelist = HashMap<String, Set<String>>()
 
         for ((flowClass, extraArgumentTypes) in defaultFlowWhiteList) {
@@ -398,7 +399,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        return FlowLogicRefFactory(flowWhitelist)
+        return FlowLogicRefFactoryImpl(flowWhitelist)
     }
 
     private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {

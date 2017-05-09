@@ -12,6 +12,7 @@ import net.corda.core.utilities.ALICE_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -45,7 +46,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
     @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    val factory = FlowLogicRefFactory(mapOf(Pair(TestFlowLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
+    val factory = FlowLogicRefFactoryImpl(mapOf(Pair(TestFlowLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
     lateinit var services: MockServiceHubInternal
 

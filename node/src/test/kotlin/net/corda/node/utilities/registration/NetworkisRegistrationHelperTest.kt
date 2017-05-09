@@ -3,6 +3,7 @@ package net.corda.node.utilities.registration
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.crypto.KeyStoreUtilities
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.exists
@@ -51,7 +52,7 @@ class NetworkRegistrationHelperTest {
         assertTrue(config.keyStoreFile.exists())
         assertTrue(config.trustStoreFile.exists())
 
-        X509Utilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
+        KeyStoreUtilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             assertEquals(3, certificateChain.size)
@@ -62,7 +63,7 @@ class NetworkRegistrationHelperTest {
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
 
-        X509Utilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword).run {
+        KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword).run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
