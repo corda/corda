@@ -2,8 +2,6 @@ package net.corda.core.crypto
 
 import net.corda.core.random63BitValue
 import net.i2p.crypto.eddsa.*
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.*
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
@@ -21,9 +19,9 @@ import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
-import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -32,8 +30,6 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
-import java.security.KeyFactory
-import java.security.KeyPairGenerator
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.cert.X509Certificate
@@ -618,7 +614,7 @@ object Crypto {
             throw IllegalArgumentException("Unsupported signature scheme: $signatureScheme.schemeCodeName")
         when (publicKey) {
             is BCECPublicKey -> return (publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid)
-            is EdDSAPublicKey -> return (publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve())
+            is EdDSAPublicKey -> return (publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve)
             else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
         }
     }
