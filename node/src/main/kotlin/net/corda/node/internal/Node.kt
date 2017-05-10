@@ -35,6 +35,7 @@ import org.slf4j.Logger
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
 import java.time.Clock
 import javax.management.ObjectName
 import kotlin.concurrent.thread
@@ -220,6 +221,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
 
+    @Throws(IllegalStateException::class)
     override fun start(): Node {
         alreadyRunningNodeCheck()
         super.start()
@@ -290,6 +292,7 @@ class Node(override val configuration: FullNodeConfiguration,
         log.info("Shutdown complete")
     }
 
+    @Throws(IllegalStateException::class)
     private fun alreadyRunningNodeCheck() {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
@@ -302,14 +305,12 @@ class Node(override val configuration: FullNodeConfiguration,
         }
         file.deleteOnExit()
         val f = RandomAccessFile(file, "rw")
-        val l = f.channel.tryLock()
-        if (l == null) {
-            log.error("It appears there is already a node running with the specified data directory ${configuration.baseDirectory}")
-            log.error("Shut that other node down and try again. It may have process ID ${file.readText()}")
-            System.exit(1)
-        }
+        nodeFileLock = try {
+            f.channel.tryLock()
+        } catch(ex: OverlappingFileLockException) {
+            throw IllegalStateException("This node has already been started with the specified data directory ${configuration.baseDirectory}", ex)
+        } ?: throw IllegalStateException("It appears there is already a node running with the specified data directory ${configuration.baseDirectory}. Shut that other node down and try again. It may have process ID ${file.readText()}")
 
-        nodeFileLock = l
         val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
         f.setLength(0)
         f.write(ourProcessID.toByteArray())

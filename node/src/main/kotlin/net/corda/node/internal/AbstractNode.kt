@@ -205,6 +205,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
 
+    /**
+     * @throws IllegalStateException if the node has already been started
+     */
+    @Throws(IllegalStateException::class)
     open fun start(): AbstractNode {
         require(!started) { "Node has already been started" }
 
