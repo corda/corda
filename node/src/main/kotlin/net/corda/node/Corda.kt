@@ -10,6 +10,7 @@ import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.LogHelper.withLevel
 import net.corda.node.internal.Node
+import net.corda.node.internal.enforceSingleNodeIsRunning
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -35,6 +36,7 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 val LOGS_DIRECTORY_NAME = "logs"
+val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
 private val log by lazy { LoggerFactory.getLogger("Main") }
 
 private fun initLogging(cmdlineOptions: CmdLineOptions) {
@@ -62,6 +64,10 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    // We do the single node check before we initialise logging so that in case of a double-node start it doesn't mess
+    // with the running node's logs.
+    enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
     initLogging(cmdlineOptions)
     disableJavaDeserialization() // Should be after initLogging to avoid TMI.
@@ -91,7 +97,7 @@ fun main(args: Array<String>) {
 
     drawBanner(versionInfo)
 
-    printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
+    printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
     val conf = try {
         cmdlineOptions.loadConfig()
