@@ -383,12 +383,13 @@ class ShutdownManager(private val executorService: ExecutorService) {
     }
 
     inner class Follower(private val start: Int) {
-        private var end: Int? = null
+        private val end = AtomicInteger(-1)
         fun unfollow() {
-            end = state.locked { registeredShutdowns.size }
+            end.set(state.locked { registeredShutdowns.size })
         }
 
-        fun shutdown() = end?.let { end ->
+        fun shutdown() = end.get().let { end ->
+            end >= 0 || throw IllegalStateException("You haven't called unfollow.")
             state.locked {
                 registeredShutdowns.subList(start, end).listIterator(end - start).run {
                     while (hasPrevious()) {
@@ -397,7 +398,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                     }
                 }
             }
-        } ?: throw IllegalStateException("You haven't called unfollow.")
+        }
     }
 
     fun follower() = Follower(state.locked { registeredShutdowns.size })
