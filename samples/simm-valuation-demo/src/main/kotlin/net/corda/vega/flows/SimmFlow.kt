@@ -14,6 +14,7 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
@@ -51,6 +52,7 @@ object SimmFlow {
      * margin using SIMM. If there is an existing state it will update and revalue the portfolio agreement.
      */
     @InitiatingFlow
+    @StartableByRPC
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)

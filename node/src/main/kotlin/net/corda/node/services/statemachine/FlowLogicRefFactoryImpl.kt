@@ -1,14 +1,10 @@
 package net.corda.node.services.statemachine
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.primitives.Primitives
-import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.AppContext
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRef
-import net.corda.core.flows.IllegalFlowLogicException
+import net.corda.core.flows.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.node.services.api.FlowLogicRefFactoryInternal
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -29,59 +25,26 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * Validation of types is performed on the way in and way out in case this object is passed between JVMs which might have differing
  * whitelists.
  *
- * TODO: Ways to populate whitelist of "blessed" flows per node/party
- * TODO: Ways to populate argument types whitelist. Per node/party or global?
  * TODO: Align with API related logic for passing in FlowLogic references (FlowRef)
  * TODO: Actual support for AppContext / AttachmentsClassLoader
+ * TODO: at some point check whether there is permission, beyond the annotations, to start flows. For example, as a security
+ * measure we might want the ability for the node admin to blacklist a flow such that it moves immediately to the "Flow Hospital"
+ * in response to a potential malicious use or buggy update to an app etc.
  */
-class FlowLogicRefFactoryImpl(override val flowWhitelist: Map<String, Set<String>>) : SingletonSerializeAsToken(), FlowLogicRefFactoryInternal {
-    constructor() : this(mapOf())
-
-    // Pending real dependence on AppContext for class loading etc
-    @Suppress("UNUSED_PARAMETER")
-    private fun validateFlowClassName(className: String, appContext: AppContext) {
-        // TODO: make this specific to the attachments in the [AppContext] by including [SecureHash] in whitelist check
-        require(flowWhitelist.containsKey(className)) { "${FlowLogic::class.java.simpleName} of ${FlowLogicRef::class.java.simpleName} must have type on the whitelist: $className" }
-    }
-
-    // Pending real dependence on AppContext for class loading etc
-    @Suppress("UNUSED_PARAMETER")
-    private fun validateArgClassName(className: String, argClassName: String, appContext: AppContext) {
-        // TODO: consider more carefully what to whitelist and how to secure flows
-        // For now automatically accept standard java.lang.* and kotlin.* types.
-        // All other types require manual specification at FlowLogicRefFactory construction time.
-        if (argClassName.startsWith("java.lang.") || argClassName.startsWith("kotlin.")) {
-            return
+object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactory {
+    override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
+        if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
+            throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
         }
-        // TODO: make this specific to the attachments in the [AppContext] by including [SecureHash] in whitelist check
-        require(flowWhitelist[className]!!.contains(argClassName)) { "Args to $className must have types on the args whitelist: $argClassName, but it has ${flowWhitelist[className]}" }
+        return createForRPC(flowClass, *args)
     }
 
-    /**
-     * Create a [FlowLogicRef] for the Kotlin primary constructor of a named [FlowLogic]
-     */
-    fun createKotlin(flowLogicClassName: String, args: Map<String, Any?>, attachments: List<SecureHash> = emptyList()): FlowLogicRef {
-        val context = AppContext(attachments)
-        validateFlowClassName(flowLogicClassName, context)
-        for (arg in args.values.filterNotNull()) {
-            validateArgClassName(flowLogicClassName, arg.javaClass.name, context)
-        }
-        val clazz = Class.forName(flowLogicClassName)
-        require(FlowLogic::class.java.isAssignableFrom(clazz)) { "$flowLogicClassName is not a FlowLogic" }
-        @Suppress("UNCHECKED_CAST")
-        val logic = clazz as Class<FlowLogic<FlowLogic<*>>>
-        return createKotlin(logic, args)
-    }
-
-    /**
-     * Create a [FlowLogicRef] by assuming a single constructor and the given args.
-     */
-    override fun create(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
+    fun createForRPC(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         // TODO: This is used via RPC but it's probably better if we pass in argument names and values explicitly
         // to avoid requiring only a single constructor.
         val argTypes = args.map { it?.javaClass }
         val constructor = try {
-            type.kotlin.constructors.single { ctor ->
+            flowClass.kotlin.constructors.single { ctor ->
                 // Get the types of the arguments, always boxed (as that's what we get in the invocation).
                 val ctorTypes = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
                 if (argTypes.size != ctorTypes.size)
@@ -93,14 +56,14 @@ class FlowLogicRefFactoryImpl(override val flowWhitelist: Map<String, Set<String
                 true
             }
         } catch (e: IllegalArgumentException) {
-            throw IllegalFlowLogicException(type, "due to ambiguous match against the constructors: $argTypes")
+            throw IllegalFlowLogicException(flowClass, "due to ambiguous match against the constructors: $argTypes")
         } catch (e: NoSuchElementException) {
-            throw IllegalFlowLogicException(type, "due to missing constructor for arguments: $argTypes")
+            throw IllegalFlowLogicException(flowClass, "due to missing constructor for arguments: $argTypes")
         }
 
         // Build map of args from array
         val argsMap = args.zip(constructor.parameters).map { Pair(it.second.name!!, it.first) }.toMap()
-        return createKotlin(type, argsMap)
+        return createKotlin(flowClass, argsMap)
     }
 
     /**
@@ -108,44 +71,32 @@ class FlowLogicRefFactoryImpl(override val flowWhitelist: Map<String, Set<String
      *
      * TODO: Rethink language specific naming.
      */
-    fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
+    @VisibleForTesting
+    internal fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
         // TODO: we need to capture something about the class loader or "application context" into the ref,
         //       perhaps as some sort of ThreadLocal style object.  For now, just create an empty one.
         val appContext = AppContext(emptyList())
-        validateFlowClassName(type.name, appContext)
         // Check we can find a constructor and populate the args to it, but don't call it
-        createConstructor(appContext, type, args)
+        createConstructor(type, args)
         return FlowLogicRefImpl(type.name, appContext, args)
     }
 
-    /**
-     * Create a [FlowLogicRef] by trying to find a Java constructor that matches the given args.
-     */
-    private fun createJava(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
-        // Build map for each
-        val argsMap = HashMap<String, Any?>(args.size)
-        var index = 0
-        args.forEach { argsMap["arg${index++}"] = it }
-        return createKotlin(type, argsMap)
-    }
-
-    override fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
+    fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*> {
         if (ref !is FlowLogicRefImpl) throw IllegalFlowLogicException(ref.javaClass, "FlowLogicRef was not created via correct FlowLogicRefFactory interface")
-        validateFlowClassName(ref.flowLogicClassName, ref.appContext)
         val klass = Class.forName(ref.flowLogicClassName, true, ref.appContext.classLoader).asSubclass(FlowLogic::class.java)
-        return createConstructor(ref.appContext, klass, ref.args)()
+        return createConstructor(klass, ref.args)()
     }
 
-    private fun createConstructor(appContext: AppContext, clazz: Class<out FlowLogic<*>>, args: Map<String, Any?>): () -> FlowLogic<*> {
+    private fun createConstructor(clazz: Class<out FlowLogic<*>>, args: Map<String, Any?>): () -> FlowLogic<*> {
         for (constructor in clazz.kotlin.constructors) {
-            val params = buildParams(appContext, clazz, constructor, args) ?: continue
+            val params = buildParams(constructor, args) ?: continue
             // If we get here then we matched every parameter
             return { constructor.callBy(params) }
         }
         throw IllegalFlowLogicException(clazz, "as could not find matching constructor for: $args")
     }
 
-    private fun buildParams(appContext: AppContext, clazz: Class<out FlowLogic<*>>, constructor: KFunction<FlowLogic<*>>, args: Map<String, Any?>): HashMap<KParameter, Any?>? {
+    private fun buildParams(constructor: KFunction<FlowLogic<*>>, args: Map<String, Any?>): HashMap<KParameter, Any?>? {
         val params = hashMapOf<KParameter, Any?>()
         val usedKeys = hashSetOf<String>()
         for (parameter in constructor.parameters) {
@@ -159,7 +110,6 @@ class FlowLogicRefFactoryImpl(override val flowWhitelist: Map<String, Set<String
             // Not all args were used
             return null
         }
-        params.values.forEach { if (it is Any) validateArgClassName(clazz.name, it.javaClass.name, appContext) }
         return params
     }
 

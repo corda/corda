@@ -8,8 +8,11 @@ UNRELEASED
 ----------
 
 * API changes:
-    * Initiating flows (i.e. those which initiate flows in a counterparty) are now required to be annotated with
-      ``InitiatingFlow``.
+    * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
+      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
+
+    *  Flows which initiate flows in their counterparties (an example of which is the ``NotaryFlow.Client``) are now
+       required to be annotated with ``@InitiatingFlow``.
 
     * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
       marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an

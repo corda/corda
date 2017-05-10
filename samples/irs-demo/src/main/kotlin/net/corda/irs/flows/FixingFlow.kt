@@ -8,6 +8,7 @@ import net.corda.core.crypto.keys
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.SchedulableFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
@@ -136,6 +137,7 @@ object FixingFlow {
      * Fixer role is chosen, then that will be initiated by the [FixingSession] message sent from the other party.
      */
     @InitiatingFlow
+    @SchedulableFlow
     class FixingRoleDecider(val ref: StateRef, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
         @Suppress("unused") // Used via reflection.
         constructor(ref: StateRef) : this(ref, tracker())

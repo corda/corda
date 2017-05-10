@@ -7,7 +7,7 @@ import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.flows.SchedulableFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -15,7 +15,6 @@ import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -68,6 +67,7 @@ class ScheduledFlowTests {
         }
     }
 
+    @SchedulableFlow
     class ScheduledFlow(val stateRef: StateRef) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -87,14 +87,6 @@ class ScheduledFlowTests {
         }
     }
 
-    object ScheduledFlowTestPlugin : CordaPluginRegistry() {
-        override val requiredFlows: Map<String, Set<String>> = mapOf(
-                InsertInitialStateFlow::class.java.name to setOf(Party::class.java.name),
-                ScheduledFlow::class.java.name to setOf(StateRef::class.java.name)
-        )
-    }
-
-
     @Before
     fun setup() {
         net = MockNetwork(threadPerNode = true)
@@ -103,8 +95,6 @@ class ScheduledFlowTests {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
         nodeA = net.createNode(notaryNode.info.address, start = false)
         nodeB = net.createNode(notaryNode.info.address, start = false)
-        nodeA.testPluginRegistries.add(ScheduledFlowTestPlugin)
-        nodeB.testPluginRegistries.add(ScheduledFlowTestPlugin)
         net.startNodes()
     }
 
@@ -138,7 +128,7 @@ class ScheduledFlowTests {
     }
 
     @Test
-    fun `Run a whole batch of scheduled flows`() {
+    fun `run a whole batch of scheduled flows`() {
         val N = 100
         for (i in 0..N - 1) {
             nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
