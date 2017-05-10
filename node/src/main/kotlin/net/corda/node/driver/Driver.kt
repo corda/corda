@@ -330,23 +330,27 @@ class ShutdownManager(private val executorService: ExecutorService) {
 
     fun shutdown() {
         val shutdownFutures = state.locked {
-            require(!isShutdown)
-            isShutdown = true
-            registeredShutdowns
-        }
-        val shutdownsFuture = Futures.allAsList(shutdownFutures)
-        val shutdowns = try {
-            shutdownsFuture.get(1, SECONDS)
-        } catch (exception: TimeoutException) {
-            /** Could not get all of them, collect what we have */
-            shutdownFutures.filter { it.isDone }.map { it.get() }
-        }
-        shutdowns.reversed().forEach { shutdown ->
-            try {
-                shutdown()
-            } catch (throwable: Throwable) {
-                log.error("Exception while shutting down", throwable)
+            if (isShutdown) {
+                emptyList<ListenableFuture<() -> Unit>>()
+            } else {
+                isShutdown = true
+                registeredShutdowns
             }
+        }
+        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
+        shutdowns.reversed().forEach { errorOrShutdown ->
+            errorOrShutdown.match(
+                    onValue = { shutdown ->
+                        try {
+                            shutdown()
+                        } catch (throwable: Throwable) {
+                            log.error("Exception while shutting down", throwable)
+                        }
+                    },
+                    onError = { error ->
+                        log.error("Exception while getting shutdown method, disregarding", error)
+                    }
+            )
         }
     }
 
