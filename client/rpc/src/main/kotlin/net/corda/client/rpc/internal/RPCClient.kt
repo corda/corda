@@ -147,26 +147,32 @@ class RPCClient<I : RPCOps>(
             }
 
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass)
-            proxyHandler.start()
+            try {
+                proxyHandler.start()
 
-            @Suppress("UNCHECKED_CAST")
-            val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
+                @Suppress("UNCHECKED_CAST")
+                val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
 
-            val serverProtocolVersion = ops.protocolVersion
-            if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
-                throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
-                        " than the server's supported protocol version ($serverProtocolVersion)")
-            }
-            proxyHandler.setServerProtocolVersion(serverProtocolVersion)
-
-            log.debug("RPC connected, returning proxy")
-            object : RPCConnection<I> {
-                override val proxy = ops
-                override val serverProtocolVersion = serverProtocolVersion
-                override fun close() {
-                    proxyHandler.close()
-                    serverLocator.close()
+                val serverProtocolVersion = ops.protocolVersion
+                if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
+                    throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
+                            " than the server's supported protocol version ($serverProtocolVersion)")
                 }
+                proxyHandler.setServerProtocolVersion(serverProtocolVersion)
+
+                log.debug("RPC connected, returning proxy")
+                object : RPCConnection<I> {
+                    override val proxy = ops
+                    override val serverProtocolVersion = serverProtocolVersion
+                    override fun close() {
+                        proxyHandler.close()
+                        serverLocator.close()
+                    }
+                }
+            } catch (exception: Throwable) {
+                proxyHandler.close()
+                serverLocator.close()
+                throw exception
             }
         }
     }

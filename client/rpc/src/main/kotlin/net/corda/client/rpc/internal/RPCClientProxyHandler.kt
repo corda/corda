@@ -25,16 +25,11 @@ import org.apache.activemq.artemis.api.core.client.ServerLocator
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
-import sun.reflect.CallerSensitive
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.ArrayList
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -87,10 +82,7 @@ class RPCClientProxyHandler(
     }
 
     // Used for reaping
-    private val reaperExecutor = Executors.newScheduledThreadPool(
-            1,
-            ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").build()
-    )
+    private var reaperExecutor: ScheduledExecutorService? = null
 
     // A sticky pool for running Observable.onNext()s. We need the stickiness to preserve the observation ordering.
     private val observationExecutorThreadFactory = ThreadFactoryBuilder().setNameFormat("rpc-client-observation-pool-%d").build()
@@ -109,7 +101,7 @@ class RPCClientProxyHandler(
             hardReferenceStore = Collections.synchronizedSet(mutableSetOf<Observable<*>>())
     )
     // Holds a reference to the scheduled reaper.
-    private lateinit var reaperScheduledFuture: ScheduledFuture<*>
+    private var reaperScheduledFuture: ScheduledFuture<*>? = null
     // The protocol version of the server, to be initialised to the value of [RPCOps.protocolVersion]
     private var serverProtocolVersion: Int? = null
 
@@ -145,7 +137,7 @@ class RPCClientProxyHandler(
     // TODO We may need to pool these somehow anyway, otherwise if the server sends many big messages in parallel a
     // single consumer may be starved for flow control credits. Recheck this once Artemis's large message streaming is
     // integrated properly.
-    private lateinit var sessionAndConsumer: ArtemisConsumer
+    private var sessionAndConsumer: ArtemisConsumer? = null
     // Pool producers to reduce contention on the client side.
     private val sessionAndProducerPool = LazyPool(bound = rpcConfiguration.producerPoolBound) {
         // Note how we create new sessions *and* session factories per producer.
@@ -162,7 +154,12 @@ class RPCClientProxyHandler(
      * Start the client. This creates the per-client queue, starts the consumer session and the reaper.
      */
     fun start() {
-        reaperScheduledFuture = reaperExecutor.scheduleAtFixedRate(
+        lifeCycle.requireState(State.UNSTARTED)
+        reaperExecutor = Executors.newScheduledThreadPool(
+                1,
+                ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").build()
+        )
+        reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
                 this::reapObservables,
                 rpcConfiguration.reapInterval.toMillis(),
                 rpcConfiguration.reapInterval.toMillis(),
@@ -187,7 +184,7 @@ class RPCClientProxyHandler(
         if (method == toStringMethod) {
             return "Client RPC proxy for $rpcOpsClass"
         }
-        if (sessionAndConsumer.session.isClosed) {
+        if (sessionAndConsumer!!.session.isClosed) {
             throw RPCException("RPC Proxy is closed")
         }
         val rpcId = RPCApi.RpcRequestId(random63BitValue())
@@ -268,13 +265,13 @@ class RPCClientProxyHandler(
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
      */
     fun close() {
-        sessionAndConsumer.consumer.close()
-        sessionAndConsumer.session.close()
-        sessionAndConsumer.sessionFactory.close()
-        reaperScheduledFuture.cancel(false)
+        sessionAndConsumer?.consumer?.close()
+        sessionAndConsumer?.session?.close()
+        sessionAndConsumer?.sessionFactory?.close()
+        reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables()
-        reaperExecutor.shutdownNow()
+        reaperExecutor?.shutdownNow()
         sessionAndProducerPool.close().forEach {
             it.producer.close()
             it.session.close()
@@ -284,8 +281,7 @@ class RPCClientProxyHandler(
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
-        observationExecutors.forEach { it.awaitTermination(100, TimeUnit.MILLISECONDS) }
-        lifeCycle.transition(State.STARTED, State.FINISHED)
+        lifeCycle.transition(State.FINISHED)
     }
 
     /**

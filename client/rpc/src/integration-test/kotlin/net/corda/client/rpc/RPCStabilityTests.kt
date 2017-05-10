@@ -5,27 +5,99 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
+import net.corda.client.rpc.internal.RPCClientConfiguration
+import net.corda.core.ErrorOr
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.millis
 import net.corda.core.random63BitValue
+import net.corda.node.driver.poll
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
 
 
 class RPCStabilityTests {
+
+    object DummyOps : RPCOps {
+        override val protocolVersion = 0
+    }
+
+    private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Int {
+        val values = ConcurrentLinkedQueue<Int>()
+        return poll(executorService, "number of threads to become stable", 250.millis) {
+            values.add(Thread.activeCount())
+            if (values.size > 5) {
+                values.poll()
+            }
+            val first = values.peek()
+            if (values.size == 5 && values.all { it == first } ) {
+                first
+            } else {
+                null
+            }
+        }.get()
+    }
+
+    @Test
+    fun `client and server dont leak threads`() {
+        val executor = Executors.newScheduledThreadPool(1)
+        fun startAndStop() {
+            rpcDriver {
+                val server = startRpcServer<RPCOps>(ops = DummyOps)
+                startRpcClient<RPCOps>(server.get().hostAndPort).get()
+            }
+        }
+        for (i in 1 .. 5) {
+            startAndStop()
+        }
+        val numberOfThreadsBefore = waitUntilNumberOfThreadsStable(executor)
+        for (i in 1 .. 5) {
+            startAndStop()
+        }
+        val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
+        // This is a less than check because threads from other tests may be shutting down while this test is running.
+        // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
+        require(numberOfThreadsBefore >= numberOfThreadsAfter)
+        executor.shutdownNow()
+    }
+
+    @Test
+    fun `client doesnt leak threads when it fails to start`() {
+        val executor = Executors.newScheduledThreadPool(1)
+        fun startAndStop() {
+            rpcDriver {
+                ErrorOr.catch { startRpcClient<RPCOps>(HostAndPort.fromString("localhost:9999")).get() }
+                val server = startRpcServer<RPCOps>(ops = DummyOps)
+                ErrorOr.catch { startRpcClient<RPCOps>(server.get().hostAndPort, configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)).get() }
+            }
+        }
+        for (i in 1 .. 5) {
+            startAndStop()
+        }
+        val numberOfThreadsBefore = waitUntilNumberOfThreadsStable(executor)
+        for (i in 1 .. 5) {
+            startAndStop()
+        }
+        val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
+        require(numberOfThreadsBefore >= numberOfThreadsAfter)
+        executor.shutdownNow()
+    }
 
     interface LeakObservableOps: RPCOps {
         fun leakObservable(): Observable<Nothing>
