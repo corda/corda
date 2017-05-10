@@ -8,7 +8,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.random63BitValue

@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo

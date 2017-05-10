@@ -1,8 +1,8 @@
 package net.corda.contracts.universal
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import java.math.BigDecimal
 import java.security.PublicKey

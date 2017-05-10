@@ -1,4 +1,4 @@
-package net.corda.core.crypto
+package net.corda.core.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.serialization.CordaSerializable

@@ -1,7 +1,7 @@
 package net.corda.vega.flows
 
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.AbstractStateReplacementFlow

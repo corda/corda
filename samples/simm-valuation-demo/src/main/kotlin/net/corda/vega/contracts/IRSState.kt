@@ -4,8 +4,8 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey

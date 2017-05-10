@@ -3,8 +3,8 @@ package net.corda.core.transactions
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializedBytes

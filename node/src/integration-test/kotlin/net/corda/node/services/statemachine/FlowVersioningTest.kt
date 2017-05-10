@@ -2,10 +2,10 @@ package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.Futures
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.unwrap

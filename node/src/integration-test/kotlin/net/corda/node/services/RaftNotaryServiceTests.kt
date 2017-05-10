@@ -5,7 +5,7 @@ import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.utilities.DUMMY_BANK_A

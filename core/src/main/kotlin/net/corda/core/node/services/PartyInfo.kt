@@ -1,6 +1,6 @@
 package net.corda.core.node.services
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
 

@@ -9,6 +9,7 @@ import net.corda.core.contracts.Contract;
 import net.corda.core.contracts.TransactionForContract.*;
 import net.corda.core.contracts.clauses.*;
 import net.corda.core.crypto.*;
+import net.corda.core.identity.Party;
 import net.corda.core.node.services.*;
 import net.corda.core.transactions.*;
 import org.jetbrains.annotations.*;

@@ -1,9 +1,9 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction

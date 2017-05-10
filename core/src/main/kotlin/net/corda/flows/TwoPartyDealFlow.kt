@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable

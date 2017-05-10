@@ -15,7 +15,7 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
 import net.corda.core.*
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.serialization.*
