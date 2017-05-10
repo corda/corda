@@ -498,7 +498,7 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { notaryNodeName(it) }
+        val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
         val paths = nodeNames.map { driverDirectory / it.commonName }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
@@ -646,8 +646,6 @@ class DriverDSL(
                 )
             }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
         }
-
-        fun notaryNodeName(number: Int) = DUMMY_NOTARY.name.appendToCommonName(number.toString())
     }
 }
 
