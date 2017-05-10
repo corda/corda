@@ -172,8 +172,9 @@ class Node(override val configuration: FullNodeConfiguration,
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
+            initialConnectAttempts = 5
             retryInterval = 5.seconds.toMillis()
-            retryIntervalMultiplier = 1.5  // Exponential backoff
+            retryIntervalMultiplier = 1.5
             maxRetryInterval = 3.minutes.toMillis()
         }
         val clientFactory = locator.createSessionFactory()
