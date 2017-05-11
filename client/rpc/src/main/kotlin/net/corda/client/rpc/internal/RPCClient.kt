@@ -114,9 +114,9 @@ class RPCClient<I : RPCOps>(
      *
      * The [RPCOps] defines what client RPCs are available. If an RPC returns an [Observable] anywhere in the object
      * graph returned then the server-side observable is transparently forwarded to the client side here.
-     * *You are expected to use it*. The server will begin buffering messages immediately that it will expect you to
-     * drain by subscribing to the returned observer. You can opt-out of this by simply calling the
-     * [net.corda.client.rpc.notUsed] method on it. You don't have to explicitly close the observable if you actually
+     * *You are expected to use it*. The server will begin sending messages immediately that will be buffered on the
+     * client, you are expected to drain by subscribing to the returned observer. You can opt-out of this by simply
+     * calling the [net.corda.client.rpc.notUsed] method on it. You don't have to explicitly close the observable if you actually
      * subscribe to it: it will close itself and free up the server-side resources either when the client or JVM itself
      * is shutdown, or when there are no more subscribers to it. Once all the subscribers to a returned observable are
      * unsubscribed or the observable completes successfully or with an error, the observable is closed and you can't
