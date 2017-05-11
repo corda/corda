@@ -79,9 +79,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         return future
     }
 
-    private fun loadLinearHeads(node: SimulatedNode): Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State<AnonymousParty>>> {
+    private fun loadLinearHeads(node: SimulatedNode): Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> {
         return node.database.transaction {
-            node.services.vaultService.linearHeadsOfType<InterestRateSwap.State<AnonymousParty>>()
+            node.services.vaultService.linearHeadsOfType<InterestRateSwap.State>()
         }
     }
 
@@ -90,8 +90,8 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State<AnonymousParty>>> = loadLinearHeads(node1)
-        val theDealRef: StateAndRef<InterestRateSwap.State<AnonymousParty>> = swaps.values.single()
+        val swaps: Map<UniqueIdentifier, StateAndRef<InterestRateSwap.State>> = loadLinearHeads(node1)
+        val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.values.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
         val nextFixingDate = theDealRef.state.data.calculation.nextFixingDate() ?: return null
@@ -121,9 +121,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // We load the IRS afresh each time because the leg parts of the structure aren't data classes so they don't
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
-        val irs = om.readValue<InterestRateSwap.State<AnonymousParty>>(javaClass.classLoader.getResource("simulation/trade.json"))
-        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity.toAnonymous()
-        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity.toAnonymous()
+        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("simulation/trade.json"))
+        irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
+        irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,

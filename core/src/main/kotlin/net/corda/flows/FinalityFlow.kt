@@ -105,7 +105,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
             // Calculate who is meant to see the results based on the participants involved.
             val keys = ltx.outputs.flatMap { it.data.participants } + ltx.inputs.flatMap { it.state.data.participants }
             // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them count as a reason to fail?
-            val parties = keys.mapNotNull { serviceHub.identityService.partyFromKey(it) }.toSet()
+            val parties = keys.mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }.toSet()
             Pair(stx, parties)
         }
     }

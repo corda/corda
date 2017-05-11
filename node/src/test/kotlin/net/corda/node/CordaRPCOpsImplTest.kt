@@ -91,7 +91,7 @@ class CordaRPCOpsImplTest {
 
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
-                recipient.owningKey)
+                recipient)
 
         var issueSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {

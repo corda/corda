@@ -16,12 +16,12 @@ import java.time.LocalDate
 import java.util.*
 import kotlin.test.assertEquals
 
-fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
+fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {
 
             val fixedLeg = InterestRateSwap.FixedLeg(
-                    fixedRatePayer = MEGA_CORP.toAnonymous(),
+                    fixedRatePayer = MEGA_CORP,
                     notional = 15900000.DOLLARS,
                     paymentFrequency = Frequency.SemiAnnual,
                     effectiveDate = LocalDate.of(2016, 3, 10),
@@ -40,7 +40,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
             )
 
             val floatingLeg = InterestRateSwap.FloatingLeg(
-                    floatingRatePayer = MINI_CORP.toAnonymous(),
+                    floatingRatePayer = MINI_CORP,
                     notional = 15900000.DOLLARS,
                     paymentFrequency = Frequency.Quarterly,
                     effectiveDate = LocalDate.of(2016, 3, 10),
@@ -111,7 +111,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
             // I did a mock up start date 10/03/2015 – 10/03/2025 so you have 5 cashflows on float side that have been preset the rest are unknown
 
             val fixedLeg = InterestRateSwap.FixedLeg(
-                    fixedRatePayer = MEGA_CORP.toAnonymous(),
+                    fixedRatePayer = MEGA_CORP,
                     notional = 25000000.DOLLARS,
                     paymentFrequency = Frequency.SemiAnnual,
                     effectiveDate = LocalDate.of(2015, 3, 10),
@@ -130,7 +130,7 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State<AnonymousParty> {
             )
 
             val floatingLeg = InterestRateSwap.FloatingLeg(
-                    floatingRatePayer = MINI_CORP.toAnonymous(),
+                    floatingRatePayer = MINI_CORP,
                     notional = 25000000.DOLLARS,
                     paymentFrequency = Frequency.Quarterly,
                     effectiveDate = LocalDate.of(2015, 3, 10),
@@ -246,8 +246,8 @@ class IRSTests {
     /**
      * Utility so I don't have to keep typing this.
      */
-    fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State<AnonymousParty> {
-        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State<AnonymousParty>>().single()
+    fun singleIRS(irsSelector: Int = 1): InterestRateSwap.State {
+        return generateIRSTxn(irsSelector).tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
     }
 
     /**
@@ -301,7 +301,7 @@ class IRSTests {
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
-        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State<AnonymousParty>>().single()
+        fun currentIRS() = previousTXN.tx.outputs.map { it.data }.filterIsInstance<InterestRateSwap.State>().single()
 
         while (true) {
             val nextFix: FixOf = currentIRS().nextFixingOf() ?: break
@@ -381,7 +381,7 @@ class IRSTests {
 
             transaction("Fix") {
                 input("irs post agreement")
-                val postAgreement = "irs post agreement".output<InterestRateSwap.State<AnonymousParty>>()
+                val postAgreement = "irs post agreement".output<InterestRateSwap.State>()
                 output("irs post first fixing") {
                     postAgreement.copy(
                             postAgreement.fixedLeg,
@@ -688,7 +688,7 @@ class IRSTests {
             transaction("Fix") {
                 input("irs post agreement1")
                 input("irs post agreement2")
-                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State<AnonymousParty>>()
+                val postAgreement1 = "irs post agreement1".output<InterestRateSwap.State>()
                 output("irs post first fixing1") {
                     postAgreement1.copy(
                             postAgreement1.fixedLeg,
@@ -697,7 +697,7 @@ class IRSTests {
                             postAgreement1.common.copy(tradeID = "t1")
                     )
                 }
-                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State<AnonymousParty>>()
+                val postAgreement2 = "irs post agreement2".output<InterestRateSwap.State>()
                 output("irs post first fixing2") {
                     postAgreement2.copy(
                             postAgreement2.fixedLeg,

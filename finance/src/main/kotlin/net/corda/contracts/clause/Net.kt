@@ -6,6 +6,7 @@ import net.corda.contracts.asset.extractAmountsDue
 import net.corda.contracts.asset.sumAmountsDue
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
+import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
 
 /**
@@ -22,7 +23,7 @@ interface NetState<P : Any> {
  * Bilateral states are used in close-out netting.
  */
 data class BilateralNetState<P : Any>(
-        val partyKeys: Set<PublicKey>,
+        val partyKeys: Set<AbstractParty>,
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 
@@ -86,7 +87,7 @@ open class NetClause<C : CommandData, P : Any> : Clause<ContractState, C, Unit>(
         }
 
         // TODO: Handle proxies nominated by parties, i.e. a central clearing service
-        val involvedParties = inputs.map { it.beneficiary }.union(inputs.map { it.obligor.owningKey }).toSet()
+        val involvedParties: Set<PublicKey> = inputs.map { it.beneficiary.owningKey }.union(inputs.map { it.obligor.owningKey }).toSet()
         when (command.value.type) {
         // For close-out netting, allow any involved party to sign
             NetType.CLOSE_OUT -> require(command.signers.intersect(involvedParties).isNotEmpty()) { "any involved party has signed" }

@@ -8,6 +8,7 @@ import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
@@ -34,7 +35,7 @@ import java.util.*
  * 3. S signs it and commits it to the ledger, notarising it and distributing the final signed transaction back
  *    to B.
  *
- * Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction
+ * Assuming no malicious termination, they both end the flow being in possession of a valid, signed transaction
  * that represents an atomic asset swap.
  *
  * Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
@@ -118,7 +119,7 @@ object TwoPartyTradeFlow {
                 // even though it is missing signatures.
                 subFlow(ResolveTransactionsFlow(wtx, otherParty))
 
-                if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
+                if (wtx.outputs.map { it.data }.sumCashBy(AnonymousParty(myPublicKey)).withoutIssuer() != price)
                     throw FlowException("Transaction is not sending us the right amount of cash")
 
                 it
@@ -219,7 +220,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, AnonymousParty(tradeRequest.sellerOwnerKey))
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(tradeRequest.assetForSale)
@@ -228,10 +229,10 @@ object TwoPartyTradeFlow {
             // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
-            val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+            val freshPublicKey = serviceHub.keyManagementService.freshKey().public
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(AnonymousParty(freshPublicKey))
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner.owningKey)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.

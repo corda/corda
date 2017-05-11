@@ -39,7 +39,8 @@ open class CashPaymentFlow(
             serviceHub.vaultService.generateSpend(
                     builder,
                     amount,
-                    recipient.owningKey,
+                    // TODO: Get a transaction key, don't just re-use the owning key
+                    recipient,
                     issuerConstraint)
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)

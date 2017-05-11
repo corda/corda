@@ -9,6 +9,9 @@ import net.corda.core.contracts.Contract;
 import net.corda.core.contracts.TransactionForContract.*;
 import net.corda.core.contracts.clauses.*;
 import net.corda.core.crypto.*;
+import net.corda.core.identity.AbstractParty;
+import net.corda.core.identity.AbstractParty;
+import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.*;
 import net.corda.core.transactions.*;
@@ -34,14 +37,14 @@ public class JavaCommercialPaper implements Contract {
     @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
-        private PublicKey owner;
+        private AbstractParty owner;
         private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
+        public State(PartyAndReference issuance, AbstractParty owner, Amount<Issued<Currency>> faceValue,
                      Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
@@ -53,13 +56,13 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
         }
 
-        public ICommercialPaperState withOwner(PublicKey newOwner) {
+        public ICommercialPaperState withOwner(AbstractParty newOwner) {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
         @NotNull
         @Override
-        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull AbstractParty newOwner) {
             return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
         }
 
@@ -76,7 +79,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         @NotNull
-        public PublicKey getOwner() {
+        public AbstractParty getOwner() {
             return owner;
         }
 
@@ -117,12 +120,12 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State withoutOwner() {
-            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
+            return new State(issuance, new AnonymousParty(NullPublicKey.INSTANCE), faceValue, maturityDate);
         }
 
         @NotNull
         @Override
-        public List<PublicKey> getParticipants() {
+        public List<AbstractParty> getParticipants() {
             return ImmutableList.of(this.owner);
         }
     }
@@ -162,12 +165,12 @@ public class JavaCommercialPaper implements Contract {
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                        @NotNull State groupingKey) {
+                                                 State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
 
-                if (!cmd.getSigners().contains(input.getOwner()))
+                if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
                 // Check the output CP state is the same as the input state, ignoring the owner field.
@@ -194,13 +197,13 @@ public class JavaCommercialPaper implements Contract {
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                        @NotNull State groupingKey) {
+                                                 State groupingKey) {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
                 State input = single(inputs);
 
-                if (!cmd.getSigners().contains(input.getOwner()))
+                if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
                 Timestamp timestamp = tx.getTimestamp();
@@ -237,7 +240,7 @@ public class JavaCommercialPaper implements Contract {
                                         @NotNull List<? extends State> inputs,
                                         @NotNull List<? extends State> outputs,
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
-                                        @NotNull State groupingKey) {
+                                                 State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
                 Timestamp timestampCommand = tx.getTimestamp();
@@ -304,7 +307,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
-        State state = new State(issuance, issuance.getParty().getOwningKey(), faceValue, maturityDate);
+        State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
         TransactionState output = new TransactionState<>(state, notary, encumbrance);
         return new TransactionType.General.Builder(notary).withItems(output, new Command(new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
@@ -317,12 +320,12 @@ public class JavaCommercialPaper implements Contract {
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
         vault.generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
         tx.addInputState(paper);
-        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
+        tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
     }
 
-    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
+    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, AbstractParty newOwner) {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
-        tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));
+        tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
     }
 }

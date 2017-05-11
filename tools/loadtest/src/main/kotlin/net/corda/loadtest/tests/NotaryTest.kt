@@ -29,7 +29,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
                         signWith(DUMMY_CASH_ISSUER_KEY)
                     }
                     val asset = issueTx.toWireTransaction().outRef<DummyContract.SingleOwnerState>(0)
-                    val moveTx = DummyContract.move(asset, DUMMY_CASH_ISSUER.party.owningKey).apply {
+                    val moveTx = DummyContract.move(asset, DUMMY_CASH_ISSUER.party).apply {
                         signWith(DUMMY_CASH_ISSUER_KEY)
                     }
                     NotariseCommand(issueTx.toSignedTransaction(false), moveTx.toSignedTransaction(false), node)

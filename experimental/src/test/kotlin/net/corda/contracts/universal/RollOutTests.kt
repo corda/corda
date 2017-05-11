@@ -36,7 +36,7 @@ class RollOutTests {
             }
         }
     }
-    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
+    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
 
     val contractStep1a = arrange {
         rollOut("2016-10-03".ld, "2017-09-01".ld, Frequency.Monthly) {
@@ -55,8 +55,8 @@ class RollOutTests {
         highStreetBank.owes(acmeCorp, 10.K, USD)
     }
 
-    val stateStep1a = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1a)
-    val stateStep1b = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractStep1b)
+    val stateStep1a = UniversalContract.State(listOf(DUMMY_NOTARY), contractStep1a)
+    val stateStep1b = UniversalContract.State(listOf(DUMMY_NOTARY), contractStep1b)
 
     val contract_transfer1 = arrange {
         highStreetBank.owes(acmeCorp, 10.K, USD)

@@ -4,9 +4,9 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.FilterOn
 import net.corda.core.contracts.clauses.verifyClause
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
+import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
 
 class DummyLinearContract : Contract {
@@ -20,11 +20,11 @@ class DummyLinearContract : Contract {
     data class State(
             override val linearId: UniqueIdentifier = UniqueIdentifier(),
             override val contract: Contract = DummyLinearContract(),
-            override val participants: List<PublicKey> = listOf(),
+            override val participants: List<AbstractParty> = listOf(),
             val nonce: SecureHash = SecureHash.randomSHA256()) : LinearState {
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.containsAny(ourKeys) }
+            return participants.any { it.owningKey.containsAny(ourKeys) }
         }
     }
 }

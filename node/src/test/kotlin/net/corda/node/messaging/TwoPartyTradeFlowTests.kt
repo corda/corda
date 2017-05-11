@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -97,7 +98,7 @@ class TwoPartyTradeFlowTests {
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                fillUpForSeller(false, aliceNode.info.legalIdentity,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
 
@@ -144,7 +145,7 @@ class TwoPartyTradeFlowTests {
                 }
 
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                fillUpForSeller(false, aliceNode.info.legalIdentity,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
 
@@ -195,7 +196,7 @@ class TwoPartyTradeFlowTests {
                 bobNode.services.fillWithSomeTestCash(2000.DOLLARS, outputNotary = notaryNode.info.notaryIdentity)
             }
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                fillUpForSeller(false, aliceNode.info.legalIdentity,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, null, notaryNode.info.notaryIdentity).second
             }
             insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey, notaryKey)
@@ -301,6 +302,7 @@ class TwoPartyTradeFlowTests {
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
         val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
+        val alice = aliceNode.info.legalIdentity
         val aliceKey = aliceNode.services.legalIdentityKey
 
         ledger(aliceNode.services) {
@@ -317,12 +319,13 @@ class TwoPartyTradeFlowTests {
             }
 
             val extraKey = bobNode.keyManagement.freshKey()
-            val bobsFakeCash = fillUpForBuyer(false, extraKey.public,
+            val extraPublicKey = extraKey.public
+            val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(extraPublicKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             val bobsSignedTxns = insertFakeTransactions(bobsFakeCash, bobNode, notaryNode, bobNode.services.legalIdentityKey, extraKey)
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                fillUpForSeller(false, alice,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
             val alicesSignedTxns = insertFakeTransactions(alicesFakePaper, aliceNode, notaryNode, aliceKey)
@@ -416,13 +419,14 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsFakeCash = fillUpForBuyer(false, bobNode.keyManagement.freshKey().public,
+            val bobsKey = bobNode.keyManagement.freshKey().public
+            val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(bobsKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
             insertFakeTransactions(bobsFakeCash, bobNode, notaryNode)
 
             val alicesFakePaper = aliceNode.database.transaction {
-                fillUpForSeller(false, aliceNode.info.legalIdentity.owningKey,
+                fillUpForSeller(false, aliceNode.info.legalIdentity,
                         1200.DOLLARS `issued by` DUMMY_CASH_ISSUER, attachmentID, notaryNode.info.notaryIdentity).second
             }
 
@@ -520,14 +524,16 @@ class TwoPartyTradeFlowTests {
         val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
         val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
         val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
+        val alice = aliceNode.info.legalIdentity
         val aliceKey = aliceNode.services.legalIdentityKey
+        val bob = bobNode.info.legalIdentity
         val bobKey = bobNode.services.legalIdentityKey
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
-        val bobsBadCash = fillUpForBuyer(bobError, bobKey.public, DUMMY_CASH_ISSUER.party,
+        val bobsBadCash = fillUpForBuyer(bobError, bob, DUMMY_CASH_ISSUER.party,
                 notaryNode.info.notaryIdentity).second
         val alicesFakePaper = aliceNode.database.transaction {
-            fillUpForSeller(aliceError, aliceNode.info.legalIdentity.owningKey,
+            fillUpForSeller(aliceError, alice,
                     1200.DOLLARS `issued by` issuer, null, notaryNode.info.notaryIdentity).second
         }
 
@@ -571,16 +577,16 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
             withError: Boolean,
-            owner: PublicKey,
-            issuer: AnonymousParty,
+            owner: AbstractParty,
+            issuer: AbstractParty,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {
-        val interimOwnerKey = MEGA_CORP_PUBKEY
+        val interimOwner = MEGA_CORP
         // Bob (Buyer) has some cash he got from the Bank of Elbonia, Alice (Seller) has some commercial paper she
         // wants to sell to Bob.
         val eb1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             // Issued money to itself.
-            output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }
-            output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }
+            output("elbonian money 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
+            output("elbonian money 2", notary = notary) { 1000.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }
             if (!withError) {
                 command(issuer.owningKey) { Cash.Commands.Issue() }
             } else {
@@ -599,15 +605,15 @@ class TwoPartyTradeFlowTests {
         val bc1 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 1")
             output("bob cash 1", notary = notary) { 800.DOLLARS.CASH `issued by` issuer `owned by` owner }
-            command(interimOwnerKey) { Cash.Commands.Move() }
+            command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
         val bc2 = transaction(transactionBuilder = TransactionBuilder(notary = notary)) {
             input("elbonian money 2")
             output("bob cash 2", notary = notary) { 300.DOLLARS.CASH `issued by` issuer `owned by` owner }
-            output(notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwnerKey }   // Change output.
-            command(interimOwnerKey) { Cash.Commands.Move() }
+            output(notary = notary) { 700.DOLLARS.CASH `issued by` issuer `owned by` interimOwner }   // Change output.
+            command(interimOwner.owningKey) { Cash.Commands.Move() }
             this.verifies()
         }
 
@@ -617,7 +623,7 @@ class TwoPartyTradeFlowTests {
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForSeller(
             withError: Boolean,
-            owner: PublicKey,
+            owner: AbstractParty,
             amount: Amount<Issued<Currency>>,
             attachmentID: SecureHash?,
             notary: Party): Pair<Vault<ContractState>, List<WireTransaction>> {

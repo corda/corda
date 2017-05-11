@@ -20,9 +20,8 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
         }
         serviceHub.recordTransactions(issueTx.toSignedTransaction())
         // Move ownership of the asset to the counterparty
-        val counterPartyKey = counterpartyNode.owningKey
         val asset = issueTx.toWireTransaction().outRef<DummyContract.SingleOwnerState>(0)
-        val moveTx = DummyContract.move(asset, counterPartyKey).apply {
+        val moveTx = DummyContract.move(asset, counterpartyNode).apply {
             signWith(myKeyPair)
         }
         // We don't check signatures because we know that the notary's signature is missing

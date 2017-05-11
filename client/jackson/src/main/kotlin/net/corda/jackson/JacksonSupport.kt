@@ -10,6 +10,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -66,6 +67,7 @@ object JacksonSupport {
             addDeserializer(AnonymousParty::class.java, AnonymousPartyDeserializer)
             addSerializer(Party::class.java, PartySerializer)
             addDeserializer(Party::class.java, PartyDeserializer)
+            addDeserializer(AbstractParty::class.java, PartyDeserializer)
             addSerializer(BigDecimal::class.java, ToStringSerializer)
             addDeserializer(BigDecimal::class.java, NumberDeserializers.BigDecimalDeserializer())
             addSerializer(SecureHash::class.java, SecureHashSerializer)
@@ -160,8 +162,16 @@ object JacksonSupport {
             }
 
             val mapper = parser.codec as PartyObjectMapper
-            val principal = X500Name(parser.text)
-            return mapper.partyFromPrincipal(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
+            // TODO: We should probably have a better specified way of identifying X.500 names vs keys
+            // Base58 keys never include an equals character, while X.500 names always will, so we use that to determine
+            // how to parse the content
+            return if (parser.text.contains("=")) {
+                val principal = X500Name(parser.text)
+                mapper.partyFromPrincipal(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
+            } else {
+                val key = parsePublicKeyBase58(parser.text)
+                mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${key.toStringShort()}")
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
@@ -27,7 +28,6 @@ import net.corda.testing.startRpcClient
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -187,21 +187,21 @@ class ContractUpgradeFlowTest {
         val firstState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals(listOf(a.info.legalIdentity.owningKey), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
+        assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
         override val legacyContract = Cash::class.java
 
-        data class State(override val amount: Amount<Issued<Currency>>, val owners: List<PublicKey>) : FungibleAsset<Currency> {
-            override val owner: PublicKey = owners.first()
-            override val exitKeys = (owners + amount.token.issuer.party.owningKey).toSet()
+        data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
+            override val owner: AbstractParty = owners.first()
+            override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
             override val contract = CashV2()
             override val participants = owners
 
-            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
+            override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
             override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
-            override fun withNewOwner(newOwner: PublicKey) = Pair(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
+            override fun withNewOwner(newOwner: AbstractParty) = Pair(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
         }
 
         override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))

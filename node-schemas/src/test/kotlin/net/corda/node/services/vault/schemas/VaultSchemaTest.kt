@@ -11,7 +11,11 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.requery.converters.InstantConverter
@@ -19,17 +23,16 @@ import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.DUMMY_PUBKEY_2
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import rx.Observable
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -81,12 +84,12 @@ class VaultSchemaTest {
     private class VaultNoopContract : Contract {
         override val legalContractReference = SecureHash.sha256("")
 
-        data class VaultNoopState(override val owner: PublicKey) : OwnableState {
+        data class VaultNoopState(override val owner: AbstractParty) : OwnableState {
             override val contract = VaultNoopContract()
-            override val participants: List<PublicKey>
+            override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Create(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Create(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {
@@ -101,10 +104,10 @@ class VaultSchemaTest {
     private fun setupDummyData() {
         // dummy Transaction
         val notary: Party = DUMMY_NOTARY
-        val inState1 = TransactionState(DummyContract.SingleOwnerState(0, DUMMY_PUBKEY_1), notary)
+        val inState1 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), notary)
         val inState2 = TransactionState(DummyContract.MultiOwnerState(0,
-                listOf(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2)), notary)
-        val inState3 = TransactionState(VaultNoopContract.VaultNoopState(DUMMY_PUBKEY_1), notary)
+                listOf(ALICE, BOB)), notary)
+        val inState3 = TransactionState(VaultNoopContract.VaultNoopState(ALICE), notary)
         val outState1 = inState1.copy()
         val outState2 = inState2.copy()
         val outState3 = inState3.copy()
@@ -132,9 +135,9 @@ class VaultSchemaTest {
 
     private fun createTxnWithTwoStateTypes(): LedgerTransaction {
         val notary: Party = DUMMY_NOTARY
-        val inState1 = TransactionState(DummyContract.SingleOwnerState(0, DUMMY_PUBKEY_1), notary)
+        val inState1 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), notary)
         val inState2 = TransactionState(DummyContract.MultiOwnerState(0,
-                listOf(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2)), notary)
+                listOf(ALICE, BOB)), notary)
         val outState1 = inState1.copy()
         val outState2 = inState2.copy()
         val state1TxHash = SecureHash.randomSHA256()

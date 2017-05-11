@@ -48,12 +48,12 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
                             notary: Party?): Pair<List<StateAndRef<Cash.State>>, Long> {
     // Collect cash type inputs
     val cashStates = serviceHub.vaultService.unconsumedStates<Cash.State>()
-    // extract our key identity for convenience
-    val ourKey = serviceHub.myInfo.legalIdentity.owningKey
+    // extract our identity for convenience
+    val ourIdentity = serviceHub.myInfo.legalIdentity
     // Filter down to our own cash states with right currency and issuer
     val suitableCashStates = cashStates.filter {
         val state = it.state.data
-        (state.owner == ourKey)
+        (state.owner == ourIdentity)
                 && (state.amount.token == amountRequired.token)
     }
     require(!suitableCashStates.isEmpty()) { "Insufficient funds" }
@@ -90,12 +90,12 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
     val (inputs, residual) = gatherOurInputs(serviceHub, sellAmount, request.notary)
 
     // Build and an output state for the counterparty
-    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty.owningKey)
+    val transferedFundsOutput = Cash.State(sellAmount, request.counterparty)
 
     if (residual > 0L) {
         // Build an output state for the residual change back to us
         val residualAmount = Amount(residual, sellAmount.token)
-        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity.owningKey)
+        val residualOutput = Cash.State(residualAmount, serviceHub.myInfo.legalIdentity)
         return FxResponse(inputs, listOf(transferedFundsOutput, residualOutput))
     } else {
         return FxResponse(inputs, listOf(transferedFundsOutput))
@@ -140,7 +140,7 @@ class ForeignExchangeFlow(val tradeId: String,
             require(it.inputs.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
-            require(it.inputs.all { it.state.data.owner == remoteRequestWithNotary.owner.owningKey }) {
+            require(it.inputs.all { it.state.data.owner == remoteRequestWithNotary.owner }) {
                 "The inputs are not owned by the correct counterparty"
             }
             require(it.inputs.all { it.state.data.amount.token == remoteRequestWithNotary.amount.token }) {
@@ -153,7 +153,7 @@ class ForeignExchangeFlow(val tradeId: String,
                     >= remoteRequestWithNotary.amount.quantity) {
                 "the provided inputs don't provide sufficient funds"
             }
-            require(it.outputs.filter { it.owner == serviceHub.myInfo.legalIdentity.owningKey }.
+            require(it.outputs.filter { it.owner == serviceHub.myInfo.legalIdentity }.
                     map { it.amount.quantity }.sum() == remoteRequestWithNotary.amount.quantity) {
                 "the provided outputs don't provide the request quantity"
             }
@@ -195,8 +195,8 @@ class ForeignExchangeFlow(val tradeId: String,
         val builder = TransactionType.General.Builder(ourStates.inputs.first().state.notary)
 
         // Add the move commands and key to indicate all the respective owners and need to sign
-        val ourSigners = ourStates.inputs.map { it.state.data.owner }.toSet()
-        val theirSigners = theirStates.inputs.map { it.state.data.owner }.toSet()
+        val ourSigners = ourStates.inputs.map { it.state.data.owner.owningKey }.toSet()
+        val theirSigners = theirStates.inputs.map { it.state.data.owner.owningKey }.toSet()
         builder.addCommand(Cash.Commands.Move(), (ourSigners + theirSigners).toList())
 
         // Build and add the inputs and outputs

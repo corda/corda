@@ -37,7 +37,8 @@ class CashIssueFlow(val amount: Amount<Currency>,
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        Cash().generateIssue(builder, amount.issuedBy(issuer), recipient.owningKey, notary)
+        // TODO: Get a transaction key, don't just re-use the owning key
+        Cash().generateIssue(builder, amount.issuedBy(issuer), recipient, notary)
         progressTracker.currentStep = SIGNING_TX
         val myKey = serviceHub.legalIdentityKey
         builder.signWith(myKey)

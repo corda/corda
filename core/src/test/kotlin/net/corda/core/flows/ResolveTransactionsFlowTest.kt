@@ -12,7 +12,7 @@ import net.corda.flows.ResolveTransactionsFlow
 import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
-import net.corda.testing.MINI_CORP_PUBKEY
+import net.corda.testing.MINI_CORP
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -94,7 +94,7 @@ class ResolveTransactionsFlowTest {
         val count = 50
         var cursor = stx2
         repeat(count) {
-            val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP_PUBKEY)
+            val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
                     .addSignatureUnchecked(NullSignature)
                     .toSignedTransaction(false)
             a.database.transaction {
@@ -113,13 +113,13 @@ class ResolveTransactionsFlowTest {
     fun `triangle of transactions resolves fine`() {
         val stx1 = makeTransactions().first
 
-        val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP_PUBKEY).run {
+        val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP).run {
             signWith(MEGA_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
             toSignedTransaction()
         }
 
-        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP_PUBKEY).run {
+        val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP).run {
             signWith(MEGA_CORP_KEY)
             signWith(DUMMY_NOTARY_KEY)
             toSignedTransaction()
@@ -173,7 +173,7 @@ class ResolveTransactionsFlowTest {
             it.signWith(DUMMY_NOTARY_KEY)
             it.toSignedTransaction(false)
         }
-        val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP_PUBKEY).let {
+        val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP).let {
             it.signWith(MEGA_CORP_KEY)
             it.signWith(DUMMY_NOTARY_KEY)
             it.toSignedTransaction()

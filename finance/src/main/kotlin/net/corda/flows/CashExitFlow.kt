@@ -60,7 +60,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         //       count as a reason to fail?
         val participants: Set<Party> = inputStates
                 .filterIsInstance<Cash.State>()
-                .map { serviceHub.identityService.partyFromKey(it.owner) }
+                .map { serviceHub.identityService.partyFromAnonymous(it.owner) }
                 .filterNotNull()
                 .toSet()
 

@@ -57,7 +57,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         firstSpend.resultFuture.getOrThrow()
 
         val secondSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity.owningKey)
+            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity)
             addOutputState(dummyState)
             signWith(aliceKey)
             toSignedTransaction(false)

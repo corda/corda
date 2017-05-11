@@ -38,10 +38,9 @@ UNRELEASED
          * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
            backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
            as possible.
-         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. A new class
-           ``AnonymousParty`` has been added, which is intended to be used in place of ``Party`` or ``PublicKey`` in contract
-           state objects. The exception to this is where the party in a contract state is intended to be well known, such as
-           issuer of a ``Cash`` state.
+         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. This now replaces
+           use of ``Party`` and ``PublicKey`` in state objects, and allows use of full or anonymised parties depending on
+           use-case.
          * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
            name. As a result all node legal names must now be structured as X.500 distinguished names.
 

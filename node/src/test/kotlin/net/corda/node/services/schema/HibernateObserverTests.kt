@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -86,7 +87,7 @@ class HibernateObserverTests {
         override val contract: Contract
             get() = throw UnsupportedOperationException()
 
-        override val participants: List<CompositeKey>
+        override val participants: List<AbstractParty>
             get() = throw UnsupportedOperationException()
     }
 

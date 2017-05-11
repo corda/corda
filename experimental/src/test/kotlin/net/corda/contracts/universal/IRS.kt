@@ -122,12 +122,12 @@ class IRS {
 
     val paymentFirst = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
-    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractInitial)
+    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
 
-    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFirst)
-    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterExecutionFirst)
+    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterFixingFirst)
+    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterExecutionFirst)
 
-    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFirst)
+    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFirst)
 
 
     @Test

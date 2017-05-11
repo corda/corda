@@ -2,9 +2,13 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
+import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
@@ -64,10 +68,10 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
                      override val contract: TradeApprovalContract = TradeApprovalContract()) : LinearState {
 
         val parties: List<Party> get() = listOf(source, counterparty)
-        override val participants: List<PublicKey> get() = parties.map { it.owningKey }
+        override val participants: List<AbstractParty> get() = parties
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.containsAny(ourKeys) }
+            return participants.any { it.owningKey.containsAny(ourKeys) }
         }
     }
 
