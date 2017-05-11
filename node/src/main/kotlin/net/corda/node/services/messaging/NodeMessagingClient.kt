@@ -158,7 +158,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             check(!started) { "start can't be called twice" }
             started = true
 
-            val serverAddress = getServerAddress()
+            val serverAddress = getBrokerAddress()
 
             log.info("Connecting to server: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
@@ -217,7 +217,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
      * fail to connect on nodes under a NAT with no loopback support. As the local message broker is listening on
      * all interfaces it is safer to always use `localhost` instead.
      */
-    private fun getServerAddress() = if (isServerLocal) HostAndPort.fromParts("localhost", serverHostPort.port) else serverHostPort
+    private fun getBrokerAddress() = if (isServerLocal) HostAndPort.fromParts("localhost", serverHostPort.port) else serverHostPort
 
     /**
      * We make the consumer twice, once to filter for just network map messages, and then once that is complete, we close
