@@ -3,21 +3,32 @@ package net.corda.attachmentdemo
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.sizedInputStreamAndHash
+import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.Emoji
 import net.corda.flows.FinalityFlow
-import net.corda.testing.ALICE_KEY
-import java.nio.file.Path
-import java.nio.file.Paths
+import net.corda.node.driver.poll
+import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.PublicKey
+import java.util.concurrent.Executors
+import java.util.jar.JarInputStream
+import javax.servlet.http.HttpServletResponse.SC_OK
+import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
+import javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM
 import kotlin.system.exitProcess
-import kotlin.test.assertEquals
 
 internal enum class Role {
     SENDER,
@@ -41,51 +52,55 @@ fun main(args: Array<String>) {
         Role.SENDER -> {
             val host = HostAndPort.fromString("localhost:10006")
             println("Connecting to sender node ($host)")
-            CordaRPCClient(host).use("demo", "demo") {
-                sender(this)
+            CordaRPCClient(host).start("demo", "demo").use {
+                sender(it.proxy)
             }
         }
         Role.RECIPIENT -> {
             val host = HostAndPort.fromString("localhost:10009")
             println("Connecting to the recipient node ($host)")
-            CordaRPCClient(host).use("demo", "demo") {
-                recipient(this)
+            CordaRPCClient(host).start("demo", "demo").use {
+                recipient(it.proxy)
             }
         }
     }
 }
 
-val PROSPECTUS_HASH = SecureHash.parse("decd098666b9657314870e192ced0c3519c2c9d395507a238338f8d003929de9")
+/** An in memory test zip attachment of at least numOfClearBytes size, will be used. */
+fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
+    val (inputStream, hash) = sizedInputStreamAndHash(numOfClearBytes)
+    sender(rpc, inputStream, hash)
+}
 
-fun sender(rpc: CordaRPCOps) {
+fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
     // Get the identity key of the other side (the recipient).
-    val otherSide: Party = rpc.partyFromName("Bank B")!!
+    val executor = Executors.newScheduledThreadPool(1)
+    val otherSide: Party = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
 
     // Make sure we have the file in storage
-    // TODO: We should have our own demo file, not share the trader demo file
-    if (!rpc.attachmentExists(PROSPECTUS_HASH)) {
-        Thread.currentThread().contextClassLoader.getResourceAsStream("bank-of-london-cp.jar").use {
+    if (!rpc.attachmentExists(hash)) {
+        inputStream.use {
             val id = rpc.uploadAttachment(it)
-            assertEquals(PROSPECTUS_HASH, id)
+            require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
     }
 
-    // Create a trivial transaction that just passes across the attachment - in normal cases there would be
-    // inputs, outputs and commands that refer to this attachment.
-    val ptx = TransactionType.General.Builder(notary = null)
-    require(rpc.attachmentExists(PROSPECTUS_HASH))
-    ptx.addAttachment(PROSPECTUS_HASH)
-    // TODO: Add a dummy state and specify a notary, so that the tx hash is randomised each time and the demo can be repeated.
+    // Create a trivial transaction with an output that describes the attachment, and the attachment itself
+    val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+    require(rpc.attachmentExists(hash))
+    ptx.addOutputState(AttachmentContract.State(hash))
+    ptx.addAttachment(hash)
 
-    // Despite not having any states, we have to have at least one signature on the transaction
-    ptx.signWith(ALICE_KEY)
+    // Sign with the notary key
+    ptx.signWith(DUMMY_NOTARY_KEY)
 
     // Send the transaction to the other recipient
     val stx = ptx.toSignedTransaction()
     println("Sending ${stx.id}")
-    val flowHandle = rpc.startFlow(::FinalityFlow, stx, setOf(otherSide))
+    val flowHandle = rpc.startTrackedFlow(::FinalityFlow, stx, setOf(otherSide))
     flowHandle.progress.subscribe(::println)
     flowHandle.returnValue.getOrThrow()
+    println("Sent ${stx.id}")
 }
 
 fun recipient(rpc: CordaRPCOps) {
@@ -93,9 +108,36 @@ fun recipient(rpc: CordaRPCOps) {
     val stx = rpc.verifiedTransactions().second.toBlocking().first()
     val wtx = stx.tx
     if (wtx.attachments.isNotEmpty()) {
-        assertEquals(PROSPECTUS_HASH, wtx.attachments.first())
-        require(rpc.attachmentExists(PROSPECTUS_HASH))
-        println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
+        if (wtx.outputs.isNotEmpty()) {
+            val state = wtx.outputs.map { it.data }.filterIsInstance<AttachmentContract.State>().single()
+            require(rpc.attachmentExists(state.hash))
+
+            // Download the attachment via the Web endpoint.
+            val connection = URL("http://localhost:10010/attachments/${state.hash}").openConnection() as HttpURLConnection
+            try {
+                require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
+                require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
+                require(connection.contentLength > 1024) { "Attachment contains only ${connection.contentLength} bytes" }
+                require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
+                    "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
+                }
+
+                // Write out the entries inside this jar.
+                println("Attachment JAR contains these entries:")
+                JarInputStream(connection.inputStream).use { it ->
+                    while (true) {
+                        val e = it.nextJarEntry ?: break
+                        println("Entry> ${e.name}")
+                        it.closeEntry()
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
+            println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
+        } else {
+            println("Error: no output state found in ${wtx.id}")
+        }
     } else {
         println("Error: no attachments found in ${wtx.id}")
     }
@@ -110,11 +152,18 @@ private fun printHelp(parser: OptionParser) {
     parser.printHelpOn(System.out)
 }
 
-// TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
-    return object : SSLConfiguration {
-        override val keyStorePassword: String = "cordacadevpass"
-        override val trustStorePassword: String = "trustpass"
-        override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
+class AttachmentContract : Contract {
+    override val legalContractReference: SecureHash
+        get() = TODO("not implemented")
+
+    override fun verify(tx: TransactionForContract) {
+        val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()
+        val attachment = tx.attachments.single()
+        require(state.hash == attachment.id)
+    }
+
+    data class State(val hash: SecureHash.SHA256) : ContractState {
+        override val contract: Contract = AttachmentContract()
+        override val participants: List<PublicKey> = emptyList()
     }
 }

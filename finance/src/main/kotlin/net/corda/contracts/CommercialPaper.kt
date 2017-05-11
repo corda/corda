@@ -1,5 +1,6 @@
 package net.corda.contracts
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.core.contracts.*
@@ -7,9 +8,9 @@ import net.corda.core.contracts.clauses.AnyOf
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.random63BitValue
 import net.corda.core.schemas.MappedSchema
@@ -18,6 +19,7 @@ import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
 import net.corda.schemas.CommercialPaperSchemaV1
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -59,34 +61,34 @@ class CommercialPaper : Contract {
 
     data class State(
             val issuance: PartyAndReference,
-            override val owner: CompositeKey,
+            override val owner: PublicKey,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, QueryableState, ICommercialPaperState {
         override val contract = CP_PROGRAM_ID
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = listOf(owner)
 
         val token: Issued<Terms>
             get() = Issued(issuance, Terms(faceValue.token, maturityDate))
 
-        override fun withNewOwner(newOwner: CompositeKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
-        override fun withOwner(newOwner: CompositeKey): ICommercialPaperState = copy(owner = newOwner)
+        override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
 
-        override fun withIssuance(newIssuance: PartyAndReference): ICommercialPaperState = copy(issuance = newIssuance)
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
+        // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
                         issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.toBase58String(),
@@ -99,14 +101,15 @@ class CommercialPaper : Contract {
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
+        // DOCEND VaultIndexedQueryCriteria
     }
 
     interface Clauses {
         class Group : GroupClauseVerifier<State, Commands, Issued<Terms>>(
                 AnyOf(
-                    Redeem(),
-                    Move(),
-                    Issue())) {
+                        Redeem(),
+                        Move(),
+                        Issue())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State, Issued<Terms>>>
                     = tx.groupStates<State, Issued<Terms>> { it.token }
         }
@@ -143,8 +146,8 @@ class CommercialPaper : Contract {
                 val command = commands.requireSingleCommand<Commands.Move>()
                 val input = inputs.single()
                 requireThat {
-                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                    "the state is propagated" by (outputs.size == 1)
+                    "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                    "the state is propagated" using (outputs.size == 1)
                     // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                     // the input ignoring the owner field due to the grouping.
                 }
@@ -152,7 +155,7 @@ class CommercialPaper : Contract {
             }
         }
 
-        class Redeem() : Clause<State, Commands, Issued<Terms>>() {
+        class Redeem : Clause<State, Commands, Issued<Terms>>() {
             override val requiredCommands: Set<Class<out CommandData>> = setOf(Commands.Redeem::class.java)
 
             override fun verify(tx: TransactionForContract,
@@ -169,10 +172,10 @@ class CommercialPaper : Contract {
                 val received = tx.outputs.sumCashBy(input.owner)
                 val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                 requireThat {
-                    "the paper must have matured" by (time >= input.maturityDate)
-                    "the received amount equals the face value" by (received == input.faceValue)
-                    "the paper must be destroyed" by outputs.isEmpty()
-                    "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                    "the paper must have matured" using (time >= input.maturityDate)
+                    "the received amount equals the face value" using (received == input.faceValue)
+                    "the paper must be destroyed" using outputs.isEmpty()
+                    "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
                 }
 
                 return setOf(command.value)
@@ -200,7 +203,7 @@ class CommercialPaper : Contract {
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
-    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: CompositeKey) {
+    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper)
         tx.addOutputState(TransactionState(paper.state.data.copy(owner = newOwner), paper.state.notary))
         tx.addCommand(Commands.Move(), paper.state.data.owner)
@@ -214,6 +217,7 @@ class CommercialPaper : Contract {
      * @throws InsufficientBalanceException if the vault doesn't contain enough money to pay the redeemer.
      */
     @Throws(InsufficientBalanceException::class)
+    @Suspendable
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
         // Add the cash movement using the states in our vault.
         val amount = paper.state.data.faceValue.let { amount -> Amount(amount.quantity, amount.token.product) }
@@ -223,8 +227,8 @@ class CommercialPaper : Contract {
     }
 }
 
-infix fun CommercialPaper.State.`owned by`(owner: CompositeKey) = copy(owner = owner)
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = copy(owner = owner)
 infix fun CommercialPaper.State.`with notary`(notary: Party) = TransactionState(this, notary)
-infix fun ICommercialPaperState.`owned by`(newOwner: CompositeKey) = withOwner(newOwner)
+infix fun ICommercialPaperState.`owned by`(newOwner: PublicKey) = withOwner(newOwner)
 
 

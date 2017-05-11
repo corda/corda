@@ -2,10 +2,10 @@ Welcome to the Corda documentation!
 ===================================
 
 .. warning:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for milestone release M9.0 <https://docs.corda.net/releases/release-M9.0/>`_.
+   current state of the code. `Read the docs for milestone release M10.1 <https://docs.corda.net/releases/release-M10.1/>`_.
 
 `Corda <https://www.corda.net/>`_ is an open-source distributed ledger platform. The latest *milestone* (i.e. stable)
-release is M9.2. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on
+release is M10.1. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on
 `Slack <https://slack.corda.net/>`_ and in our `forum <https://discourse.corda.net/>`_.
 
 If you're new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
@@ -46,6 +46,7 @@ Documentation Contents:
    getting-set-up-fault-finding
    running-the-demos
    CLI-vs-IDE
+   cheat-sheet
 
 .. toctree::
    :maxdepth: 2
@@ -72,6 +73,7 @@ Documentation Contents:
    :maxdepth: 2
    :caption: The Corda node
 
+   versioning
    shell
    serialization
    clientrpc
@@ -124,6 +126,7 @@ Documentation Contents:
    :caption: Appendix
 
    loadtesting
+   demobench
    setting-up-a-corda-network
    secure-coding-guidelines
    release-process
@@ -134,6 +137,7 @@ Documentation Contents:
    further-notes-on-kotlin
    publishing-corda
    azure-vm
+   out-of-process-verification
 
 .. toctree::
    :maxdepth: 2

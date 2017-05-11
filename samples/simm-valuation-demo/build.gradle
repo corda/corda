@@ -10,30 +10,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
-
 sourceSets {
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output
@@ -49,15 +26,16 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':node')
-    compile project(':node:webserver')
+    compile project(':webserver')
     compile project(':finance')
     testCompile project(':test-utils')
 
@@ -78,19 +56,18 @@ dependencies {
     compile "com.opengamma.strata:strata-math:${strata_version}"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "Controller"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Controller"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
-        webPort 10003
         cordapps = []
     }
     node {
-        name "Bank A"
+        name "CN=Bank A,O=Bank A,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10004
@@ -98,7 +75,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         cordapps = []
     }
     node {
-        name "Bank B"
+        name "CN=Bank B,O=Bank B,L=New York,C=US"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10006
@@ -106,8 +83,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         cordapps = []
     }
     node {
-        name "Bank C"
-        nearestCity "tokyo"
+        name "CN=Bank C,O=Bank C,L=Tokyo,C=Japan"
+        nearestCity "Tokyo"
         advertisedServices = []
         p2pPort 10008
         webPort 10009

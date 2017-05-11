@@ -1,6 +1,6 @@
 package net.corda.contracts.universal
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import java.math.BigDecimal
 import java.util.*
 

@@ -19,7 +19,7 @@ A number of interfaces then extend ``ContractState``, representing standardised 
 of state such as:
 
       ``OwnableState``
-      A state which has an owner (represented as a ``CompositeKey``, discussed later). Exposes the owner and a function
+      A state which has an owner (represented as a ``PublicKey`` which can be a ``CompositeKey``, discussed later). Exposes the owner and a function
       for replacing the owner e.g. when an asset is sold.
 
       ``SchedulableState``
@@ -42,9 +42,9 @@ identifier for convenience purposes.
 Transaction lifecycle types
 ---------------------------
 
-The ``WireTransaction`` class contains the core of a transaction without signatures, and with references to attachments
-in place of the attachments themselves (see also :doc:`key-concepts-data-model`). Once signed these are encapsulated in the
-``SignedTransaction`` class. For processing a transaction (i.e. to verify it) a ``SignedTransaction`` is then converted to a
+A ``WireTransaction`` instance contains the core of a transaction without signatures, and with references to attachments
+in place of the attachments themselves (see also :doc:`key-concepts-data-model`). Once signed these are encapsulated in a
+``SignedTransaction`` instance. For processing a transaction (i.e. to verify it) a ``SignedTransaction`` is then converted to a
 ``LedgerTransaction``, which involves verifying the signatures and associating them to the relevant command(s), and
 resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
 ``AuthenticatedObject`` type.
@@ -90,7 +90,7 @@ keys under their control.
 Parties can be represented either in full (including name) or pseudonymously, using the ``Party`` or ``AnonymousParty``
 classes respectively. For example, in a transaction sent to your node as part of a chain of custody it is important you
 can convince yourself of the transaction's validity, but equally important that you don't learn anything about who was
-involved in that transaction. In these cases ``AnonymousParty`` should be used, which contains a composite public key
+involved in that transaction. In these cases ``AnonymousParty`` should be used, which contains a public key (may be a composite key)
 without any identifying information about who owns it. In contrast, for internal processing where extended details of
 a party are required, the ``Party`` class should be used. The identity service provides functionality for resolving
 anonymous parties to full parties.

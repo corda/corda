@@ -1,6 +1,6 @@
 package net.corda.core.node
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -19,7 +19,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: Party)
 @CordaSerializable
 data class NodeInfo(val address: SingleMessageRecipient,
                     val legalIdentity: Party,
-                    val version: Version,
+                    val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
                     val physicalLocation: PhysicalLocation? = null) {
     init {

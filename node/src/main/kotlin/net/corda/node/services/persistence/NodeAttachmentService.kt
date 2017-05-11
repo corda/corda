@@ -5,6 +5,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
+import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
 import net.corda.core.createDirectory
 import net.corda.core.crypto.SecureHash
@@ -13,6 +14,9 @@ import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.services.database.RequeryConfiguration
@@ -65,11 +69,12 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
      * inside it, we haven't read the whole file, so we can't check the hash. But when copying it over the network
      * this will provide an additional safety check against user error.
      */
-    private class HashCheckingStream(val expected: SecureHash.SHA256,
-                                     val expectedSize: Int,
-                                     input: InputStream,
-                                     private val counter: CountingInputStream = CountingInputStream(input),
-                                     private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
+    @VisibleForTesting @CordaSerializable
+    class HashCheckingStream(val expected: SecureHash.SHA256,
+                             val expectedSize: Int,
+                             input: InputStream,
+                             private val counter: CountingInputStream = CountingInputStream(input),
+                             private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
         override fun close() {
             super.close()
 
@@ -81,38 +86,31 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
         }
     }
 
-    private class AttachmentImpl(override val id: SecureHash,
-                                 private val attachment: ByteArray,
-                                 private val checkOnLoad: Boolean) : Attachment {
+    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean) : AbstractAttachment(dataLoader), SerializeAsToken {
         override fun open(): InputStream {
-
-            var stream = ByteArrayInputStream(attachment)
-
+            val stream = super.open()
             // This is just an optional safety check. If it slows things down too much it can be disabled.
-            if (id is SecureHash.SHA256 && checkOnLoad)
-                return HashCheckingStream(id, attachment.size, stream)
-
-            return stream
+            return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
-        override fun equals(other: Any?) = other is Attachment && other.id == id
-        override fun hashCode(): Int = id.hashCode()
+        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentDataLoader(id), checkOnLoad)
+        }
+
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad)
+
     }
 
-    override fun openAttachment(id: SecureHash): Attachment? {
-        val attachment = session.withTransaction {
-            try {
-                session.select(AttachmentEntity::class)
-                        .where(AttachmentEntity.ATT_ID.eq(id))
-                        .get()
-                        .single()
-            } catch (e: NoSuchElementException) {
-                null
-            }
-        } ?: return null
-
-        return AttachmentImpl(id, attachment.content, checkAttachmentsOnLoad)
-    }
+    override fun openAttachment(id: SecureHash): Attachment? = session.withTransaction {
+        try {
+            session.select(AttachmentEntity::class)
+                    .where(AttachmentEntity.ATT_ID.eq(id))
+                    .get()
+                    .single()
+        } catch (e: NoSuchElementException) {
+            null
+        }
+    }?.run { AttachmentImpl(id, { content }, checkAttachmentsOnLoad) }
 
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     override fun importAttachment(jar: InputStream): SecureHash {

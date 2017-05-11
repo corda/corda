@@ -1,46 +1,47 @@
 package net.corda.demobench.model
 
+import net.corda.nodeapi.User
 import org.junit.Test
-import kotlin.test.*
+import kotlin.test.assertEquals
 
 class UserTest {
 
     @Test
     fun createFromEmptyMap() {
         val user = toUser(emptyMap())
-        assertEquals("none", user.user)
+        assertEquals("none", user.username)
         assertEquals("none", user.password)
-        assertEquals(emptyList<String>(), user.permissions)
+        assertEquals(emptySet<String>(), user.permissions)
     }
 
     @Test
     fun createFromMap() {
         val map = mapOf(
-            "user" to "MyName",
-            "password" to "MyPassword",
-            "permissions" to listOf("Flow.MyFlow")
+                "username" to "MyName",
+                "password" to "MyPassword",
+                "permissions" to listOf("Flow.MyFlow")
         )
         val user = toUser(map)
-        assertEquals("MyName", user.user)
+        assertEquals("MyName", user.username)
         assertEquals("MyPassword", user.password)
-        assertEquals(listOf("Flow.MyFlow"), user.permissions)
+        assertEquals(setOf("Flow.MyFlow"), user.permissions)
     }
 
     @Test
     fun userToMap() {
-        val user = User("MyName", "MyPassword", listOf("Flow.MyFlow"))
+        val user = User("MyName", "MyPassword", setOf("Flow.MyFlow"))
         val map = user.toMap()
-        assertEquals("MyName", map["user"])
+        assertEquals("MyName", map["username"])
         assertEquals("MyPassword", map["password"])
-        assertEquals(listOf("Flow.MyFlow"), map["permissions"])
+        assertEquals(setOf("Flow.MyFlow"), map["permissions"])
     }
 
     @Test
     fun `default user`() {
         val user = user("guest")
-        assertEquals("guest", user.user)
+        assertEquals("guest", user.username)
         assertEquals("letmein", user.password)
-        assertEquals(listOf("ALL"), user.permissions)
+        assertEquals(setOf("ALL"), user.permissions)
     }
 
 }

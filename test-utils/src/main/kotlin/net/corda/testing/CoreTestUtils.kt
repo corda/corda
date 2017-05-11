@@ -5,34 +5,37 @@ package net.corda.testing
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
-import com.typesafe.config.Config
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.NodeVersionInfo
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.Version
+import net.corda.core.node.VersionInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.*
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.configureDevKeyAndTrustStores
+import net.corda.node.services.config.*
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.AddOrRemove.ADD
+import net.corda.node.services.statemachine.StateMachineManager
+import net.corda.nodeapi.User
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
 /**
@@ -55,43 +58,40 @@ import kotlin.reflect.KClass
 
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: CompositeKey get() = MEGA_CORP_KEY.public.composite
+val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
 
 val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: CompositeKey get() = MINI_CORP_KEY.public.composite
+val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
 
 val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: CompositeKey get() = ORACLE_KEY.public.composite
+val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
 
-val ALICE_KEY: KeyPair by lazy { generateKeyPair() }
-val ALICE_PUBKEY: CompositeKey get() = ALICE_KEY.public.composite
-val ALICE: Party get() = Party("Alice", ALICE_PUBKEY)
+val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
+val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
+val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val BOB_KEY: KeyPair by lazy { generateKeyPair() }
-val BOB_PUBKEY: CompositeKey get() = BOB_KEY.public.composite
-val BOB: Party get() = Party("Bob", BOB_PUBKEY)
-
-val CHARLIE_KEY: KeyPair by lazy { generateKeyPair() }
-val CHARLIE_PUBKEY: CompositeKey get() = CHARLIE_KEY.public.composite
-val CHARLIE: Party get() = Party("Charlie", CHARLIE_PUBKEY)
-
-val MEGA_CORP: Party get() = Party("MegaCorp", MEGA_CORP_PUBKEY)
-val MINI_CORP: Party get() = Party("MiniCorp", MINI_CORP_PUBKEY)
+val MEGA_CORP: Party get() = Party(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
+val MINI_CORP: Party get() = Party(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
-val BOC_PUBKEY: CompositeKey get() = BOC_KEY.public.composite
-val BOC: Party get() = Party("BankOfCorda", BOC_PUBKEY)
+val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
+val BOC: Party get() = Party(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
+
+val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
+val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
+val BIG_CORP: Party get() = Party(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
+val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
 val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
-val MOCK_VERSION = Version(0, 0, false)
-val MOCK_NODE_VERSION_INFO = NodeVersionInfo(MOCK_VERSION, "Mock revision", "Mock Vendor")
+val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
+private val freePortCounter = AtomicInteger(30000)
 /**
  * Returns a free port.
  *
@@ -99,7 +99,7 @@ fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
 fun freeLocalHostAndPort(): HostAndPort {
-    val freePort = ServerSocket(0).use { it.localPort }
+    val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + 1) % 10000 }
     return HostAndPort.fromParts("localhost", freePort)
 }
 
@@ -110,12 +110,8 @@ fun freeLocalHostAndPort(): HostAndPort {
  * to the Node, some other process else could allocate the returned ports.
  */
 fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
-    // Create a bunch of sockets up front.
-    val sockets = Array(numberToAlloc) { ServerSocket(0) }
-    val result = sockets.map { HostAndPort.fromParts(hostName, it.localPort) }
-    // Close sockets only once we've grabbed all the ports we need.
-    sockets.forEach(ServerSocket::close)
-    return result
+    val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
+    return (freePort .. freePort + numberToAlloc - 1).map { HostAndPort.fromParts(hostName, it) }
 }
 
 /**
@@ -144,34 +140,64 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
 
 /**
  * The given flow factory will be used to initiate just one instance of a flow of type [P] when a counterparty
- * flow requests for it using [markerClass].
+ * flow requests for it using [clientFlowClass].
  * @return Returns a [ListenableFuture] holding the single [FlowStateMachineImpl] created by the request.
  */
 inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
-        markerClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): ListenableFuture<P> {
-    val future = smm.changes.filter { it.addOrRemove == ADD && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerFlowInitiator(markerClass.java, flowFactory)
+        clientFlowClass: KClass<out FlowLogic<*>>,
+        noinline serviceFlowFactory: (Party) -> P): ListenableFuture<P> {
+    val future = smm.changes.filter { it is StateMachineManager.Change.Add && it.logic is P }.map { it.logic as P }.toFuture()
+    services.registerServiceFlow(clientFlowClass.java, serviceFlowFactory)
     return future
 }
 
+// TODO Replace this with testConfiguration
 data class TestNodeConfiguration(
         override val baseDirectory: Path,
-        override val myLegalName: String,
+        override val myLegalName: X500Name,
         override val networkMapService: NetworkMapInfo?,
+        override val minimumPlatformVersion: Int = 1,
         override val keyStorePassword: String = "cordacadevpass",
         override val trustStorePassword: String = "trustpass",
-        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName),
-        override val nearestCity: String = "Null Island",
+        override val rpcUsers: List<User> = emptyList(),
+        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName.commonName),
         override val emailAddress: String = "",
         override val exportJMXto: String = "",
         override val devMode: Boolean = true,
-        override val certificateSigningService: URL = URL("http://localhost")) : NodeConfiguration
+        override val certificateSigningService: URL = URL("http://localhost"),
+        override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
+        override val verifierType: VerifierType = VerifierType.InMemory,
+        override val messageRedeliveryDelaySeconds: Int = 5) : NodeConfiguration {
+    override val nearestCity = myLegalName.getRDNs(BCStyle.L).single().typesAndValues.single().value.toString()
+}
 
-fun Config.getHostAndPort(name: String) = HostAndPort.fromString(getString(name))
+fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): FullNodeConfiguration {
+    return FullNodeConfiguration(
+            basedir = baseDirectory,
+            myLegalName = legalName,
+            networkMapService = null,
+            nearestCity = "Null Island",
+            emailAddress = "",
+            keyStorePassword = "cordacadevpass",
+            trustStorePassword = "trustpass",
+            dataSourceProperties = makeTestDataSourceProperties(legalName.commonName),
+            certificateSigningService = URL("http://localhost"),
+            rpcUsers = emptyList(),
+            verifierType = VerifierType.InMemory,
+            useHTTPS = false,
+            p2pAddress = HostAndPort.fromParts("localhost", basePort),
+            rpcAddress = HostAndPort.fromParts("localhost", basePort + 1),
+            messagingServerAddress = null,
+            extraAdvertisedServiceIds = emptyList(),
+            notaryNodeId = null,
+            notaryNodeAddress = null,
+            notaryClusterAddresses = emptyList(),
+            certificateChainCheckPolicies = emptyList(),
+            devMode = true)
+}
 
 @JvmOverloads
-fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = object : SSLConfiguration {
+fun configureTestSSL(legalName: X500Name = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")
     override val keyStorePassword: String get() = "cordacadevpass"
     override val trustStorePassword: String get() = "trustpass"
@@ -179,4 +205,20 @@ fun configureTestSSL(legalName: String = "Mega Corp."): SSLConfiguration = objec
     init {
         configureDevKeyAndTrustStores(legalName)
     }
+}
+
+
+/**
+ * Return a bogus X.509 for testing purposes.
+ */
+fun getTestX509Name(commonName: String): X500Name {
+    require(!commonName.startsWith("CN="))
+    // TODO: Consider if we want to make these more variable, i.e. different locations?
+    val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
+    nameBuilder.addRDN(BCStyle.CN, commonName)
+    nameBuilder.addRDN(BCStyle.O, "R3")
+    nameBuilder.addRDN(BCStyle.OU, "Corda QA Department")
+    nameBuilder.addRDN(BCStyle.L, "New York")
+    nameBuilder.addRDN(BCStyle.C, "US")
+    return nameBuilder.build()
 }

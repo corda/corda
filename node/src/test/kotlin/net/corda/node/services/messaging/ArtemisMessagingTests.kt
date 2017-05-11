@@ -1,20 +1,18 @@
 package net.corda.node.services.messaging
 
+import com.codahale.metrics.MetricRegistry
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.typesafe.config.ConfigFactory.empty
-import net.corda.core.crypto.composite
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.messaging.Message
 import net.corda.core.messaging.RPCOps
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
-import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.network.InMemoryNetworkMapCache
@@ -22,13 +20,14 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
-import net.corda.testing.MOCK_NODE_VERSION_INFO
+import net.corda.node.utilities.transaction
+import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
@@ -70,10 +69,10 @@ class ArtemisMessagingTests {
     @Before
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
-        userService = RPCUserServiceImpl(FullNodeConfiguration(baseDirectory, empty()))
+        userService = RPCUserServiceImpl(emptyList())
         config = TestNodeConfiguration(
                 baseDirectory = baseDirectory,
-                myLegalName = "me",
+                myLegalName = ALICE.name,
                 networkMapService = null)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
@@ -86,6 +85,8 @@ class ArtemisMessagingTests {
     fun cleanUp() {
         messagingClient?.stop()
         messagingServer?.stop()
+        messagingClient = null
+        messagingServer = null
         dataSource.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
@@ -206,27 +207,28 @@ class ArtemisMessagingTests {
 
         val messagingClient = createMessagingClient()
         startNodeMessagingClient()
-        messagingClient.addMessageHandler(topic) { message, r ->
+        messagingClient.addMessageHandler(topic) { message, _ ->
             receivedMessages.add(message)
         }
-        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, r ->
+        messagingClient.addMessageHandler(NetworkMapService.FETCH_TOPIC) { message, _ ->
             receivedMessages.add(message)
         }
         // Run after the handlers are added, otherwise (some of) the messages get delivered and discarded / dead-lettered.
-        thread { messagingClient.run() }
+        thread { messagingClient.run(messagingServer!!.serverControl) }
         return messagingClient
     }
 
     private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
-        return databaseTransaction(database) {
+        return database.transaction {
             NodeMessagingClient(
                     config,
-                    MOCK_NODE_VERSION_INFO,
+                    MOCK_VERSION_INFO,
                     server,
-                    identity.public.composite,
+                    identity.public,
                     ServiceAffinityExecutor("ArtemisMessagingTests", 1),
                     database,
-                    networkMapRegistrationFuture).apply {
+                    networkMapRegistrationFuture,
+                    MonitoringService(MetricRegistry())).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

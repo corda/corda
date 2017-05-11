@@ -7,28 +7,9 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 apply plugin: 'application'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 mainClassName = 'net.corda.irs.IRSDemo'
 
 sourceSets {
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output
@@ -44,15 +25,16 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
-    compile project(':node:webserver')
+    compile project(':webserver')
     compile project(':test-utils')
 
     // Javax is required for webapis
@@ -63,11 +45,11 @@ dependencies {
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "Notary"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Notary"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating", "corda.interest_rates"]
         p2pPort 10002
@@ -77,7 +59,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         useTestClock true
     }
     node {
-        name "Bank A"
+        name "CN=Bank A,O=Bank A,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10005
@@ -87,7 +69,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         useTestClock true
     }
     node {
-        name "Bank B"
+        name "CN=Bank B,O=Bank B,L=New York,C=US"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10008

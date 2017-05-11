@@ -1,23 +1,29 @@
 package net.corda.core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.ErrorOr
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import java.io.InputStream
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -25,28 +31,37 @@ import java.util.*
 data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
+        val initiator: FlowInitiator,
         val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
-)
+) {
+    override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
+}
 
 @CordaSerializable
-sealed class StateMachineUpdate(val id: StateMachineRunId) {
-    class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate(stateMachineInfo.id) {
-        override fun toString() = "Added($id, ${stateMachineInfo.flowLogicClassName})"
+sealed class StateMachineUpdate {
+    abstract val id: StateMachineRunId
+
+    data class Added(val stateMachineInfo: StateMachineInfo) : StateMachineUpdate() {
+        override val id: StateMachineRunId get() = stateMachineInfo.id
     }
 
-    class Removed(id: StateMachineRunId) : StateMachineUpdate(id) {
-        override fun toString() = "Removed($id)"
-    }
+    data class Removed(override val id: StateMachineRunId, val result: ErrorOr<*>) : StateMachineUpdate()
 }
 
 /**
  * RPC operations that the node exposes to clients using the Java client library. These can be called from
- * client apps and are implemented by the node in the [CordaRPCOpsImpl] class.
+ * client apps and are implemented by the node in the [net.corda.node.internal.CordaRPCOpsImpl] class.
  */
 
 // TODO: The use of Pairs throughout is unfriendly for Java interop.
 
 interface CordaRPCOps : RPCOps {
+    /**
+     * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
+     * to be present.
+     */
+    override val protocolVersion: Int get() = nodeIdentity().platformVersion
+
     /**
      * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
@@ -54,9 +69,63 @@ interface CordaRPCOps : RPCOps {
     fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
 
     /**
+     * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
+     *
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.Page] object containing the following:
+     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
+     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
+     *  3. the [PageSpecification] used in the query
+     *  4. a total number of results available (for subsequent paging if necessary)
+     *
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
+     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
+     */
+    // DOCSTART VaultQueryByAPI
+    fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                         paging: PageSpecification = PageSpecification(),
+                                         sorting: Sort = Sort(emptySet())): Vault.Page<T>
+    // DOCEND VaultQueryByAPI
+
+    /**
+     * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
+     *
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.PageAndUpdates] object containing
+     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
+     * 2) an [Observable] of [Vault.Update]
+     *
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
+    */
+    // DOCSTART VaultTrackByAPI
+    @RPCReturnsObservables
+    fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                         paging: PageSpecification = PageSpecification(),
+                                         sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
+    // DOCEND VaultTrackByAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+
+    // DOCSTART VaultQueryAPIJavaHelpers
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria = criteria)
+    fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging = paging)
+    fun <T : ContractState> vaultQueryByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting = sorting)
+
+    fun <T : ContractState> vaultTrackByCriteria(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria = criteria)
+    fun <T : ContractState> vaultTrackByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging = paging)
+    fun <T : ContractState> vaultTrackByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, sorting = sorting)
+    // DOCEND VaultQueryAPIJavaHelpers
+
+    /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**
@@ -79,11 +148,17 @@ interface CordaRPCOps : RPCOps {
     fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
+     * Start the given flow with the given arguments.
+     */
+    @RPCReturnsObservables
+    fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+
+    /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
      * result of running the flow.
      */
     @RPCReturnsObservables
-    fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
+    fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
 
     /**
      * Returns Node's identity, assuming this will not change while the node is running.
@@ -110,7 +185,7 @@ interface CordaRPCOps : RPCOps {
      * Checks whether an attachment with the given hash is stored on the node.
      */
     fun attachmentExists(id: SecureHash): Boolean
-    
+
     /**
      * Download an attachment JAR by ID
      */
@@ -156,12 +231,18 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] corresponding to the given key, if found.
      */
-    fun partyFromKey(key: CompositeKey): Party?
+    fun partyFromKey(key: PublicKey): Party?
 
     /**
      * Returns the [Party] with the given name as it's [Party.name]
      */
+    @Deprecated("Use partyFromX500Name instead")
     fun partyFromName(name: String): Party?
+
+    /**
+     * Returns the [Party] with the X.500 principal as it's [Party.name]
+     */
+    fun partyFromX500Name(x500Name: X500Name): Party?
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
@@ -179,20 +260,20 @@ interface CordaRPCOps : RPCOps {
 inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: () -> R
-) = startFlowDynamic(R::class.java)
+): FlowHandle<T> = startFlowDynamic(R::class.java)
 
 inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A) -> R,
         arg0: A
-) = startFlowDynamic(R::class.java, arg0)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0)
 
 inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
         flowConstructor: (A, B) -> R,
         arg0: A,
         arg1: B
-) = startFlowDynamic(R::class.java, arg0, arg1)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1)
 
 inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
@@ -200,7 +281,7 @@ inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         arg0: A,
         arg1: B,
         arg2: C
-) = startFlowDynamic(R::class.java, arg0, arg1, arg2)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2)
 
 inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
         @Suppress("UNUSED_PARAMETER")
@@ -209,18 +290,47 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startFlow
         arg1: B,
         arg2: C,
         arg3: D
-) = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
 /**
- * [FlowHandle] is a serialisable handle for the started flow, parameterised by the type of the flow's return value.
- *
- * @param id The started state machine's ID.
- * @param progress The stream of progress tracker events.
- * @param returnValue A [ListenableFuture] of the flow's return value.
+ * Same again, except this time with progress-tracking enabled.
  */
-@CordaSerializable
-data class FlowHandle<A>(
-        val id: StateMachineRunId,
-        val progress: Observable<String>,
-        val returnValue: ListenableFuture<A>
-)
+@Suppress("unused")
+inline fun <T : Any, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: () -> R
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java)
+
+@Suppress("unused")
+inline fun <T : Any, A, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A) -> R,
+        arg0: A
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B) -> R,
+        arg0: A,
+        arg1: B
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2)
+
+@Suppress("unused")
+inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrackedFlow(
+        @Suppress("unused_parameter")
+        flowConstructor: (A, B, C, D) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D
+): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)

@@ -6,13 +6,13 @@ import net.corda.contracts.asset.extractAmountsDue
 import net.corda.contracts.asset.sumAmountsDue
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.Clause
-import net.corda.core.crypto.CompositeKey
+import java.security.PublicKey
 
 /**
  * Common interface for the state subsets used when determining nettability of two or more states. Exposes the
  * underlying issued thing.
  */
-interface NetState<P> {
+interface NetState<P : Any> {
     val template: Obligation.Terms<P>
 }
 
@@ -21,8 +21,8 @@ interface NetState<P> {
  * If two obligation state objects produce equal bilateral net states, they are considered safe to net directly.
  * Bilateral states are used in close-out netting.
  */
-data class BilateralNetState<P>(
-        val partyKeys: Set<CompositeKey>,
+data class BilateralNetState<P : Any>(
+        val partyKeys: Set<PublicKey>,
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 
@@ -34,7 +34,7 @@ data class BilateralNetState<P>(
  * input and output is handled elsewhere.
  * Used in cases where all parties (or their proxies) are signing, such as central clearing.
  */
-data class MultilateralNetState<P>(
+data class MultilateralNetState<P : Any>(
         override val template: Obligation.Terms<P>
 ) : NetState<P>
 
@@ -42,7 +42,7 @@ data class MultilateralNetState<P>(
  * Clause for netting contract states. Currently only supports obligation contract.
  */
 // TODO: Make this usable for any nettable contract states
-open class NetClause<C : CommandData, P> : Clause<ContractState, C, Unit>() {
+open class NetClause<C : CommandData, P : Any> : Clause<ContractState, C, Unit>() {
     override val requiredCommands: Set<Class<out CommandData>> = setOf(Obligation.Commands.Net::class.java)
 
     @Suppress("ConvertLambdaToReference")
@@ -79,9 +79,10 @@ open class NetClause<C : CommandData, P> : Clause<ContractState, C, Unit>() {
         // Sum the columns of the matrices. This will yield the net amount payable to/from each party to/from all other participants.
         // The two summaries must match, reflecting that the amounts owed match on both input and output.
         requireThat {
-            "all input states use the same template" by (inputs.all { it.template == template })
-            "all output states use the same template" by (outputs.all { it.template == template })
-            "amounts owed on input and output must match" by (sumAmountsDue(inputBalances) == sumAmountsDue(outputBalances))
+            "all input states use the same template" using (inputs.all { it.template == template })
+            "all output states use the same template" using (outputs.all { it.template == template })
+            "amounts owed on input and output must match" using (sumAmountsDue(inputBalances) == sumAmountsDue
+            (outputBalances))
         }
 
         // TODO: Handle proxies nominated by parties, i.e. a central clearing service

@@ -9,6 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDateTime
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
@@ -18,17 +19,20 @@ import javax.ws.rs.core.Response
 @Path("bank")
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
-                                  val issueToPartyName: String, val issueToPartyRefAsString: String,
-                                  val issuerBankName: String)
+                                  val issueToPartyName: X500Name, val issueToPartyRefAsString: String,
+                                  val issuerBankName: X500Name)
+
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
     }
+
     @GET
     @Path("date")
     @Produces(MediaType.APPLICATION_JSON)
     fun getCurrentDate(): Any {
         return mapOf("date" to LocalDateTime.now().toLocalDate())
     }
+
     /**
      *  Request asset issuance
      */
@@ -37,9 +41,9 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     @Consumes(MediaType.APPLICATION_JSON)
     fun issueAssetRequest(params: IssueRequestParams): Response {
         // Resolve parties via RPC
-        val issueToParty = rpc.partyFromName(params.issueToPartyName)
+        val issueToParty = rpc.partyFromX500Name(params.issueToPartyName)
                 ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
-        val issuerBankParty = rpc.partyFromName(params.issuerBankName)
+        val issuerBankParty = rpc.partyFromX500Name(params.issuerBankName)
                 ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
 
         val amount = Amount(params.amount, currency(params.currency))

@@ -1,11 +1,10 @@
 package net.corda.loadtest
 
-import kotlinx.support.jdk8.collections.parallelStream
 import net.corda.client.mock.Generator
-import net.corda.core.div
+import net.corda.client.rpc.notUsed
+import net.corda.core.crypto.toBase58String
 import net.corda.node.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.transactions.ValidatingNotaryService
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -88,7 +87,7 @@ data class LoadTest<T, S>(
                     log.info("$count remaining commands, state:\n$state")
                     // Generate commands
                     val commands = nodes.generate(state, parameters.parallelism).generate(random).getOrThrow()
-                    require(commands.size > 0)
+                    require(commands.isNotEmpty())
                     log.info("Generated command batch of size ${commands.size}: $commands")
                     // Interpret commands
                     val newState = commands.fold(state, interpret)
@@ -160,7 +159,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
     val random = SplittableRandom(seed)
     connectToNodes(
             configuration.sshUser,
-            configuration.nodeHosts.map { it to configuration.remoteNodeDirectory / "certificates" },
+            configuration.nodeHosts,
             configuration.remoteMessagingPort,
             PortAllocation.Incremental(configuration.localTunnelStartingPort),
             configuration.rpcUsername,
@@ -172,7 +171,8 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             log.info("Getting node info of ${connection.hostName}")
             val nodeInfo = connection.proxy.nodeIdentity()
             log.info("Got node info of ${connection.hostName}: $nodeInfo!")
-            val otherNodeInfos = connection.proxy.networkMapUpdates().first
+            val (otherNodeInfos, nodeInfoUpdates) = connection.proxy.networkMapUpdates()
+            nodeInfoUpdates.notUsed()
             val pubkeysString = otherNodeInfos.map {
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
@@ -196,9 +196,9 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
                 notary = notaryNode.second,
                 networkMap = networkMapNode.second,
                 simpleNodes = hostNodeHandleMap.values.filter {
-                    it.info.advertisedServices.filter {
-                        it.info.type in setOf(NetworkMapService.type, ValidatingNotaryService.type)
-                    }.isEmpty()
+                    it.info.advertisedServices.none {
+                        it.info.type == NetworkMapService.type || it.info.type.isNotary()
+                    }
                 }
         )
 

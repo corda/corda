@@ -2,6 +2,7 @@ package net.corda.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.location
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -10,18 +11,22 @@ import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
 import net.corda.core.then
+import net.corda.core.utilities.DUMMY_MAP
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_REGULATOR
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.node.utilities.AddOrRemove
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.math.BigInteger
@@ -45,7 +50,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             throw IllegalArgumentException("The latency injector is only useful when using manual pumping.")
     }
 
-    val bankLocations = listOf("London", "Frankfurt", "Rome")
+    val bankLocations = listOf(Pair("London", "UK"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
 
     // This puts together a mock network of SimulatedNodes.
 
@@ -63,19 +68,17 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             val letter = 'A' + counter
-            val city = bankLocations[counter++ % bankLocations.size]
+            val (city, country) = bankLocations[counter++ % bankLocations.size]
 
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    // TODO: Set this back to "Bank of $city" after video day.
-                    myLegalName = "Bank $letter",
-                    nearestCity = city,
+                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=$city,C=$country"),
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
 
         fun createAll(): List<SimulatedNode> {
-            return bankLocations.mapIndexed { i, location ->
+            return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
                 network.createNode(networkMap.info.address, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
             }
@@ -91,8 +94,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             require(advertisedServices.containsType(NetworkMapService.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Network coordination center",
-                    nearestCity = "Amsterdam",
+                    myLegalName = DUMMY_MAP.name,
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {}
         }
@@ -105,28 +107,29 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             require(advertisedServices.containsType(SimpleNotaryService.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Notary Service",
-                    nearestCity = "Zurich",
+                    myLegalName = DUMMY_NOTARY.name,
                     networkMapService = null)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
     }
 
     object RatesOracleFactory : MockNetwork.Factory {
+        // TODO: Make a more realistic legal name
+        val RATES_SERVICE_NAME = X500Name("CN=Rates Service Provider,O=R3,OU=corda,L=Madrid,C=ES")
+
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             require(advertisedServices.containsType(NodeInterestRates.type))
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Rates Service Provider",
-                    nearestCity = "Madrid",
+                    myLegalName = RATES_SERVICE_NAME,
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
                     javaClass.classLoader.getResourceAsStream("example.rates.txt").use {
-                        databaseTransaction(database) {
+                        database.transaction {
                             findService<NodeInterestRates.Service>().upload(it)
                         }
                     }
@@ -142,8 +145,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             val cfg = TestNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = "Regulator A",
-                    nearestCity = "Paris",
+                    myLegalName = DUMMY_REGULATOR.name,
                     networkMapService = null)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
@@ -235,7 +237,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showProgressFor(nodes: List<SimulatedNode>) {
         nodes.forEach { node ->
-            node.smm.changes.filter { it.addOrRemove == AddOrRemove.ADD }.subscribe {
+            node.smm.changes.filter { it is StateMachineManager.Change.Add }.subscribe {
                 linkFlowProgress(node, it.logic)
             }
         }
@@ -252,13 +254,13 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     protected fun showConsensusFor(nodes: List<SimulatedNode>) {
         val node = nodes.first()
-        node.smm.changes.filter { it.addOrRemove == net.corda.node.utilities.AddOrRemove.ADD }.first().subscribe {
+        node.smm.changes.filter { it is StateMachineManager.Change.Add }.first().subscribe {
             linkConsensus(nodes, it.logic)
         }
     }
 
     private fun linkConsensus(nodes: Collection<SimulatedNode>, flow: FlowLogic<*>) {
-        flow.progressTracker?.changes?.subscribe { change: ProgressTracker.Change ->
+        flow.progressTracker?.changes?.subscribe { _: ProgressTracker.Change ->
             // Runs on node thread.
             if (flow.progressTracker!!.currentStep == ProgressTracker.DONE) {
                 _doneSteps.onNext(nodes)

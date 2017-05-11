@@ -3,30 +3,43 @@ package net.corda.services.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.flows.ServiceRequestMessage
-import net.corda.flows.sendRequest
+import net.corda.core.utilities.*
 import net.corda.node.internal.Node
+import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.testing.freeLocalHostAndPort
+import net.corda.testing.getTestX509Name
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 class P2PMessagingTest : NodeBasedTest() {
+    private companion object {
+        val DISTRIBUTED_SERVICE_NAME = getTestX509Name("DistributedService")
+        val SERVICE_2_NAME = getTestX509Name("Service Node 2")
+    }
+
     @Test
     fun `network map will work after restart`() {
-        fun startNodes() = Futures.allAsList(startNode("NodeA"), startNode("NodeB"), startNode("Notary"))
+        val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
+        fun startNodes() = Futures.allAsList(identities.map { startNode(it.name) })
 
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
@@ -40,7 +53,7 @@ class P2PMessagingTest : NodeBasedTest() {
     fun `communicating with a service running on the network map node`() {
         startNetworkMapNode(advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         networkMapNode.respondWith("Hello")
-        val alice = startNode("Alice").getOrThrow()
+        val alice = startNode(ALICE.name).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
             alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
@@ -51,41 +64,133 @@ class P2PMessagingTest : NodeBasedTest() {
     // TODO Use a dummy distributed service
     @Test
     fun `communicating with a distributed service which the network map node is part of`() {
-        val serviceName = "DistributedService"
 
         val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
-                listOf(root / "NetworkMap", root / "Service Node 2"),
+                listOf(root / DUMMY_MAP.name.commonName, root / SERVICE_2_NAME.commonName),
                 RaftValidatingNotaryService.type.id,
-                serviceName)
+                DISTRIBUTED_SERVICE_NAME)
 
-        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, serviceName)
+        val distributedService = ServiceInfo(RaftValidatingNotaryService.type, DISTRIBUTED_SERVICE_NAME)
         val notaryClusterAddress = freeLocalHostAndPort()
         startNetworkMapNode(
-                "NetworkMap",
+                DUMMY_MAP.name,
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         val (serviceNode2, alice) = Futures.allAsList(
                 startNode(
-                        "Service Node 2",
+                        SERVICE_2_NAME,
                         advertisedServices = setOf(distributedService),
                         configOverrides = mapOf(
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
-                startNode("Alice")
+                startNode(ALICE.name)
         ).getOrThrow()
 
-        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), serviceName, alice)
+        assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
 
     @Test
     fun `communicating with a distributed service which we're part of`() {
-        val serviceName = "Distributed Service"
-        val distributedService = startNotaryCluster(serviceName, 2).getOrThrow()
-        assertAllNodesAreUsed(distributedService, serviceName, distributedService[0])
+        val distributedService = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
+        assertAllNodesAreUsed(distributedService, DISTRIBUTED_SERVICE_NAME, distributedService[0])
     }
 
-    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: String, originatingNode: Node) {
+    @Test
+    fun `distributed service requests are retried if one of the nodes in the cluster goes down without sending a response`() {
+        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
+        val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
+        val serviceAddress = alice.services.networkMapCache.run {
+            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+        }
+
+        val dummyTopic = "dummy.topic"
+        val responseMessage = "response"
+
+        simulateCrashingNode(distributedServiceNodes, dummyTopic, responseMessage)
+
+        // Send a single request with retry
+        val response = with(alice.net) {
+            val request = TestRequest(replyTo = myAddress)
+            val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
+            val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+            send(msg, serviceAddress, retryId = request.sessionID)
+            responseFuture
+        }.getOrThrow(10.seconds)
+
+        assertThat(response).isEqualTo(responseMessage)
+    }
+
+    @Test
+    fun `distributed service request retries are persisted across client node restarts`() {
+        val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
+        val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
+        val serviceAddress = alice.services.networkMapCache.run {
+            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+        }
+
+        val dummyTopic = "dummy.topic"
+        val responseMessage = "response"
+
+        val (firstRequestReceived, requestsReceived) = simulateCrashingNode(distributedServiceNodes, dummyTopic, responseMessage)
+
+        val sessionId = random63BitValue()
+
+        // Send a single request with retry
+        with(alice.net) {
+            val request = TestRequest(sessionId, myAddress)
+            val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
+            send(msg, serviceAddress, retryId = request.sessionID)
+        }
+
+        // Wait until the first request is received
+        firstRequestReceived.await(5, TimeUnit.SECONDS)
+        // Stop alice's node before the request is redelivered – the first request is ignored
+        alice.stop()
+        assertThat(requestsReceived.get()).isEqualTo(1)
+
+        // Restart the node and expect a response
+        val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
+        val response = aliceRestarted.net.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
+
+        assertThat(requestsReceived.get()).isGreaterThanOrEqualTo(2)
+        assertThat(response).isEqualTo(responseMessage)
+    }
+
+    /**
+     * Sets up the [distributedServiceNodes] to respond to [dummyTopic] requests. The first node in the service to
+     * receive a request will ignore it and all subsequent requests. This simulates the scenario where a node receives
+     * a request message, but crashes before sending back a response. The other nodes will respond to _all_ requests.
+     */
+    private fun simulateCrashingNode(distributedServiceNodes: List<Node>, dummyTopic: String, responseMessage: String): Pair<CountDownLatch, AtomicInteger> {
+        val firstToReceive = AtomicBoolean(true)
+        val requestsReceived = AtomicInteger(0)
+        val firstRequestReceived = CountDownLatch(1)
+        distributedServiceNodes.forEach {
+            val nodeName = it.info.legalIdentity.name
+            var ignoreRequests = false
+            it.net.addMessageHandler(dummyTopic, DEFAULT_SESSION_ID) { netMessage, _ ->
+                requestsReceived.incrementAndGet()
+                firstRequestReceived.countDown()
+                // The node which receives the first request will ignore all requests
+                if (firstToReceive.getAndSet(false)) ignoreRequests = true
+                print("$nodeName: Received request - ")
+                if (ignoreRequests) {
+                    println("ignoring")
+                    // Requests are ignored to simulate a service node crashing before sending back a response.
+                    // A retry by the client will result in the message being redelivered to another node in the service cluster.
+                } else {
+                    println("sending response")
+                    val request = netMessage.data.deserialize<TestRequest>()
+                    val response = it.net.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes)
+                    it.net.send(response, request.replyTo)
+                }
+            }
+        }
+        return Pair(firstRequestReceived, requestsReceived)
+    }
+
+    private fun assertAllNodesAreUsed(participatingServiceNodes: List<Node>, serviceName: X500Name, originatingNode: Node) {
         // Setup each node in the distributed service to return back it's NodeInfo so that we can know which node is being used
         participatingServiceNodes.forEach { node ->
             node.respondWith(node.info)
@@ -107,7 +212,7 @@ class P2PMessagingTest : NodeBasedTest() {
     }
 
     private fun Node.respondWith(message: Any) {
-        net.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, reg ->
+        net.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
             val response = net.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
             net.send(response, request.replyTo)

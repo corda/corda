@@ -2,7 +2,7 @@ package net.corda.node.services.transactions
 
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -11,7 +11,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** A dummy Uniqueness provider that stores the whole history of consumed states in memory */
 @ThreadSafe
-class InMemoryUniquenessProvider() : UniquenessProvider {
+class InMemoryUniquenessProvider : UniquenessProvider {
     /** For each input state store the consuming transaction information */
     private val committedStates = ThreadBox(HashMap<StateRef, UniquenessProvider.ConsumingTx>())
 

@@ -1,7 +1,7 @@
 package net.corda.traderdemo.plugin
 
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.SellerFlow

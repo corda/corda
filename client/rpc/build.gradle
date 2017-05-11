@@ -4,18 +4,6 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 description 'Corda client RPC modules'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 //noinspection GroovyAssignabilityCheck
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
@@ -33,11 +21,6 @@ sourceSets {
             srcDir file('src/integration-test/kotlin')
         }
     }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -53,6 +36,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     testCompile project(':test-utils')
+    testCompile project(':client:mock')
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

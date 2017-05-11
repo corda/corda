@@ -8,8 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static net.corda.sandbox.CandidateMethod.State.*;
-
 /**
  * Represents the status of the candidacy of a particular set of candidate methods, i.e. Their progress from
  * being {@link CandidateMethod.State#UNDETERMINED} to {@link CandidateMethod.State#DETERMINISTIC}
@@ -49,8 +47,8 @@ public class CandidacyStatus {
      * @param signature
      * @return true if the input was absent from the underlying map
      */
-    boolean putIfAbsent(final String signature, final CandidateMethod candidate) {
-        return null == candidateMethods.putIfAbsent(signature, candidate);
+    void putIfAbsent(final String signature, final CandidateMethod candidate) {
+        candidateMethods.putIfAbsent(signature, candidate);
     }
 
     /**
@@ -214,8 +212,6 @@ public class CandidacyStatus {
             return false;
         if (!Objects.equals(this.reason, other.reason))
             return false;
-        if (this.recursiveDepth != other.recursiveDepth)
-            return false;
-        return true;
+        return this.recursiveDepth == other.recursiveDepth;
     }
 }

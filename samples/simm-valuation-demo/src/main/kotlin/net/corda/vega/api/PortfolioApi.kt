@@ -1,15 +1,18 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
+import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
+import net.corda.core.crypto.*
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.DUMMY_MAP
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
@@ -19,6 +22,7 @@ import net.corda.vega.flows.SimmRevaluation
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
+import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -35,7 +39,9 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
-        return rpc.vaultAndUpdates().first.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
+        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
+        vaultUpdates.notUsed()
+        return vault.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
     }
 
     /**
@@ -43,7 +49,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
      * Used as such: withParty(name) { doSomethingWith(it) }
      */
     private fun withParty(partyName: String, func: (Party) -> Response): Response {
-        val otherParty = rpc.partyFromKey(CompositeKey.parseFromBase58(partyName))
+        val otherParty = rpc.partyFromKey(parsePublicKeyBase58(partyName))
         return if (otherParty != null) {
             func(otherParty)
         } else {
@@ -130,8 +136,8 @@ class PortfolioApi(val rpc: CordaRPCOps) {
             Response.ok().entity(swaps.map {
                 it.toView(ownParty,
                         latestPortfolioStateData?.portfolio?.toStateAndRef<IRSState>(rpc)?.toPortfolio(),
-                        PVs?.get(it.id.second.toString()) ?: MultiCurrencyAmount.empty(),
-                        IMs?.get(it.id.second.toString()) ?: InitialMarginTriple.zero()
+                        PVs?.get(it.id.second) ?: MultiCurrencyAmount.empty(),
+                        IMs?.get(it.id.second) ?: InitialMarginTriple.zero()
                 )
             }).build()
         }
@@ -237,7 +243,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 
-    data class ApiParty(val id: String, val text: String)
+    data class ApiParty(val id: String, val text: X500Name)
     data class AvailableParties(val self: ApiParty, val counterparties: List<ApiParty>)
 
     /**
@@ -247,8 +253,12 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
-        val counterParties = rpc.networkMapUpdates().first.filter {
-            it.legalIdentity.name != "NetworkMapService" && it.legalIdentity.name != "Notary" && it.legalIdentity.name != ownParty.name
+        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        partyUpdates.notUsed()
+        val counterParties = parties.filter {
+            it.legalIdentity.name != DUMMY_MAP.name
+                    && it.legalIdentity.name != DUMMY_NOTARY.name
+                    && it.legalIdentity.name != ownParty.name
         }
 
         return AvailableParties(
@@ -269,6 +279,8 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             val flowHandle = if (existingSwap == null) {
+                // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
+                @Suppress("UNSUPPORTED_FEATURE")
                 rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate)
             } else {
                 rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)

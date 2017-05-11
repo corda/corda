@@ -1,53 +1,47 @@
 package net.corda.contracts;
 
-import com.google.common.collect.ImmutableList;
-import kotlin.Pair;
-import kotlin.Unit;
-import net.corda.contracts.asset.CashKt;
+import co.paralleluniverse.fibers.*;
+import com.google.common.collect.*;
+import kotlin.*;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.TransactionForContract.InOutGroup;
-import net.corda.core.contracts.clauses.AnyOf;
-import net.corda.core.contracts.clauses.Clause;
-import net.corda.core.contracts.clauses.ClauseVerifier;
-import net.corda.core.contracts.clauses.GroupClauseVerifier;
-import net.corda.core.crypto.CompositeKey;
-import net.corda.core.crypto.CryptoUtilities;
-import net.corda.core.crypto.Party;
-import net.corda.core.crypto.SecureHash;
-import net.corda.core.node.services.VaultService;
-import net.corda.core.transactions.TransactionBuilder;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.corda.core.contracts.Contract;
+import net.corda.core.contracts.TransactionForContract.*;
+import net.corda.core.contracts.clauses.*;
+import net.corda.core.crypto.*;
+import net.corda.core.identity.Party;
+import net.corda.core.node.services.*;
+import net.corda.core.transactions.*;
+import org.jetbrains.annotations.*;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Currency;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.time.*;
+import java.util.*;
+import java.util.stream.*;
+import java.security.PublicKey;
 
-import static kotlin.collections.CollectionsKt.single;
-import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
-import static net.corda.core.contracts.ContractsDSL.requireThat;
+import static kotlin.collections.CollectionsKt.*;
+import static net.corda.core.contracts.ContractsDSL.*;
 
 
 /**
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  */
+@SuppressWarnings("unused")
 public class JavaCommercialPaper implements Contract {
     private static final Contract JCP_PROGRAM_ID = new JavaCommercialPaper();
 
+    @SuppressWarnings("unused")
     public static class State implements OwnableState, ICommercialPaperState {
         private PartyAndReference issuance;
-        private CompositeKey owner;
+        private PublicKey owner;
         private Amount<Issued<Currency>> faceValue;
         private Instant maturityDate;
 
         public State() {
         }  // For serialization
 
-        public State(PartyAndReference issuance, CompositeKey owner, Amount<Issued<Currency>> faceValue,
+        public State(PartyAndReference issuance, PublicKey owner, Amount<Issued<Currency>> faceValue,
                      Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
@@ -59,18 +53,14 @@ public class JavaCommercialPaper implements Contract {
             return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
         }
 
-        public ICommercialPaperState withOwner(CompositeKey newOwner) {
+        public ICommercialPaperState withOwner(PublicKey newOwner) {
             return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
         }
 
         @NotNull
         @Override
-        public Pair<CommandData, OwnableState> withNewOwner(@NotNull CompositeKey newOwner) {
+        public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
             return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
-        }
-
-        public ICommercialPaperState withIssuance(PartyAndReference newIssuance) {
-            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
         }
 
         public ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue) {
@@ -86,7 +76,7 @@ public class JavaCommercialPaper implements Contract {
         }
 
         @NotNull
-        public CompositeKey getOwner() {
+        public PublicKey getOwner() {
             return owner;
         }
 
@@ -127,26 +117,27 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State withoutOwner() {
-            return new State(issuance, CryptoUtilities.getNullCompositeKey(), faceValue, maturityDate);
+            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
         }
 
         @NotNull
         @Override
-        public List<CompositeKey> getParticipants() {
+        public List<PublicKey> getParticipants() {
             return ImmutableList.of(this.owner);
         }
     }
 
     public interface Clauses {
+        @SuppressWarnings("unused")
         class Group extends GroupClauseVerifier<State, Commands, State> {
             // This complains because we're passing generic types into a varargs, but it is valid so we suppress the
             // warning.
             @SuppressWarnings("unchecked")
             Group() {
                 super(new AnyOf<>(
-                    new Clauses.Redeem(),
-                    new Clauses.Move(),
-                    new Clauses.Issue()
+                        new Clauses.Redeem(),
+                        new Clauses.Move(),
+                        new Clauses.Issue()
                 ));
             }
 
@@ -157,6 +148,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Move extends Clause<State, Commands, State> {
             @NotNull
             @Override
@@ -188,6 +180,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Redeem extends Clause<State, Commands, State> {
             @NotNull
             @Override
@@ -217,12 +210,12 @@ public class JavaCommercialPaper implements Contract {
                 Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                 requireThat(require -> {
-                    require.by("must be timestamped", timestamp != null);
-                    require.by("received amount equals the face value: "
+                    require.using("must be timestamped", timestamp != null);
+                    require.using("received amount equals the face value: "
                             + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
-                    require.by("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
-                    require.by("the received amount equals the face value", input.getFaceValue().equals(received));
-                    require.by("the paper must be destroyed", outputs.isEmpty());
+                    require.using("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
+                    require.using("the received amount equals the face value", input.getFaceValue().equals(received));
+                    require.using("the paper must be destroyed", outputs.isEmpty());
                     return Unit.INSTANCE;
                 });
 
@@ -230,6 +223,7 @@ public class JavaCommercialPaper implements Contract {
             }
         }
 
+        @SuppressWarnings("unused")
         class Issue extends Clause<State, Commands, State> {
             @NotNull
             @Override
@@ -252,11 +246,11 @@ public class JavaCommercialPaper implements Contract {
                         : timestampCommand.getBefore();
 
                 requireThat(require -> {
-                    require.by("output values sum to more than the inputs", inputs.isEmpty());
-                    require.by("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);
-                    require.by("must be timestamped", timestampCommand != null);
-                    require.by("the maturity date is not in the past", time != null && time.isBefore(output.getMaturityDate()));
-                    require.by("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
+                    require.using("output values sum to more than the inputs", inputs.isEmpty());
+                    require.using("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);
+                    require.using("must be timestamped", timestampCommand != null);
+                    require.using("the maturity date is not in the past", time != null && time.isBefore(output.getMaturityDate()));
+                    require.using("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
                     return Unit.INSTANCE;
                 });
 
@@ -319,13 +313,14 @@ public class JavaCommercialPaper implements Contract {
         return generateIssue(issuance, faceValue, maturityDate, notary, null);
     }
 
+    @Suspendable
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, VaultService vault) throws InsufficientBalanceException {
         vault.generateSpend(tx, StructuresKt.withoutIssuer(paper.getState().getData().getFaceValue()), paper.getState().getData().getOwner(), null);
         tx.addInputState(paper);
         tx.addCommand(new Command(new Commands.Redeem(), paper.getState().getData().getOwner()));
     }
 
-    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, CompositeKey newOwner) {
+    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
         tx.addInputState(paper);
         tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), paper.getState().getNotary(), paper.getState().getEncumbrance()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getData().getOwner()));

@@ -1,9 +1,21 @@
 package net.corda.demobench.web
 
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.RateLimiter
+import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.catch
+import net.corda.core.minutes
+import net.corda.core.until
 import net.corda.core.utilities.loggerFor
-import java.io.IOException
-import java.util.concurrent.Executors
 import net.corda.demobench.model.NodeConfig
+import net.corda.demobench.readErrorLines
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URI
+import java.time.Instant
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeoutException
+import kotlin.concurrent.thread
 
 class WebServer internal constructor(private val webServerController: WebServerController) : AutoCloseable {
     private companion object {
@@ -14,13 +26,12 @@ class WebServer internal constructor(private val webServerController: WebServerC
     private var process: Process? = null
 
     @Throws(IOException::class)
-    fun open(config: NodeConfig, onExit: (NodeConfig) -> Unit) {
+    fun open(config: NodeConfig): ListenableFuture<URI> {
         val nodeDir = config.nodeDir.toFile()
 
         if (!nodeDir.isDirectory) {
             log.warn("Working directory '{}' does not exist.", nodeDir.absolutePath)
-            onExit(config)
-            return
+            return SettableFuture.create()
         }
 
         try {
@@ -34,18 +45,29 @@ class WebServer internal constructor(private val webServerController: WebServerC
             // Close these streams because no-one is using them.
             safeClose(p.outputStream)
             safeClose(p.inputStream)
-            safeClose(p.errorStream)
 
             executor.submit {
                 val exitValue = p.waitFor()
+                val errors = p.readErrorLines()
                 process = null
 
-                log.info("Web Server for '{}' has exited (value={})", config.legalName, exitValue)
-                onExit(config)
+                if (errors.isEmpty()) {
+                    log.info("Web Server for '{}' has exited (value={})", config.legalName, exitValue)
+                } else {
+                    log.error("Web Server for '{}' has exited (value={}, {})", config.legalName, exitValue, errors)
+                }
             }
+
+            val future = SettableFuture.create<URI>()
+            thread {
+                future.catch {
+                    log.info("Waiting for web server for ${config.legalName} to start ...")
+                    waitForStart(config.webPort)
+                }
+            }
+            return future
         } catch (e: IOException) {
             log.error("Failed to launch Web Server for '{}': {}", config.legalName, e.message)
-            onExit(config)
             throw e
         }
     }
@@ -63,4 +85,23 @@ class WebServer internal constructor(private val webServerController: WebServerC
         }
     }
 
+    private fun waitForStart(port: Int): URI {
+        val url = URI("http://localhost:$port/")
+        val rateLimiter = RateLimiter.create(2.0)
+        val start = Instant.now()
+        val timeout = 1.minutes
+        while ((start until Instant.now()) < timeout) {
+            try {
+                rateLimiter.acquire()
+                val conn = url.toURL().openConnection() as HttpURLConnection
+                conn.connectTimeout = 500  // msec
+                conn.requestMethod = "HEAD"
+                conn.connect()
+                conn.disconnect()
+                return url
+            } catch(e: IOException) {
+            }
+        }
+        throw TimeoutException("Web server did not start within ${timeout.seconds} seconds")
+    }
 }

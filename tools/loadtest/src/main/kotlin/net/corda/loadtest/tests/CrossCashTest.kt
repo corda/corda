@@ -2,11 +2,12 @@ package net.corda.loadtest.tests
 
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickN
+import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.AbstractParty
+import net.corda.core.identity.AbstractParty
 import net.corda.core.failure
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
@@ -218,7 +219,8 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
             val currentNodeVaults = HashMap<AbstractParty, HashMap<AbstractParty, Long>>()
             simpleNodes.forEach {
                 val quantities = HashMap<AbstractParty, Long>()
-                val vault = it.connection.proxy.vaultAndUpdates().first
+                val (vault, vaultUpdates) = it.connection.proxy.vaultAndUpdates()
+                vaultUpdates.notUsed()
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {

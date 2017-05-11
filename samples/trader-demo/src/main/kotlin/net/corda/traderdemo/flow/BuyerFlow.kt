@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionGraphSearch
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -14,11 +14,11 @@ import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow
-import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 class BuyerFlow(val otherParty: Party,
-                private val attachmentsPath: Path,
+                private val attachmentsDirectory: String,
                 override val progressTracker: ProgressTracker = ProgressTracker(STARTING_BUY)) : FlowLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
@@ -31,7 +31,7 @@ class BuyerFlow(val otherParty: Party,
                 it.automaticallyExtractAttachments = true
                 it.storePath
             }
-            services.registerFlowInitiator(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath) }
+            services.registerServiceFlow(SellerFlow::class.java) { BuyerFlow(it, attachmentsPath.toString()) }
         }
     }
 
@@ -49,7 +49,7 @@ class BuyerFlow(val otherParty: Party,
                 CommercialPaper.State::class.java)
 
         // This invokes the trading flow and out pops our finished transaction.
-        val tradeTX: SignedTransaction = subFlow(buyer, shareParentSessions = true)
+        val tradeTX: SignedTransaction = subFlow(buyer)
         // TODO: This should be moved into the flow itself.
         serviceHub.recordTransactions(listOf(tradeTX))
 
@@ -73,7 +73,7 @@ class BuyerFlow(val otherParty: Party,
         val cpIssuance = search.call().single()
 
         cpIssuance.attachments.first().let {
-            val p = attachmentsPath.toAbsolutePath().resolve("$it.jar")
+            val p = Paths.get(attachmentsDirectory, "$it.jar")
             println("""
 
 The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:

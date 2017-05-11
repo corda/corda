@@ -13,9 +13,7 @@ The Corda repository contains a number of demo programs demonstrating the functi
 6. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
 
-The demos can be run either from the command line, or from inside IntelliJ. Running from the command line is
-recommended if you just want to see the demos run, whereas using IntelliJ can be helpful if you want to debug or
-extend the demos. For more details about running via the command line or from within IntelliJ, see :doc:`CLI-vs-IDE`.
+We recommend running the demos from the command line rather than from IntelliJ. For more details about running via the command line or from within IntelliJ, see :doc:`CLI-vs-IDE`.
 
 If any of the demos don't work, please raise an issue on GitHub.
 
@@ -46,16 +44,6 @@ To run from the command line in Windows:
    This step will display progress information related to the cash issuance process (in the Bank of Corda node log output)
 4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. You can see both sides of the
    trade print their progress and final transaction state in the bank node tabs/windows
-
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Trader Demo: Run Nodes`` configuration, which will start four nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run ``Trader Demo: Run Buyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node
-4. Run ``Trader Demo: Run Seller`` to trigger the transaction
-5. In the "Trader Demo: Run Nodes" run configuration window, you should see some log lines scroll past. Within a few seconds, the message
-   "Purchase complete - we are a happy customer!" should be printed.
 
 .. _irs-demo:
 
@@ -92,19 +80,8 @@ To run from the command line in Windows:
    see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
 7. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``IRS Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run ``IRS Demo: Run Upload Rates`` to upload the new interest rates to the oracle
-4. Run ``IRS Demo: Run Trade`` to have the nodes agree on a trade
-5. Run ``IRS Demo: Run Date Change`` to roll the simulated clock forward and see some fixings take place
-6. In the "IRS Demo: Run Nodes" window you'll see a lot of activity when you run the trade and when you change the date.
-   The date change rolls the clock forwards and causes the nodes to agree on the fixings over a period.
-
 This demo also has a web app. To use this, run nodes and upload rates, then navigate to
-http://localhost:10005/web/irsdemo and http://localhost:10007/web/irsdemo to see each node's view of the ledger.
+http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
@@ -129,16 +106,6 @@ To run from the command line in Windows:
 3. Run ``gradlew samples:attachment-demo:runRecipient``, which will block waiting for a trade to start
 4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
    see the output of the demo
-
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Attachment Demo: Run Nodes`` configuration to start three nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run ``Attachment Demo: Run Recipient``, which will wait for a trade to start
-4. Run ``Attachment Demo: Run Sender`` to send the attachment
-5. In the "Attachment Demo: Run Nodes" window you should see some log lines scroll past. Within a few seconds, the
-   message "File received - we're happy!" should be printed.
 
 Raft Notary demo
 ----------------
@@ -165,14 +132,6 @@ To run from the command line in Windows:
 2. Run ``samples\raft-notary-demo\build\nodes\runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``gradlew samples:raft-notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
-   In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
-
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Raft Notary Demo: Run Nodes`` configuration to start the nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run the ``Raft Notary Demo: Run Notarisation`` configuration to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
 Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
@@ -225,14 +184,6 @@ To run from the command line in Windows:
 3. Run ``gradlew samples:bank-of-corda-demo:runRPCCashIssue`` to trigger a cash issuance request
 4. Run ``gradlew samples:bank-of-corda-demo:runWebCashIssue`` to trigger another cash issuance request.
    Now look at the Bank of Corda terminal tab/window to see the output of the demo
-
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``Bank Of Corda Demo: Run Issuer`` configuration to start three nodes. Once all nodes are started you will see several
-   "Node started up and registered in ..." messages
-3. Run ``Bank Of Corda Demo: Run RPC Cash Issue`` to request issuance of some cash on behalf of Big Corporation via RPC
-4. Run ``Bank Of Corda Demo: Run Web Cash Issue`` to request issuance of some cash on behalf of Big Corporation via HTTP
 
 .. note:: To verify that the Bank of Corda node is alive and running, navigate to the following URL:
           http://localhost:10007/api/bank/date
@@ -333,12 +284,7 @@ To run from the command line in Windows:
 1. Deploy the nodes using ``gradlew samples:simm-valuation-demo:deployNodes``
 2. Run the nodes using ``samples\simm-valuation-demo\build\nodes\runnodes``
 
-To run from IntelliJ:
-
-1. Open the Corda project in IntelliJ and import the Gradle project
-2. Run the ``SIMM Valuation Demo`` configuration
-
-Then, for all three:
+Then, for both Unix and Windows:
 
 3. Browse to http://localhost:10005/web/simmvaluationdemo
 4. Select the counterparty (i.e. Bank B)

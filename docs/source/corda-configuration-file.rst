@@ -34,7 +34,7 @@ NetworkMapService plus Simple Notary configuration file.
 
 .. parsed-literal::
 
-    myLegalName : "Notary Service"
+    myLegalName : "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     nearestCity : "London"
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
@@ -85,7 +85,7 @@ path to the node's base directory.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
-:webAddress: The host and port on which the bundled webserver will listen if it is started.
+:webAddress: The host and port on which the webserver will listen if it is started. This is not used by the node itself.
 
     .. note:: If HTTPS is enabled then the browser security checks will require that the accessing url host name is one
         of either the machine name, fully qualified machine name, or server IP address to line up with the Subject Alternative
@@ -116,6 +116,10 @@ path to the node's base directory.
         :legalName: Legal name of the node. This is required as part of the TLS host verification process. The node will
             reject the connection to the network map service if it provides a TLS common name which doesn't match with this value.
 
+:minimumPlatformVersion: Used by the node if it's running the network map service to enforce a minimum version requirement
+    on registrations - any node on a Platform Version lower than this value will have their registration rejected.
+    Defaults to 1 if absent.
+
 :useHTTPS: If false the node's web server will be plain HTTP. If true the node will use the same certificate and private
     key from the ``<workspace>/certificates/sslkeystore.jks`` file as the ArtemisMQ port for HTTPS. If HTTPS is enabled
     then unencrypted HTTP traffic to the node's **webAddress** port is not supported.
@@ -123,7 +127,7 @@ path to the node's base directory.
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
-        :user: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
+        :username: Username consisting only of word characters (a-z, A-Z, 0-9 and _)
         :password: The password
         :permissions: A list of permission strings which RPC methods can use to control access
 

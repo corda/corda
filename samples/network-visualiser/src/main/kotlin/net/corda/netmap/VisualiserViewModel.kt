@@ -10,6 +10,7 @@ import javafx.util.Duration
 import net.corda.core.utilities.ProgressTracker
 import net.corda.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
+import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 
 class VisualiserViewModel {
@@ -62,14 +63,14 @@ class VisualiserViewModel {
     fun repositionNodes() {
         for ((index, bank) in simulation.banks.withIndex()) {
             nodesToWidgets[bank]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, index -> nodeMapCoords(node) }
-                Style.CIRCLE -> { node, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
+                Style.MAP -> { node, _ -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.BANK, index) }
             })
         }
         for ((index, serviceProvider) in (simulation.serviceProviders + simulation.regulators).withIndex()) {
             nodesToWidgets[serviceProvider]!!.position(index, when (displayStyle) {
-                Style.MAP -> { node, index -> nodeMapCoords(node) }
-                Style.CIRCLE -> { node, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
+                Style.MAP -> { node, _ -> nodeMapCoords(node) }
+                Style.CIRCLE -> { _, index -> nodeCircleCoords(NetworkMapVisualiser.NodeType.SERVICE, index) }
             })
         }
     }
@@ -105,8 +106,8 @@ class VisualiserViewModel {
         val yOffset = -80
         val circleX = view.stageWidth / 2 + xOffset
         val circleY = view.stageHeight / 2 + yOffset
-        val x: Double = radius * Math.cos(tangentRad) + circleX;
-        val y: Double = radius * Math.sin(tangentRad) + circleY;
+        val x: Double = radius * Math.cos(tangentRad) + circleX
+        val y: Double = radius * Math.sin(tangentRad) + circleY
         return Pair(x, y)
     }
 
@@ -124,7 +125,7 @@ class VisualiserViewModel {
         }
     }
 
-    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: String = "Bank of Bologna",
+    fun makeNodeWidget(forNode: MockNetwork.MockNode, type: String, label: X500Name = X500Name("CN=Bank of Bologna,OU=Corda QA Department,O=R3 CEV,L=Bologna,C=IT"),
                        nodeType: NetworkMapVisualiser.NodeType, index: Int): NodeWidget {
         fun emitRadarPulse(initialRadius: Double, targetRadius: Double, duration: Double): Pair<Circle, Animation> {
             val pulse = Circle(initialRadius).apply {
@@ -154,7 +155,7 @@ class VisualiserViewModel {
         view.root.children += longPulseOuterDot
         view.root.children += innerDot
 
-        val nameLabel = Label(label)
+        val nameLabel = Label(label.toString())
         val nameLabelRect = StackPane(nameLabel).apply {
             styleClass += "node-label"
             alignment = Pos.CENTER_RIGHT
@@ -170,8 +171,8 @@ class VisualiserViewModel {
 
         val widget = NodeWidget(forNode, innerDot, outerDot, longPulseOuterDot, pulseAnim, longPulseAnim, nameLabel, statusLabel)
         when (displayStyle) {
-            Style.CIRCLE -> widget.position(index, { node, index -> nodeCircleCoords(nodeType, index) })
-            Style.MAP -> widget.position(index, { node, index -> nodeMapCoords(node) })
+            Style.CIRCLE -> widget.position(index, { _, index -> nodeCircleCoords(nodeType, index) })
+            Style.MAP -> widget.position(index, { node, _ -> nodeMapCoords(node) })
         }
         return widget
     }

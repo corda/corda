@@ -54,9 +54,9 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     @CordaSerializable
     sealed class PartialTree {
-        class IncludedLeaf(val hash: SecureHash) : PartialTree()
-        class Leaf(val hash: SecureHash) : PartialTree()
-        class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
+        data class IncludedLeaf(val hash: SecureHash) : PartialTree()
+        data class Leaf(val hash: SecureHash) : PartialTree()
+        data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 
     companion object {
@@ -82,8 +82,8 @@ class PartialMerkleTree(val root: PartialTree) {
             return when (tree) {
                 is MerkleTree.Leaf -> level
                 is MerkleTree.Node -> {
-                    val l1 = checkFull(tree.left, level+1)
-                    val l2 = checkFull(tree.right, level+1)
+                    val l1 = checkFull(tree.left, level + 1)
+                    val l2 = checkFull(tree.right, level + 1)
                     if (l1 != l2) throw MerkleTreeException("Got not full binary tree.")
                     l1
                 }
@@ -104,10 +104,10 @@ class PartialMerkleTree(val root: PartialTree) {
         ): Pair<Boolean, PartialTree> {
             return when (root) {
                 is MerkleTree.Leaf ->
-                    if (root.value in includeHashes) {
-                        usedHashes.add(root.value)
-                        Pair(true, PartialTree.IncludedLeaf(root.value))
-                    } else Pair(false, PartialTree.Leaf(root.value))
+                    if (root.hash in includeHashes) {
+                        usedHashes.add(root.hash)
+                        Pair(true, PartialTree.IncludedLeaf(root.hash))
+                    } else Pair(false, PartialTree.Leaf(root.hash))
                 is MerkleTree.Node -> {
                     val leftNode = buildPartialTree(root.left, includeHashes, usedHashes)
                     val rightNode = buildPartialTree(root.right, includeHashes, usedHashes)
@@ -117,7 +117,7 @@ class PartialMerkleTree(val root: PartialTree) {
                         Pair(true, newTree)
                     } else {
                         // This node has no included leaves below. Cut the tree here and store a hash as a Leaf.
-                        val newTree = PartialTree.Leaf(root.value)
+                        val newTree = PartialTree.Leaf(root.hash)
                         Pair(false, newTree)
                     }
                 }

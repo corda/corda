@@ -12,7 +12,7 @@ interface SchemaService {
     /**
      * Represents any options configured on the node for a schema.
      */
-    data class SchemaOptions(val databaseSchema: String?, val tablePrefix: String?)
+    data class SchemaOptions(val databaseSchema: String? = null, val tablePrefix: String? = null)
 
     /**
      * Options configured for this node's schemas.  A missing entry for a schema implies all properties are null.

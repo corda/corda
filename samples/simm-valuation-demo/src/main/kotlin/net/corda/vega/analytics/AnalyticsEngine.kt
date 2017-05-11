@@ -80,7 +80,7 @@ class OGSIMMAnalyticsEngine : AnalyticsEngine() {
         var totalSensitivities = CurrencyParameterSensitivities.empty()
         var totalCurrencyExposure = MultiCurrencyAmount.empty()
         for (resolvedTrade in trades) {
-            val swap = resolvedTrade.getProduct()
+            val swap = resolvedTrade.product
 
             val pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider).build()
             val sensitivities = combinedRatesProvider.parameterSensitivity(pointSensitivities)

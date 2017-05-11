@@ -31,7 +31,7 @@ class ChosenList<E>(
     }
 
     init {
-        chosenListObservable.addListener { observable: Observable -> rechoose() }
+        chosenListObservable.addListener { _: Observable -> rechoose() }
         currentList.addListener(listener)
         beginChange()
         nextAdd(0, currentList.size)

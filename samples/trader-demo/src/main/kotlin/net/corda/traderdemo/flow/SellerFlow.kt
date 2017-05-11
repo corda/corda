@@ -4,18 +4,24 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.identity.Party
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.days
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.NotaryFlow
 import net.corda.flows.TwoPartyTradeFlow
+import net.corda.testing.BOC
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
+@InitiatingFlow
 class SellerFlow(val otherParty: Party,
                  val amount: Amount<Currency>,
                  override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
@@ -42,7 +48,7 @@ class SellerFlow(val otherParty: Party,
 
         val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
         val cpOwnerKey = serviceHub.legalIdentityKey
-        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public.composite, notary)
+        val commercialPaper = selfIssueSomeCommercialPaper(cpOwnerKey.public, notary)
 
         progressTracker.currentStep = TRADING
 
@@ -55,14 +61,14 @@ class SellerFlow(val otherParty: Party,
                 amount,
                 cpOwnerKey,
                 progressTracker.getChildProgressTracker(TRADING)!!)
-        return subFlow(seller, shareParentSessions = true)
+        return subFlow(seller)
     }
 
     @Suspendable
-    fun selfIssueSomeCommercialPaper(ownedBy: CompositeKey, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
+    fun selfIssueSomeCommercialPaper(ownedBy: PublicKey, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
         val keyPair = generateKeyPair()
-        val party = Party("Bank of London", keyPair.public)
+        val party = Party(BOC.name, keyPair.public)
 
         val issuance: SignedTransaction = run {
             val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,

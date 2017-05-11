@@ -1,9 +1,9 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.WireTransaction
 import net.corda.flows.ContractUpgradeFlow
+import java.security.PublicKey
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 val DUMMY_V2_PROGRAM_ID = DummyContractV2()
@@ -11,12 +11,13 @@ val DUMMY_V2_PROGRAM_ID = DummyContractV2()
 /**
  * Dummy contract state for testing of the upgrade process.
  */
+// DOCSTART 1
 class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
     override val legacyContract = DummyContract::class.java
 
-    data class State(val magicNumber: Int = 0, val owners: List<CompositeKey>) : ContractState {
+    data class State(val magicNumber: Int = 0, val owners: List<PublicKey>) : ContractState {
         override val contract = DUMMY_V2_PROGRAM_ID
-        override val participants: List<CompositeKey> = owners
+        override val participants: List<PublicKey> = owners
     }
 
     interface Commands : CommandData {
@@ -35,7 +36,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
 
     // The "empty contract"
     override val legalContractReference: SecureHash = SecureHash.sha256("")
-
+    // DOCEND 1
     /**
      * Generate an upgrade transaction from [DummyContract].
      *
@@ -43,7 +44,7 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
      *
      * @return a pair of wire transaction, and a set of those who should sign the transaction for it to be valid.
      */
-    fun generateUpgradeFromV1(vararg states: StateAndRef<DummyContract.State>): Pair<WireTransaction, Set<CompositeKey>> {
+    fun generateUpgradeFromV1(vararg states: StateAndRef<DummyContract.State>): Pair<WireTransaction, Set<PublicKey>> {
         val notary = states.map { it.state.notary }.single()
         require(states.isNotEmpty())
 

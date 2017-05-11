@@ -27,7 +27,7 @@ Now we can connect to the node itself using a valid RPC login. We login using th
 
 We start generating transactions in a different thread (``generateTransactions`` to be defined later) using ``proxy``, which exposes the full RPC interface of the node:
 
-.. literalinclude:: ../../node/src/main/kotlin/net/corda/node/services/messaging/CordaRPCOps.kt
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
     :language: kotlin
     :start-after: interface CordaRPCOps
     :end-before: }
@@ -61,7 +61,7 @@ Now we just need to create the transactions themselves!
     :start-after: START 6
     :end-before: END 6
 
-We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault.
+We utilise several RPC functions here to query things like the notaries in the node cluster or our own vault. These RPC functions also return ``Observable`` objects so that the node can send us updated values. However, we don't need updates here and so we mark these observables as ``notUsed``. (As a rule, you should always either subscribe to an ``Observable`` or mark it as not used. Failing to do this will leak resources in the node.)
 
 Then in a loop we generate randomly either an Issue, a Pay or an Exit transaction.
 
@@ -116,14 +116,14 @@ In the instructions above the server node permissions are configured programmati
 
         driver(driverDirectory = baseDirectory) {
             val user = User("user", "password", permissions = setOf(startFlowPermission<CashFlow>()))
-            val node = startNode("Alice", rpcUsers = listOf(user)).get()
+            val node = startNode("CN=Alice Corp,O=Alice Corp,L=London,C=UK", rpcUsers = listOf(user)).get()
 
 When starting a standalone node using a configuration file we must supply the RPC credentials as follows:
 
 .. code-block:: text
 
     rpcUsers : [
-        { user=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
+        { username=user, password=password, permissions=[ StartFlow.net.corda.flows.CashFlow ] }
     ]
 
 When using the gradle Cordformation plugin to configure and deploy a node you must supply the RPC credentials in a similar manner:
@@ -131,7 +131,7 @@ When using the gradle Cordformation plugin to configure and deploy a node you mu
 .. code-block:: text
 
         rpcUsers = [
-                ['user' : "user",
+                ['username' : "user",
                  'password' : "password",
                  'permissions' : ["StartFlow.net.corda.flows.CashFlow"]]
         ]

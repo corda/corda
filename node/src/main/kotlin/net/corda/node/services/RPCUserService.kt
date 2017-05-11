@@ -1,7 +1,6 @@
 package net.corda.node.services
 
 import net.corda.core.flows.FlowLogic
-import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.User
 
 /**
@@ -16,13 +15,9 @@ interface RPCUserService {
 
 // TODO Store passwords as salted hashes
 // TODO Or ditch this and consider something like Apache Shiro
-class RPCUserServiceImpl(config: NodeConfiguration) : RPCUserService {
-
-    private val _users = config.rpcUsers.associateBy(User::username)
-
-    override fun getUser(username: String): User? = _users[username]
-
-    override val users: List<User> get() = _users.values.toList()
+// TODO Need access to permission checks from inside flows and at other point during audit checking.
+class RPCUserServiceImpl(override val users: List<User>) : RPCUserService {
+    override fun getUser(username: String): User? = users.find { it.username == username }
 }
 
 fun startFlowPermission(className: String) = "StartFlow.$className"

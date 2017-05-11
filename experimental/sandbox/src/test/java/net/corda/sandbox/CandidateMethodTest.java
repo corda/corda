@@ -1,6 +1,5 @@
 package net.corda.sandbox;
 
-import net.corda.sandbox.CandidateMethod;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 

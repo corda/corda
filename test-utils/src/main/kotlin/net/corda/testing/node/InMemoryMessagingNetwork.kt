@@ -6,17 +6,19 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.*
+import net.corda.core.messaging.AllPossibleRecipients
+import net.corda.core.messaging.MessageRecipientGroup
+import net.corda.core.messaging.MessageRecipients
+import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.MessagingServiceBuilder
-import net.corda.node.services.api.MessagingServiceInternal
+import net.corda.node.services.messaging.*
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.JDBCHashSet
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork.InMemoryMessaging
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
@@ -66,7 +68,7 @@ class InMemoryMessagingNetwork(
     private val messageSendQueue = LinkedBlockingQueue<MessageTransfer>()
     private val _sentMessages = PublishSubject.create<MessageTransfer>()
     @Suppress("unused") // Used by the visualiser tool.
-    /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples */
     val sentMessages: Observable<MessageTransfer>
         get() = _sentMessages
 
@@ -82,7 +84,7 @@ class InMemoryMessagingNetwork(
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
 
     @Suppress("unused") // Used by the visualiser tool.
-    /** A stream of (sender, message, recipients) triples */
+            /** A stream of (sender, message, recipients) triples */
     val receivedMessages: Observable<MessageTransfer>
         get() = _receivedMessages
 
@@ -125,10 +127,10 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: String? = null,
+            description: X500Name? = null,
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, PeerHandle(id, description ?: "In memory node $id"), advertisedServices.map(::ServiceHandle), executor, database = database)
+        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getDevX509Name("In memory node $id")), advertisedServices.map(::ServiceHandle), executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -196,8 +198,8 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    data class PeerHandle(val id: Int, val description: String) : SingleMessageRecipient {
-        override fun toString() = description
+    data class PeerHandle(val id: Int, val description: X500Name) : SingleMessageRecipient {
+        override fun toString() = description.toString()
         override fun equals(other: Any?) = other is PeerHandle && other.id == id
         override fun hashCode() = id.hashCode()
     }
@@ -217,12 +219,13 @@ class InMemoryMessagingNetwork(
                 return pickFrom[random.nextInt(pickFrom.size)]
             }
         }
+
         class RoundRobin : ServicePeerAllocationStrategy() {
             val previousPicks = HashMap<ServiceHandle, Int>()
             override fun <A> pickNext(service: ServiceHandle, pickFrom: List<A>): A {
-                val nextIndex = previousPicks.compute(service) { _key, previous ->
+                val nextIndex = previousPicks.compute(service) { _, previous ->
                     (previous?.plus(1) ?: 0) % pickFrom.size
-                }
+                }!!
                 return pickFrom[nextIndex]
             }
         }
@@ -271,12 +274,20 @@ class InMemoryMessagingNetwork(
     }
 
     @CordaSerializable
-    private data class InMemoryMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant = Instant.now()) : Message {
+    private data class InMemoryMessage(override val topicSession: TopicSession,
+                                       override val data: ByteArray,
+                                       override val uniqueMessageId: UUID,
+                                       override val debugTimestamp: Instant = Instant.now()) : Message {
         override fun toString() = "$topicSession#${String(data)}"
     }
 
     @CordaSerializable
-    private data class InMemoryReceivedMessage(override val topicSession: TopicSession, override val data: ByteArray, override val uniqueMessageId: UUID, override val debugTimestamp: Instant, override val peer: X500Name) : ReceivedMessage
+    private data class InMemoryReceivedMessage(override val topicSession: TopicSession,
+                                               override val data: ByteArray,
+                                               override val platformVersion: Int,
+                                               override val uniqueMessageId: UUID,
+                                               override val debugTimestamp: Instant,
+                                               override val peer: X500Name) : ReceivedMessage
 
     /**
      * An [InMemoryMessaging] provides a [MessagingService] that isn't backed by any kind of network or disk storage
@@ -289,7 +300,7 @@ class InMemoryMessagingNetwork(
     inner class InMemoryMessaging(private val manuallyPumped: Boolean,
                                   private val peerHandle: PeerHandle,
                                   private val executor: AffinityExecutor,
-                                  private val database: Database) : SingletonSerializeAsToken(), MessagingServiceInternal {
+                                  private val database: Database) : SingletonSerializeAsToken(), MessagingService {
         inner class Handler(val topicSession: TopicSession,
                             val callback: (ReceivedMessage, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
 
@@ -332,7 +343,7 @@ class InMemoryMessagingNetwork(
             val (handler, transfers) = state.locked {
                 val handler = Handler(topicSession, callback).apply { handlers.add(this) }
                 val pending = ArrayList<MessageTransfer>()
-                databaseTransaction(database) {
+                database.transaction {
                     pending.addAll(pendingRedelivery)
                     pendingRedelivery.clear()
                 }
@@ -348,7 +359,7 @@ class InMemoryMessagingNetwork(
             state.locked { check(handlers.remove(registration as Handler)) }
         }
 
-        override fun send(message: Message, target: MessageRecipients) {
+        override fun send(message: Message, target: MessageRecipients, retryId: Long?) {
             check(running)
             msgSend(this, message, target)
             if (!sendManuallyPumped) {
@@ -364,6 +375,8 @@ class InMemoryMessagingNetwork(
             running = false
             netNodeHasShutdown(peerHandle)
         }
+
+        override fun cancelRedelivery(retryId: Long) {}
 
         /** Returns the given (topic & session, data) pair as a newly created message object. */
         override fun createMessage(topicSession: TopicSession, data: ByteArray, uuid: UUID): Message {
@@ -408,7 +421,7 @@ class InMemoryMessagingNetwork(
                         // up a handler for yet. Most unit tests don't run threaded, but we want to test true parallelism at
                         // least sometimes.
                         log.warn("Message to ${transfer.message.topicSession} could not be delivered")
-                        databaseTransaction(database) {
+                        database.transaction {
                             pendingRedelivery.add(transfer)
                         }
                         null
@@ -430,7 +443,7 @@ class InMemoryMessagingNetwork(
 
             if (transfer.message.uniqueMessageId !in processedMessages) {
                 executor.execute {
-                    databaseTransaction(database) {
+                    database.transaction {
                         for (handler in deliverTo) {
                             try {
                                 handler.callback(transfer.toReceivedMessage(), handler)
@@ -452,6 +465,9 @@ class InMemoryMessagingNetwork(
         private fun MessageTransfer.toReceivedMessage(): ReceivedMessage = InMemoryReceivedMessage(
                 message.topicSession,
                 message.data.copyOf(), // Kryo messes with the buffer so give each client a unique copy
-                message.uniqueMessageId, message.debugTimestamp, X509Utilities.getDevX509Name(sender.description))
+                1,
+                message.uniqueMessageId,
+                message.debugTimestamp,
+                sender.description)
     }
 }

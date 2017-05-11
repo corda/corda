@@ -31,16 +31,15 @@ dependencies {
 
 task buildExplorerJAR(type: FatCapsule) {
     applicationClass 'net.corda.explorer.Main'
-    archiveName "node-explorer-${corda_version}.jar"
+    archiveName "node-explorer-${corda_release_version}.jar"
     applicationSource = files(project.tasks.findByName('jar'), '../build/classes/main/ExplorerCaplet.class')
     classifier 'fat'
 
     capsuleManifest {
-        applicationVersion = corda_version
+        applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'Node Explorer'
         minJavaVersion = '1.8.0'
-        // This version is known to work and avoids earlier 8u versions that have bugs.
-        minUpdateVersion['1.8'] = '102'
+        minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['ExplorerCaplet']
 
         // JVM configuration:
@@ -49,10 +48,6 @@ task buildExplorerJAR(type: FatCapsule) {
         //
         // If you change these flags, please also update Driver.kt
         jvmArgs = ['-Xmx200m', '-XX:+UseG1GC']
-    }
-
-    manifest {
-        attributes('Corda-Version': corda_version)
     }
 }
 

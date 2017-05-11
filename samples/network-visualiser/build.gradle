@@ -5,24 +5,15 @@ apply plugin: 'application'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'us.kirchmeier.capsule'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile project(':samples:irs-demo')
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     testCompile project(':test-utils')

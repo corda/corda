@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
+import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
 import net.corda.core.crypto.CompositeKey
@@ -16,9 +17,18 @@ import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
 import java.io.BufferedInputStream
+import java.io.FileInputStream
+import java.io.InputStream
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -53,6 +63,7 @@ object DefaultKryoCustomizer {
             ImmutableMapSerializer.registerSerializers(this)
             ImmutableMultimapSerializer.registerSerializers(this)
 
+            // InputStream subclasses whitelisting, required for attachments.
             register(BufferedInputStream::class.java, InputStreamSerializer)
             register(Class.forName("sun.net.www.protocol.jar.JarURLConnection\$JarURLInputStream"), InputStreamSerializer)
 
@@ -62,11 +73,10 @@ object DefaultKryoCustomizer {
             register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
 
             // Using a custom serializer for compactness
-            register(CompositeKey.Node::class.java, CompositeKeyNodeSerializer)
-            register(CompositeKey.Leaf::class.java, CompositeKeyLeafSerializer)
+            register(CompositeKey::class.java, CompositeKeySerializer)
 
             // Exceptions. We don't bother sending the stack traces as the client will fill in its own anyway.
-            register(Array<StackTraceElement>::class, read = { kryo, input -> emptyArray() }, write = { kryo, output, obj -> })
+            register(Array<StackTraceElement>::class, read = { _, _ -> emptyArray() }, write = { _, _, _ -> })
 
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
@@ -77,9 +87,24 @@ object DefaultKryoCustomizer {
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
             register(MetaData::class.java, MetaDataSerializer)
-            register(BitSet::class.java, ReferencesAwareJavaSerializer)
+            register(BitSet::class.java, BitSetSerializer())
+            register(Class::class.java, ClassSerializer)
 
             addDefaultSerializer(Logger::class.java, LoggerSerializer)
+
+            register(FileInputStream::class.java, InputStreamSerializer)
+            // Required for HashCheckingStream (de)serialization.
+            // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
+            addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
+
+            register(X500Name::class.java, X500NameSerializer)
+
+            register(BCECPrivateKey::class.java, PrivateKeySerializer)
+            register(BCECPublicKey::class.java, PublicKeySerializer)
+            register(BCRSAPrivateCrtKey::class.java, PrivateKeySerializer)
+            register(BCRSAPublicKey::class.java, PublicKeySerializer)
+            register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
+            register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }

@@ -10,6 +10,7 @@ import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.Timestamp
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
@@ -26,7 +27,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Server
 import net.corda.node.utilities.JDBCHashMap
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
 import java.util.*
 
@@ -51,15 +52,15 @@ object BFTSMaRt {
     /** Sent from [Server] to [Client]. */
     @CordaSerializable
     sealed class ReplicaResponse {
-        class Error(val error: NotaryError) : ReplicaResponse()
-        class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
+        data class Error(val error: NotaryError) : ReplicaResponse()
+        data class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
     }
 
     /** An aggregate response from all replica ([Server]) replies sent from [Client] back to the calling application. */
     @CordaSerializable
     sealed class ClusterResponse {
-        class Error(val error: NotaryError) : ClusterResponse()
-        class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
+        data class Error(val error: NotaryError) : ClusterResponse()
+        data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
     }
 
     class Client(val id: Int) : SingletonSerializeAsToken() {
@@ -102,7 +103,7 @@ object BFTSMaRt {
 
         /** An extractor to build the final response message for the client application from all received replica replies. */
         private fun buildExtractor(): Extractor {
-            return Extractor { replies, sameContent, lastReceived ->
+            return Extractor { replies, _, lastReceived ->
                 val responses = replies.mapNotNull { it?.content?.deserialize<ReplicaResponse>() }
                 val accepted = responses.filterIsInstance<ReplicaResponse.Signature>()
                 val rejected = responses.filterIsInstance<ReplicaResponse.Error>()
@@ -144,7 +145,7 @@ object BFTSMaRt {
 
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        val commitLog = databaseTransaction(db) { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        val commitLog = db.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
 
         init {
             // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
@@ -156,7 +157,7 @@ object BFTSMaRt {
         }
 
         override fun appExecuteBatch(command: Array<ByteArray>, mcs: Array<MessageContext>): Array<ByteArray?> {
-            val replies = command.zip(mcs) { c, m ->
+            val replies = command.zip(mcs) { c, _ ->
                 executeCommand(c)
             }
             return replies.toTypedArray()
@@ -171,7 +172,7 @@ object BFTSMaRt {
         protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
-            databaseTransaction(db) {
+            db.transaction {
                 states.forEach { state ->
                     commitLog[state]?.let { conflicts[state] = it }
                 }
@@ -193,12 +194,12 @@ object BFTSMaRt {
 
         protected fun validateTimestamp(t: Timestamp?) {
             if (t != null && !timestampChecker.isValid(t))
-                throw NotaryException(NotaryError.TimestampInvalid())
+                throw NotaryException(NotaryError.TimestampInvalid)
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            val mySigningKey = databaseTransaction(db) { services.notaryIdentityKey }
-            return mySigningKey.signWithECDSA(bytes)
+            val mySigningKey = db.transaction { services.notaryIdentityKey }
+            return mySigningKey.sign(bytes)
         }
 
         // TODO:
@@ -207,7 +208,7 @@ object BFTSMaRt {
         override fun getSnapshot(): ByteArray {
             // LinkedHashMap for deterministic serialisation
             val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            databaseTransaction(db) {
+            db.transaction {
                 commitLog.forEach { m[it.key] = it.value }
             }
             return m.serialize().bytes
@@ -215,7 +216,7 @@ object BFTSMaRt {
 
         override fun installSnapshot(bytes: ByteArray) {
             val m = bytes.deserialize<LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>>()
-            databaseTransaction(db) {
+            db.transaction {
                 commitLog.clear()
                 commitLog.putAll(m)
             }

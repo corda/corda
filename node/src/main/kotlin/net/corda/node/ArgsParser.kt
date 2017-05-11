@@ -1,10 +1,11 @@
 package net.corda.node
 
-import com.typesafe.config.Config
 import joptsimple.OptionParser
 import joptsimple.util.EnumConverter
 import net.corda.core.div
 import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.nodeapi.config.parseAs
 import org.slf4j.event.Level
 import java.io.PrintStream
 import java.nio.file.Path
@@ -64,7 +65,9 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean) {
-    fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): Config {
-        return ConfigHelper.loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
+    fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): FullNodeConfiguration {
+        return ConfigHelper
+                .loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
+                .parseAs<FullNodeConfiguration>()
     }
 }

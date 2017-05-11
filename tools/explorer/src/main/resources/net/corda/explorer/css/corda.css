@@ -158,15 +158,15 @@
     -fx-background-color: -color-4;
 }
 
-.certificateButton.button, .certificateButton.button:hover{
+.certificateButton.button, .certificateButton.button:hover {
     -fx-background-color: transparent;
 }
 
-.certificateIcon{
+.certificateIcon {
     -fx-fill: -color-2;
 }
 
-.certificateIcon:hover{
+.certificateIcon:hover {
     -fx-fill: -color-3;
 }
 
@@ -253,6 +253,7 @@
 #setting-edit-label:hover .text, #setting-edit-label:hover .glyph-icon {
     -fx-fill: -color-4;
 }
+
 /* Styles for firing bullets between nodes in Network view. */
 .bullet {
     -fx-fill: black;

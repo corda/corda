@@ -1,17 +1,98 @@
 Release notes
 =============
 
-Here are release notes for each snapshot release from M9 onwards. This includes guidance on how to upgrade code from
-the previous milestone release.
+Here are release notes for each snapshot release from M9 onwards.
 
-UNRELEASED
+Unreleased
 ----------
+
+We've added the ability for flows to be versioned by their CorDapp developers. This enables a node to support a particular
+version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future
+release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
+
+There are major changes to the ``Party`` class as part of confidential identities. See :doc:`changelog` for full details.
+
+
+Milestone 11
+------------
+
+Special thank you to `Gary Rowe <https://github.com/gary-rowe>`_ for his contribution to Corda's Contracts DSL in M11.
+
+Work has continued on confidential identities, introducing code to enable the Java standard libraries to work with
+composite key signatures. This will form the underlying basis of future work to standardise the public key and signature
+formats to enable interoperability with other systems, as well as enabling the use of composite signatures on X.509
+certificates to prove association between transaction keys and identity keys.
+
+The identity work will require changes to existing code and configurations, to replace party names with full X.500
+distinguished names (see RFC 1779 for details on the construction of distinguished names). Currently this is not
+enforced, however it will be in a later milestone.
+
+* "myLegalName" in node configurations will need to be replaced, for example "Bank A" is replaced with
+  "CN=Bank A,O=Bank A,L=London,C=UK". Obviously organisation, location and country ("O", "L" and "C" respectively)
+  must be given values which are appropriate to the node, do not just use these example values.
+* "networkMap" in node configurations must be updated to match any change to the legal name of the network map.
+* If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided
+  in order to ensure consistency.
+
+We anticipate enforcing the use of distinguished names in node configurations from M12, and across the network from M13.
+
+We have increased the maximum message size that we can send to Corda over RPC from 100 KB to 10 MB.
+
+The Corda node now disables any use of ObjectInputStream to prevent Java deserialisation within flows. This is a security fix,
+and prevents the node from deserialising arbitrary objects.
+
+We've introduced the concept of platform version which is a single integer value which increments by 1 if a release changes
+any of the public APIs of the entire Corda platform. This includes the node's public APIs, the messaging protocol,
+serialisation, etc. The node exposes the platform version it's on and we envision CorDapps will use this to be able to
+run on older versions of the platform to the one they were compiled against. Platform version borrows heavily from Android's
+API Level.
+
+We have revamped the DemoBench user interface. DemoBench will now also be installed as "Corda DemoBench" for both Windows
+and MacOSX. The original version was installed as just "DemoBench", and so will not be overwritten automatically by the
+new version.
+
+Milestone 10
+------------
+
+Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_,
+`Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions
+to Corda in M10.
 
 A new interactive **Corda Shell** has been added to the node. The shell lets developers and node administrators
 easily command the node by running flows, RPCs and SQL queries. It also provides a variety of commands to monitor
 the node. The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can
 be easily added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
 We have many enhancements planned over time including SSH access, more commands and better tab completion.
+
+The new "DemoBench" makes it easy to configure and launch local Corda nodes. It is a standalone desktop app that can be
+bundled with its own JRE and packaged as either EXE (Windows), DMG (MacOS) or RPM (Linux-based). It has the following
+features:
+
+ #. New nodes can be added at the click of a button. Clicking "Add node" creates a new tab that lets you edit the most
+    important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
+ #. Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
+ #. You can launch an Corda Explorer instance for each node at the click of a button. Credentials are handed to the Corda
+    Explorer so it starts out logged in already.
+ #. Some basic statistics are shown about each node, informed via the RPC connection.
+ #. Another button launches a database viewer in the system browser.
+ #. The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+
+Soft Locking is a new feature implemented in the vault to prevent a node constructing transactions that attempt to use the
+same input(s) simultaneously. Such transactions would result in naturally wasted effort when the notary rejects them as
+double spend attempts. Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two
+transactions attempt to spend the same fungible states.
+
+The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with
+currency reference data.
+
+We have added optional out-of-process transaction verification. Any number of external verifier processes may be attached
+to the node which can handle loadbalanced verification requests.
+
+We have also delivered the long waited Kotlin 1.1 upgrade in M10! The new features in Kotlin allow us to write even more
+clean and easy to manage code, which greatly increases our productivity.
+
+This release contains a large number of improvements, new features, library upgrades and bug fixes. For a full list of
+changes please see :doc:`changelog`.
 
 Milestone 9
 -----------
@@ -55,4 +136,4 @@ clients.
 There have also been dozens of bug fixes, performance improvements and usability tweaks. Upgrading is definitely
 worthwhile and will only take a few minutes for most apps.
 
-For a full list of changes please see :doc:`change-log`.
+For a full list of changes please see :doc:`changelog`.

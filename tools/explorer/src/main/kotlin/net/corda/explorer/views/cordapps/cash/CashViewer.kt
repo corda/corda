@@ -17,14 +17,16 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
-import net.corda.client.jfx.utils.*
 import net.corda.client.jfx.model.*
+import net.corda.client.jfx.utils.*
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
-import net.corda.core.crypto.AbstractParty
+import net.corda.core.identity.AbstractParty
+import net.corda.core.crypto.commonName
 import net.corda.explorer.formatters.AmountFormatter
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
@@ -126,7 +128,10 @@ class CashViewer : CordaView("Cash") {
             }
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
             // TODO: Anonymous should probably be italicised or similar
-            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull() ?: "Anonymous"))
+            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull()?.let {
+                PartyNameFormatter.short.format(it)
+            } ?: "Anonymous"))
+            issuerValueLabel.apply { tooltip(resolvedIssuer.nameOrNull()?.let { PartyNameFormatter.full.format(it) } ?: "Anonymous") }
             originatedValueLabel.text = stateRow.originated.toString()
             amountValueLabel.text = amountFormatter.format(amountNoIssuer)
             equivValueLabel.textProperty().bind(equivAmount.map { equivFormatter.format(it) })
@@ -143,7 +148,7 @@ class CashViewer : CordaView("Cash") {
          */
         val searchField = SearchField(cashStates,
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.contains(text, true) ?: false }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.commonName?.contains(text, true) ?: false }
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {
@@ -213,14 +218,14 @@ class CashViewer : CordaView("Cash") {
                     treeItem
                 }
 
-        cashViewerTable.apply() {
+        cashViewerTable.apply {
             root = TreeItem()
             val children: List<TreeItem<out ViewerNode>> = root.children
             Bindings.bindContent(children, cashViewerIssueNodes)
             root.isExpanded = true
             isShowRoot = false
             // TODO use smart resize
-            setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, column ->
+            setColumnPrefWidthPolicy { tableWidthWithoutPaddingAndBorder, _ ->
                 Math.floor(tableWidthWithoutPaddingAndBorder.toDouble() / columns.size).toInt()
             }
         }
@@ -229,8 +234,8 @@ class CashViewer : CordaView("Cash") {
         cashViewerTableIssuerCurrency.setCellValueFactory {
             val node = it.value.value
             when (node) {
-                // TODO: Anonymous should probably be italicised or similar
-                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull() ?: "Anonymous")
+            // TODO: Anonymous should probably be italicised or similar
+                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous")
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
         }
@@ -280,7 +285,7 @@ class CashViewer : CordaView("Cash") {
         }
     }
 
-    private class CashWidget() : VBox() {
+    private class CashWidget : VBox() {
         // Inject data.
         private val reportingCurrency by observableValue(SettingsModel::reportingCurrencyProperty)
         private val cashStates by observableList(ContractStateModel::cashStates)
@@ -308,7 +313,7 @@ class CashViewer : CordaView("Cash") {
             }
             linechart(null, xAxis, yAxis) {
                 series("USD") {
-                    sumAmount.addListener { observableValue, old, new ->
+                    sumAmount.addListener { _, _, _ ->
                         val lastTimeStamp = data.last().value?.xValue
                         if (lastTimeStamp == null || System.currentTimeMillis() - lastTimeStamp.toLong() > 1.seconds.toMillis()) {
                             data(System.currentTimeMillis(), sumAmount.value.quantity)

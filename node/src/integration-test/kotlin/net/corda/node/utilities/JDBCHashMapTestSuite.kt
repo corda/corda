@@ -1,5 +1,14 @@
 package net.corda.node.utilities
 
+import com.google.common.collect.testing.MapTestSuiteBuilder
+import com.google.common.collect.testing.SetTestSuiteBuilder
+import com.google.common.collect.testing.TestStringMapGenerator
+import com.google.common.collect.testing.TestStringSetGenerator
+import com.google.common.collect.testing.features.CollectionFeature
+import com.google.common.collect.testing.features.CollectionSize
+import com.google.common.collect.testing.features.MapFeature
+import com.google.common.collect.testing.features.SetFeature
+import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -56,39 +65,43 @@ class JDBCHashMapTestSuite {
         }
 
         @JvmStatic
-        fun createMapTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = com.google.common.collect.testing.MapTestSuiteBuilder
+        fun createMapTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = MapTestSuiteBuilder
                 .using(JDBCHashMapTestGenerator(loadOnInit = loadOnInit, constrained = constrained))
                 .named("test JDBCHashMap with loadOnInit=$loadOnInit")
                 .withFeatures(
-                        com.google.common.collect.testing.features.CollectionSize.ANY,
-                        com.google.common.collect.testing.features.MapFeature.ALLOWS_ANY_NULL_QUERIES,
-                        com.google.common.collect.testing.features.MapFeature.GENERAL_PURPOSE,
-                        com.google.common.collect.testing.features.CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
-                        com.google.common.collect.testing.features.CollectionFeature.KNOWN_ORDER
+                        CollectionSize.ANY,
+                        MapFeature.ALLOWS_ANY_NULL_QUERIES,
+                        MapFeature.GENERAL_PURPOSE,
+                        CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
+                        CollectionFeature.KNOWN_ORDER
                 )
                 // putAll(null) not supported by Kotlin MutableMap interface
-                .suppressing(com.google.common.collect.testing.testers.MapPutAllTester::class.java.getMethod("testPutAll_nullCollectionReference"))
+                .suppressing(MapPutAllTester::class.java.getMethod("testPutAll_nullCollectionReference"))
+                // We suppress the following because of NotReallyMutableEntry
+                .suppressing(MapReplaceAllTester::class.java.getMethod("testReplaceAllPreservesOrder"))
+                .suppressing(MapReplaceAllTester::class.java.getMethod("testReplaceAllRotate"))
+                .suppressing(MapEntrySetTester::class.java.getMethod("testSetValue"))
                 .createTestSuite()
 
         @JvmStatic
-        fun createSetTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = com.google.common.collect.testing.SetTestSuiteBuilder
+        fun createSetTestSuite(loadOnInit: Boolean, constrained: Boolean): TestSuite = SetTestSuiteBuilder
                 .using(JDBCHashSetTestGenerator(loadOnInit = loadOnInit, constrained = constrained))
                 .named("test JDBCHashSet with loadOnInit=$loadOnInit")
                 .withFeatures(
-                        com.google.common.collect.testing.features.CollectionSize.ANY,
-                        com.google.common.collect.testing.features.SetFeature.GENERAL_PURPOSE,
-                        com.google.common.collect.testing.features.CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
-                        com.google.common.collect.testing.features.CollectionFeature.KNOWN_ORDER
+                        CollectionSize.ANY,
+                        SetFeature.GENERAL_PURPOSE,
+                        CollectionFeature.SUPPORTS_ITERATOR_REMOVE,
+                        CollectionFeature.KNOWN_ORDER
                 )
                 // add/remove/retainAll(null) not supported by Kotlin MutableSet interface
-                .suppressing(com.google.common.collect.testing.testers.CollectionAddAllTester::class.java.getMethod("testAddAll_nullCollectionReference"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionAddAllTester::class.java.getMethod("testAddAll_nullUnsupported"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionAddTester::class.java.getMethod("testAdd_nullUnsupported"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionCreationTester::class.java.getMethod("testCreateWithNull_unsupported"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceNonEmptySubject"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceEmptySubject"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceNonEmptySubject"))
-                .suppressing(com.google.common.collect.testing.testers.CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceEmptySubject"))
+                .suppressing(CollectionAddAllTester::class.java.getMethod("testAddAll_nullCollectionReference"))
+                .suppressing(CollectionAddAllTester::class.java.getMethod("testAddAll_nullUnsupported"))
+                .suppressing(CollectionAddTester::class.java.getMethod("testAdd_nullUnsupported"))
+                .suppressing(CollectionCreationTester::class.java.getMethod("testCreateWithNull_unsupported"))
+                .suppressing(CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceNonEmptySubject"))
+                .suppressing(CollectionRemoveAllTester::class.java.getMethod("testRemoveAll_nullCollectionReferenceEmptySubject"))
+                .suppressing(CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceNonEmptySubject"))
+                .suppressing(CollectionRetainAllTester::class.java.getMethod("testRetainAll_nullCollectionReferenceEmptySubject"))
                 .createTestSuite()
 
         private fun setUpDatabaseTx() {
@@ -134,7 +147,7 @@ class JDBCHashMapTestSuite {
     /**
      * Generator of map instances needed for testing.
      */
-    class JDBCHashMapTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringMapGenerator() {
+    class JDBCHashMapTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : TestStringMapGenerator() {
         override fun create(elements: Array<Map.Entry<String, String>>): Map<String, String> {
             val map = if (loadOnInit) loadOnInitTrueMap else if (constrained) memoryConstrainedMap else loadOnInitFalseMap
             map.clear()
@@ -176,7 +189,7 @@ class JDBCHashMapTestSuite {
     /**
      * Generator of set instances needed for testing.
      */
-    class JDBCHashSetTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : com.google.common.collect.testing.TestStringSetGenerator() {
+    class JDBCHashSetTestGenerator(val loadOnInit: Boolean, val constrained: Boolean) : TestStringSetGenerator() {
         override fun create(elements: Array<String>): Set<String> {
             val set = if (loadOnInit) loadOnInitTrueSet else if (constrained) memoryConstrainedSet else loadOnInitFalseSet
             set.clear()
@@ -233,17 +246,17 @@ class JDBCHashMapTestSuite {
 
         @Test
         fun `fill map and check content after reconstruction`() {
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table")
                 // Populate map the first time.
                 applyOpsToMap(persistentMap)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = false)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }
-            databaseTransaction(database) {
+            database.transaction {
                 val persistentMap = JDBCHashMap<String, String>("the_table", loadOnInit = true)
                 assertThat(persistentMap.entries).containsExactly(*transientMapForComparison.entries.toTypedArray())
             }

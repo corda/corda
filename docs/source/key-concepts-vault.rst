@@ -13,13 +13,18 @@ The vault keeps track of both unconsumed and consumed states:
 By fungible we refer to assets of measurable quantity (eg. a cash currency, units of stock) which can be combined
 together to represent a single ledger state.
 
-Like with a cryptocurrency wallet, the Corda vault can create transactions that send value (eg. transfer of state) to someone else
-by combining fungible states and possibly adding a change output that makes the values balance (this process is usually referred to as ‘coin selection’).
-Vault spending ensures that transactions respect the fungibility rules in order to ensure that the issuer and reference data is preserved as the assets pass from hand to hand.
+Like with a cryptocurrency wallet, the Corda vault can create transactions that send value (eg. transfer of state) to
+someone else by combining fungible states and possibly adding a change output that makes the values balance (this
+process is usually referred to as ‘coin selection’). Vault spending ensures that transactions respect the fungibility
+rules in order to ensure that the issuer and reference data is preserved as the assets pass from hand to hand. 
+
+A feature called **soft locking** provides the ability to automatically or explicitly reserve states to prevent
+multiple transactions within the same node from trying to use the same output simultaneously. Whilst this scenario would
+ultimately be detected by a notary, *soft locking* provides a mechanism of early detection for such unwarranted and
+invalid scenarios. :doc:`soft-locking` describes this feature in detail.
 
 .. note:: Basic 'coin selection' is currently implemented. Future work includes fungible state optimisation (splitting and
-          merging of states in the background), 'soft locking' (ability to automatically or explicitly reserve states to prevent
-          multiple transactions trying to use the same output simultaneously), 'state re-issuance' (sending of states back to the
+          merging of states in the background), and 'state re-issuance' (sending of states back to the
           issuer for re-issuance, thus pruning long transaction chains and improving privacy).
 
 There is also a facility for attaching descriptive textual notes against any transaction stored in the vault.
@@ -41,12 +46,11 @@ Note the following:
 * the vault performs fungible state spending (and in future, fungible state optimisation management including merging, splitting and re-issuance)
 * vault extensions represent additional custom plugin code a developer may write to query specific custom contract state attributes.
 * customer "Off Ledger" (private store) represents internal organisational data that may be joined with the vault data to perform additional reporting or processing
-* a vault query API is exposed to developers using standard Corda RPC and CorDapp plugin mechanisms
+* a :doc:`vault-query` API is exposed to developers using standard Corda RPC and CorDapp plugin mechanisms
 * a vault update API is internally used by transaction recording flows.
 * the vault database schemas are directly accessible via JDBC for customer joins and queries
 
-Section 8 of the `Technical white paper`_ describes features of the vault yet to be implemented including private key managament,
-soft state locking, state splitting and merging, asset re-issuance and node event scheduling.
+Section 8 of the `Technical white paper`_ describes features of the vault yet to be implemented including private key managament, state splitting and merging, asset re-issuance and node event scheduling.
 
 .. _`Technical white paper`: _static/corda-technical-whitepaper.pdf
 

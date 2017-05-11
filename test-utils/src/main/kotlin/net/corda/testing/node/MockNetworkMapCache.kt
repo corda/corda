@@ -2,12 +2,13 @@ package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import net.corda.core.crypto.DummyPublicKey
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapCache
-import net.corda.testing.MOCK_VERSION
+import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.getTestX509Name
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -15,13 +16,18 @@ import rx.subjects.PublishSubject
  * Network map cache with no backing map service.
  */
 class MockNetworkMapCache : InMemoryNetworkMapCache() {
+    private companion object {
+        val BANK_C = Party(getTestX509Name("Bank C"), DummyPublicKey("Bank C"))
+        val BANK_D = Party(getTestX509Name("Bank D"), DummyPublicKey("Bank D"))
+    }
+
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
-    data class MockAddress(val id: String): SingleMessageRecipient
+    data class MockAddress(val id: String) : SingleMessageRecipient
 
     init {
-        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), Party("Bank C", DummyPublicKey("Bank C")), MOCK_VERSION)
-        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), Party("Bank D", DummyPublicKey("Bank D")), MOCK_VERSION)
+        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), BANK_C, MOCK_VERSION_INFO.platformVersion)
+        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), BANK_D, MOCK_VERSION_INFO.platformVersion)
         registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
         registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
         runWithoutMapService()
@@ -41,7 +47,7 @@ class MockNetworkMapCache : InMemoryNetworkMapCache() {
      * not a change being received.
      */
     @VisibleForTesting
-    fun deleteRegistration(legalIdentity: Party) : Boolean {
+    fun deleteRegistration(legalIdentity: Party): Boolean {
         return registeredNodes.remove(legalIdentity.owningKey) != null
     }
 }

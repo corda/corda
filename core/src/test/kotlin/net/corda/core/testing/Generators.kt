@@ -2,12 +2,17 @@ package net.corda.core.testing
 
 import com.pholser.junit.quickcheck.generator.GenerationStatus
 import com.pholser.junit.quickcheck.generator.Generator
-import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.testing.getTestX509Name
+import org.bouncycastle.asn1.x500.X500Name
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Duration
@@ -33,27 +38,22 @@ class PrivateKeyGenerator : Generator<PrivateKey>(PrivateKey::class.java) {
     }
 }
 
+// TODO add CompositeKeyGenerator that actually does something useful.
 class PublicKeyGenerator : Generator<PublicKey>(PublicKey::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): PublicKey {
         return entropyToKeyPair(random.nextBigInteger(32)).public
     }
 }
 
-class CompositeKeyGenerator : Generator<CompositeKey>(CompositeKey::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): CompositeKey {
-        return entropyToKeyPair(random.nextBigInteger(32)).public.composite
-    }
-}
-
 class AnonymousPartyGenerator : Generator<AnonymousParty>(AnonymousParty::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): AnonymousParty {
-        return AnonymousParty(CompositeKeyGenerator().generate(random, status))
+        return AnonymousParty(PublicKeyGenerator().generate(random, status))
     }
 }
 
 class PartyGenerator : Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
+        return Party(X500NameGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
     }
 }
 
@@ -83,20 +83,20 @@ class TransactionStateGenerator<T : ContractState>(val stateGenerator: Generator
 }
 
 @Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
-class IssuedGenerator<T>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
+class IssuedGenerator<T : Any>(val productGenerator: Generator<T>) : Generator<Issued<T>>(Issued::class.java as Class<Issued<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Issued<T> {
         return Issued(PartyAndReferenceGenerator().generate(random, status), productGenerator.generate(random, status))
     }
 }
 
 @Suppress("CAST_NEVER_SUCCEEDS", "UNCHECKED_CAST")
-class AmountGenerator<T>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
+class AmountGenerator<T : Any>(val tokenGenerator: Generator<T>) : Generator<Amount<T>>(Amount::class.java as Class<Amount<T>>) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Amount<T> {
         return Amount(random.nextLong(0, 1000000), tokenGenerator.generate(random, status))
     }
 }
 
-class CurrencyGenerator() : Generator<Currency>(Currency::class.java) {
+class CurrencyGenerator : Generator<Currency>(Currency::class.java) {
     companion object {
         val currencies = Currency.getAvailableCurrencies().toList()
     }
@@ -124,3 +124,32 @@ class TimestampGenerator : Generator<Timestamp>(Timestamp::class.java) {
     }
 }
 
+class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
+    companion object {
+        private val charset = Charset.forName("US-ASCII")
+        private val asciiA = charset.encode("A")[0]
+        private val asciia = charset.encode("a")[0]
+    }
+
+    /**
+     * Append something that looks a bit like a proper noun to the string builder.
+     */
+    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness, status: GenerationStatus) : StringBuilder {
+        val length = random.nextByte(1, 8)
+        val encoded = ByteBuffer.allocate(length.toInt())
+        encoded.put((random.nextByte(0, 25) + asciiA).toByte())
+        for (charIdx in 1..length - 1) {
+            encoded.put((random.nextByte(0, 25) + asciia).toByte())
+        }
+        return builder.append(charset.decode(encoded))
+    }
+
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): X500Name {
+        val wordCount = random.nextByte(1, 3)
+        val cn = StringBuilder()
+        for (word in 0..wordCount) {
+            appendProperNoun(cn, random, status).append(" ")
+        }
+        return getTestX509Name(cn.trim().toString())
+    }
+}

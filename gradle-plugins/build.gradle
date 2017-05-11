@@ -3,11 +3,11 @@
 
 buildscript {
     // For sharing constants between builds
-    Properties props = new Properties()
-    file("../publish.properties").withInputStream { props.load(it) }
+    Properties constants = new Properties()
+    file("$projectDir/../constants.properties").withInputStream { constants.load(it) }
 
     // If you bump this version you must re-bootstrap the codebase. See the README for more information.
-    ext.gradle_plugins_version = props.getProperty("gradlePluginsVersion")
+    ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
 
     repositories {
         mavenLocal()

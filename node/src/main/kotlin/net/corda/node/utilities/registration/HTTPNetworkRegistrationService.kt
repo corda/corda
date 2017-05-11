@@ -1,5 +1,6 @@
 package net.corda.node.utilities.registration
 
+import com.google.common.net.MediaType
 import net.corda.core.crypto.CertificateStream
 import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
@@ -50,7 +51,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
         conn.outputStream.write(request.encoded)
 
         return when (conn.responseCode) {
-            HTTP_OK -> IOUtils.toString(conn.inputStream)
+            HTTP_OK -> IOUtils.toString(conn.inputStream, conn.charset)
             HTTP_FORBIDDEN -> throw IOException("Client version $clientVersion is forbidden from accessing permissioning server, please upgrade to newer version.")
             else -> throwUnexpectedResponseCode(conn)
         }
@@ -60,5 +61,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
         throw IOException("Unexpected response code ${connection.responseCode} - ${connection.errorMessage}")
     }
 
-    private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream)
+    private val HttpURLConnection.charset: String get() = MediaType.parse(contentType).charset().or(Charsets.UTF_8).name()
+
+    private val HttpURLConnection.errorMessage: String get() = IOUtils.toString(errorStream, charset)
 }

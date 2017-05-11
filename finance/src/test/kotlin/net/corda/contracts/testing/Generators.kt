@@ -25,7 +25,7 @@ class ContractStateGenerator : Generator<ContractState>(ContractState::class.jav
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): ContractState {
         return Cash.State(
                 amount = AmountGenerator(IssuedGenerator(CurrencyGenerator())).generate(random, status),
-                owner = CompositeKeyGenerator().generate(random, status)
+                owner = PublicKeyGenerator().generate(random, status)
         )
     }
 }
@@ -58,8 +58,8 @@ class CommandDataGenerator : Generator<CommandData>(CommandData::class.java) {
 class CommandGenerator : Generator<Command>(Command::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Command {
         val signersGenerator = ArrayListGenerator()
-        signersGenerator.addComponentGenerators(listOf(CompositeKeyGenerator()))
-        return Command(CommandDataGenerator().generate(random, status), CompositeKeyGenerator().generate(random, status))
+        signersGenerator.addComponentGenerators(listOf(PublicKeyGenerator()))
+        return Command(CommandDataGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
     }
 }
 
@@ -73,7 +73,7 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
                 commands = commands,
                 notary = PartyGenerator().generate(random, status),
                 signers = commands.flatMap { it.signers },
-                type = TransactionType.General(),
+                type = TransactionType.General,
                 timestamp = TimestampGenerator().generate(random, status)
         )
     }

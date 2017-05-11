@@ -7,9 +7,12 @@ open class StorageServiceImpl(override val attachments: AttachmentStorage,
                               override val validatedTransactions: TransactionStorage,
                               override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage)
     : SingletonSerializeAsToken(), TxWritableStorageService {
+    override val attachmentsClassLoaderEnabled = false
+
     lateinit override var uploaders: List<FileUploader>
 
     fun initUploaders(uploadersList: List<FileUploader>) {
+        @Suppress("DEPRECATION")
         uploaders = uploadersList
     }
 }

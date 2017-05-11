@@ -6,26 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output
@@ -41,12 +22,13 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
     compile project(':test-utils')
@@ -67,8 +49,8 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
-    ext.rpcUsers = [['user': "demo", 'password': "demo", 'permissions': [
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+    ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
             'StartFlow.net.corda.flows.IssuerFlow$IssuanceRequester',
             "StartFlow.net.corda.traderdemo.flow.SellerFlow"
     ]]]
@@ -76,41 +58,37 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
-    networkMap "Notary"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Notary"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
-        webPort 10004
         cordapps = []
     }
     node {
-        name "Bank A"
+        name "CN=Bank A,O=Bank A,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10005
         rpcPort 10006
-        webPort 10007
         cordapps = []
         rpcUsers = ext.rpcUsers
     }
     node {
-        name "Bank B"
+        name "CN=Bank B,O=Bank B,L=New York,C=US"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009
-        webPort 10010
         cordapps = []
         rpcUsers = ext.rpcUsers
     }
     node {
-        name "BankOfCorda"
+        name "CN=BankOfCorda,O=R3,OU=corda,L=New York,C=US"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10011
-        webPort 10012
         cordapps = []
     }
 }

@@ -15,7 +15,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.node.MockNetwork
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
 import org.junit.Before
@@ -60,7 +60,7 @@ class AttachmentTests {
         val (n0, n1) = network.createTwoNodes()
 
         // Insert an attachment into node zero's store directly.
-        val id = databaseTransaction(n0.database) {
+        val id = n0.database.transaction {
             n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
         }
 
@@ -71,7 +71,7 @@ class AttachmentTests {
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
-        val attachment = databaseTransaction(n1.database) {
+        val attachment = n1.database.transaction {
             n1.storage.attachments.openAttachment(id)!!
         }
 
@@ -118,7 +118,7 @@ class AttachmentTests {
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
-        val id = databaseTransaction(n0.database) {
+        val id = n0.database.transaction {
             n0.storage.attachments.importAttachment(ByteArrayInputStream(attachment))
         }
 
@@ -129,7 +129,7 @@ class AttachmentTests {
         val corruptAttachment = AttachmentEntity()
         corruptAttachment.attId = id
         corruptAttachment.content = attachment
-        databaseTransaction(n0.database) {
+        n0.database.transaction {
             (n0.storage.attachments as NodeAttachmentService).session.update(corruptAttachment)
         }
 

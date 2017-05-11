@@ -10,26 +10,6 @@ buildscript {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
-sourceSets {
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
-}
-
 dependencies {
 
     testCompile "junit:junit:$junit_version"
@@ -42,9 +22,8 @@ dependencies {
     testCompile project(":node")
     testCompile project(":test-utils")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-support-jdk8:0.3"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
     // Thread safety annotations
@@ -84,7 +63,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    compile 'net.i2p.crypto:eddsa:0.1.0'
+    compile 'net.i2p.crypto:eddsa:0.2.0'
 
     // Bouncy castle support needed for X509 certificate manipulation
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
@@ -93,20 +72,14 @@ dependencies {
     // JPA 2.1 annotations.
     compile "org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final"
 
-    // RS API: Response type and codes for ApiUtils.
-    compile "javax.ws.rs:javax.ws.rs-api:2.0.1"
-
     // Requery: SQL based query & persistence for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
+
+    // For AMQP serialisation.
+    compile "org.apache.qpid:proton-j:0.18.0"
 }
 
 configurations {
-    compile {
-        // We want to use SLF4J's version of these binding: jcl-over-slf4j
-        // Remove any transitive dependency on Apache's version.
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
-
     testArtifacts.extendsFrom testRuntime
 }
 

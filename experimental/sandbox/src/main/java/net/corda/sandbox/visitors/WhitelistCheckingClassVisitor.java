@@ -9,13 +9,11 @@ import net.corda.sandbox.Utils;
 import java.util.HashSet;
 import java.util.Set;
 
-import net.corda.sandbox.*;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static net.corda.sandbox.CandidateMethod.State.*;
 import static org.objectweb.asm.Opcodes.*;
 
 /**
@@ -149,11 +147,6 @@ public final class WhitelistCheckingClassVisitor extends ClassVisitor {
                     candidateMethod.deterministic();
                     break;
             }
-        }
-
-        // If the initial scan has produced a DISALLOWED code path
-        if (!candidacyStatus.isLoadable()) {
-            return;
         }
     }
 

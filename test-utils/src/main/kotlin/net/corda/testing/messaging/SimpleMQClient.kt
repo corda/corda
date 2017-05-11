@@ -1,18 +1,23 @@
 package net.corda.testing.messaging
 
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.core.crypto.X509Utilities
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.configureTestSSL
 import org.apache.activemq.artemis.api.core.client.*
+import org.bouncycastle.asn1.x500.X500Name
 
 /**
  * As the name suggests this is a simple client for connecting to MQ brokers.
  */
 class SimpleMQClient(val target: HostAndPort,
-                     override val config: SSLConfiguration? = configureTestSSL("SimpleMQClient")) : ArtemisMessagingComponent() {
+                     override val config: SSLConfiguration? = configureTestSSL(DEFAULT_MQ_LEGAL_NAME)) : ArtemisMessagingComponent() {
+    companion object {
+        val DEFAULT_MQ_LEGAL_NAME = X500Name("CN=SimpleMQClient,O=R3,OU=corda,L=London,C=UK")
+    }
     lateinit var sessionFactory: ClientSessionFactory
     lateinit var session: ClientSession
     lateinit var producer: ClientProducer

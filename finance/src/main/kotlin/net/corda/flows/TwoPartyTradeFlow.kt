@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
@@ -16,6 +17,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -50,7 +52,7 @@ object TwoPartyTradeFlow {
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: CompositeKey
+            val sellerOwnerKey: PublicKey
     )
 
     @CordaSerializable
@@ -72,6 +74,7 @@ object TwoPartyTradeFlow {
             object COMMITTING : ProgressTracker.Step("Committing transaction to the ledger") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
             }
+
             // DOCEND 3
             object SENDING_FINAL_TX : ProgressTracker.Step("Sending final transaction to buyer")
 
@@ -94,7 +97,7 @@ object TwoPartyTradeFlow {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val myPublicKey = myKeyPair.public.composite
+            val myPublicKey = myKeyPair.public
             // Make the first message we'll send to kick off the flow.
             val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
@@ -133,7 +136,7 @@ object TwoPartyTradeFlow {
 
         open fun calculateOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
-            return myKeyPair.signWithECDSA(partialTX.id)
+            return myKeyPair.sign(partialTX.id)
         }
     }
 
@@ -197,9 +200,9 @@ object TwoPartyTradeFlow {
             }
         }
 
-        private fun signWithOurKeys(cashSigningPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in cashSigningPubKeys.keys) {
+            for (publicKey in cashSigningPubKeys.expandedCompositeKeys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
                 ptx.signWith(KeyPair(publicKey, privateKey))
             }
@@ -207,7 +210,8 @@ object TwoPartyTradeFlow {
             return ptx.toSignedTransaction(checkSufficientSignatures = false)
         }
 
-        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<CompositeKey>> {
+        @Suspendable
+        private fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
@@ -221,7 +225,7 @@ object TwoPartyTradeFlow {
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public.composite)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
 

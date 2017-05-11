@@ -6,14 +6,15 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
-import net.corda.node.services.persistence.DataVending.Service.NotifyTransactionHandler
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.services.NotifyTransactionHandler
+import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -48,7 +49,7 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction()
-        databaseTransaction(vaultServiceNode.database) {
+        vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
@@ -78,7 +79,7 @@ class DataVendingServiceTests {
         val registerKey = registerNode.services.legalIdentityKey
         ptx.signWith(registerKey)
         val tx = ptx.toSignedTransaction(false)
-        databaseTransaction(vaultServiceNode.database) {
+        vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
             registerNode.sendNotifyTx(tx, vaultServiceNode)
@@ -89,12 +90,13 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.services.registerFlowInitiator(NotifyTxFlow::class.java, ::NotifyTransactionHandler)
+        walletServiceNode.registerServiceFlow(clientFlowClass = NotifyTxFlow::class, serviceFlowFactory = ::NotifyTransactionHandler)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }
 
 
+    @InitiatingFlow
     private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() = send(otherParty, NotifyTxRequest(stx))

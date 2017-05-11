@@ -4,15 +4,19 @@ import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
-import net.corda.flows.IssuerFlow
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashPaymentFlow
+import net.corda.flows.IssuerFlow
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.BOC
+import org.bouncycastle.asn1.x500.X500Name
 import kotlin.system.exitProcess
 
 /**
@@ -24,6 +28,8 @@ fun main(args: Array<String>) {
 
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
+
+val BIGCORP_LEGAL_NAME = X500Name("CN=BigCorporation,O=R3,OU=corda,L=London,C=UK")
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -53,16 +59,15 @@ private class BankOfCordaDriver {
             driver(dsl = {
                 val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
                 val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
-                startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type)))
-                val bankOfCorda = startNode("BankOfCorda", rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
-                startNode("BigCorporation", rpcUsers = listOf(bigCorpUser))
+                startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
+                val bankOfCorda = startNode(BOC.name, rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
+                startNode(BIGCORP_LEGAL_NAME, rpcUsers = listOf(bigCorpUser))
                 startWebserver(bankOfCorda.get())
                 waitForAllNodesToFinish()
             }, isDebug = true)
-        }
-        else {
+        } else {
             try {
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), "BigCorporation", "1", "BankOfCorda")
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name)
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
@@ -76,10 +81,8 @@ private class BankOfCordaDriver {
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }
-                    Role.ISSUER -> {}
                 }
-            }
-            catch (e: Exception) {
+            } catch (e: Exception) {
                 println("Exception occurred: $e \n ${e.printStackTrace()}")
                 exitProcess(1)
             }

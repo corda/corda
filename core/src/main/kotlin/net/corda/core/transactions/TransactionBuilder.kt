@@ -1,9 +1,13 @@
 package net.corda.core.transactions
 
+import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowStateMachine
+import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
+import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -25,13 +29,14 @@ import java.util.*
  * but for the [TransactionType.NotaryChange] transactions it is the set of all input [ContractState.participants].
  */
 open class TransactionBuilder(
-        protected val type: TransactionType = TransactionType.General(),
+        protected val type: TransactionType = TransactionType.General,
         var notary: Party? = null,
+        var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
-        protected val signers: MutableSet<CompositeKey> = mutableSetOf(),
+        protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var timestamp: Timestamp? = null) {
 
     val time: Timestamp? get() = timestamp
@@ -93,7 +98,7 @@ open class TransactionBuilder(
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
-        addSignatureUnchecked(key.signWithECDSA(data.bytes))
+        addSignatureUnchecked(key.sign(data.bytes))
         return this
     }
 
@@ -117,7 +122,7 @@ open class TransactionBuilder(
      */
     fun checkSignature(sig: DigitalSignature.WithKey) {
         require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
-        sig.verifyWithECDSA(toWireTransaction().id)
+        sig.verify(toWireTransaction().id)
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
@@ -132,7 +137,7 @@ open class TransactionBuilder(
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<CompositeKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
+            val missing: Set<PublicKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
             if (missing.isNotEmpty())
                 throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
         }
@@ -143,7 +148,7 @@ open class TransactionBuilder(
     open fun addInputState(stateAndRef: StateAndRef<*>) {
         check(currentSigs.isEmpty())
         val notary = stateAndRef.state.notary
-        require(notary == this.notary) { "Input state requires notary \"${notary}\" which does not match the transaction notary \"${this.notary}\"." }
+        require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
         inputs.add(stateAndRef.ref)
     }
@@ -175,8 +180,8 @@ open class TransactionBuilder(
         commands.add(arg)
     }
 
-    fun addCommand(data: CommandData, vararg keys: CompositeKey) = addCommand(Command(data, listOf(*keys)))
-    fun addCommand(data: CommandData, keys: List<CompositeKey>) = addCommand(Command(data, keys))
+    fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
+    fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)

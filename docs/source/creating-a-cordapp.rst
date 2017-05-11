@@ -128,8 +128,8 @@ the following segments to the relevant part of your build.gradle.
 .. code-block:: groovy
 
     buildscript {
-        ext.corda_version = '<enter the corda version you build against here>'
-        ext.corda_gradle_plugins_version = '<enter the gradle plugins version here>' // This is usually the same as corda_version.
+        ext.corda_release_version = '<enter the corda version you build against here>'
+        ext.corda_gradle_plugins_version = '<enter the gradle plugins version here>' // This is usually the same as corda_release_version.
         ... your buildscript ...
 
         repositories {
@@ -155,10 +155,10 @@ the following segments to the relevant part of your build.gradle.
     }
 
     dependencies {
-        compile "net.corda.core:$corda_version"
-        compile "net.corda.finance:$corda_version"
-        compile "net.corda.node:$corda_version"
-        compile "net.corda.corda:$corda_version"
+        compile "net.corda.core:$corda_release_version"
+        compile "net.corda.finance:$corda_release_version"
+        compile "net.corda.node:$corda_release_version"
+        compile "net.corda.corda:$corda_release_version"
         ... other dependencies here ...
     }
 
@@ -192,34 +192,37 @@ is a three node example;
 
 .. code-block:: text
 
-    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes" // The output directory
-        networkMap "Controller" // The artemis address of the node named here will be used as the networkMapService.address on all other nodes.
+        networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node named here will be used as the networkMapService.address on all other nodes.
         node {
-            name "Controller"
+            name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
             nearestCity "London"
             advertisedServices = [ "corda.notary.validating" ]
             p2pPort 10002
             rpcPort 10003
             webPort 10004
+            h2Port 11002
             cordapps []
         }
         node {
-            name "NodeA"
+            name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
             nearestCity "London"
             advertisedServices = []
             p2pPort 10005
             rpcPort 10006
             webPort 10007
+            h2Port 11005
             cordapps []
         }
         node {
-            name "NodeB"
+            name "CN=NodeB,O=R3,OU=corda,L=New York,C=US"
             nearestCity "New York"
             advertisedServices = []
             p2pPort 10008
             rpcPort 10009
             webPort 10010
+            h2Port 11008
             cordapps []
         }
     }

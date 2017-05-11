@@ -6,6 +6,9 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
+import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
@@ -18,6 +21,10 @@ import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.CHARLIE
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -30,21 +37,25 @@ import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.DriverBasedTest
 import net.corda.testing.sequence
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import rx.Observable
 
 class NodeMonitorModelTest : DriverBasedTest() {
     lateinit var aliceNode: NodeInfo
+    lateinit var bobNode: NodeInfo
     lateinit var notaryNode: NodeInfo
 
     lateinit var rpc: CordaRPCOps
+    lateinit var rpcBob: CordaRPCOps
     lateinit var stateMachineTransactionMapping: Observable<StateMachineTransactionMapping>
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
+    lateinit var stateMachineUpdatesBob: Observable<StateMachineUpdate>
     lateinit var progressTracking: Observable<ProgressTrackingEvent>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>
     lateinit var networkMapUpdates: Observable<NetworkMapCache.MapChange>
-    lateinit var newNode: (String) -> NodeInfo
+    lateinit var newNode: (X500Name) -> NodeInfo
 
     override fun setup() = driver {
         val cashUser = User("user1", "test", permissions = setOf(
@@ -52,15 +63,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
                 startFlowPermission<CashPaymentFlow>(),
                 startFlowPermission<CashExitFlow>())
         )
-        val aliceNodeFuture = startNode("Alice", rpcUsers = listOf(cashUser))
-        val notaryNodeFuture = startNode("Notary", advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
+        val aliceNodeFuture = startNode(ALICE.name, rpcUsers = listOf(cashUser))
+        val notaryNodeFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val aliceNodeHandle = aliceNodeFuture.getOrThrow()
         val notaryNodeHandle = notaryNodeFuture.getOrThrow()
         aliceNode = aliceNodeHandle.nodeInfo
         notaryNode = notaryNodeHandle.nodeInfo
         newNode = { nodeName -> startNode(nodeName).getOrThrow().nodeInfo }
         val monitor = NodeMonitorModel()
-
         stateMachineTransactionMapping = monitor.stateMachineTransactionMapping.bufferUntilSubscribed()
         stateMachineUpdates = monitor.stateMachineUpdates.bufferUntilSubscribed()
         progressTracking = monitor.progressTracking.bufferUntilSubscribed()
@@ -70,26 +80,32 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
         monitor.register(aliceNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
         rpc = monitor.proxyObservable.value!!
+
+        val bobNodeHandle = startNode(BOB.name, rpcUsers = listOf(cashUser)).getOrThrow()
+        bobNode = bobNodeHandle.nodeInfo
+        val monitorBob = NodeMonitorModel()
+        stateMachineUpdatesBob = monitorBob.stateMachineUpdates.bufferUntilSubscribed()
+        monitorBob.register(bobNodeHandle.configuration.rpcAddress!!, cashUser.username, cashUser.password)
+        rpcBob = monitorBob.proxyObservable.value!!
         runTest()
     }
 
     @Test
     fun `network map update`() {
-        newNode("Bob")
-        newNode("Charlie")
+        newNode(CHARLIE.name)
         networkMapUpdates.filter { !it.node.advertisedServices.any { it.info.type.isNotary() } }
                 .filter { !it.node.advertisedServices.any { it.info.type == NetworkMapService.type } }
                 .expectEvents(isStrict = false) {
                     sequence(
                             // TODO : Add test for remove when driver DSL support individual node shutdown.
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == "Alice") { "Expecting : Alice, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.legalIdentity.name == ALICE.name) { "Expecting : ${ALICE.name}, Actual : ${output.node.legalIdentity.name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == "Bob") { "Expecting : Bob, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.legalIdentity.name == BOB.name) { "Expecting : ${BOB.name}, Actual : ${output.node.legalIdentity.name}" }
                             },
                             expect { output: NetworkMapCache.MapChange ->
-                                require(output.node.legalIdentity.name == "Charlie") { "Expecting : Charlie, Actual : ${output.node.legalIdentity.name}" }
+                                require(output.node.legalIdentity.name == CHARLIE.name) { "Expecting : ${CHARLIE.name}, Actual : ${output.node.legalIdentity.name}" }
                             }
                     )
                 }
@@ -108,12 +124,12 @@ class NodeMonitorModelTest : DriverBasedTest() {
             sequence(
                     // SNAPSHOT
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
-                        require(output.produced.size == 0) { output.produced.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
+                        require(output.produced.isEmpty()) { output.produced.size }
                     },
                     // ISSUE
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
                         require(output.produced.size == 1) { output.produced.size }
                     }
             )
@@ -123,7 +139,7 @@ class NodeMonitorModelTest : DriverBasedTest() {
     @Test
     fun `cash issue and move`() {
         rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, aliceNode.legalIdentity).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
@@ -134,6 +150,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
                         issueSmId = add.id
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == issueSmId)
@@ -141,6 +159,8 @@ class NodeMonitorModelTest : DriverBasedTest() {
                     // MOVE
                     expect { add: StateMachineUpdate.Added ->
                         moveSmId = add.id
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is FlowInitiator.RPC && initiator.username == "user1")
                     },
                     expect { remove: StateMachineUpdate.Removed ->
                         require(remove.id == moveSmId)
@@ -148,28 +168,38 @@ class NodeMonitorModelTest : DriverBasedTest() {
             )
         }
 
+        stateMachineUpdatesBob.expectEvents {
+            sequence(
+                    // MOVE
+                    expect { add: StateMachineUpdate.Added ->
+                        val initiator = add.stateMachineInfo.initiator
+                        require(initiator is FlowInitiator.Peer && initiator.party.name == aliceNode.legalIdentity.name)
+                    }
+            )
+        }
+
         transactions.expectEvents {
             sequence(
                     // ISSUE
-                    expect { tx ->
-                        require(tx.tx.inputs.isEmpty())
-                        require(tx.tx.outputs.size == 1)
-                        val signaturePubKeys = tx.sigs.map { it.by }.toSet()
+                    expect { stx ->
+                        require(stx.tx.inputs.isEmpty())
+                        require(stx.tx.outputs.size == 1)
+                        val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Only Alice signed
                         val aliceKey = aliceNode.legalIdentity.owningKey
                         require(signaturePubKeys.size <= aliceKey.keys.size)
                         require(aliceKey.isFulfilledBy(signaturePubKeys))
-                        issueTx = tx
+                        issueTx = stx
                     },
                     // MOVE
-                    expect { tx ->
-                        require(tx.tx.inputs.size == 1)
-                        require(tx.tx.outputs.size == 1)
-                        val signaturePubKeys = tx.sigs.map { it.by }.toSet()
+                    expect { stx ->
+                        require(stx.tx.inputs.size == 1)
+                        require(stx.tx.outputs.size == 1)
+                        val signaturePubKeys = stx.sigs.map { it.by }.toSet()
                         // Alice and Notary signed
                         require(aliceNode.legalIdentity.owningKey.isFulfilledBy(signaturePubKeys))
                         require(notaryNode.notaryIdentity.owningKey.isFulfilledBy(signaturePubKeys))
-                        moveTx = tx
+                        moveTx = stx
                     }
             )
         }
@@ -178,18 +208,18 @@ class NodeMonitorModelTest : DriverBasedTest() {
             sequence(
                     // SNAPSHOT
                     expect { output: Vault.Update ->
-                        require(output.consumed.size == 0) { output.consumed.size }
-                        require(output.produced.size == 0) { output.produced.size }
+                        require(output.consumed.isEmpty()) { output.consumed.size }
+                        require(output.produced.isEmpty()) { output.produced.size }
                     },
                     // ISSUE
                     expect { update ->
-                        require(update.consumed.size == 0) { update.consumed.size }
+                        require(update.consumed.isEmpty()) { update.consumed.size }
                         require(update.produced.size == 1) { update.produced.size }
                     },
                     // MOVE
                     expect { update ->
                         require(update.consumed.size == 1) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                        require(update.produced.isEmpty()) { update.produced.size }
                     }
             )
         }

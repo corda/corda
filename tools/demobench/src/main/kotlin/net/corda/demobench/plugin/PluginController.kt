@@ -1,13 +1,13 @@
 package net.corda.demobench.plugin
 
-import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.stream.Stream
 import net.corda.demobench.model.HasPlugins
 import net.corda.demobench.model.JVMConfig
 import net.corda.demobench.model.NodeConfig
 import tornadofx.*
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.stream.Stream
 
 class PluginController : Controller() {
 
@@ -22,7 +22,7 @@ class PluginController : Controller() {
     fun populate(config: NodeConfig) {
         // Nodes cannot issue cash unless they contain the "Bank of Corda" plugin.
         if (config.isCashIssuer && bankOfCorda.isFile) {
-            bankOfCorda.copyTo(config.pluginDir.resolve(bankOfCorda.name).toFile(), overwrite=true)
+            bankOfCorda.copyTo(config.pluginDir.resolve(bankOfCorda.name).toFile(), overwrite = true)
             log.info("Installed 'Bank of Corda' plugin")
         }
     }

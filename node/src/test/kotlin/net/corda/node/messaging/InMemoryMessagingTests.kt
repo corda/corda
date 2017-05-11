@@ -1,10 +1,10 @@
 package net.corda.node.messaging
 
-import net.corda.core.messaging.Message
-import net.corda.core.messaging.TopicStringValidator
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
+import net.corda.node.services.messaging.Message
+import net.corda.node.services.messaging.TopicStringValidator
+import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
 import org.junit.Test
@@ -41,13 +41,13 @@ class InMemoryMessagingTests {
         var finalDelivery: Message? = null
 
         with(node2) {
-            node2.net.addMessageHandler { msg, registration ->
+            node2.net.addMessageHandler { msg, _ ->
                 node2.net.send(msg, node3.info.address)
             }
         }
 
         with(node3) {
-            node2.net.addMessageHandler { msg, registration ->
+            node2.net.addMessageHandler { msg, _ ->
                 finalDelivery = msg
             }
         }
@@ -69,7 +69,7 @@ class InMemoryMessagingTests {
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.net.addMessageHandler { msg, registration -> counter++ } }
+        listOf(node1, node2, node3).forEach { it.net.addMessageHandler { _, _ -> counter++ } }
         node1.net.send(node2.net.createMessage("test.topic", DEFAULT_SESSION_ID, bits), network.messagingNetwork.everyoneOnline)
         network.runNetwork(rounds = 1)
         assertEquals(3, counter)
@@ -85,7 +85,7 @@ class InMemoryMessagingTests {
         val node2 = network.createNode(networkMapAddress = node1.info.address)
         var received: Int = 0
 
-        node1.net.addMessageHandler("valid_message") { msg, reg ->
+        node1.net.addMessageHandler("valid_message") { _, _ ->
             received++
         }
 

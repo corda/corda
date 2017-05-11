@@ -1,5 +1,5 @@
 buildscript {
-    ext.tornadofx_version = '1.6.2'
+    ext.tornadofx_version = '1.7.3'
     ext.jna_version = '4.1.0'
     ext.purejavacomm_version = '0.0.17'
     ext.controlsfx_version = '8.40.12'
@@ -23,21 +23,18 @@ apply plugin: 'application'
 evaluationDependsOn(':tools:explorer:capsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
-applicationDefaultJvmArgs = ['-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig', '-Dorg.jboss.logging.provider=slf4j']
+applicationDefaultJvmArgs = [
+        '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+        '-Dorg.jboss.logging.provider=slf4j'
+]
 
 repositories {
     flatDir {
         dirs 'libs'
     }
-
-    mavenLocal()
-    mavenCentral()
-    jcenter()
     maven {
+        jcenter()
         url 'http://www.sparetimelabs.com/maven2'
-    }
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
     }
 }
 
@@ -48,12 +45,8 @@ dependencies {
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
-    compile (project(':client:rpc')) {
-        exclude module: 'junit'
-    }
-    compile (project(':finance')) {
-        exclude module: 'junit'
-    }
+    compile project(':client:rpc')
+    compile project(':finance')
 
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
@@ -65,6 +58,9 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-core:$log4j_version"
     compile "com.typesafe:config:$typesafe_config_version"
 
+    // FontAwesomeFX: icons in the form of a font.
+    compile "de.jensd:fontawesomefx-fontawesome:4.7.0-5"
+
     // These libraries don't exist in any Maven repository I can find.
     // See: https://github.com/JetBrains/jediterm
     //
@@ -73,14 +69,17 @@ dependencies {
     compile ':jediterm-terminal-2.5'
     compile ':pty4j-0.7.2'
 
+    testCompile project(':node')
+    testCompile project(':webserver')
+
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    testCompile "org.mockito:mockito-core:$mockito_version"
 }
 
 jar {
     manifest {
         attributes(
-            'Corda-Version': corda_version,
             'Main-Class': mainClassName,
             'Class-Path': configurations.compile.collect { it.getName() }.join(' ')
         )
@@ -112,7 +111,7 @@ distributions {
                 rename 'corda-(.*)', 'corda.jar'
                 into 'corda'
             }
-            from(project(':node:webserver:webcapsule').tasks.buildWebserverJar) {
+            from(project(':webserver:webcapsule').tasks.buildWebserverJar) {
                 rename 'corda-webserver-(.*)', 'corda-webserver.jar'
                 into 'corda'
             }
@@ -120,7 +119,7 @@ distributions {
                 rename 'bank-of-corda-demo-(.*)', 'bank-of-corda.jar'
                 into 'plugins'
             }
-       }
+        }
     }
 }
 
@@ -168,13 +167,13 @@ task javapackage(dependsOn: 'distZip') {
         }
 
         ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+                resource: 'com/sun/javafx/tools/ant/antlib.xml',
+                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {
-            application(name: 'DemoBench', version: pkg_version, mainClass: mainClassName)
-            info(title: 'DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
+            application(name: 'Corda DemoBench', version: pkg_version, mainClass: mainClassName)
+            info(title: 'Corda DemoBench', vendor: 'R3', description: 'A sales and educational tool for demonstrating Corda.')
             resources {
                 fileset(dir: "$dist_source/lib", type: 'jar') {
                     include(name: '*.jar')
@@ -199,7 +198,7 @@ task javapackage(dependsOn: 'distZip') {
                 property(name: 'org.jboss.logging.provider', value: 'slf4j')
             }
 
-            preferences(install: false)
+            preferences(install: true)
         }
     }
 }

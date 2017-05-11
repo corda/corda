@@ -2,9 +2,10 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
@@ -28,8 +29,9 @@ object IssuerFlow {
      * IssuanceRequester should be used by a client to ask a remote node to issue some [FungibleAsset] with the given details.
      * Returns the transaction created by the Issuer to move the cash to the Requester.
      */
+    @InitiatingFlow
     class IssuanceRequester(val amount: Amount<Currency>, val issueToParty: Party, val issueToPartyRef: OpaqueBytes,
-                            val issuerBankParty: Party): FlowLogic<SignedTransaction>() {
+                            val issuerBankParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         @Throws(CashException::class)
         override fun call(): SignedTransaction {
@@ -42,12 +44,13 @@ object IssuerFlow {
      * Issuer refers to a Node acting as a Bank Issuer of [FungibleAsset], and processes requests from a [IssuanceRequester] client.
      * Returns the generated transaction representing the transfer of the [Issued] [FungibleAsset] to the issue requester.
      */
-    class Issuer(val otherParty: Party): FlowLogic<SignedTransaction>() {
+    class Issuer(val otherParty: Party) : FlowLogic<SignedTransaction>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
             object ISSUING : ProgressTracker.Step("Self issuing asset")
             object TRANSFERRING : ProgressTracker.Step("Transferring asset to issuance requester")
             object SENDING_CONFIRM : ProgressTracker.Step("Confirming asset issuance to requester")
+
             fun tracker() = ProgressTracker(AWAITING_REQUEST, ISSUING, TRANSFERRING, SENDING_CONFIRM)
             private val VALID_CURRENCIES = listOf(USD, GBP, EUR, CHF)
         }
@@ -70,8 +73,6 @@ object IssuerFlow {
             return txn
         }
 
-        // TODO: resolve race conditions caused by the 2 separate Cashflow commands (Issue and Pay) not reusing the same
-        //       state references (thus causing Notarisation double spend exceptions).
         @Suspendable
         private fun issueCashTo(amount: Amount<Currency>,
                                 issueTo: Party,
@@ -97,7 +98,7 @@ object IssuerFlow {
 
         class Service(services: PluginServiceHub) {
             init {
-                services.registerFlowInitiator(IssuanceRequester::class.java, ::Issuer)
+                services.registerServiceFlow(IssuanceRequester::class.java, ::Issuer)
             }
         }
     }

@@ -8,20 +8,9 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 
 description 'Corda finance modules'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 dependencies {
     compile project(':core')
+    compile project(':node-schemas')
 
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
@@ -32,14 +21,6 @@ dependencies {
     //       of javassist:javassist.
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
-}
-
-sourceSets {
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
 }
 
 configurations.testCompile {

@@ -3,23 +3,18 @@ package net.corda.contracts
 import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
 import net.corda.core.days
-import net.corda.core.node.recordTransactions
+import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -40,7 +35,7 @@ interface ICommercialPaperTestTemplate {
     fun getMoveCommand(): CommandData
 }
 
-class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
+class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
             MEGA_CORP.ref(123),
             MEGA_CORP_PUBKEY,
@@ -53,7 +48,7 @@ class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
     override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
 }
 
-class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
+class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,
@@ -66,7 +61,7 @@ class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
     override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
 }
 
-class KotlinCommercialPaperLegacyTest() : ICommercialPaperTestTemplate {
+class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaperLegacy.State(
             issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_PUBKEY,
@@ -199,11 +194,6 @@ class CommercialPaperTestsGeneric {
         }
     }
 
-    fun cashOutputsToVault(vararg outputs: TransactionState<Cash.State>): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*outputs), emptyList(), emptyList(), SecureHash.randomSHA256(), null, emptyList(), null, TransactionType.General())
-        return Pair(ltx, outputs.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.id, index)) })
-    }
-
     /**
      *  Unit test requires two separate Database instances to represent each of the two
      *  transaction participants (enforces uniqueness of vault content in lieu of partipant identity)
@@ -225,10 +215,10 @@ class CommercialPaperTestsGeneric {
         val dataSourcePropsAlice = makeTestDataSourceProperties()
         val dataSourceAndDatabaseAlice = configureDatabase(dataSourcePropsAlice)
         val databaseAlice = dataSourceAndDatabaseAlice.second
-        databaseTransaction(databaseAlice) {
+        databaseAlice.transaction {
 
             aliceServices = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourcePropsAlice)
+                override val vaultService: VaultService = makeVaultService(dataSourcePropsAlice)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -245,10 +235,10 @@ class CommercialPaperTestsGeneric {
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
         val dataSourceAndDatabaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
         val databaseBigCorp = dataSourceAndDatabaseBigCorp.second
-        databaseTransaction(databaseBigCorp) {
+        databaseBigCorp.transaction {
 
             bigCorpServices = object : MockServices() {
-                override val vaultService: VaultService = NodeVaultService(this, dataSourcePropsBigCorp)
+                override val vaultService: VaultService = makeVaultService(dataSourcePropsBigCorp)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -276,12 +266,12 @@ class CommercialPaperTestsGeneric {
                     signWith(DUMMY_NOTARY_KEY)
                 }.toSignedTransaction()
 
-        databaseTransaction(databaseAlice) {
+        databaseAlice.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public.composite)
-                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public.composite)
+                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
+                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
                 ptx.signWith(bigCorpServices.key)
                 ptx.signWith(aliceServices.key)
                 ptx.signWith(DUMMY_NOTARY_KEY)
@@ -289,33 +279,39 @@ class CommercialPaperTestsGeneric {
             }
         }
 
-        databaseTransaction(databaseBigCorp) {
-            fun makeRedeemTX(time: Instant): SignedTransaction {
-                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                ptx.setTime(time, 30.seconds)
-                CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
-                ptx.signWith(aliceServices.key)
-                ptx.signWith(bigCorpServices.key)
-                ptx.signWith(DUMMY_NOTARY_KEY)
-                return ptx.toSignedTransaction()
-            }
-
-            val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)
-            val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
-
+        databaseBigCorp.transaction {
             // Verify the txns are valid and insert into both sides.
             listOf(issueTX, moveTX).forEach {
                 it.toLedgerTransaction(aliceServices).verify()
                 aliceServices.recordTransactions(it)
                 bigCorpServices.recordTransactions(it)
             }
+        }
 
+        databaseBigCorp.transaction {
+            fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
+                val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
+                ptx.setTime(time, 30.seconds)
+                CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
+                ptx.signWith(aliceServices.key)
+                ptx.signWith(bigCorpServices.key)
+                ptx.signWith(DUMMY_NOTARY_KEY)
+                return Pair(ptx.toSignedTransaction(), ptx.lockId)
+            }
+
+            val redeemTX = makeRedeemTX(TEST_TX_TIME + 10.days)
+            val tooEarlyRedemption = redeemTX.first
+            val tooEarlyRedemptionLockId = redeemTX.second
             val e = assertFailsWith(TransactionVerificationException::class) {
                 tooEarlyRedemption.toLedgerTransaction(aliceServices).verify()
             }
+            // manually release locks held by this failing transaction
+            aliceServices.vaultService.softLockRelease(tooEarlyRedemptionLockId)
             assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
+            val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days).first
             validRedemption.toLedgerTransaction(aliceServices).verify()
+            // soft lock not released after success either!!! (as transaction not recorded)
         }
     }
 }

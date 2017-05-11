@@ -7,18 +7,22 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.testing.BOC
+import net.corda.testing.http.HttpUtils
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
+import kotlin.test.assertTrue
 
 class BankOfCordaHttpAPITest {
     @Test
     fun `issuer flow via Http`() {
         driver(dsl = {
             val (nodeBankOfCorda) = Futures.allAsList(
-                startNode("BankOfCorda", setOf(ServiceInfo(SimpleNotaryService.type))),
-                startNode("BigCorporation")
+                    startNode(BOC.name, setOf(ServiceInfo(SimpleNotaryService.type))),
+                    startNode(BIGCORP_LEGAL_NAME)
             ).getOrThrow()
-            val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow()
-            assert(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", "BigCorporation", "1", "BankOfCorda")))
+            val nodeBankOfCordaApiAddr = startWebserver(nodeBankOfCorda).getOrThrow().listenAddress
+            assertTrue(BankOfCordaClientApi(nodeBankOfCordaApiAddr).requestWebIssue(IssueRequestParams(1000, "USD", BIGCORP_LEGAL_NAME, "1", BOC.name)))
         }, isDebug = true)
     }
 }

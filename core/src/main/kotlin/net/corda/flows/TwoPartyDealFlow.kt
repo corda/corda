@@ -1,14 +1,12 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DealState
-import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.recordTransactions
-import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -19,6 +17,7 @@ import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.KeyPair
+import java.security.PublicKey
 
 /**
  * Classes for manipulating a two party deal or agreement.
@@ -31,29 +30,12 @@ import java.security.KeyPair
  *
  */
 object TwoPartyDealFlow {
-
-    @CordaSerializable
-    class DealMismatchException(val expectedDeal: ContractState, val actualDeal: ContractState) : Exception() {
-        override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
-    }
-
-    @CordaSerializable
-    class DealRefMismatchException(val expectedDeal: StateRef, val actualDeal: StateRef) : Exception() {
-        override fun toString() = "The submitted deal didn't match the expected: $expectedDeal vs $actualDeal"
-    }
-
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable
-    data class Handshake<out T>(val payload: T, val publicKey: CompositeKey)
+    data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
 
     @CordaSerializable
     class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
-
-    /**
-     * [Primary] at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
-     * sepearate session with the regulator. This interface is used to do that in [Primary.getCounterpartyMarker].
-     */
-    interface MarkerForBogusRegulatorFlow
 
     /**
      * Abstracted bilateral deal flow participant that initiates communication/handshake.
@@ -80,20 +62,12 @@ object TwoPartyDealFlow {
         abstract val otherParty: Party
         abstract val myKeyPair: KeyPair
 
-        override fun getCounterpartyMarker(party: Party): Class<*> {
-            return if (serviceHub.networkMapCache.regulatorNodes.any { it.legalIdentity == party }) {
-                MarkerForBogusRegulatorFlow::class.java
-            } else {
-                super.getCounterpartyMarker(party)
-            }
-        }
-
         @Suspendable
         fun getPartialTransaction(): UntrustworthyData<SignedTransaction> {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
             // Make the first message we'll send to kick off the flow.
-            val hello = Handshake(payload, myKeyPair.public.composite)
+            val hello = Handshake(payload, myKeyPair.public)
             val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
 
             return maybeSTX
@@ -107,7 +81,7 @@ object TwoPartyDealFlow {
                 progressTracker.nextStep()
 
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public.composite, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${stx.id}" }
 
                 checkDependencies(stx)
@@ -157,9 +131,8 @@ object TwoPartyDealFlow {
             progressTracker.currentStep = COPYING_TO_REGULATOR
             val regulators = serviceHub.networkMapCache.regulatorNodes
             if (regulators.isNotEmpty()) {
-                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
-                // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), fullySigned) }
+                // If there are regulators in the network, then we could copy them in on the transaction via a sub-flow
+                // which would simply send them the transaction.
             }
 
             return fullySigned
@@ -173,7 +146,7 @@ object TwoPartyDealFlow {
 
         open fun computeOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
-            return myKeyPair.signWithECDSA(partialTX.id)
+            return myKeyPair.sign(partialTX.id)
         }
 
         @Suspendable
@@ -254,9 +227,9 @@ object TwoPartyDealFlow {
             return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
         }
 
-        private fun signWithOurKeys(signingPubKeys: List<CompositeKey>, ptx: TransactionBuilder): SignedTransaction {
+        private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in signingPubKeys.keys) {
+            for (publicKey in signingPubKeys.expandedCompositeKeys) {
                 val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
                 ptx.signWith(KeyPair(publicKey, privateKey))
             }
@@ -265,7 +238,7 @@ object TwoPartyDealFlow {
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
-        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<CompositeKey>>
+        @Suspendable protected abstract fun assembleSharedTX(handshake: Handshake<U>): Pair<TransactionBuilder, List<PublicKey>>
     }
 
     @CordaSerializable
@@ -298,7 +271,7 @@ object TwoPartyDealFlow {
             return handshake.copy(payload = autoOffer.copy(dealBeingOffered = deal))
         }
 
-        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<CompositeKey>> {
+        override fun assembleSharedTX(handshake: Handshake<AutoOffer>): Pair<TransactionBuilder, List<PublicKey>> {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 

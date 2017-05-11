@@ -4,7 +4,10 @@ import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.Uninterruptibles
 import net.corda.core.utilities.loggerFor
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.function.Supplier
 
 /**
@@ -51,13 +54,12 @@ interface AffinityExecutor : Executor {
      * tasks in the future and verify code is running on the executor.
      */
     open class ServiceAffinityExecutor(threadName: String, numThreads: Int) : AffinityExecutor,
-            ThreadPoolExecutor(numThreads, numThreads, 0L, TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>()) {
+            ScheduledThreadPoolExecutor(numThreads) {
         companion object {
             val logger = loggerFor<ServiceAffinityExecutor>()
         }
 
         private val threads = Collections.synchronizedSet(HashSet<Thread>())
-        private val uncaughtExceptionHandler = Thread.currentThread().uncaughtExceptionHandler
 
         init {
             setThreadFactory(fun(runnable: Runnable): Thread {
@@ -75,11 +77,6 @@ interface AffinityExecutor : Executor {
                 threads += thread
                 return thread
             })
-        }
-
-        override fun afterExecute(r: Runnable, t: Throwable?) {
-            if (t != null)
-                uncaughtExceptionHandler.uncaughtException(Thread.currentThread(), t)
         }
 
         override val isOnThread: Boolean get() = Thread.currentThread() in threads
@@ -113,8 +110,6 @@ interface AffinityExecutor : Executor {
             val runnable = Uninterruptibles.takeUninterruptibly(commandQ)
             runnable.run()
         }
-
-        val taskQueueSize: Int get() = commandQ.size
 
         override fun flush() {
             throw UnsupportedOperationException()

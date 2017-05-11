@@ -19,7 +19,7 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
      * to infinity. Google Maps, for example, uses a square map image, and square maps yield latitude extents
      * of 85.0511 to -85.0511 = arctan(sinh(π)).
      */
-    @Suppress("unused")  // Used from the visualiser GUI.
+    @Suppress("unused") // Used from the visualiser GUI.
     fun project(screenWidth: Double, screenHeight: Double, topLatitude: Double, bottomLatitude: Double,
                 leftLongitude: Double, rightLongitude: Double): Pair<Double, Double> {
         require(latitude in bottomLatitude..topLatitude)
@@ -40,25 +40,32 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
 /**
  * A labelled [WorldCoordinate], where the label is human meaningful. For example, the name of the nearest city.
  * Labels should not refer to non-landmarks, for example, they should not contain the names of organisations.
+ * The [countryCode] field is a two letter ISO country code.
  */
 @CordaSerializable
-data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String)
+data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
 
 /**
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.
  */
 object CityDatabase {
-    private val cityMap = HashMap<String, PhysicalLocation>()
+    private val matcher = Regex("^([a-zA-Z- ]*) \\((..)\\)$")
+    private val caseInsensitiveLookups = HashMap<String, PhysicalLocation>()
+    val cityMap = HashMap<String, PhysicalLocation>()
 
     init {
         javaClass.getResourceAsStream("cities.txt").bufferedReader().useLines { lines ->
             for (line in lines) {
                 if (line.startsWith("#")) continue
                 val (name, lng, lat) = line.split('\t')
-                cityMap[name.toLowerCase()] = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), name)
+                val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
+                val (city, country) = matchResult.destructured
+                val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
+                caseInsensitiveLookups[city.toLowerCase()] = location
+                cityMap[city] = location
             }
         }
     }
 
-    operator fun get(name: String) = cityMap[name.toLowerCase()]
+    operator fun get(name: String) = caseInsensitiveLookups[name.toLowerCase()]
 }

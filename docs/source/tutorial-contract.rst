@@ -214,7 +214,7 @@ We have four fields in our state:
   relationships such as a derivative contract.
 * ``faceValue``, an ``Amount<Issued<Currency>>``, which wraps an integer number of pennies and a currency that is
   specific to some issuer (e.g. a regular bank, a central bank, etc). You can read more about this very common
-  type in :doc:`transaction-data-types`.
+  type in :doc:`key-concepts-core-types`.
 * ``maturityDate``, an `Instant <https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html>`_, which is a type
   from the Java 8 standard time library. It defines a point on the timeline.
 
@@ -438,8 +438,8 @@ logic.
               is Commands.Move -> {
                   val input = inputs.single()
                   requireThat {
-                      "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
-                      "the state is propagated" by (group.outputs.size == 1)
+                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                      "the state is propagated" using (group.outputs.size == 1)
                       // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                       // the input ignoring the owner field due to the grouping.
                   }
@@ -451,10 +451,10 @@ logic.
                   val received = tx.outputs.sumCashBy(input.owner)
                   val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                   requireThat {
-                      "the paper must have matured" by (time >= input.maturityDate)
-                      "the received amount equals the face value" by (received == input.faceValue)
-                      "the paper must be destroyed" by outputs.isEmpty()
-                      "the transaction is signed by the owner of the CP" by (input.owner in command.signers)
+                      "the paper must have matured" using (time >= input.maturityDate)
+                      "the received amount equals the face value" using (received == input.faceValue)
+                      "the paper must be destroyed" using outputs.isEmpty()
+                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
                   }
               }
 
@@ -463,9 +463,9 @@ logic.
                   val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                   requireThat {
                       // Don't allow people to issue commercial paper under other entities identities.
-                      "output states are issued by a command signer" by (output.issuance.party.owningKey in command.signers)
-                      "output values sum to more than the inputs" by (output.faceValue.quantity > 0)
-                      "the maturity date is not in the past" by (time < output.maturityDate)
+                      "output states are issued by a command signer" using (output.issuance.party.owningKey in command.signers)
+                      "output values sum to more than the inputs" using (output.faceValue.quantity > 0)
+                      "the maturity date is not in the past" using (time < output.maturityDate)
                       // Don't allow an existing CP state to be replaced by this issuance.
                       "can't reissue an existing state" by inputs.isEmpty()
                   }
@@ -531,7 +531,7 @@ is straightforward: we are simply using the ``Preconditions.checkState`` method 
 built into the language. In fact *requireThat* is an ordinary function provided by the platform's contract API. Kotlin
 supports the creation of *domain specific languages* through the intersection of several features of the language, and
 we use it here to support the natural listing of requirements. To see what it compiles down to, look at the Java version.
-Each ``"string" by (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
+Each ``"string" using (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
 true, with an ``IllegalStateException`` being thrown that contains the string if not. It's just another way to write out a regular
 assertion, but with the English-language requirement being put front and center.
 
@@ -641,7 +641,7 @@ any ``StateAndRef`` (input), ``ContractState`` (output) or ``Command`` objects a
 for you.
 
 There's one final thing to be aware of: we ask the caller to select a *notary* that controls this state and
-prevents it from being double spent. You can learn more about this topic in the :doc:`consensus` article.
+prevents it from being double spent. You can learn more about this topic in the :doc:`key-concepts-consensus-notaries` article.
 
 .. note:: For now, don't worry about how to pick a notary. More infrastructure will come later to automate this
    decision for you.

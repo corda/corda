@@ -10,14 +10,15 @@ import java.util.concurrent.Future
 import java.util.concurrent.locks.Lock
 import kotlin.concurrent.withLock
 
+// TODO: We should consider using a Semaphore or CountDownLatch here to make it a little easier to understand, but it seems as though the current version of Quasar does not support suspending on either of their implementations.
 
 /**
- * Modelled on [ThreadBox], but with support for waiting that is compatible with Quasar [Fiber]s and [MutableClock]s.
+ * Modelled on [net.corda.core.ThreadBox], but with support for waiting that is compatible with Quasar [Fiber]s and [MutableClock]s.
  *
  * It supports 3 main operations, all of which operate in a similar context to the [locked] method
- * of [ThreadBox].  i.e. in the context of the content.
+ * of [net.corda.core.ThreadBox].  i.e. in the context of the content.
  * * [read] operations which acquire the associated lock but do not notify any waiters (see [readWithDeadline])
- * and is a direct equivalent of [ThreadBox.locked].
+ * and is a direct equivalent of [net.corda.core.ThreadBox.locked].
  * * [write] operations which are the same as [read] operations but additionally notify any waiters that the content may have changed.
  * * [readWithDeadline] operations acquire the lock and are evaluated repeatedly until they no longer throw any subclass
  * of [RetryableException].  Between iterations it will wait until woken by a [write] or the deadline is reached.  It will eventually
@@ -27,14 +28,12 @@ import kotlin.concurrent.withLock
  * or testing.
  *
  * Currently this is intended for use within a node as a simplified way for Oracles to implement subscriptions for changing
- * data by running a flow internally to implement the request handler (see [NodeInterestRates.Oracle]), which can then
+ * data by running a flow internally to implement the request handler which can then
  * effectively relinquish control until the data becomes available.  This isn't the most scalable design and is intended
- * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [FlowLogic]
+ * to be temporary.  In addition, it's enitrely possible to envisage a time when we want public [net.corda.core.flows.FlowLogic]
  * implementations to be able to wait for some condition to become true outside of message send/receive.  At that point
  * we may revisit this implementation and indeed the whole model for this, when we understand that requirement more fully.
  *
- * TODO: We should consider using a [Semaphore] or [CountDownLatch] here to make it a little easier to understand, but it seems
- *       as though the current version of Qasar does not support suspending on either of their implementations.
  */
 class FiberBox<out T>(private val content: T, private val lock: Lock = ReentrantLock()) {
     private var mutated: SettableFuture<Boolean>? = null

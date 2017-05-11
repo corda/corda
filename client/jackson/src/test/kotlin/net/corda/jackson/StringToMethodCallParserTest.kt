@@ -10,7 +10,7 @@ class StringToMethodCallParserTest {
         fun simple() = "simple"
         fun string(note: String) = note
         fun twoStrings(a: String, b: String) = a + b
-        fun simpleObject(hash: SecureHash.SHA256) = hash.toString()!!
+        fun simpleObject(hash: SecureHash.SHA256) = hash.toString()
         fun complexObject(pair: Pair<Int, String>) = pair
 
         fun overload(a: String) = a

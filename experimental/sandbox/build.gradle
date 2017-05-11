@@ -1,17 +1,9 @@
-group 'net.corda'
-version '0.6-SNAPSHOT'
-
 apply plugin: 'java'
 apply plugin: 'kotlin'
 
-sourceCompatibility = 1.8
-
 buildscript {
     ext.asm_version = '5.1'
-}
-
-repositories {
-    mavenCentral()
+    ext.logback_version = '1.2.3'
 }
 
 dependencies {
@@ -25,7 +17,20 @@ dependencies {
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Simple Logging Facade: makes the code independent of the chosen logging framework.
-    compile "org.slf4j:slf4j-api:1.7.21"
+    compile "org.slf4j:slf4j-api:$slf4j_version"
+    compile "ch.qos.logback:logback-classic:$logback_version"
 
     testCompile "junit:junit:$junit_version"
+}
+
+task standaloneJar(type: Jar) {
+    // Create a fat jar by packing all deps into the output
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+    manifest {
+        attributes 'Main-Class': 'net.corda.sandbox.tools.SandboxCreator'
+    }
+    archiveName "corda-sandbox-creator-${version}.jar"
 }

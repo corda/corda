@@ -33,7 +33,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
         class Group : GroupClauseVerifier<PortfolioState, Commands, UniqueIdentifier>(FirstOf(Agree(), Update())) {
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<PortfolioState, UniqueIdentifier>>
                     // Group by Trade ID for in / out states
-                    = tx.groupStates() { state -> state.linearId }
+                    = tx.groupStates { state -> state.linearId }
         }
 
         class Update : Clause<PortfolioState, Commands, UniqueIdentifier>() {
@@ -47,10 +47,10 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                 val command = tx.commands.requireSingleCommand<Commands.Update>()
 
                 requireThat {
-                    "there is only one input" by (inputs.size == 1)
-                    "there is only one output" by (outputs.size == 1)
-                    "the valuer hasn't changed" by (inputs[0].valuer == outputs[0].valuer)
-                    "the linear id hasn't changed" by (inputs[0].linearId == outputs[0].linearId)
+                    "there is only one input" using (inputs.size == 1)
+                    "there is only one output" using (outputs.size == 1)
+                    "the valuer hasn't changed" using (inputs[0].valuer == outputs[0].valuer)
+                    "the linear id hasn't changed" using (inputs[0].linearId == outputs[0].linearId)
                 }
 
                 return setOf(command.value)
@@ -68,10 +68,10 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
 
                 requireThat {
-                    "there are no inputs" by (inputs.size == 0)
-                    "there is one output" by (outputs.size == 1)
-                    "valuer must be a party" by (outputs[0].parties.contains(outputs[0].valuer))
-                    "all participants must be parties" by (outputs[0].parties.map { it.owningKey }.containsAll(outputs[0].participants))
+                    "there are no inputs" using (inputs.size == 0)
+                    "there is one output" using (outputs.size == 1)
+                    "valuer must be a party" using (outputs[0].parties.contains(outputs[0].valuer))
+                    "all participants must be parties" using (outputs[0].parties.map { it.owningKey }.containsAll(outputs[0].participants))
                 }
 
                 return setOf(command.value)

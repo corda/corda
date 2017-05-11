@@ -1,6 +1,8 @@
 package net.corda.plugins
 
 import com.typesafe.config.*
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -36,7 +38,7 @@ class Node {
     /**
      * Set the RPC users for this node. This configuration block allows arbitrary configuration.
      * The recommended current structure is:
-     * [[['user': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
+     * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
      * The above is a list to a map of keys to values using Groovy map and list shorthands.
      *
      * @note Incorrect configurations will not cause a DSL error.
@@ -73,6 +75,13 @@ class Node {
      */
     void https(Boolean isHttps) {
         config = config.withValue("useHTTPS", ConfigValueFactory.fromAnyRef(isHttps))
+    }
+
+    /**
+     * Sets the H2 port for this node
+     */
+    void h2Port(Integer h2Port) {
+        config = config.withValue("h2port", ConfigValueFactory.fromAnyRef(h2Port))
     }
 
     void useTestClock(Boolean useTestClock) {
@@ -147,7 +156,15 @@ class Node {
     }
 
     void build(File rootDir) {
-        nodeDir = new File(rootDir, name.replaceAll("\\s",""))
+        def dirName
+        try {
+            X500Name x500Name = new X500Name(name)
+            dirName = x500Name.getRDNs(BCStyle.CN).getAt(0).getFirst().getValue().toString()
+        } catch(IllegalArgumentException ex) {
+            // Can't parse as an X500 name, use the full string
+            dirName = name
+        }
+        nodeDir = new File(rootDir, dirName.replaceAll("\\s",""))
         configureRpcUsers()
         installCordaJar()
         installWebserverJar()
@@ -267,10 +284,10 @@ class Node {
      */
     private File verifyAndGetCordaJar() {
         def maybeCordaJAR = project.configurations.runtime.filter {
-            it.toString().contains("corda-${project.corda_version}.jar")
+            it.toString().contains("corda-${project.corda_release_version}.jar")
         }
         if (maybeCordaJAR.size() == 0) {
-            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_version}.jar\"")
+            throw new RuntimeException("No Corda Capsule JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-${project.corda_release_version}.jar\"")
         } else {
             def cordaJar = maybeCordaJAR.getSingleFile()
             assert(cordaJar.isFile())
@@ -285,10 +302,10 @@ class Node {
      */
     private File verifyAndGetWebserverJar() {
         def maybeJar = project.configurations.runtime.filter {
-            it.toString().contains("corda-webserver-${project.corda_version}.jar")
+            it.toString().contains("corda-webserver-${project.corda_release_version}.jar")
         }
         if (maybeJar.size() == 0) {
-            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_version}.jar\"")
+            throw new RuntimeException("No Corda Webserver JAR found. Have you deployed the Corda project to Maven? Looked for \"corda-webserver-${project.corda_release_version}.jar\"")
         } else {
             def jar = maybeJar.getSingleFile()
             assert(jar.isFile())

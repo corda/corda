@@ -46,7 +46,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'R3 Corda'
-copyright = u'2016, R3 Limited'
+copyright = u'2017, R3 Limited'
 author = u'R3 DLG'
 
 # The version info for the project you're documenting, acts as replacement for

@@ -1,27 +1,65 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.core.crypto.Party
+import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.composite
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.sign
+import net.corda.core.identity.Party
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_KEY_1
-import net.corda.core.utilities.DUMMY_KEY_2
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.testing.ALICE
+import net.corda.core.utilities.*
 import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.BOB
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TransactionTests {
+
+    private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair): SignedTransaction {
+        val bytes: SerializedBytes<WireTransaction> = wtx.serialized
+        return SignedTransaction(bytes, keys.map { it.sign(wtx.id.bytes) })
+    }
+
+    @Test
+    fun `signed transaction missing signatures - CompositeKey`() {
+        val ak = generateKeyPair()
+        val bk = generateKeyPair()
+        val ck = generateKeyPair()
+        val apub = ak.public
+        val bpub = bk.public
+        val cpub = ck.public
+        val c1 = CompositeKey.Builder().addKeys(apub, bpub).build(2)
+        val compKey = CompositeKey.Builder().addKeys(c1, cpub).build(1)
+        val wtx = WireTransaction(
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = emptyList(),
+                notary = DUMMY_NOTARY,
+                signers = listOf(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public),
+                type = TransactionType.General,
+                timestamp = null
+        )
+        assertEquals(
+                setOf(compKey, DUMMY_KEY_2.public),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifySignatures() }.missing
+        )
+
+        assertEquals(
+                setOf(compKey, DUMMY_KEY_2.public),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1, ak).verifySignatures() }.missing
+        )
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk).verifySignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ck).verifySignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak, bk, ck).verifySignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2, ak).verifySignatures(compKey)
+        makeSigned(wtx, DUMMY_KEY_1, ak).verifySignatures(compKey, DUMMY_KEY_2.public) // Mixed allowed to be missing.
+    }
+
     @Test
     fun `signed transaction missing signatures`() {
         val wtx = WireTransaction(
@@ -30,31 +68,29 @@ class TransactionTests {
                 outputs = emptyList(),
                 commands = emptyList(),
                 notary = DUMMY_NOTARY,
-                signers = listOf(DUMMY_KEY_1.public.composite, DUMMY_KEY_2.public.composite),
-                type = TransactionType.General(),
+                signers = listOf(DUMMY_KEY_1.public, DUMMY_KEY_2.public),
+                type = TransactionType.General,
                 timestamp = null
         )
-        val bytes: SerializedBytes<WireTransaction> = wtx.serialized
-        fun make(vararg keys: KeyPair) = SignedTransaction(bytes, keys.map { it.signWithECDSA(wtx.id.bytes) })
-        assertFailsWith<IllegalArgumentException> { make().verifySignatures() }
+        assertFailsWith<IllegalArgumentException> { makeSigned(wtx).verifySignatures() }
 
         assertEquals(
-                setOf(DUMMY_KEY_1.public.composite),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_KEY_2).verifySignatures() }.missing
+                setOf(DUMMY_KEY_1.public),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_2).verifySignatures() }.missing
         )
         assertEquals(
-                setOf(DUMMY_KEY_2.public.composite),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_KEY_1).verifySignatures() }.missing
+                setOf(DUMMY_KEY_2.public),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_KEY_1).verifySignatures() }.missing
         )
         assertEquals(
-                setOf(DUMMY_KEY_2.public.composite),
-                assertFailsWith<SignedTransaction.SignaturesMissingException> { make(DUMMY_CASH_ISSUER_KEY).verifySignatures(DUMMY_KEY_1.public.composite) }.missing
+                setOf(DUMMY_KEY_2.public),
+                assertFailsWith<SignedTransaction.SignaturesMissingException> { makeSigned(wtx, DUMMY_CASH_ISSUER_KEY).verifySignatures(DUMMY_KEY_1.public) }.missing
         )
 
-        make(DUMMY_KEY_1).verifySignatures(DUMMY_KEY_2.public.composite)
-        make(DUMMY_KEY_2).verifySignatures(DUMMY_KEY_1.public.composite)
+        makeSigned(wtx, DUMMY_KEY_1).verifySignatures(DUMMY_KEY_2.public)
+        makeSigned(wtx, DUMMY_KEY_2).verifySignatures(DUMMY_KEY_1.public)
 
-        make(DUMMY_KEY_1, DUMMY_KEY_2).verifySignatures()
+        makeSigned(wtx, DUMMY_KEY_1, DUMMY_KEY_2).verifySignatures()
     }
 
     @Test
@@ -65,7 +101,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
@@ -76,7 +112,7 @@ class TransactionTests {
                 null,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         transaction.type.verify(transaction)
@@ -92,7 +128,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
@@ -103,7 +139,7 @@ class TransactionTests {
                 DUMMY_NOTARY,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         assertFailsWith<TransactionVerificationException.DuplicateInputStates> { transaction.type.verify(transaction) }
@@ -119,7 +155,7 @@ class TransactionTests {
         val commands = emptyList<AuthenticatedObject<CommandData>>()
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
-        val signers = listOf(DUMMY_NOTARY_KEY.public.composite)
+        val signers = listOf(DUMMY_NOTARY_KEY.public)
         val timestamp: Timestamp? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
@@ -130,7 +166,7 @@ class TransactionTests {
                 notary,
                 signers,
                 timestamp,
-                TransactionType.General()
+                TransactionType.General
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { transaction.type.verify(transaction) }

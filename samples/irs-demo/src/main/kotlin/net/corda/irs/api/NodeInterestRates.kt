@@ -5,8 +5,9 @@ import net.corda.core.RetryableException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.identity.Party
+import net.corda.core.crypto.keys
+import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
@@ -74,8 +75,8 @@ object NodeInterestRates {
             // Note: access to the singleton oracle property is via the registered SingletonSerializeAsToken Service.
             // Otherwise the Kryo serialisation of the call stack in the Quasar Fiber extends to include
             // the framework Oracle and the flow will crash.
-            services.registerFlowInitiator(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
-            services.registerFlowInitiator(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
+            services.registerServiceFlow(RatesFixFlow.FixSignFlow::class.java) { FixSignHandler(it, this) }
+            services.registerServiceFlow(RatesFixFlow.FixQueryFlow::class.java) { FixQueryHandler(it, this) }
         }
 
         private class FixSignHandler(val otherParty: Party, val service: Service) : FlowLogic<Unit>() {
@@ -213,6 +214,7 @@ object NodeInterestRates {
                     else -> throw IllegalArgumentException("Oracle received data of different type than expected.")
                 }
             }
+
             val leaves = ftx.filteredLeaves
             if (!leaves.checkWithFun(::check))
                 throw IllegalArgumentException()
@@ -222,7 +224,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return signingKey.signWithECDSA(ftx.rootHash.bytes, identity)
+            return signingKey.sign(ftx.rootHash.bytes, identity)
         }
         // DOCEND 1
     }

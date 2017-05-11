@@ -7,7 +7,8 @@ import net.corda.contracts.asset.`owned by`
 import net.corda.core.bd
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -18,12 +19,13 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert
@@ -47,7 +49,7 @@ class NodeInterestRatesTest {
         """.trimIndent())
 
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
-    val DUMMY_CASH_ISSUER = Party("Cash issuer", DUMMY_CASH_ISSUER_KEY.public)
+    val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_CASH_ISSUER_KEY.public)
 
     val clock = Clock.systemUTC()
     lateinit var oracle: NodeInterestRates.Oracle
@@ -68,7 +70,7 @@ class NodeInterestRatesTest {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
+        database.transaction {
             oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
         }
     }
@@ -80,7 +82,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query successfully`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
@@ -91,7 +93,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query with one success and one missing`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
             val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
@@ -101,7 +103,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `query successfully with interpolated rate`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
             val res = oracle.query(listOf(q), clock.instant())
             assertEquals(1, res.size)
@@ -112,7 +114,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `rate missing and unable to interpolate`() {
-        databaseTransaction(database) {
+        database.transaction {
             val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
             assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
         }
@@ -120,14 +122,14 @@ class NodeInterestRatesTest {
 
     @Test
     fun `empty query`() {
-        databaseTransaction(database) {
+        database.transaction {
             assertFailsWith<IllegalArgumentException> { oracle.query(emptyList(), clock.instant()) }
         }
     }
 
     @Test
     fun `refuse to sign with no relevant commands`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val wtx1 = tx.toWireTransaction()
             fun filterAllOutputs(elem: Any): Boolean {
@@ -136,6 +138,7 @@ class NodeInterestRatesTest {
                     else -> false
                 }
             }
+
             val ftx1 = wtx1.buildFilteredTransaction(::filterAllOutputs)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
@@ -148,7 +151,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `sign successfully`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             tx.addCommand(fix, oracle.identity.owningKey)
@@ -162,7 +165,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `do not sign with unknown fix`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val badFix = Fix(fixOf, "0.6789".bd)
@@ -176,7 +179,7 @@ class NodeInterestRatesTest {
 
     @Test
     fun `do not sign too many leaves`() {
-        databaseTransaction(database) {
+        database.transaction {
             val tx = makeTX()
             val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
             fun filtering(elem: Any): Boolean {
@@ -206,7 +209,7 @@ class NodeInterestRatesTest {
         val net = MockNetwork()
         val n1 = net.createNotaryNode()
         val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
-        databaseTransaction(n2.database) {
+        n2.database.transaction {
             n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
         }
         val tx = TransactionType.General.Builder(null)
@@ -231,10 +234,10 @@ class NodeInterestRatesTest {
                             rateTolerance: BigDecimal,
                             progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
         override fun filtering(elem: Any): Boolean {
-                return when (elem) {
-                    is Command -> oracle.owningKey in elem.signers && elem.value is Fix
-                    else -> false
-                }
+            return when (elem) {
+                is Command -> oracle.owningKey in elem.signers && elem.value is Fix
+                else -> false
+            }
         }
     }
 

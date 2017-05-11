@@ -9,7 +9,7 @@ import java.util.*
 /**
  * Compose a number of clauses, such that all of the clauses must run for verification to pass.
  */
-open class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg  remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
+open class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     override val clauses = ArrayList<Clause<S, C, K>>()
 
     init {
@@ -19,7 +19,7 @@ open class AllOf<S : ContractState, C : CommandData, K : Any>(firstClause: Claus
 
     override fun matchedClauses(commands: List<AuthenticatedObject<C>>): List<Clause<S, C, K>> {
         clauses.forEach { clause ->
-            check(clause.matches(commands)) { "Failed to match clause ${clause}" }
+            check(clause.matches(commands)) { "Failed to match clause $clause" }
         }
         return clauses
     }

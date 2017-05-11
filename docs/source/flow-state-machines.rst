@@ -121,7 +121,7 @@ each side.
           data class SellerTradeInfo(
                   val assetForSale: StateAndRef<OwnableState>,
                   val price: Amount<Currency>,
-                  val sellerOwnerKey: CompositeKey
+                  val sellerOwnerKey: PublicKey
           )
 
           data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
@@ -156,7 +156,7 @@ simply flow messages or exceptions. The other two represent the buyer and seller
 Going through the data needed to become a seller, we have:
 
 - ``otherParty: Party`` - the party with which you are trading.
-- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`consensus`" for more
+- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`key-concepts-consensus-notaries`" for more
   information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
 - ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).
@@ -215,32 +215,18 @@ Java reflection ``Class`` object that describes the flow class to use (in this c
 It also takes a set of arguments to pass to the constructor. Because it's possible for flow invocations to
 be requested by untrusted code (e.g. a state that you have been sent), the types that can be passed into the
 flow are checked against a whitelist, which can be extended by apps themselves at load time.  There are also a series
-of inlined extension functions of the form ``CordaRPCOps.startFlow`` which help with invoking flows in a type
+of inlined Kotlin extension functions of the form ``CordaRPCOps.startFlow`` which help with invoking flows in a type
 safe manner.
 
-The process of starting a flow returns a ``FlowHandle`` that you can use to either observe
-the result, observe its progress and which also contains a permanent identifier for the invoked flow in the form
-of the ``StateMachineRunId``.
+The process of starting a flow returns a ``FlowHandle`` that you can use to observe the result, and which also contains
+a permanent identifier for the invoked flow in the form of the ``StateMachineRunId``. Should you also wish to track the
+progress of your flow (see :ref:`progress-tracking`) then you can invoke your flow instead using
+``CordaRPCOps.startTrackedFlowDynamic`` or any of its corresponding ``CordaRPCOps.startTrackedFlow`` extension functions.
+These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` except that it also contains an observable
+``progress`` field.
 
-In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side
-has to be registered by its node to respond to the initiating flow via ``PluginServiceHub.registerFlowInitiator``.
-In our example it doesn't matter which flow is the initiator and which is the initiated. For example, if we are to
-take the seller as the initiator then we would register the buyer as such:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      val services: PluginServiceHub = TODO()
-      services.registerFlowInitiator(Seller::class) { otherParty ->
-        val notary = services.networkMapCache.notaryNodes[0]
-        val acceptablePrice = TODO()
-        val typeToBuy = TODO()
-        Buyer(otherParty, notary, acceptablePrice, typeToBuy)
-      }
-
-This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
-is a seller (``Seller::class``).
+.. note:: The developer `must` then either subscribe to this ``progress`` observable or invoke the ``notUsed()`` extension
+   function for it. Otherwise the unused observable will waste resources back in the node.
 
 Implementing the seller
 -----------------------
@@ -412,6 +398,49 @@ This code is longer but no more complicated. Here are some things to pay attenti
 
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
+
+Initiating communication
+------------------------
+
+Now that we have both sides of the deal negotation implemented as flows we need a way to start things off. We do this by
+having one side initiate communication and the other respond to it and start their flow. Initiation is typically done using
+RPC with the ``startFlowDynamic`` method. The initiating flow has be to annotated with ``InitiatingFlow``. In our example
+it doesn't matter which flow is the initiator and which is the initiated, which is why neither ``Buyer`` nor ``Seller``
+are annotated with it. For example, if we choose the seller side as the initiator then we need a seller starter flow that
+might look something like this:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @InitiatingFlow
+        class SellerStarter(val otherParty: Party, val assetToSell: StateAndRef<OwnableState>, val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+            @Suspendable
+            override fun call(): SignedTransaction {
+                val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
+                val cpOwnerKey: KeyPair = serviceHub.legalIdentityKey
+                return subFlow(TwoPartyTradeFlow.Seller(otherParty, notary, assetToSell, price, cpOwnerKey))
+            }
+        }
+
+The buyer side would then need to register their flow, perhaps with something like:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val services: PluginServiceHub = TODO()
+        services.registerServiceFlow(SellerStarter::class.java) { otherParty ->
+            val notary = services.networkMapCache.notaryNodes[0]
+            val acceptablePrice = TODO()
+            val typeToBuy = TODO()
+            Buyer(otherParty, notary, acceptablePrice, typeToBuy)
+        }
+
+This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
+is a seller (``SellerStarter::class.java``).
+
+.. _progress-tracking:
 
 Progress tracking
 -----------------

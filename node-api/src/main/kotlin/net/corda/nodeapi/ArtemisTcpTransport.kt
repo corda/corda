@@ -5,20 +5,21 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
+import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.FileSystems
 import java.nio.file.Path
 
 sealed class ConnectionDirection {
-    class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
-    class Outbound(
-            val expectedCommonName: String? = null,
+    data class Inbound(val acceptorFactoryClassName: String) : ConnectionDirection()
+    data class Outbound(
+            val expectedCommonName: X500Name? = null,
             val connectorFactoryClassName: String = NettyConnectorFactory::class.java.name
     ) : ConnectionDirection()
 }
 
 class ArtemisTcpTransport {
     companion object {
-        const val VERIFY_PEER_COMMON_NAME = "corda.verifyPeerCommonName"
+        const val VERIFY_PEER_LEGAL_NAME = "corda.verifyPeerCommonName"
 
         // Restrict enabled Cipher Suites to AES and GCM as minimum for the bulk cipher.
         // Our self-generated certificates all use ECDSA for handshakes, but we allow classical RSA certificates to work
@@ -41,7 +42,7 @@ class ArtemisTcpTransport {
         ): TransportConfiguration {
             val options = mutableMapOf<String, Any?>(
                     // Basic TCP target details
-                    TransportConstants.HOST_PROP_NAME to hostAndPort.hostText,
+                    TransportConstants.HOST_PROP_NAME to hostAndPort.host,
                     TransportConstants.PORT_PROP_NAME to hostAndPort.port,
 
                     // Turn on AMQP support, which needs the protocol jar on the classpath.
@@ -67,7 +68,7 @@ class ArtemisTcpTransport {
                         TransportConstants.ENABLED_CIPHER_SUITES_PROP_NAME to CIPHER_SUITES.joinToString(","),
                         TransportConstants.ENABLED_PROTOCOLS_PROP_NAME to "TLSv1.2",
                         TransportConstants.NEED_CLIENT_AUTH_PROP_NAME to true,
-                        VERIFY_PEER_COMMON_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonName
+                        VERIFY_PEER_LEGAL_NAME to (direction as? ConnectionDirection.Outbound)?.expectedCommonName
                 )
                 options.putAll(tlsOptions)
             }

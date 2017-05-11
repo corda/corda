@@ -4,6 +4,9 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
@@ -21,12 +24,8 @@ val IRS_PROGRAM_ID = InterestRateSwap()
 
 // This is a placeholder for some types that we haven't identified exactly what they are just yet for things still in discussion
 @CordaSerializable
-open class UnknownType() {
-
-    override fun equals(other: Any?): Boolean {
-        return (other is UnknownType)
-    }
-
+open class UnknownType {
+    override fun equals(other: Any?): Boolean = other is UnknownType
     override fun hashCode() = 1
 }
 
@@ -188,7 +187,7 @@ class FloatingRatePaymentEvent(date: LocalDate,
  * Currently, we are not interested (excuse pun) in valuing the swap, calculating the PVs, DFs and all that good stuff (soon though).
  * This is just a representation of a vanilla Fixed vs Floating (same currency) IRS in the R3 prototype model.
  */
-class InterestRateSwap() : Contract {
+class InterestRateSwap : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
 
     companion object {
@@ -308,7 +307,7 @@ class InterestRateSwap() : Contract {
     }
 
     @CordaSerializable
-    open class FixedLeg<P: AbstractParty>(
+    open class FixedLeg<P : AbstractParty>(
             var fixedRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
@@ -366,6 +365,7 @@ class InterestRateSwap() : Contract {
                 fixedRatePayer, notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate,
                 terminationDateAdjustment, dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay,
                 paymentCalendar, interestPeriodAdjustment, fixedRate, rollConvention)
+
         fun toAnonymous(): FixedLeg<AnonymousParty> {
             return FixedLeg(fixedRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
                     dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
@@ -374,7 +374,7 @@ class InterestRateSwap() : Contract {
     }
 
     @CordaSerializable
-    open class FloatingLeg<P: AbstractParty>(
+    open class FloatingLeg<P : AbstractParty>(
             var floatingRatePayer: P,
             notional: Amount<Currency>,
             paymentFrequency: Frequency,
@@ -462,6 +462,7 @@ class InterestRateSwap() : Contract {
                 paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment, rollConvention,
                 fixingRollConvention, resetDayInMonth, fixingPeriod, resetRule, fixingsPerPayment,
                 fixingCalendar, index, indexSource, indexTenor)
+
         fun toAnonymous(): FloatingLeg<AnonymousParty> {
             return FloatingLeg(floatingRatePayer.toAnonymous(), notional, paymentFrequency, effectiveDate, effectiveDateAdjustment, terminationDate, terminationDateAdjustment,
                     dayCountBasisDay, dayCountBasisYear, dayInMonth, paymentRule, paymentDelay, paymentCalendar, interestPeriodAdjustment,
@@ -470,7 +471,7 @@ class InterestRateSwap() : Contract {
         }
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllComposition(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Clauses {
         /**
@@ -481,22 +482,22 @@ class InterestRateSwap() : Contract {
             // These functions may make more sense to use for basket types, but for now let's leave them here
             fun checkLegDates(legs: List<CommonLeg>) {
                 requireThat {
-                    "Effective date is before termination date" by legs.all { it.effectiveDate < it.terminationDate }
-                    "Effective dates are in alignment" by legs.all { it.effectiveDate == legs[0].effectiveDate }
-                    "Termination dates are in alignment" by legs.all { it.terminationDate == legs[0].terminationDate }
+                    "Effective date is before termination date" using legs.all { it.effectiveDate < it.terminationDate }
+                    "Effective dates are in alignment" using legs.all { it.effectiveDate == legs[0].effectiveDate }
+                    "Termination dates are in alignment" using legs.all { it.terminationDate == legs[0].terminationDate }
                 }
             }
 
             fun checkLegAmounts(legs: List<CommonLeg>) {
                 requireThat {
-                    "The notional is non zero" by legs.any { it.notional.quantity > (0).toLong() }
-                    "The notional for all legs must be the same" by legs.all { it.notional == legs[0].notional }
+                    "The notional is non zero" using legs.any { it.notional.quantity > (0).toLong() }
+                    "The notional for all legs must be the same" using legs.all { it.notional == legs[0].notional }
                 }
                 for (leg: CommonLeg in legs) {
                     if (leg is FixedLeg<*>) {
                         requireThat {
                             // TODO: Confirm: would someone really enter a swap with a negative fixed rate?
-                            "Fixed leg rate must be positive" by leg.fixedRate.isPositive()
+                            "Fixed leg rate must be positive" using leg.fixedRate.isPositive()
                         }
                     }
                 }
@@ -519,10 +520,10 @@ class InterestRateSwap() : Contract {
             }
         }
 
-        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyComposition(Agree(), Fix(), Pay(), Mature())) {
+        class Group : GroupClauseVerifier<State<*>, Commands, UniqueIdentifier>(AnyOf(Agree(), Fix(), Pay(), Mature())) {
             // Group by Trade ID for in / out states
             override fun groupStates(tx: TransactionForContract): List<TransactionForContract.InOutGroup<State<*>, UniqueIdentifier>> {
-                return tx.groupStates() { state -> state.linearId }
+                return tx.groupStates { state -> state.linearId }
             }
         }
 
@@ -549,21 +550,21 @@ class InterestRateSwap() : Contract {
                 val command = tx.commands.requireSingleCommand<Commands.Agree>()
                 val irs = outputs.filterIsInstance<State<*>>().single()
                 requireThat {
-                    "There are no in states for an agreement" by inputs.isEmpty()
-                    "There are events in the fix schedule" by (irs.calculation.fixedLegPaymentSchedule.size > 0)
-                    "There are events in the float schedule" by (irs.calculation.floatingLegPaymentSchedule.size > 0)
-                    "All notionals must be non zero" by (irs.fixedLeg.notional.quantity > 0 && irs.floatingLeg.notional.quantity > 0)
-                    "The fixed leg rate must be positive" by (irs.fixedLeg.fixedRate.isPositive())
-                    "The currency of the notionals must be the same" by (irs.fixedLeg.notional.token == irs.floatingLeg.notional.token)
-                    "All leg notionals must be the same" by (irs.fixedLeg.notional == irs.floatingLeg.notional)
+                    "There are no in states for an agreement" using inputs.isEmpty()
+                    "There are events in the fix schedule" using (irs.calculation.fixedLegPaymentSchedule.isNotEmpty())
+                    "There are events in the float schedule" using (irs.calculation.floatingLegPaymentSchedule.isNotEmpty())
+                    "All notionals must be non zero" using (irs.fixedLeg.notional.quantity > 0 && irs.floatingLeg.notional.quantity > 0)
+                    "The fixed leg rate must be positive" using (irs.fixedLeg.fixedRate.isPositive())
+                    "The currency of the notionals must be the same" using (irs.fixedLeg.notional.token == irs.floatingLeg.notional.token)
+                    "All leg notionals must be the same" using (irs.fixedLeg.notional == irs.floatingLeg.notional)
 
-                    "The effective date is before the termination date for the fixed leg" by (irs.fixedLeg.effectiveDate < irs.fixedLeg.terminationDate)
-                    "The effective date is before the termination date for the floating leg" by (irs.floatingLeg.effectiveDate < irs.floatingLeg.terminationDate)
-                    "The effective dates are aligned" by (irs.floatingLeg.effectiveDate == irs.fixedLeg.effectiveDate)
-                    "The termination dates are aligned" by (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
-                    "The rates are valid" by checkRates(listOf(irs.fixedLeg, irs.floatingLeg))
-                    "The schedules are valid" by checkSchedules(listOf(irs.fixedLeg, irs.floatingLeg))
-                    "The fixing period date offset cannot be negative" by (irs.floatingLeg.fixingPeriodOffset >= 0)
+                    "The effective date is before the termination date for the fixed leg" using (irs.fixedLeg.effectiveDate < irs.fixedLeg.terminationDate)
+                    "The effective date is before the termination date for the floating leg" using (irs.floatingLeg.effectiveDate < irs.floatingLeg.terminationDate)
+                    "The effective dates are aligned" using (irs.floatingLeg.effectiveDate == irs.fixedLeg.effectiveDate)
+                    "The termination dates are aligned" using (irs.floatingLeg.terminationDate == irs.fixedLeg.terminationDate)
+                    "The rates are valid" using checkRates(listOf(irs.fixedLeg, irs.floatingLeg))
+                    "The schedules are valid" using checkSchedules(listOf(irs.fixedLeg, irs.floatingLeg))
+                    "The fixing period date offset cannot be negative" using (irs.floatingLeg.fixingPeriodOffset >= 0)
 
                     // TODO: further tests
                 }
@@ -590,8 +591,8 @@ class InterestRateSwap() : Contract {
                 // Having both of these tests are "redundant" as far as verify() goes, however, by performing both
                 // we can relay more information back to the user in the case of failure.
                 requireThat {
-                    "There is at least one difference in the IRS floating leg payment schedules" by !paymentDifferences.isEmpty()
-                    "There is only one change in the IRS floating leg payment schedule" by (paymentDifferences.size == 1)
+                    "There is at least one difference in the IRS floating leg payment schedules" using !paymentDifferences.isEmpty()
+                    "There is only one change in the IRS floating leg payment schedule" using (paymentDifferences.size == 1)
                 }
 
                 val changedRates = paymentDifferences.single().second // Ignore the date of the changed rate (we checked that earlier).
@@ -599,19 +600,19 @@ class InterestRateSwap() : Contract {
                 val fixValue = command.value.fix
                 // Need to check that everything is the same apart from the new fixed rate entry.
                 requireThat {
-                    "The fixed leg parties are constant" by (irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
-                    "The fixed leg is constant" by (irs.fixedLeg == prevIrs.fixedLeg)
-                    "The floating leg is constant" by (irs.floatingLeg == prevIrs.floatingLeg)
-                    "The common values are constant" by (irs.common == prevIrs.common)
-                    "The fixed leg payment schedule is constant" by (irs.calculation.fixedLegPaymentSchedule == prevIrs.calculation.fixedLegPaymentSchedule)
-                    "The expression is unchanged" by (irs.calculation.expression == prevIrs.calculation.expression)
-                    "There is only one changed payment in the floating leg" by (paymentDifferences.size == 1)
-                    "There changed payment is a floating payment" by (oldFloatingRatePaymentEvent.rate is ReferenceRate)
-                    "The new payment is a fixed payment" by (newFixedRatePaymentEvent.rate is FixedRate)
-                    "The changed payments dates are aligned" by (oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
-                    "The new payment has the correct rate" by (newFixedRatePaymentEvent.rate.ratioUnit!!.value == fixValue.value)
-                    "The fixing is for the next required date" by (prevIrs.calculation.nextFixingDate() == fixValue.of.forDay)
-                    "The fix payment has the same currency as the notional" by (newFixedRatePaymentEvent.flow.token == irs.floatingLeg.notional.token)
+                    "The fixed leg parties are constant" using (irs.fixedLeg.fixedRatePayer == prevIrs.fixedLeg.fixedRatePayer) // Although superseded by the below test, this is included for a regression issue
+                    "The fixed leg is constant" using (irs.fixedLeg == prevIrs.fixedLeg)
+                    "The floating leg is constant" using (irs.floatingLeg == prevIrs.floatingLeg)
+                    "The common values are constant" using (irs.common == prevIrs.common)
+                    "The fixed leg payment schedule is constant" using (irs.calculation.fixedLegPaymentSchedule == prevIrs.calculation.fixedLegPaymentSchedule)
+                    "The expression is unchanged" using (irs.calculation.expression == prevIrs.calculation.expression)
+                    "There is only one changed payment in the floating leg" using (paymentDifferences.size == 1)
+                    "There changed payment is a floating payment" using (oldFloatingRatePaymentEvent.rate is ReferenceRate)
+                    "The new payment is a fixed payment" using (newFixedRatePaymentEvent.rate is FixedRate)
+                    "The changed payments dates are aligned" using (oldFloatingRatePaymentEvent.date == newFixedRatePaymentEvent.date)
+                    "The new payment has the correct rate" using (newFixedRatePaymentEvent.rate.ratioUnit!!.value == fixValue.value)
+                    "The fixing is for the next required date" using (prevIrs.calculation.nextFixingDate() == fixValue.of.forDay)
+                    "The fix payment has the same currency as the notional" using (newFixedRatePaymentEvent.flow.token == irs.floatingLeg.notional.token)
                     // "The fixing is not in the future " by (fixCommand) // The oracle should not have signed this .
                 }
 
@@ -629,7 +630,7 @@ class InterestRateSwap() : Contract {
                                 groupingKey: UniqueIdentifier?): Set<Commands> {
                 val command = tx.commands.requireSingleCommand<Commands.Pay>()
                 requireThat {
-                    "Payments not supported / verifiable yet" by false
+                    "Payments not supported / verifiable yet" using false
                 }
                 return setOf(command.value)
             }
@@ -646,8 +647,8 @@ class InterestRateSwap() : Contract {
                 val command = tx.commands.requireSingleCommand<Commands.Mature>()
                 val irs = inputs.filterIsInstance<State<*>>().single()
                 requireThat {
-                    "No more fixings to be applied" by (irs.calculation.nextFixingDate() == null)
-                    "The irs is fully consumed and there is no id matched output state" by outputs.isEmpty()
+                    "No more fixings to be applied" using (irs.calculation.nextFixingDate() == null)
+                    "The irs is fully consumed and there is no id matched output state" using outputs.isEmpty()
                 }
 
                 return setOf(command.value)
@@ -666,7 +667,7 @@ class InterestRateSwap() : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
-    data class State<P: AbstractParty>(
+    data class State<P : AbstractParty>(
             val fixedLeg: FixedLeg<P>,
             val floatingLeg: FloatingLeg<P>,
             val calculation: Calculation,
@@ -681,7 +682,7 @@ class InterestRateSwap() : Contract {
 
         override val ref = common.tradeID
 
-        override val participants: List<CompositeKey>
+        override val participants: List<PublicKey>
             get() = parties.map { it.owningKey }
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
@@ -739,6 +740,7 @@ class InterestRateSwap() : Contract {
 
         fun toAnonymous(): State<AnonymousParty> {
             return if (this.fixedLeg.fixedRatePayer is AnonymousParty) {
+                @Suppress("UNCHECKED_CAST")
                 this as State<AnonymousParty>
             } else {
                 State(fixedLeg.toAnonymous(), floatingLeg.toAnonymous(), calculation, common, linearId)

@@ -14,7 +14,6 @@ local.properties
 
 # General build files
 **/build/*
-!docs/build/*
 
 lib/dokka.jar
 
@@ -33,6 +32,9 @@ lib/dokka.jar
 .idea/libraries
 .idea/shelf
 .idea/dataSources
+
+# Include the -parameters compiler option by default in IntelliJ required for serialization.
+!.idea/compiler.xml
 
 # if you remove the above rule, at least ignore the following:
 

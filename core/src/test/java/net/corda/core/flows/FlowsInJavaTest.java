@@ -1,15 +1,13 @@
 package net.corda.core.flows;
 
-import co.paralleluniverse.fibers.Suspendable;
-import net.corda.core.crypto.Party;
-import net.corda.testing.node.MockNetwork;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import co.paralleluniverse.fibers.*;
+import net.corda.core.identity.Party;
+import net.corda.testing.node.*;
+import org.junit.*;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.*;
 
 public class FlowsInJavaTest {
 
@@ -32,12 +30,14 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.getServices().registerFlowInitiator(SendInUnwrapFlow.class, (otherParty) -> new OtherFlow(otherParty, "Hello"));
+        node2.getServices().registerServiceFlow(SendInUnwrapFlow.class, (otherParty) -> new OtherFlow(otherParty, "Hello"));
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         net.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
 
+    @SuppressWarnings("unused")
+    @InitiatingFlow
     private static class SendInUnwrapFlow extends FlowLogic<String> {
         private final Party otherParty;
 

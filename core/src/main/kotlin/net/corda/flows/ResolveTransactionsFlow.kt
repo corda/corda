@@ -2,10 +2,10 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.checkedAdd
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.recordTransactions
+import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -42,9 +42,9 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
             // Construct txhash -> dependent-txs map
             val forwardGraph = HashMap<SecureHash, HashSet<SignedTransaction>>()
             transactions.forEach { stx ->
-                stx.tx.inputs.forEach { input ->
+                stx.tx.inputs.forEach { (txhash) ->
                     // Note that we use a LinkedHashSet here to make the traversal deterministic (as long as the input list is)
-                    forwardGraph.getOrPut(input.txhash) { LinkedHashSet() }.add(stx)
+                    forwardGraph.getOrPut(txhash) { LinkedHashSet() }.add(stx)
                 }
             }
 
@@ -69,7 +69,7 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
     }
 
     @CordaSerializable
-    class ExcessivelyLargeTransactionGraph() : Exception()
+    class ExcessivelyLargeTransactionGraph : Exception()
 
     // Transactions to verify after the dependencies.
     private var stx: SignedTransaction? = null
@@ -107,7 +107,9 @@ class ResolveTransactionsFlow(private val txHashes: Set<SecureHash>,
         for (stx in newTxns) {
             // Resolve to a LedgerTransaction and then run all contracts.
             val ltx = stx.toLedgerTransaction(serviceHub)
-            ltx.verify()
+            // Block on each verification request.
+            // TODO We could recover some parallelism from the dependency graph.
+            serviceHub.transactionVerifierService.verify(ltx).getOrThrow()
             serviceHub.recordTransactions(stx)
             result += ltx
         }

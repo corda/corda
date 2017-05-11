@@ -1,18 +1,16 @@
 package net.corda.core.contracts
 
 import net.corda.core.contracts.clauses.Clause
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.serialization.serialize
+import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
@@ -53,7 +51,7 @@ interface MultilateralNettableState<out T : Any> {
     val multilateralNetState: T
 }
 
-interface NettableState<N : BilateralNettableState<N>, T : Any> : BilateralNettableState<N>,
+interface NettableState<N : BilateralNettableState<N>, out T : Any> : BilateralNettableState<N>,
         MultilateralNettableState<T>
 
 /**
@@ -116,7 +114,7 @@ interface ContractState {
      * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
      * list should just contain the owner.
      */
-    val participants: List<CompositeKey>
+    val participants: List<PublicKey>
 }
 
 /**
@@ -146,25 +144,12 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * Note that an encumbered state that is being consumed must have its encumbrance consumed in the same transaction,
          * otherwise the transaction is not valid.
          */
-        val encumbrance: Int? = null) {
-
-    /**
-     * Copies the underlying state, replacing the notary field with the new value.
-     * To replace the notary, we need an approval (signature) from _all_ participants of the [ContractState].
-     */
-    fun withNotary(newNotary: Party) = TransactionState(this.data, newNotary, encumbrance)
-}
+        val encumbrance: Int? = null)
 
 /** Wraps the [ContractState] in a [TransactionState] object */
 infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
 
 infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(this, newNotary)
-
-/**
- * Marker interface for data classes that represent the issuance state for a contract. These are intended as templates
- * from which the state object is initialised.
- */
-interface IssuanceDefinition
 
 /**
  * Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
@@ -173,7 +158,7 @@ interface IssuanceDefinition
  * @param P the type of product underlying the definition, for example [Currency].
  */
 @CordaSerializable
-data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
+data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
     override fun toString() = "$product issued by $issuer"
 }
 
@@ -182,17 +167,17 @@ data class Issued<out P>(val issuer: PartyAndReference, val product: P) {
  * cares about specific issuers with code that will accept any, or which is imposing issuer constraints via some
  * other mechanism and the additional type safety is not wanted.
  */
-fun <T> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
+fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
 /**
  * A contract state that can have a single owner.
  */
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount */
-    val owner: CompositeKey
+    val owner: PublicKey
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: CompositeKey): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
 }
 
 /** Something which is scheduled to happen at a point in time */
@@ -237,14 +222,14 @@ interface LinearState : ContractState {
 
     /**
      * True if this should be tracked by our vault(s).
-     * */
+     */
     fun isRelevant(ourKeys: Set<PublicKey>): Boolean
 
     /**
      * Standard clause to verify the LinearState safety properties.
      */
     @CordaSerializable
-    class ClauseVerifier<S : LinearState, C : CommandData>() : Clause<S, C, Unit>() {
+    class ClauseVerifier<in S : LinearState, C : CommandData> : Clause<S, C, Unit>() {
         override fun verify(tx: TransactionForContract,
                             inputs: List<S>,
                             outputs: List<S>,
@@ -253,8 +238,8 @@ interface LinearState : ContractState {
             val inputIds = inputs.map { it.linearId }.distinct()
             val outputIds = outputs.map { it.linearId }.distinct()
             requireThat {
-                "LinearStates are not merged" by (inputIds.count() == inputs.count())
-                "LinearStates are not split" by (outputIds.count() == outputs.count())
+                "LinearStates are not merged" using (inputIds.count() == inputs.count())
+                "LinearStates are not split" using (outputIds.count() == outputs.count())
             }
             return emptySet()
         }
@@ -360,7 +345,8 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
 @CordaSerializable
 data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
     constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
-    override fun toString() = "${party}$reference"
+
+    override fun toString() = "$party$reference"
 }
 
 /** Marker interface for classes that represent commands */
@@ -375,12 +361,12 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
-data class Command(val value: CommandData, val signers: List<CompositeKey>) {
+data class Command(val value: CommandData, val signers: List<PublicKey>) {
     init {
         require(signers.isNotEmpty())
     }
 
-    constructor(data: CommandData, key: CompositeKey) : this(data, listOf(key))
+    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 
     private fun commandDataToString() = value.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
     override fun toString() = "${commandDataToString()} with pubkeys ${signers.joinToString()}"
@@ -414,7 +400,7 @@ data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 @CordaSerializable
 data class AuthenticatedObject<out T : Any>(
-        val signers: List<CompositeKey>,
+        val signers: List<PublicKey>,
         /** If any public keys were recognised, the looked up institutions are available here */
         val signingParties: List<Party>,
         val value: T
@@ -494,26 +480,54 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
  * - Facts generated by oracles which might be reused a lot
  */
 interface Attachment : NamedByHash {
+
     fun open(): InputStream
-    fun openAsJAR() = JarInputStream(open())
+
+    fun openAsJAR(): JarInputStream {
+        val stream = open()
+        try {
+            return JarInputStream(stream)
+        } catch (t: Throwable) {
+            stream.use { throw t }
+        }
+    }
 
     /**
      * Finds the named file case insensitively and copies it to the output stream.
      *
      * @throws FileNotFoundException if the given path doesn't exist in the attachment.
      */
-    fun extractFile(path: String, outputTo: OutputStream) {
-        val p = path.toLowerCase().split('\\', '/')
-        openAsJAR().use { jar ->
-            while (true) {
-                val e = jar.nextJarEntry ?: break
-                if (e.name.toLowerCase().split('\\', '/') == p) {
-                    jar.copyTo(outputTo)
-                    return
-                }
-                jar.closeEntry()
+    fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
+}
+
+abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
+    companion object {
+        fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
+            val storage = serviceHub.storageService.attachments
+            return {
+                val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
+                if (a is AbstractAttachment) a.attachmentData else a.open().use { it.readBytes() }
             }
         }
-        throw FileNotFoundException()
     }
+
+    protected val attachmentData: ByteArray by lazy(dataLoader)
+    override fun open(): InputStream = attachmentData.inputStream()
+    override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id
+    override fun hashCode() = id.hashCode()
+    override fun toString() = "${javaClass.simpleName}(id=$id)"
+}
+
+@Throws(IOException::class)
+fun JarInputStream.extractFile(path: String, outputTo: OutputStream) {
+    val p = path.toLowerCase().split('\\', '/')
+    while (true) {
+        val e = nextJarEntry ?: break
+        if (!e.isDirectory && e.name.toLowerCase().split('\\', '/') == p) {
+            copyTo(outputTo)
+            return
+        }
+        closeEntry()
+    }
+    throw FileNotFoundException(path)
 }

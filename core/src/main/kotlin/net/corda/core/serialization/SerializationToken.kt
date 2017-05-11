@@ -6,6 +6,8 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import net.corda.core.node.ServiceHub
+import net.corda.core.serialization.SingletonSerializationToken.Companion.singletonSerializationToken
 
 /**
  * The interfaces and classes in this file allow large, singleton style classes to
@@ -39,29 +41,31 @@ interface SerializationToken {
  */
 class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
     override fun write(kryo: Kryo, output: Output, obj: T) {
-        kryo.writeClassAndObject(output, obj.toToken(getContext(kryo) ?: throw KryoException("Attempt to write a ${SerializeAsToken::class.simpleName} instance of ${obj.javaClass.name} without initialising a context")))
+        kryo.writeClassAndObject(output, obj.toToken(kryo.serializationContext() ?: throw KryoException("Attempt to write a ${SerializeAsToken::class.simpleName} instance of ${obj.javaClass.name} without initialising a context")))
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<T>): T {
         val token = (kryo.readClassAndObject(input) as? SerializationToken) ?: throw KryoException("Non-token read for tokenized type: ${type.name}")
-        val fromToken = token.fromToken(getContext(kryo) ?: throw KryoException("Attempt to read a token for a ${SerializeAsToken::class.simpleName} instance of ${type.name} without initialising a context"))
+        val fromToken = token.fromToken(kryo.serializationContext() ?: throw KryoException("Attempt to read a token for a ${SerializeAsToken::class.simpleName} instance of ${type.name} without initialising a context"))
         if (type.isAssignableFrom(fromToken.javaClass)) {
             return type.cast(fromToken)
         } else {
             throw KryoException("Token read ($token) did not return expected tokenized type: ${type.name}")
         }
     }
+}
 
-    companion object {
-        private fun getContext(kryo: Kryo): SerializeAsTokenContext? = kryo.context.get(SerializeAsTokenContext::class.java) as? SerializeAsTokenContext
+private val serializationContextKey = SerializeAsTokenContext::class.java
 
-        fun setContext(kryo: Kryo, context: SerializeAsTokenContext) {
-            kryo.context.put(SerializeAsTokenContext::class.java, context)
-        }
+fun Kryo.serializationContext() = context.get(serializationContextKey) as? SerializeAsTokenContext
 
-        fun clearContext(kryo: Kryo) {
-            kryo.context.remove(SerializeAsTokenContext::class.java)
-        }
+fun <T> Kryo.withSerializationContext(serializationContext: SerializeAsTokenContext, block: () -> T) = run {
+    context.containsKey(serializationContextKey) && throw IllegalStateException("There is already a serialization context.")
+    context.put(serializationContextKey, serializationContext)
+    try {
+        block()
+    } finally {
+        context.remove(serializationContextKey)
     }
 }
 
@@ -74,52 +78,58 @@ class SerializeAsTokenSerializer<T : SerializeAsToken> : Serializer<T>() {
  * Then it is a case of using the companion object methods on [SerializeAsTokenSerializer] to set and clear context as necessary
  * on the Kryo instance when serializing to enable/disable tokenization.
  */
-class SerializeAsTokenContext(toBeTokenized: Any, kryoPool: KryoPool) {
-    internal val tokenToTokenized = mutableMapOf<SerializationToken, SerializeAsToken>()
-    internal var readOnly = false
+class SerializeAsTokenContext internal constructor(val serviceHub: ServiceHub, init: SerializeAsTokenContext.() -> Unit) {
+    constructor(toBeTokenized: Any, kryoPool: KryoPool, serviceHub: ServiceHub) : this(serviceHub, {
+        kryoPool.run { kryo ->
+            kryo.withSerializationContext(this) {
+                toBeTokenized.serialize(kryo)
+            }
+        }
+    })
+
+    private val classNameToSingleton = mutableMapOf<String, SerializeAsToken>()
+    private var readOnly = false
 
     init {
-        /*
+        /**
          * Go ahead and eagerly serialize the object to register all of the tokens in the context.
          *
-         * This results in the toToken() method getting called for any [SerializeAsStringToken] instances which
+         * This results in the toToken() method getting called for any [SingletonSerializeAsToken] instances which
          * are encountered in the object graph as they are serialized by Kryo and will therefore register the token to
          * object mapping for those instances.  We then immediately set the readOnly flag to stop further adhoc or
          * accidental registrations from occuring as these could not be deserialized in a deserialization-first
          * scenario if they are not part of this iniital context construction serialization.
          */
-        kryoPool.run { kryo ->
-            SerializeAsTokenSerializer.setContext(kryo, this)
-            toBeTokenized.serialize(kryo)
-            SerializeAsTokenSerializer.clearContext(kryo)
-        }
+        init(this)
         readOnly = true
     }
+
+    internal fun putSingleton(toBeTokenized: SerializeAsToken) {
+        val className = toBeTokenized.javaClass.name
+        if (className !in classNameToSingleton) {
+            // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
+            if (readOnly) {
+                throw UnsupportedOperationException("Attempt to write token for lazy registered ${className}. All tokens should be registered during context construction.")
+            }
+            classNameToSingleton[className] = toBeTokenized
+        }
+    }
+
+    internal fun getSingleton(className: String) = classNameToSingleton[className] ?: throw IllegalStateException("Unable to find tokenized instance of $className in context $this")
 }
 
 /**
  * A class representing a [SerializationToken] for some object that is not serializable but can be looked up
  * (when deserialized) via just the class name.
  */
-@CordaSerializable
-data class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
+class SingletonSerializationToken private constructor(private val className: String) : SerializationToken {
 
-    constructor(toBeTokenized: SerializeAsToken) : this(toBeTokenized.javaClass.name)
+    override fun fromToken(context: SerializeAsTokenContext) = context.getSingleton(className)
 
-    override fun fromToken(context: SerializeAsTokenContext): Any = context.tokenToTokenized[this] ?:
-            throw IllegalStateException("Unable to find tokenized instance of $className in context $context")
+    fun registerWithContext(context: SerializeAsTokenContext, toBeTokenized: SerializeAsToken) = also { context.putSingleton(toBeTokenized) }
 
     companion object {
-        fun registerWithContext(token: SingletonSerializationToken, toBeTokenized: SerializeAsToken, context: SerializeAsTokenContext): SerializationToken =
-                if (token in context.tokenToTokenized) token else registerNewToken(token, toBeTokenized, context)
-
-        // Only allowable if we are in SerializeAsTokenContext init (readOnly == false)
-        private fun registerNewToken(token: SingletonSerializationToken, toBeTokenized: SerializeAsToken, context: SerializeAsTokenContext): SerializationToken {
-            if (context.readOnly) throw UnsupportedOperationException("Attempt to write token for lazy registered ${toBeTokenized.javaClass.name}. " +
-                    "All tokens should be registered during context construction.")
-            context.tokenToTokenized[token] = toBeTokenized
-            return token
-        }
+        fun <T : SerializeAsToken> singletonSerializationToken(toBeTokenized: Class<T>) = SingletonSerializationToken(toBeTokenized.name)
     }
 }
 
@@ -127,9 +137,8 @@ data class SingletonSerializationToken private constructor(private val className
  * A base class for implementing large objects / components / services that need to serialize themselves to a string token
  * to indicate which instance the token is a serialized form of.
  */
-abstract class SingletonSerializeAsToken() : SerializeAsToken {
-    @Suppress("LeakingThis")
-    private val token = SingletonSerializationToken(this)
+abstract class SingletonSerializeAsToken : SerializeAsToken {
+    private val token = singletonSerializationToken(javaClass)
 
-    override fun toToken(context: SerializeAsTokenContext) = SingletonSerializationToken.registerWithContext(token, this, context)
+    override fun toToken(context: SerializeAsTokenContext) = token.registerWithContext(context, this)
 }

@@ -2,8 +2,8 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.recordTransactions
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -75,7 +75,7 @@ fun LedgerDSLInterpreter<TransactionDSLInterpreter>.ledger(
  * the triggered diagnostic.
  */
 sealed class EnforceVerifyOrFail {
-    internal object Token: EnforceVerifyOrFail()
+    internal object Token : EnforceVerifyOrFail()
 }
 
 class DuplicateOutputLabel(label: String) : Exception("Output label '$label' already used")
@@ -130,7 +130,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addAttachment(attachmentId)
     }
 
-    override fun _command(signers: List<CompositeKey>, commandData: CommandData) {
+    override fun _command(signers: List<PublicKey>, commandData: CommandData) {
         val command = Command(commandData, signers)
         transactionBuilder.addCommand(command)
     }
@@ -154,7 +154,7 @@ data class TestTransactionDSLInterpreter private constructor(
     ) = dsl(TransactionDSL(copy()))
 }
 
-data class TestLedgerDSLInterpreter private constructor (
+data class TestLedgerDSLInterpreter private constructor(
         val services: ServiceHub,
         internal val labelToOutputStateAndRefs: HashMap<String, StateAndRef<ContractState>> = HashMap(),
         private val transactionWithLocations: HashMap<SecureHash, WireTransactionWithLocation> = LinkedHashMap(),
@@ -201,8 +201,8 @@ data class TestLedgerDSLInterpreter private constructor (
     internal inline fun <reified S : ContractState> resolveStateRef(stateRef: StateRef): TransactionState<S> {
         val transactionWithLocation =
                 transactionWithLocations[stateRef.txhash] ?:
-                nonVerifiedTransactionWithLocations[stateRef.txhash] ?:
-                throw TransactionResolutionException(stateRef.txhash)
+                        nonVerifiedTransactionWithLocations[stateRef.txhash] ?:
+                        throw TransactionResolutionException(stateRef.txhash)
         val output = transactionWithLocation.transaction.outputs[stateRef.index]
         return if (S::class.java.isAssignableFrom(output.data.javaClass)) @Suppress("UNCHECKED_CAST") {
             output as TransactionState<S>
@@ -233,7 +233,7 @@ data class TestLedgerDSLInterpreter private constructor (
     }
 
     fun outputToLabel(state: ContractState): String? =
-        labelToOutputStateAndRefs.filter { it.value.state.data == state }.keys.firstOrNull()
+            labelToOutputStateAndRefs.filter { it.value.state.data == state }.keys.firstOrNull()
 
     private fun <R> recordTransactionWithTransactionMap(
             transactionLabel: String?,
@@ -283,7 +283,7 @@ data class TestLedgerDSLInterpreter private constructor (
         try {
             val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it.serialized, listOf(NullSignature)) })
-            for ((key, value) in transactionWithLocations) {
+            for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
                 ltx.verify()
@@ -298,7 +298,7 @@ data class TestLedgerDSLInterpreter private constructor (
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
-            val transactionWithLocation = transactionWithLocations[exception.tx.id]
+            val transactionWithLocation = transactionWithLocations[exception.txId]
             val transactionName = transactionWithLocation?.label ?: transactionWithLocation?.location ?: "<unknown>"
             throw VerifiesFailed(transactionName, exception)
         }
@@ -336,9 +336,9 @@ fun signAll(transactionsToSign: List<WireTransaction>, extraKeys: List<KeyPair>)
     (ALL_TEST_KEYS + extraKeys).forEach {
         keyLookup[it.public] = it
     }
-    wtx.mustSign.keys.forEach {
+    wtx.mustSign.expandedCompositeKeys.forEach {
         val key = keyLookup[it] ?: throw IllegalArgumentException("Missing required key for ${it.toStringShort()}")
-        signatures += key.signWithECDSA(wtx.id)
+        signatures += key.sign(wtx.id)
     }
     SignedTransaction(bits, signatures)
 }

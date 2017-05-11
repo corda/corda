@@ -1,7 +1,6 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.Cash
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.DUMMY_PUBKEY_2
@@ -9,6 +8,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.ledger
 import net.corda.testing.transaction
 import org.junit.Test
+import java.security.PublicKey
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -23,8 +23,8 @@ class TransactionEncumbranceTests {
     )
     val stateWithNewOwner = state.copy(owner = DUMMY_PUBKEY_2)
 
-    val FOUR_PM = Instant.parse("2015-04-17T16:00:00.00Z")
-    val FIVE_PM = FOUR_PM.plus(1, ChronoUnit.HOURS)
+    val FOUR_PM: Instant = Instant.parse("2015-04-17T16:00:00.00Z")
+    val FIVE_PM: Instant = FOUR_PM.plus(1, ChronoUnit.HOURS)
     val timeLock = DummyTimeLock.State(FIVE_PM)
 
     class DummyTimeLock : Contract {
@@ -33,14 +33,14 @@ class TransactionEncumbranceTests {
             val timeLockInput = tx.inputs.filterIsInstance<State>().singleOrNull() ?: return
             val time = tx.timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
             requireThat {
-                "the time specified in the time-lock has passed" by (time >= timeLockInput.validFrom)
+                "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
             }
         }
 
         data class State(
                 val validFrom: Instant
         ) : ContractState {
-            override val participants: List<CompositeKey> = emptyList()
+            override val participants: List<PublicKey> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
         }
     }

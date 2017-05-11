@@ -1,5 +1,7 @@
 package net.corda.testing.node
 
+import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.getOrThrow
 import net.corda.node.driver.DriverDSLExposedInterface
 import org.junit.After
 import org.junit.Before
@@ -9,7 +11,7 @@ import kotlin.concurrent.thread
 abstract class DriverBasedTest {
     private val stopDriver = CountDownLatch(1)
     private var driverThread: Thread? = null
-    private lateinit var driverStarted: CountDownLatch
+    private lateinit var driverStarted: SettableFuture<Unit>
 
     protected sealed class RunTestToken {
         internal object Token : RunTestToken()
@@ -18,18 +20,22 @@ abstract class DriverBasedTest {
     protected abstract fun setup(): RunTestToken
 
     protected fun DriverDSLExposedInterface.runTest(): RunTestToken {
-        driverStarted.countDown()
+        driverStarted.set(Unit)
         stopDriver.await()
         return RunTestToken.Token
     }
 
     @Before
     fun start() {
-        driverStarted = CountDownLatch(1)
+        driverStarted = SettableFuture.create()
         driverThread = thread {
-            setup()
+            try {
+                setup()
+            } catch (t: Throwable) {
+                driverStarted.setException(t)
+            }
         }
-        driverStarted.await()
+        driverStarted.getOrThrow()
     }
 
     @After

@@ -1,5 +1,6 @@
 package net.corda.testing
 
+import net.corda.testing.TestTimestamp.Companion.timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 

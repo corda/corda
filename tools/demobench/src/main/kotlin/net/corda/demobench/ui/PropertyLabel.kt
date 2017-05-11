@@ -3,12 +3,12 @@ package net.corda.demobench.ui
 import javafx.scene.control.Label
 import javafx.scene.layout.HBox
 
-class PropertyLabel() : HBox() {
+class PropertyLabel : HBox() {
 
     val nameLabel = Label()
     val valueLabel = Label()
 
-    var name : String
+    var name: String
         get() = nameLabel.text
         set(value) {
             nameLabel.text = value

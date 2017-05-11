@@ -1,8 +1,11 @@
 package net.corda.demobench.model
 
+import javafx.scene.control.Alert
+import javafx.scene.control.Alert.AlertType.ERROR
+import javafx.stage.Stage
+import tornadofx.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import tornadofx.Controller
 
 class JVMConfig : Controller() {
 
@@ -23,4 +26,22 @@ class JVMConfig : Controller() {
         return ProcessBuilder(commandFor(jarPath, *args))
     }
 
+}
+
+typealias atRuntime = (Path, String) -> Unit
+
+fun checkExists(path: Path, header: String) {
+    if (!path.toFile().exists()) {
+        val alert = Alert(ERROR)
+        alert.isResizable = true
+        alert.headerText = header
+        alert.contentText = "'$path' does not exist.\n" +
+                "Please install all of DemoBench's runtime dependencies or run the installer. " +
+                "See the documentation for more details."
+
+        val stage = alert.dialogPane.scene.window as Stage
+        stage.isAlwaysOnTop = true
+
+        alert.show()
+    }
 }

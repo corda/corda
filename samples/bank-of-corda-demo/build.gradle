@@ -6,26 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://dl.bintray.com/kotlin/exposed'
-    }
-}
-
 sourceSets {
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output
@@ -41,12 +22,12 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
     runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":node:webserver:webcapsule", configuration: 'runtimeArtifacts')
+    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client:jfx')
     compile project(':client:rpc')
@@ -57,37 +38,36 @@ dependencies {
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
+task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
-    networkMap "Notary"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "Notary"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         rpcPort 10003
-        webPort 10004
         cordapps = []
     }
     node {
-        name "BankOfCorda"
-        nearestCity "London"
+        name "CN=BankOfCorda,O=R3,OU=corda,L=New York,C=US"
+        nearestCity "New York"
         advertisedServices = ["corda.issuer.USD"]
         p2pPort 10005
         rpcPort 10006
         webPort 10007
         cordapps = []
         rpcUsers = [
-                ['user' : "bankUser",
-                 'password' : "test",
-                 'permissions' : ["StartFlow.net.corda.flows.CashPaymentFlow",
-                                  "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
+                ['username'   : "bankUser",
+                 'password'   : "test",
+                 'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow",
+                                 "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
         ]
     }
     node {
-        name "BigCorporation"
+        name "CN=BigCorporation,O=R3,OU=corda,L=London,C=UK"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10008
@@ -95,9 +75,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
         webPort 10010
         cordapps = []
         rpcUsers = [
-                ['user' : "bigCorpUser",
-                 'password' : "test",
-                 'permissions' : ["StartFlow.net.corda.flows.CashPaymentFlow"]]
+                ['username'   : "bigCorpUser",
+                 'password'   : "test",
+                 'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow"]]
         ]
     }
 }

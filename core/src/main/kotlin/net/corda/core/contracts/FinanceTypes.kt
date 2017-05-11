@@ -11,16 +11,25 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
-import java.math.BigInteger
+import java.math.RoundingMode
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
+ * This interface is used by [Amount] to determine the conversion ratio from
+ * indicative/displayed asset amounts in [BigDecimal] to fungible tokens represented by Amount objects.
+ */
+interface TokenizableAssetInfo {
+    val displayTokenSize: BigDecimal
+}
+
+/**
  * Amount represents a positive quantity of some token (currency, asset, etc.), measured in quantity of the smallest
- * representable units. Note that quantity is not necessarily 1/100ths of a currency unit, but are the actual smallest
- * amount used in whatever underlying thing the amount represents.
+ * representable units. The nominal quantity represented by each individual token is equal to the [displayTokenSize].
+ * The scale property of the [displayTokenSize] should correctly reflect the displayed decimal places and is used
+ * when rounding conversions from indicative/displayed amounts in [BigDecimal] to Amount occur via the Amount.fromDecimal method.
  *
  * Amounts of different tokens *do not mix* and attempting to add or subtract two amounts of different currencies
  * will throw [IllegalArgumentException]. Amounts may not be negative. Amounts are represented internally using a signed
@@ -28,25 +37,62 @@ import java.util.*
  * multiplication are overflow checked and will throw [ArithmeticException] if the operation would have caused integer
  * overflow.
  *
- * TODO: It may make sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface,
- *       in particular for use during calculations. This may also resolve...
- * TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
- * TODO: Add either a scaling factor, or a variant for use in calculations.
- *
+ * @param quantity the number of tokens as a Long value.
+ * @param displayTokenSize the nominal display unit size of a single token,
+ * potentially with trailing decimal display places if the scale parameter is non-zero.
  * @param T the type of the token, for example [Currency].
+ * T should implement TokenizableAssetInfo if automatic conversion to/from a display format is required.
+ *
+ * TODO Proper lookup of currencies in a locale and context sensitive fashion is not supported and is left to the application.
  */
 @CordaSerializable
-data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
+data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal, val token: T) : Comparable<Amount<T>> {
     companion object {
         /**
-         * Build a currency amount from a decimal representation. For example, with an input of "12.34" GBP,
-         * returns an amount with a quantity of "1234".
+         * Build an Amount from a decimal representation. For example, with an input of "12.34 GBP",
+         * returns an amount with a quantity of "1234" tokens. The displayTokenSize as determined via
+         * getDisplayTokenSize is used to determine the conversion scaling.
+         * e.g. Bonds might be in nominal amounts of 100, currencies in 0.01 penny units.
          *
          * @see Amount<Currency>.toDecimal
+         * @throws ArithmeticException if the intermediate calculations cannot be converted to an unsigned 63-bit token amount.
          */
-        fun fromDecimal(quantity: BigDecimal, currency: Currency) : Amount<Currency> {
-            val longQuantity = quantity.movePointRight(currency.defaultFractionDigits).toLong()
-            return Amount(longQuantity, currency)
+        @JvmStatic
+        @JvmOverloads
+        fun <T : Any> fromDecimal(displayQuantity: BigDecimal, token: T, rounding: RoundingMode = RoundingMode.FLOOR): Amount<T> {
+            val tokenSize = getDisplayTokenSize(token)
+            val tokenCount = displayQuantity.divide(tokenSize).setScale(0, rounding).longValueExact()
+            return Amount(tokenCount, tokenSize, token)
+        }
+
+        /**
+         * For a particular token returns a zero sized Amount<T>
+         */
+        @JvmStatic
+        fun <T : Any> zero(token: T): Amount<T> {
+            val tokenSize = getDisplayTokenSize(token)
+            return Amount(0L, tokenSize, token)
+        }
+
+
+        /**
+         * Determines the representation of one Token quantity in BigDecimal. For Currency and Issued<Currency>
+         * the definitions is taken from Currency defaultFractionDigits property e.g. 2 for USD, or 0 for JPY
+         * so that the automatic token size is the conventional minimum penny amount.
+         * For other possible token types the asset token should implement TokenizableAssetInfo to
+         * correctly report the designed nominal amount.
+         */
+        fun getDisplayTokenSize(token: Any): BigDecimal {
+            if (token is TokenizableAssetInfo) {
+                return token.displayTokenSize
+            }
+            if (token is Currency) {
+                return BigDecimal.ONE.scaleByPowerOfTen(-token.defaultFractionDigits)
+            }
+            if (token is Issued<*>) {
+                return getDisplayTokenSize(token.product)
+            }
+            return BigDecimal.ONE
         }
 
         private val currencySymbols: Map<String, Currency> = mapOf(
@@ -111,44 +157,93 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     }
 
     init {
-        // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
-        // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
-        // If you want to express a negative amount, for now, use a long.
+        // Amount represents a static balance of physical assets as managed by the distributed ledger and is not allowed
+        // to become negative a rule further maintained by the Contract verify method.
+        // N.B. If concepts such as an account overdraft are required this should be modelled separately via Obligations,
+        // or similar second order smart contract concepts.
         require(quantity >= 0) { "Negative amounts are not allowed: $quantity" }
     }
 
     /**
-     * Construct the amount using the given decimal value as quantity. Any fractional part
-     * is discarded. To convert and use the fractional part, see [fromDecimal].
+     * Automatic conversion constructor from number of tokens to an Amount using getDisplayTokenSize to determine
+     * the displayTokenSize.
+     *
+     * @param tokenQuantity the number of tokens represented.
+     * @param token the type of the token, for example a [Currency] object.
      */
-    constructor(quantity: BigDecimal, token: T) : this(quantity.toLong(), token)
-    constructor(quantity: BigInteger, token: T) : this(quantity.toLong(), token)
+    constructor(tokenQuantity: Long, token: T) : this(tokenQuantity, getDisplayTokenSize(token), token)
 
+    /**
+     * A checked addition operator is supported to simplify aggregation of Amounts.
+     * @throws ArithmeticException if there is overflow of Amount tokens during the summation
+     * Mixing non-identical token types will throw [IllegalArgumentException]
+     */
     operator fun plus(other: Amount<T>): Amount<T> {
         checkToken(other)
-        return Amount(Math.addExact(quantity, other.quantity), token)
+        return Amount(Math.addExact(quantity, other.quantity), displayTokenSize, token)
     }
 
+    /**
+     * A checked addition operator is supported to simplify netting of Amounts.
+     * If this leads to the Amount going negative this will throw [IllegalArgumentException].
+     * @throws ArithmeticException if there is Numeric underflow
+     * Mixing non-identical token types will throw [IllegalArgumentException]
+     */
     operator fun minus(other: Amount<T>): Amount<T> {
         checkToken(other)
-        return Amount(Math.subtractExact(quantity, other.quantity), token)
+        return Amount(Math.subtractExact(quantity, other.quantity), displayTokenSize, token)
     }
 
     private fun checkToken(other: Amount<T>) {
         require(other.token == token) { "Token mismatch: ${other.token} vs $token" }
+        require(other.displayTokenSize == displayTokenSize) { "Token size mismatch: ${other.displayTokenSize} vs $displayTokenSize" }
     }
 
-    operator fun div(other: Long): Amount<T> = Amount(quantity / other, token)
-    operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), token)
-    operator fun div(other: Int): Amount<T> = Amount(quantity / other, token)
-    operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), token)
+    /**
+     * The multiplication operator is supported to allow easy calculation for multiples of a primitive Amount.
+     * Note this is not a conserving operation, so it may not always be correct modelling of proper token behaviour.
+     * N.B. Division is not supported as fractional tokens are not representable by an Amount.
+     */
+    operator fun times(other: Long): Amount<T> = Amount(Math.multiplyExact(quantity, other), displayTokenSize, token)
 
+    operator fun times(other: Int): Amount<T> = Amount(Math.multiplyExact(quantity, other.toLong()), displayTokenSize, token)
+
+    /**
+     * This method provides a token conserving divide mechanism.
+     * @param partitions the number of amounts to divide the current quantity into.
+     * @result Returns [partitions] separate Amount objects which sum to the same quantity as this Amount
+     * and differ by no more than a single token in size.
+     */
+    fun splitEvenly(partitions: Int): List<Amount<T>> {
+        require(partitions >= 1) { "Must split amount into one, or more pieces" }
+        val commonTokensPerPartition = quantity.div(partitions)
+        val residualTokens = quantity - (commonTokensPerPartition * partitions)
+        val splitAmount = Amount(commonTokensPerPartition, displayTokenSize, token)
+        val splitAmountPlusOne = Amount(commonTokensPerPartition + 1L, displayTokenSize, token)
+        return (0..partitions - 1).map { if (it < residualTokens) splitAmountPlusOne else splitAmount }.toList()
+    }
+
+    /**
+     * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
+     * of "1234" GBP, returns "12.34". The precise representation is controlled by the displayTokenSize,
+     * which determines the size of a single token and controls the trailing decimal places via it's scale property.
+     *
+     * @see Amount.Companion.fromDecimal
+     */
+    fun toDecimal(): BigDecimal = BigDecimal.valueOf(quantity, 0) * displayTokenSize
+
+
+    /**
+     * Convert a currency [Amount] to a display string representation.
+     *
+     * For example, with an amount with a quantity of "1234" GBP, returns "12.34 GBP".
+     * The result of fromDecimal is used to control the numerical formatting and
+     * the token specifier appended is taken from token.toString.
+     *
+     * @see Amount.Companion.fromDecimal
+     */
     override fun toString(): String {
-        val bd = if (token is Currency)
-            BigDecimal(quantity).movePointLeft(token.defaultFractionDigits)
-        else
-            BigDecimal(quantity)
-        return bd.toPlainString() + " " + token
+        return toDecimal().toPlainString() + " " + token
     }
 
     override fun compareTo(other: Amount<T>): Int {
@@ -157,17 +252,206 @@ data class Amount<T>(val quantity: Long, val token: T) : Comparable<Amount<T>> {
     }
 }
 
-/**
- * Convert a currency [Amount] to a decimal representation. For example, with an amount with a quantity
- * of "1234" GBP, returns "12.34".
- *
- * @see Amount.Companion.fromDecimal
- */
-fun Amount<Currency>.toDecimal() : BigDecimal = BigDecimal(quantity).movePointLeft(token.defaultFractionDigits)
 
-fun <T> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
-fun <T> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
-fun <T> Iterable<Amount<T>>.sumOrZero(currency: T) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
+fun <T : Any> Iterable<Amount<T>>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+fun <T : Any> Iterable<Amount<T>>.sumOrThrow() = reduce { left, right -> left + right }
+fun <T : Any> Iterable<Amount<T>>.sumOrZero(token: T) = if (iterator().hasNext()) sumOrThrow() else Amount.zero(token)
+
+
+/**
+ * Simple data class to associate the origin, owner, or holder of a particular Amount object.
+ * @param source the holder of the Amount.
+ * @param amount the Amount of asset available.
+ * @param ref is an optional field used for housekeeping in the caller.
+ * e.g. to point back at the original Vault state objects.
+ * @see SourceAndAmount.apply which processes a list of SourceAndAmount objects
+ * and calculates the resulting Amount distribution as a new list of SourceAndAmount objects.
+ */
+data class SourceAndAmount<T : Any, out P : Any>(val source: P, val amount: Amount<T>, val ref: Any? = null)
+
+/**
+ * This class represents a possibly negative transfer of tokens from one vault state to another, possibly at a future date.
+ *
+ * @param quantityDelta is a signed Long value representing the exchanged number of tokens. If positive then
+ * it represents the movement of Math.abs(quantityDelta) tokens away from source and receipt of Math.abs(quantityDelta)
+ * at the destination. If the quantityDelta is negative then the source will receive Math.abs(quantityDelta) tokens
+ * and the destination will lose Math.abs(quantityDelta) tokens.
+ * Where possible the source and destination should be coded to ensure a positive quantityDelta,
+ * but in various scenarios it may be more consistent to allow positive and negative values.
+ * For example it is common for a bank to code asset flows as gains and losses from its perspective i.e. always the destination.
+ * @param token represents the type of asset token as would be used to construct Amount<T> objects.
+ * @param source is the [Party], [Account], [CompositeKey], or other identifier of the token source if quantityDelta is positive,
+ * or the token sink if quantityDelta is negative. The type P should support value equality.
+ * @param destination is the [Party], [Account], [CompositeKey], or other identifier of the token sink if quantityDelta is positive,
+ * or the token source if quantityDelta is negative. The type P should support value equality.
+ */
+@CordaSerializable
+class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
+                                       val token: T,
+                                       val source: P,
+                                       val destination: P) {
+    companion object {
+        /**
+         * Construct an AmountTransfer object from an indicative/displayable BigDecimal source, applying rounding as specified.
+         * The token size is determined from the token type and is the same as for [Amount] of the same token.
+         * @param displayQuantityDelta is the signed amount to transfer between source and destination in displayable units.
+         * Positive values mean transfers from source to destination. Negative values mean transfers from destination to source.
+         * @param token defines the asset being represented in the transfer. The token should implement [TokenizableAssetInfo] if custom
+         * conversion logic is required.
+         * @param source The payer of the transfer if displayQuantityDelta is positive, the payee if displayQuantityDelta is negative
+         * @param destination The payee of the transfer if displayQuantityDelta is positive, the payer if displayQuantityDelta is negative
+         * @param rounding The mode of rounding to apply after scaling to integer token units.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <T : Any, P : Any> fromDecimal(displayQuantityDelta: BigDecimal,
+                                           token: T,
+                                           source: P,
+                                           destination: P,
+                                           rounding: RoundingMode = RoundingMode.DOWN): AmountTransfer<T, P> {
+            val tokenSize = Amount.getDisplayTokenSize(token)
+            val deltaTokenCount = displayQuantityDelta.divide(tokenSize).setScale(0, rounding).longValueExact()
+            return AmountTransfer(deltaTokenCount, token, source, destination)
+        }
+
+        /**
+         * Helper to make a zero size AmountTransfer
+         */
+        @JvmStatic
+        fun <T : Any, P : Any> zero(token: T,
+                                    source: P,
+                                    destination: P): AmountTransfer<T, P> = AmountTransfer(0L, token, source, destination)
+    }
+
+    init {
+        require(source != destination) { "The source and destination cannot be the same ($source)" }
+    }
+
+    /**
+     * Add together two [AmountTransfer] objects to produce the single equivalent net flow.
+     * The addition only applies to AmountTransfer objects with the same token type.
+     * Also the pair of parties must be aligned, although source destination may be
+     * swapped in the second item.
+     * @throws ArithmeticException if there is underflow, or overflow in the summations.
+     */
+    operator fun plus(other: AmountTransfer<T, P>): AmountTransfer<T, P> {
+        require(other.token == token) { "Token mismatch: ${other.token} vs $token" }
+        require((other.source == source && other.destination == destination)
+                || (other.source == destination && other.destination == source)) {
+            "Only AmountTransfer between the same two parties can be aggregated/netted"
+        }
+        return if (other.source == source) {
+            AmountTransfer(Math.addExact(quantityDelta, other.quantityDelta), token, source, destination)
+        } else {
+            AmountTransfer(Math.subtractExact(quantityDelta, other.quantityDelta), token, source, destination)
+        }
+    }
+
+    /**
+     * Convert the quantityDelta to a displayable format BigDecimal value. The conversion ratio is the same as for
+     * [Amount] of the same token type.
+     */
+    fun toDecimal(): BigDecimal = BigDecimal.valueOf(quantityDelta, 0) * Amount.getDisplayTokenSize(token)
+
+    fun copy(quantityDelta: Long = this.quantityDelta,
+             token: T = this.token,
+             source: P = this.source,
+             destination: P = this.destination): AmountTransfer<T, P> = AmountTransfer(quantityDelta, token, source, destination)
+
+    /**
+     * Checks value equality of AmountTransfer objects, but also matches the reversed source and destination equivalent.
+     */
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+
+        other as AmountTransfer<*, *>
+
+        if (token != other.token) return false
+        if (source == other.source) {
+            if (destination != other.destination) return false
+            if (quantityDelta != other.quantityDelta) return false
+            return true
+        } else if (source == other.destination) {
+            if (destination != other.source) return false
+            if (quantityDelta != -other.quantityDelta) return false
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * HashCode ensures that reversed source and destination equivalents will hash to the same value.
+     */
+    override fun hashCode(): Int {
+        var result = Math.abs(quantityDelta).hashCode() // ignore polarity reversed values
+        result = 31 * result + token.hashCode()
+        result = 31 * result + (source.hashCode() xor destination.hashCode()) // XOR to ensure the same hash for swapped source and destination
+        return result
+    }
+
+    override fun toString(): String {
+        return "Transfer from $source to $destination of ${this.toDecimal().toPlainString()} $token"
+    }
+
+    /**
+     * Novation is a common financial operation in which a bilateral exchange is modified so that the same
+     * relative asset exchange happens, but with each party exchanging versus a central counterparty, or clearing house.
+     *
+     * @param centralParty The central party to face the exchange against.
+     * @return Returns two new AmountTransfers each between one of the original parties and the centralParty.
+     * The net total exchange is the same as in the original input.
+     */
+    fun novate(centralParty: P): Pair<AmountTransfer<T, P>, AmountTransfer<T, P>> = Pair(copy(destination = centralParty), copy(source = centralParty))
+
+    /**
+     * Applies this AmountTransfer to a list of [SourceAndAmount] objects representing balances.
+     * The list can be heterogeneous in terms of token types and parties, so long as there is sufficient balance
+     * of the correct token type held with the party paying for the transfer.
+     * @param balances The source list of [SourceAndAmount] objects containing the funds to satisfy the exchange.
+     * @param newRef An optional marker object which is attached to any new [SourceAndAmount] objects created in the output.
+     * i.e. To the new payment destination entry and to any residual change output.
+     * @return The returned list is a copy of the original list, except that funds needed to cover the exchange
+     * will have been removed and a new output and possibly residual amount entry will be added at the end of the list.
+     * @throws ArithmeticException if there is underflow in the summations.
+     */
+    fun apply(balances: List<SourceAndAmount<T, P>>, newRef: Any? = null): List<SourceAndAmount<T, P>> {
+        val (payer, payee) = if (quantityDelta >= 0L) Pair(source, destination) else Pair(destination, source)
+        val transfer = Math.abs(quantityDelta)
+        var residual = transfer
+        val outputs = mutableListOf<SourceAndAmount<T, P>>()
+        var remaining: SourceAndAmount<T, P>? = null
+        var newAmount: SourceAndAmount<T, P>? = null
+        for (balance in balances) {
+            if (balance.source != payer
+                    || balance.amount.token != token
+                    || residual == 0L) {
+                // Just copy across unmodified.
+                outputs += balance
+            } else if (balance.amount.quantity < residual) {
+                // Consume the payers amount and do not copy across.
+                residual -= balance.amount.quantity
+            } else {
+                // Calculate any residual spend left on the payers balance.
+                if (balance.amount.quantity > residual) {
+                    remaining = SourceAndAmount(payer, balance.amount.copy(quantity = Math.subtractExact(balance.amount.quantity, residual)), newRef)
+                }
+                // Build the new output payment to the payee.
+                newAmount = SourceAndAmount(payee, balance.amount.copy(quantity = transfer), newRef)
+                // Clear the residual.
+                residual = 0L
+            }
+        }
+        require(residual == 0L) { "Insufficient funds. Unable to process $this" }
+        if (remaining != null) {
+            outputs += remaining
+        }
+        outputs += newAmount!!
+        return outputs
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -232,7 +516,7 @@ data class Tenor(val name: String) {
         val adjustedMaturityDate = calendar.applyRollConvention(maturityDate, DateRollConvention.ModifiedFollowing)
         val daysToMaturity = calculateDaysBetween(startDate, adjustedMaturityDate, DayCountBasisYear.Y360, DayCountBasisDay.DActual)
 
-        return daysToMaturity.toInt()
+        return daysToMaturity
     }
 
     override fun toString(): String = name
@@ -265,43 +549,25 @@ enum class DateRollDirection(val value: Long) { FORWARD(1), BACKWARD(-1) }
  * There are some additional rules which are explained in the individual cases below.
  */
 @CordaSerializable
-enum class DateRollConvention {
+enum class DateRollConvention(val direction: () -> DateRollDirection, val isModified: Boolean) {
     // direction() cannot be a val due to the throw in the Actual instance
 
     /** Don't roll the date, use the one supplied. */
-    Actual {
-        override fun direction(): DateRollDirection = throw UnsupportedOperationException("Direction is not relevant for convention Actual")
-        override val isModified: Boolean = false
-    },
+    Actual({ throw UnsupportedOperationException("Direction is not relevant for convention Actual") }, false),
     /** Following is the next business date from this one. */
-    Following {
-        override fun direction(): DateRollDirection = DateRollDirection.FORWARD
-        override val isModified: Boolean = false
-    },
+    Following({ DateRollDirection.FORWARD }, false),
     /**
      * "Modified following" is the next business date, unless it's in the next month, in which case use the preceeding
      * business date.
      */
-    ModifiedFollowing {
-        override fun direction(): DateRollDirection = DateRollDirection.FORWARD
-        override val isModified: Boolean = true
-    },
+    ModifiedFollowing({ DateRollDirection.FORWARD }, true),
     /** Previous is the previous business date from this one. */
-    Previous {
-        override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
-        override val isModified: Boolean = false
-    },
+    Previous({ DateRollDirection.BACKWARD }, false),
     /**
      * Modified previous is the previous business date, unless it's in the previous month, in which case use the next
      * business date.
      */
-    ModifiedPrevious {
-        override fun direction(): DateRollDirection = DateRollDirection.BACKWARD
-        override val isModified: Boolean = true
-    };
-
-    abstract fun direction(): DateRollDirection
-    abstract val isModified: Boolean
+    ModifiedPrevious({ DateRollDirection.BACKWARD }, true);
 }
 
 
@@ -345,31 +611,14 @@ enum class PaymentRule {
  */
 @Suppress("unused")   // TODO: Revisit post-Vega and see if annualCompoundCount is still needed.
 @CordaSerializable
-enum class Frequency(val annualCompoundCount: Int) {
-    Annual(1) {
-        override fun offset(d: LocalDate, n: Long) = d.plusYears(1 * n)
-    },
-    SemiAnnual(2) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(6 * n)
-    },
-    Quarterly(4) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(3 * n)
-    },
-    Monthly(12) {
-        override fun offset(d: LocalDate, n: Long) = d.plusMonths(1 * n)
-    },
-    Weekly(52) {
-        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(1 * n)
-    },
-    BiWeekly(26) {
-        override fun offset(d: LocalDate, n: Long) = d.plusWeeks(2 * n)
-    },
-    Daily(365) {
-        override fun offset(d: LocalDate, n: Long) = d.plusDays(1 * n)
-    };
-
-    abstract fun offset(d: LocalDate, n: Long = 1): LocalDate
-    // Daily() // Let's not worry about this for now.
+enum class Frequency(val annualCompoundCount: Int, val offset: LocalDate.(Long) -> LocalDate) {
+    Annual(1, { plusYears(1 * it) }),
+    SemiAnnual(2, { plusMonths(6 * it) }),
+    Quarterly(4, { plusMonths(3 * it) }),
+    Monthly(12, { plusMonths(1 * it) }),
+    Weekly(52, { plusWeeks(1 * it) }),
+    BiWeekly(26, { plusWeeks(2 * it) }),
+    Daily(365, { plusDays(1 * it) });
 }
 
 
@@ -396,7 +645,7 @@ open class BusinessCalendar private constructor(val holidayDates: List<LocalDate
         }.toMap()
 
         /** Parses a date of the form YYYY-MM-DD, like 2016-01-10 for 10th Jan. */
-        fun parseDateFromString(it: String) = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
+        fun parseDateFromString(it: String): LocalDate = LocalDate.parse(it, DateTimeFormatter.ISO_LOCAL_DATE)
 
         /** Returns a business calendar that combines all the named holiday calendars into one list of holiday dates. */
         fun getInstance(vararg calname: String) = BusinessCalendar(
@@ -546,7 +795,10 @@ enum class NetType {
 @CordaSerializable
 data class Commodity(val commodityCode: String,
                      val displayName: String,
-                     val defaultFractionDigits: Int = 0) {
+                     val defaultFractionDigits: Int = 0) : TokenizableAssetInfo {
+    override val displayTokenSize: BigDecimal
+        get() = BigDecimal.ONE.scaleByPowerOfTen(-defaultFractionDigits)
+
     companion object {
         private val registry = mapOf(
                 // Simple example commodity, as in http://www.investopedia.com/university/commodities/commodities14.asp

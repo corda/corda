@@ -4,7 +4,10 @@ import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.loggerFor
+import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import kotlin.system.exitProcess
 
@@ -42,13 +45,13 @@ private class TraderDemo {
         val role = options.valueOf(roleArg)!!
         if (role == Role.BUYER) {
             val host = HostAndPort.fromString("localhost:10006")
-            CordaRPCClient(host).use("demo", "demo") {
-                TraderDemoClientApi(this).runBuyer()
+            CordaRPCClient(host).start("demo", "demo").use {
+                TraderDemoClientApi(it.proxy).runBuyer()
             }
         } else {
             val host = HostAndPort.fromString("localhost:10009")
             CordaRPCClient(host).use("demo", "demo") {
-                TraderDemoClientApi(this).runSeller(1000.DOLLARS, "Bank A")
+                TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name)
             }
         }
     }

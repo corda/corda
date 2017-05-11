@@ -1,10 +1,19 @@
 package net.corda.core.node.services
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.flows.FlowException
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
@@ -12,6 +21,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Instant
 import java.util.*
 
 /**
@@ -49,7 +59,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>) {
+    data class Update(val consumed: Set<StateAndRef<ContractState>>, val produced: Set<StateAndRef<ContractState>>, val flowId: UUID? = null) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
 
@@ -84,8 +94,38 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     enum class StateStatus {
-        UNCONSUMED, CONSUMED
+        UNCONSUMED, CONSUMED, ALL
     }
+
+    /**
+     * Returned in queries [VaultService.queryBy] and [VaultService.trackBy].
+     * A Page contains:
+     *  1) a [List] of actual [StateAndRef] requested by the specified [QueryCriteria] to a maximum of [MAX_PAGE_SIZE]
+     *  2) a [List] of associated [Vault.StateMetadata], one per [StateAndRef] result
+     *  3) the [PageSpecification] definition used to bound this result set
+     *  4) a total number of states that met the given [QueryCriteria]
+     *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
+     *     further pagination (by issuing new queries).
+     */
+    @CordaSerializable
+    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
+                                           val statesMetadata: List<Vault.StateMetadata>,
+                                           val pageable: PageSpecification,
+                                           val totalStatesAvailable: Long)
+
+    @CordaSerializable
+    data class StateMetadata(val ref: StateRef,
+                             val contractStateClassName: String,
+                             val recordedTime: Instant,
+                             val consumedTime: Instant?,
+                             val status: Vault.StateStatus,
+                             val notaryName: String,
+                             val notaryKey: String,
+                             val lockId: String?,
+                             val lockUpdateTime: Instant?)
+
+    @CordaSerializable
+    data class PageAndUpdates<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>? = null)
 }
 
 /**
@@ -125,12 +165,58 @@ interface VaultService {
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
+
+    // DOCSTART VaultQueryAPI
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.Page] object containing the following:
+     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
+     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
+     *  3. the [PageSpecification] used in the query
+     *  4. a total number of results available (for subsequent paging if necessary)
+     *
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
+     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
+     */
+    fun <T : ContractState> queryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort(emptySet())): Vault.Page<T>
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.PageAndUpdates] object containing
+     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
+     * 2) an [Observable] of [Vault.Update]
+     *
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
+     */
+    fun <T : ContractState> trackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
+    // DOCEND VaultQueryAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+    fun <T : ContractState> queryBy(): Vault.Page<T> = queryBy()
+    fun <T : ContractState> queryBy(criteria: QueryCriteria): Vault.Page<T> = queryBy(criteria)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = queryBy(criteria, paging)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = queryBy(criteria, sorting)
+
+    fun <T : ContractState> trackBy(): Vault.PageAndUpdates<T> = trackBy()
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = trackBy(criteria)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = trackBy(criteria, paging)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = trackBy(criteria, Sort(emptySet()))
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
-     * TODO: revisit and generalize this exposed API function.
      */
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
 
     /**
@@ -197,30 +283,89 @@ interface VaultService {
      *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
      */
     @Throws(InsufficientBalanceException::class)
+    @Suspendable
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: CompositeKey,
-                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<CompositeKey>>
+                      to: PublicKey,
+                      onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
 
+    // DOCSTART VaultStatesQuery
     /**
      * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
+     * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
-    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>): Iterable<StateAndRef<T>>
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
+    fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
+    // DOCEND VaultStatesQuery
+
+    /**
+     * Soft locking is used to prevent multiple transactions trying to use the same output simultaneously.
+     * Violation of a soft lock would result in a double spend being created and rejected by the notary.
+     */
+
+    // DOCSTART SoftLockAPI
+
+    /**
+     * Reserve a set of [StateRef] for a given [UUID] unique identifier.
+     * Typically, the unique identifier will refer to a Flow lockId associated with a [Transaction] in an in-flight flow.
+     * In the case of coin selection, soft locks are automatically taken upon gathering relevant unconsumed input refs.
+     *
+     * @throws [StatesNotAvailableException] when not possible to softLock all of requested [StateRef]
+     */
+    @Throws(StatesNotAvailableException::class)
+    fun softLockReserve(lockId: UUID, stateRefs: Set<StateRef>)
+
+    /**
+     * Release all or an explicitly specified set of [StateRef] for a given [UUID] unique identifier.
+     * A vault soft lock manager is automatically notified of a Flows that are terminated, such that any soft locked states
+     * may be released.
+     * In the case of coin selection, softLock are automatically released once previously gathered unconsumed input refs
+     * are consumed as part of cash spending.
+     */
+    fun softLockRelease(lockId: UUID, stateRefs: Set<StateRef>? = null)
+
+    /**
+     * Retrieve softLockStates for a given [UUID] or return all softLockStates in vault for a given
+     * [ContractState] type
+     */
+    fun <T : ContractState> softLockedStates(lockId: UUID? = null): List<StateAndRef<T>>
+
+    // DOCEND SoftLockAPI
+
+    /**
+     * TODO: this function should be private to the vault, but currently Cash Exit functionality
+     * is implemented in a separate module (finance) and requires access to it.
+     */
+    @Suspendable
+    fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
 
-inline fun <reified T: ContractState> VaultService.unconsumedStates(): Iterable<StateAndRef<T>> =
-        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
+inline fun <reified T : ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
+        states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
 
-inline fun <reified T: ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
+inline fun <reified T : ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
 
 /** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
                 .associateBy { it.state.data.linearId }.mapValues { it.value }
 
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
+}
+
+class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
+    override fun toString() = "Soft locking error: $message"
 }
 
 /**
@@ -235,11 +380,19 @@ interface KeyManagementService {
     /** Returns a snapshot of the current pubkey->privkey mapping. */
     val keys: Map<PublicKey, PrivateKey>
 
+    @Throws(IllegalStateException::class)
     fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key ${publicKey.toStringShort()}")
 
-    fun toKeyPair(publicKey: PublicKey) = KeyPair(publicKey, toPrivate(publicKey))
+    @Throws(IllegalArgumentException::class)
+    fun toKeyPair(publicKey: PublicKey): KeyPair {
+        when (publicKey) {
+            is CompositeKey -> throw IllegalArgumentException("Got CompositeKey when single PublicKey expected.")
+            else -> return KeyPair(publicKey, toPrivate(publicKey))
+        }
+    }
 
     /** Returns the first [KeyPair] matching any of the [publicKeys] */
+    @Throws(IllegalArgumentException::class)
     fun toKeyPair(publicKeys: Iterable<PublicKey>) = publicKeys.first { keys.contains(it) }.let { toKeyPair(it) }
 
     /** Generates a new random key and adds it to the exposed map. */
@@ -267,6 +420,7 @@ interface FileUploader {
 interface AttachmentsStorageService {
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+    val attachmentsClassLoaderEnabled: Boolean
 }
 
 /**
@@ -302,23 +456,12 @@ interface TxWritableStorageService : StorageService {
 }
 
 /**
- * Provides access to schedule activity at some point in time.  This interface might well be expanded to
- * increase the feature set in the future.
- *
- * If the point in time is in the past, the expectation is that the activity will happen shortly after it is scheduled.
- *
- * The main consumer initially is an observer of the vault to schedule activities based on transactions as they are
- * recorded.
+ * Provides verification service. The implementation may be a simple in-memory verify() call or perhaps an IPC/RPC.
  */
-interface SchedulerService {
+interface TransactionVerifierService {
     /**
-     * Schedule a new activity for a TX output, probably because it was just produced.
-     *
-     * Only one activity can be scheduled for a particular [StateRef] at any one time.  Scheduling a [ScheduledStateRef]
-     * replaces any previously scheduled [ScheduledStateRef] for any one [StateRef].
+     * @param transaction The transaction to be verified.
+     * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
      */
-    fun scheduleStateActivity(action: ScheduledStateRef)
-
-    /** Unschedule all activity for a TX output, probably because it was consumed. */
-    fun unscheduleStateActivity(ref: StateRef)
+    fun verify(transaction: LedgerTransaction): ListenableFuture<*>
 }

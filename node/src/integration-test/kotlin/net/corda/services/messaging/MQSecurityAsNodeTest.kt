@@ -2,7 +2,7 @@ package net.corda.services.messaging
 
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
-import net.corda.nodeapi.ArtemisMessagingComponent.Companion.RPC_REQUESTS_QUEUE
+import net.corda.nodeapi.RPCApi
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
@@ -24,7 +24,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
     @Test
     fun `send message to RPC requests address`() {
-        assertSendAttackFails(RPC_REQUESTS_QUEUE)
+        assertSendAttackFails(RPCApi.RPC_SERVER_QUEUE_NAME)
     }
 
     @Test

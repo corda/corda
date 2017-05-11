@@ -26,8 +26,10 @@ import javafx.util.Duration
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
+import net.corda.core.crypto.toBase58String
 import net.corda.core.node.NodeInfo
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
 import tornadofx.*
 
@@ -83,7 +85,7 @@ class Network : CordaView() {
 
     private fun NodeInfo.render(): MapViewComponents {
         val node = this
-        val mapLabel = label(node.legalIdentity.name) {
+        val mapLabel = label(PartyNameFormatter.short.format(node.legalIdentity.name)) {
             graphic = FontAwesomeIconView(FontAwesomeIcon.DOT_CIRCLE_ALT)
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
@@ -97,10 +99,11 @@ class Network : CordaView() {
 
         val button = button {
             graphic = vbox {
-                label(node.legalIdentity.name) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
+                label(PartyNameFormatter.short.format(node.legalIdentity.name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
                 gridpane {
                     hgap = 5.0
                     vgap = 5.0
+                    row("Full name :") { label(PartyNameFormatter.full.format(node.legalIdentity.name)) }
                     row("Pub Key :") { copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())) }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
                     node.physicalLocation?.apply { row("Location :") { label(this@apply.description) } }
@@ -118,7 +121,7 @@ class Network : CordaView() {
         Bindings.bindContent(mapPane.children, mapLabels)
         // Run once when the screen is ready.
         // TODO : Find a better way to do this.
-        mapPane.heightProperty().addListener { _o, old, _new ->
+        mapPane.heightProperty().addListener { _, old, _ ->
             if (old == 0.0) myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
         }
         // Listen on zooming gesture, if device has gesture support.
@@ -128,7 +131,7 @@ class Network : CordaView() {
         zoomInButton.setOnAction { zoom(1.2) }
         zoomOutButton.setOnAction { zoom(0.8) }
 
-        lastTransactions.addListener { observableValue, old, new ->
+        lastTransactions.addListener { _, _, new ->
             new?.forEach {
                 it.first.value?.let { a ->
                     it.second.value?.let { b ->

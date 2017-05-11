@@ -3,9 +3,11 @@ package net.corda.irs
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.postJson
@@ -16,7 +18,9 @@ import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.IntegrationTestCategory
+import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.observables.BlockingObservable
 import java.net.URL
@@ -24,28 +28,34 @@ import java.time.LocalDate
 
 class IRSDemoTest : IntegrationTestCategory {
     val rpcUser = User("user", "password", emptySet())
-    val currentDate = LocalDate.now()
-    val futureDate = currentDate.plusMonths(6)
+    val currentDate: LocalDate = LocalDate.now()
+    val futureDate: LocalDate = currentDate.plusMonths(6)
 
     @Test
     fun `runs IRS demo`() {
         driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = Futures.allAsList(
-                    startNode("Notary", setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
-                    startNode("Bank A", rpcUsers = listOf(rpcUser)),
-                    startNode("Bank B")
+                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                    startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
+                    startNode(DUMMY_BANK_B.name)
             ).getOrThrow()
 
             val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
-            ).getOrThrow()
+            ).getOrThrow().map { it.listenAddress }
 
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
+            val numADeals = getTradeCount(nodeAAddr)
+            val numBDeals = getTradeCount(nodeBAddr)
 
             runUploadRates(controllerAddr)
-            runTrade(nodeAAddr, nodeA.nodeInfo.legalIdentity, nodeB.nodeInfo.legalIdentity)
+            runTrade(nodeAAddr)
+
+            assertThat(getTradeCount(nodeAAddr)).isEqualTo(numADeals + 1)
+            assertThat(getTradeCount(nodeBAddr)).isEqualTo(numBDeals + 1)
+
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
             nextFixingDates.first { it == null || it > currentDate }
 
@@ -56,8 +66,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
     fun getFixingDateObservable(config: FullNodeConfiguration): BlockingObservable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!)
-        client.start("user", "password")
-        val proxy = client.proxy()
+        val proxy = client.start("user", "password").proxy
         val vaultUpdates = proxy.vaultAndUpdates().second
 
         val fixingDates = vaultUpdates.map { update ->
@@ -70,19 +79,25 @@ class IRSDemoTest : IntegrationTestCategory {
 
     private fun runDateChange(nodeAddr: HostAndPort) {
         val url = URL("http://$nodeAddr/api/irs/demodate")
-        assert(putJson(url, "\"$futureDate\""))
+        assertThat(putJson(url, "\"$futureDate\"")).isTrue()
     }
 
-    private fun runTrade(nodeAddr: HostAndPort, fixedRatePayer: Party, floatingRatePayer: Party) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"))
+    private fun runTrade(nodeAddr: HostAndPort) {
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
-        assert(postJson(url, tradeFile))
+        assertThat(postJson(url, tradeFile)).isTrue()
     }
 
     private fun runUploadRates(host: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"))
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$host/upload/interest-rates")
-        assert(uploadFile(url, fileContents))
+        assertThat(uploadFile(url, fileContents)).isTrue()
+    }
+
+    private fun getTradeCount(nodeAddr: HostAndPort): Int {
+        val api = HttpApi.fromHostAndPort(nodeAddr, "api/irs")
+        val deals = api.getJson<Array<*>>("deals")
+        return deals.size
     }
 }

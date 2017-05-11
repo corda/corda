@@ -8,7 +8,7 @@ import net.corda.core.contracts.currency
 import net.corda.core.createDirectories
 import net.corda.core.div
 import net.corda.core.exists
-import tornadofx.Component
+import tornadofx.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

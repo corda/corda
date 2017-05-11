@@ -1,17 +1,14 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.security.PublicKey
 
 /** Defines transaction build & validation logic for a specific transaction type */
 @CordaSerializable
 sealed class TransactionType {
-    override fun equals(other: Any?) = other?.javaClass == javaClass
-    override fun hashCode() = javaClass.name.hashCode()
-
     /**
      * Check that the transaction is valid based on:
      * - General platform rules
@@ -23,16 +20,16 @@ sealed class TransactionType {
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
         val duplicates = detectDuplicateInputs(tx)
-        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx, duplicates)
+        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates)
         val missing = verifySigners(tx)
-        if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx, missing.toList())
+        if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx.id, missing.toList())
         verifyTransaction(tx)
     }
 
     /** Check that the list of signers includes all the necessary keys */
-    fun verifySigners(tx: LedgerTransaction): Set<CompositeKey> {
+    fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
         val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
-        if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx)
+        if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx.id)
 
         val requiredKeys = getRequiredSigners(tx) + notaryKey
         val missing = requiredKeys - tx.mustSign
@@ -57,15 +54,15 @@ sealed class TransactionType {
      * Return the list of public keys that that require signatures for the transaction type.
      * Note: the notary key is checked separately for all transactions and need not be included.
      */
-    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<CompositeKey>
+    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKey>
 
     /** Implement type specific transaction validation logic */
     abstract fun verifyTransaction(tx: LedgerTransaction)
 
     /** A general transaction type where transaction validity is determined by custom contract code */
-    class General : TransactionType() {
+    object General : TransactionType() {
         /** Just uses the default [TransactionBuilder] with no special logic */
-        class Builder(notary: Party?) : TransactionBuilder(General(), notary) {}
+        class Builder(notary: Party?) : TransactionBuilder(General, notary)
 
         override fun verifyTransaction(tx: LedgerTransaction) {
             verifyNoNotaryChange(tx)
@@ -84,7 +81,7 @@ sealed class TransactionType {
             if (tx.notary != null && tx.inputs.isNotEmpty()) {
                 tx.outputs.forEach {
                     if (it.notary != tx.notary) {
-                        throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx, it.notary)
+                        throw TransactionVerificationException.NotaryChangeInWrongTransactionType(tx.id, tx.notary, it.notary)
                     }
                 }
             }
@@ -93,13 +90,14 @@ sealed class TransactionType {
         private fun verifyEncumbrances(tx: LedgerTransaction) {
             // Validate that all encumbrances exist within the set of input states.
             val encumberedInputs = tx.inputs.filter { it.state.encumbrance != null }
-            encumberedInputs.forEach { encumberedInput ->
+            encumberedInputs.forEach { (state, ref) ->
                 val encumbranceStateExists = tx.inputs.any {
-                    it.ref.txhash == encumberedInput.ref.txhash && it.ref.index == encumberedInput.state.encumbrance
+                    it.ref.txhash == ref.txhash && it.ref.index == state.encumbrance
                 }
                 if (!encumbranceStateExists) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumberedInput.state.encumbrance!!,
+                            tx.id,
+                            state.encumbrance!!,
                             TransactionVerificationException.Direction.INPUT
                     )
                 }
@@ -111,7 +109,8 @@ sealed class TransactionType {
                 val encumbranceIndex = output.encumbrance ?: continue
                 if (encumbranceIndex == i || encumbranceIndex >= tx.outputs.size) {
                     throw TransactionVerificationException.TransactionMissingEncumbranceException(
-                            tx, encumbranceIndex,
+                            tx.id,
+                            encumbranceIndex,
                             TransactionVerificationException.Direction.OUTPUT)
                 }
             }
@@ -129,7 +128,7 @@ sealed class TransactionType {
                 try {
                     contract.verify(ctx)
                 } catch(e: Throwable) {
-                    throw TransactionVerificationException.ContractRejection(tx, contract, e)
+                    throw TransactionVerificationException.ContractRejection(tx.id, contract, e)
                 }
             }
         }
@@ -141,12 +140,12 @@ sealed class TransactionType {
      * A special transaction type for reassigning a notary for a state. Validation does not involve running
      * any contract code, it just checks that the states are unmodified apart from the notary field.
      */
-    class NotaryChange : TransactionType() {
+    object NotaryChange : TransactionType() {
         /**
          * A transaction builder that automatically sets the transaction type to [NotaryChange]
          * and adds the list of participants to the signers set for every input state.
          */
-        class Builder(notary: Party) : TransactionBuilder(NotaryChange(), notary) {
+        class Builder(notary: Party) : TransactionBuilder(NotaryChange, notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
                 signers.addAll(stateAndRef.state.data.participants)
                 super.addInputState(stateAndRef)
@@ -167,7 +166,7 @@ sealed class TransactionType {
                 }
                 check(tx.commands.isEmpty())
             } catch (e: IllegalStateException) {
-                throw TransactionVerificationException.InvalidNotaryChange(tx)
+                throw TransactionVerificationException.InvalidNotaryChange(tx.id)
             }
         }
 

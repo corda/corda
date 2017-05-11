@@ -3,18 +3,17 @@ package net.corda.contracts.asset
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.DUMMY_PUBKEY_2
-import net.corda.core.utilities.LogHelper
+import net.corda.core.utilities.*
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.MockServices
@@ -24,6 +23,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.security.KeyPair
+import java.security.PublicKey
 import java.util.*
 import kotlin.test.*
 
@@ -55,10 +55,10 @@ class CashTests {
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        databaseTransaction(database) {
+        database.transaction {
             services = object : MockServices() {
                 override val keyManagementService: MockKeyManagementService = MockKeyManagementService(MINI_CORP_KEY, MEGA_CORP_KEY, OUR_KEY)
-                override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
+                override val vaultService: VaultService = makeVaultService(dataSourceProps)
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -205,7 +205,7 @@ class CashTests {
         // Can't use an issue command to lower the amount.
         transaction {
             input { inState }
-            output { inState.copy(amount = inState.amount / 2) }
+            output { inState.copy(amount = inState.amount.splitEvenly(2).first()) }
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Issue() }
             this `fails with` "output values sum to more than the inputs"
         }
@@ -232,7 +232,7 @@ class CashTests {
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             tweak {
-                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount / 2) }
+                command(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(inState.amount.splitEvenly(2).first()) }
                 this `fails with` "The following commands were not matched at the end of execution"
             }
             this.verifies()
@@ -265,20 +265,22 @@ class CashTests {
             command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             tweak {
                 input { inState }
-                for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
+                val splits4 = inState.amount.splitEvenly(4)
+                for (i in 0..3) output { inState.copy(amount = splits4[i]) }
                 this.verifies()
             }
             // Merging 4 inputs into 2 outputs works.
             tweak {
-                for (i in 1..4) input { inState.copy(amount = inState.amount / 4) }
-                output { inState.copy(amount = inState.amount / 2) }
-                output { inState.copy(amount = inState.amount / 2) }
+                val splits2 = inState.amount.splitEvenly(2)
+                val splits4 = inState.amount.splitEvenly(4)
+                for (i in 0..3) input { inState.copy(amount = splits4[i]) }
+                for (i in 0..1) output { inState.copy(amount = splits2[i]) }
                 this.verifies()
             }
             // Merging 2 inputs into 1 works.
             tweak {
-                input { inState.copy(amount = inState.amount / 2) }
-                input { inState.copy(amount = inState.amount / 2) }
+                val splits2 = inState.amount.splitEvenly(2)
+                for (i in 0..1) input { inState.copy(amount = splits2[i]) }
                 output { inState }
                 this.verifies()
             }
@@ -310,9 +312,9 @@ class CashTests {
         }
         // Can't change deposit reference when splitting.
         transaction {
+            val splits2 = inState.amount.splitEvenly(2)
             input { inState }
-            output { outState.copy(amount = inState.amount / 2).editDepositRef(0) }
-            output { outState.copy(amount = inState.amount / 2).editDepositRef(1) }
+            for (i in 0..1) output { outState.copy(amount = splits2[i]).editDepositRef(i.toByte()) }
             this `fails with` "the amounts balance"
         }
         // Can't mix currencies.
@@ -456,7 +458,7 @@ class CashTests {
     // Spend tx generation
 
     val OUR_KEY: KeyPair by lazy { generateKeyPair() }
-    val OUR_PUBKEY_1: CompositeKey get() = OUR_KEY.public.composite
+    val OUR_PUBKEY_1: PublicKey get() = OUR_KEY.public
 
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
@@ -482,9 +484,9 @@ class CashTests {
         return tx.toWireTransaction()
     }
 
-    fun makeSpend(amount: Amount<Currency>, dest: CompositeKey): WireTransaction {
+    fun makeSpend(amount: Amount<Currency>, dest: PublicKey): WireTransaction {
         val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-        databaseTransaction(database) {
+        database.transaction {
             vault.generateSpend(tx, amount, dest)
         }
         return tx.toWireTransaction()
@@ -513,7 +515,7 @@ class CashTests {
         val wtx = makeExit(50.DOLLARS, MEGA_CORP, 1)
         assertEquals(WALLET[0].ref, wtx.inputs[0])
         assertEquals(1, wtx.outputs.size)
-        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount / 2), wtx.outputs[0].data)
+        assertEquals(WALLET[0].state.data.copy(amount = WALLET[0].state.data.amount.splitEvenly(2).first()), wtx.outputs[0].data)
     }
 
     /**
@@ -562,7 +564,7 @@ class CashTests {
     @Test
     fun generateSimpleDirectSpend() {
 
-        databaseTransaction(database) {
+        database.transaction {
 
             val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
 
@@ -577,10 +579,10 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithParties() {
 
-        databaseTransaction(database) {
+        database.transaction {
 
             val tx = TransactionType.General.Builder(DUMMY_NOTARY)
-            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP))
+            vault.generateSpend(tx, 80.DOLLARS, ALICE_PUBKEY, setOf(MINI_CORP.toAnonymous()))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -589,7 +591,7 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithChange() {
 
-        databaseTransaction(database) {
+        database.transaction {
 
             val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
 
@@ -605,7 +607,7 @@ class CashTests {
     @Test
     fun generateSpendWithTwoInputs() {
 
-        databaseTransaction(database) {
+        database.transaction {
             val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
 
             @Suppress("UNCHECKED_CAST")
@@ -621,7 +623,7 @@ class CashTests {
     @Test
     fun generateSpendMixedDeposits() {
 
-        databaseTransaction(database) {
+        database.transaction {
             val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
             assertEquals(3, wtx.inputs.size)
 
@@ -642,7 +644,7 @@ class CashTests {
     @Test
     fun generateSpendInsufficientBalance() {
 
-        databaseTransaction(database) {
+        database.transaction {
 
             val e: InsufficientBalanceException = assertFailsWith("balance") {
                 makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)

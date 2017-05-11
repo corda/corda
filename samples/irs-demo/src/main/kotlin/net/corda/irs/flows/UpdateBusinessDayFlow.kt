@@ -1,8 +1,9 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -30,7 +31,7 @@ object UpdateBusinessDayFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerFlowInitiator(Broadcast::class.java, ::UpdateBusinessDayHandler)
+            services.registerServiceFlow(Broadcast::class.java, ::UpdateBusinessDayHandler)
         }
     }
 
@@ -42,6 +43,7 @@ object UpdateBusinessDayFlow {
     }
 
 
+    @InitiatingFlow
     class Broadcast(val date: LocalDate, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
         constructor(date: LocalDate) : this(date, tracker())
 
@@ -66,7 +68,7 @@ object UpdateBusinessDayFlow {
          */
         private fun getRecipients(): Iterable<NodeInfo> {
             val notaryNodes = serviceHub.networkMapCache.notaryNodes
-            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name }
+            val partyNodes = (serviceHub.networkMapCache.partyNodes - notaryNodes).sortedBy { it.legalIdentity.name.toString() }
             return notaryNodes + partyNodes
         }
 

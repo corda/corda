@@ -2,13 +2,14 @@ package net.corda.node.services.transactions
 
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.node.utilities.*
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.util.*
@@ -16,7 +17,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val TABLE_NAME = "${NODE_DATABASE_PREFIX}notary_commit_log"
         private val log = loggerFor<PersistentUniquenessProvider>()
@@ -38,7 +39,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
         override fun valueFromRow(row: ResultRow): UniquenessProvider.ConsumingTx = UniquenessProvider.ConsumingTx(
                 row[table.consumingTxHash],
                 row[table.consumingIndex],
-                Party(row[table.requestingParty.name], row[table.requestingParty.owningKey])
+                Party(X500Name(row[table.requestingParty.name]), row[table.requestingParty.owningKey])
         )
 
         override fun addKeyToInsert(insert: InsertStatement,
@@ -53,7 +54,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
                                       finalizables: MutableList<() -> Unit>) {
             insert[table.consumingTxHash] = entry.value.id
             insert[table.consumingIndex] = entry.value.inputIndex
-            insert[table.requestingParty.name] = entry.value.requestingParty.name
+            insert[table.requestingParty.name] = entry.value.requestingParty.name.toString()
             insert[table.requestingParty.owningKey] = entry.value.requestingParty.owningKey
         }
     })
@@ -66,7 +67,7 @@ class PersistentUniquenessProvider() : UniquenessProvider, SingletonSerializeAsT
                 if (consumingTx != null) conflictingStates[inputState] = consumingTx
             }
             if (conflictingStates.isNotEmpty()) {
-                log.debug("Failure, input states already committed: ${conflictingStates.keys.toString()}")
+                log.debug("Failure, input states already committed: ${conflictingStates.keys}")
                 UniquenessProvider.Conflict(conflictingStates)
             } else {
                 states.forEachIndexed { i, stateRef ->

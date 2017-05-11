@@ -1,6 +1,6 @@
 package net.corda.notarydemo.plugin
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.NotaryFlow

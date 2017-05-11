@@ -57,5 +57,8 @@
             <AppenderRef ref="Console-Appender-Println"/>
             <AppenderRef ref="RollingFile-Appender" />
         </Logger>
+        <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
+            <AppenderRef ref="RollingFile-Appender"/>
+        </Logger>
     </Loggers>
 </Configuration>

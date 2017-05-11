@@ -1,25 +1,29 @@
 @file:JvmName("Corda")
+
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
-import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
-import net.corda.core.node.NodeVersionInfo
-import net.corda.core.node.Version
+import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.LogHelper.withLevel
 import net.corda.node.internal.Node
+import net.corda.node.internal.enforceSingleNodeIsRunning
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
+import org.slf4j.bridge.SLF4JBridgeHandler
+import java.io.*
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
-import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.*
 import kotlin.system.exitProcess
 
 private var renderBasicInfoToConsole = true
@@ -32,10 +36,24 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 val LOGS_DIRECTORY_NAME = "logs"
+val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
+private val log by lazy { LoggerFactory.getLogger("Main") }
+
+private fun initLogging(cmdlineOptions: CmdLineOptions) {
+    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase(Locale.ENGLISH)
+    System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+    if (cmdlineOptions.logToConsole) {
+        System.setProperty("consoleLogLevel", loggingLevel)
+        renderBasicInfoToConsole = false
+    }
+    System.setProperty("log-path", (cmdlineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
+    SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
+    SLF4JBridgeHandler.install()
+}
 
 fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
-    checkJavaVersion()
+    assertCanNormalizeEmptyPath()
 
     val argsParser = ArgsParser()
 
@@ -47,26 +65,27 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
-    // Set up logging. These properties are referenced from the XML config file.
-    val loggingLevel = cmdlineOptions.loggingLevel.name.toLowerCase()
-    System.setProperty("defaultLogLevel", loggingLevel)
-    if (cmdlineOptions.logToConsole) {
-        System.setProperty("consoleLogLevel", loggingLevel)
-        renderBasicInfoToConsole = false
-    }
+    // We do the single node check before we initialise logging so that in case of a double-node start it doesn't mess
+    // with the running node's logs.
+    enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
+
+    initLogging(cmdlineOptions)
+    disableJavaDeserialization() // Should be after initLogging to avoid TMI.
 
     // Manifest properties are only available if running from the corda jar
     fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-    val nodeVersionInfo = NodeVersionInfo(
-            manifestValue("Corda-Version")?.let { Version.parse(it) } ?: Version(0, 0, false),
+    val versionInfo = VersionInfo(
+            manifestValue("Corda-Platform-Version")?.toInt() ?: 1,
+            manifestValue("Corda-Release-Version") ?: "Unknown",
             manifestValue("Corda-Revision") ?: "Unknown",
             manifestValue("Corda-Vendor") ?: "Unknown"
     )
 
     if (cmdlineOptions.isVersion) {
-        println("${nodeVersionInfo.vendor} ${nodeVersionInfo.version}")
-        println("Revision ${nodeVersionInfo.revision}")
+        println("${versionInfo.vendor} ${versionInfo.releaseVersion}")
+        println("Revision ${versionInfo.revision}")
+        println("Platform Version ${versionInfo.platformVersion}")
         exitProcess(0)
     }
 
@@ -76,18 +95,12 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    drawBanner(nodeVersionInfo)
+    drawBanner(versionInfo)
 
-    val dir: Path = cmdlineOptions.baseDirectory
-    System.setProperty("log-path", (dir / "logs").toString())
-
-    val log = LoggerFactory.getLogger("Main")
-    printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
+    printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
     val conf = try {
-        val conf = cmdlineOptions.loadConfig()
-        checkConfigVersion(conf)
-        FullNodeConfiguration(cmdlineOptions.baseDirectory, conf)
+        cmdlineOptions.loadConfig()
     } catch (e: ConfigException) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
@@ -104,9 +117,10 @@ fun main(args: Array<String>) {
         exitProcess(0)
     }
 
-    log.info("Version: ${nodeVersionInfo.version}")
-    log.info("Vendor: ${nodeVersionInfo.vendor}")
-    log.info("Revision: ${nodeVersionInfo.revision}")
+    log.info("Vendor: ${versionInfo.vendor}")
+    log.info("Release: ${versionInfo.releaseVersion}")
+    log.info("Platform Version: ${versionInfo.platformVersion}")
+    log.info("Revision: ${versionInfo.revision}")
     val info = ManagementFactory.getRuntimeMXBean()
     log.info("PID: ${info.name.split("@").firstOrNull()}")  // TODO Java 9 has better support for this
     log.info("Main class: ${FullNodeConfiguration::class.java.protectionDomain.codeSource.location.toURI().path}")
@@ -115,14 +129,18 @@ fun main(args: Array<String>) {
     log.info("bootclasspath: ${info.bootClassPath}")
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
-    log.info("Machine: ${InetAddress.getLocalHost().hostName}")
+    log.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
+    val agentProperties = sun.misc.VMSupport.getAgentProperties()
+    if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
+        log.info("Debug port: ${agentProperties.getProperty("sun.jdwp.listenerAddress")}")
+    }
     log.info("Starting as node on ${conf.p2pAddress}")
 
     try {
         cmdlineOptions.baseDirectory.createDirectories()
 
-        val node = conf.createNode(nodeVersionInfo)
+        val node = conf.createNode(versionInfo)
         node.start()
         printPluginsAndServices(node)
 
@@ -133,7 +151,11 @@ fun main(args: Array<String>) {
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
             node.startupComplete then {
-                InteractiveShell.startShell(dir, runShell, cmdlineOptions.sshdServer, node)
+                try {
+                    InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
+                } catch(e: Throwable) {
+                    log.error("Shell failed to start", e)
+                }
             }
         } failure {
             log.error("Error during network map registration", it)
@@ -148,25 +170,60 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
-private fun checkConfigVersion(conf: Config) {
-    // TODO: Remove this check in future milestone.
-    if (conf.hasPath("artemisAddress")) {
-        // artemisAddress has been renamed to p2pAddress in M10.
-        println("artemisAddress has been renamed to p2pAddress in M10, please upgrade your configuration file and start Corda node again.")
-        println("Corda will now exit...")
-        exitProcess(1)
+private fun lookupMachineNameAndMaybeWarn(): String {
+    val start = System.currentTimeMillis()
+    val hostName: String = InetAddress.getLocalHost().hostName
+    val elapsed = System.currentTimeMillis() - start
+    if (elapsed > 1000 && hostName.endsWith(".local")) {
+        // User is probably on macOS and experiencing this problem: http://stackoverflow.com/questions/10064581/how-can-i-eliminate-slow-resolving-loading-of-localhost-virtualhost-a-2-3-secon
+        //
+        // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
+        val messages = listOf(
+                "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
+                "Please see https://docs.corda.net/getting-set-up-fault-finding.html#slow-localhost-resolution for information on how to fix this. ",
+                "It will only take a few seconds for you to resolve."
+        )
+        log.warn(messages.joinToString(""))
+        Emoji.renderIfSupported {
+            print(Ansi.ansi().fgBrightRed())
+            messages.forEach {
+                println("${Emoji.sleepingFace}$it")
+            }
+            print(Ansi.ansi().reset())
+        }
     }
+    return hostName
 }
 
-private fun checkJavaVersion() {
+private fun assertCanNormalizeEmptyPath() {
     // Check we're not running a version of Java with a known bug: https://github.com/corda/corda/issues/83
     try {
         Paths.get("").normalize()
     } catch (e: ArrayIndexOutOfBoundsException) {
-        println("""
-You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.
-Corda will now exit...""")
-        exitProcess(1)
+        failStartUp("You are using a version of Java that is not supported (${System.getProperty("java.version")}). Please upgrade to the latest version.")
+    }
+}
+
+private fun failStartUp(message: String): Nothing {
+    println(message)
+    println("Corda will now exit...")
+    exitProcess(1)
+}
+
+private fun disableJavaDeserialization() {
+    // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we are using the system property interface for portability.
+    // This property has already been set in the Capsule. Anywhere else may be too late, but we'll repeat it here for developers.
+    System.setProperty("jdk.serialFilter", "maxbytes=0")
+    // Attempt at deserialization so that ObjectInputFilter (permanently) inits itself:
+    val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
+    try {
+        withLevel("java.io.serialization", "WARN") {
+            ObjectInputStream(data.inputStream()).use { it.readObject() } // Logs REJECTED at INFO, which we don't want users to see.
+        }
+        // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
+        failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121 and set system property 'jdk.serialFilter' to 'maxbytes=0' when booting Corda.")
+    } catch (e: InvalidClassException) {
+        // Good, our system property is honoured.
     }
 }
 
@@ -176,7 +233,7 @@ private fun printPluginsAndServices(node: Node) {
     }
     val plugins = node.pluginRegistries
             .map { it.javaClass.name }
-            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.")}
+            .filterNot { it.startsWith("net.corda.node.") || it.startsWith("net.corda.core.") || it.startsWith("net.corda.nodeapi.") }
             .map { it.substringBefore('$') }
     if (plugins.isNotEmpty())
         printBasicNodeInfo("Loaded plugins", plugins.joinToString())
@@ -213,21 +270,20 @@ private fun messageOfTheDay(): Pair<String, String> {
     return Pair(a, b)
 }
 
-private fun drawBanner(nodeVersionInfo: NodeVersionInfo) {
+private fun drawBanner(versionInfo: VersionInfo) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
     Emoji.renderIfSupported {
         val (msg1, msg2) = messageOfTheDay()
 
-        println(Ansi.ansi().fgBrightRed().a(
-"""
+        println(Ansi.ansi().fgBrightRed().a("""
    ______               __
   / ____/     _________/ /___ _
  / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
 "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
 """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
-        a("--- ${nodeVersionInfo.vendor} ${nodeVersionInfo.version} (${nodeVersionInfo.revision.take(7)}) -----------------------------------------------").
+        a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
         newline().
         newline().
         a("${Emoji.books}New! ").reset().a("Training now available worldwide, see https://corda.net/corda-training/").

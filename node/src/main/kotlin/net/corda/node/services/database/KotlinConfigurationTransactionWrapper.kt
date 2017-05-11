@@ -9,7 +9,10 @@ import io.requery.sql.*
 import io.requery.sql.platform.H2
 import io.requery.util.function.Function
 import io.requery.util.function.Supplier
-import net.corda.core.schemas.requery.converters.*
+import net.corda.core.schemas.requery.converters.InstantConverter
+import net.corda.core.schemas.requery.converters.SecureHashConverter
+import net.corda.core.schemas.requery.converters.StateRefConverter
+import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection
 import java.util.*
@@ -128,8 +131,7 @@ class KotlinConfigurationTransactionWrapper(private val model: EntityModel,
         override fun getConnection(): Connection {
             val tx = TransactionManager.manager.currentOrNull()
             return CordaConnection(
-                    tx?.connection ?:
-                    TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
+                    tx?.connection ?: TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ).connection
             )
         }
     }

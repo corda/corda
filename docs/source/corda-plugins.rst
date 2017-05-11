@@ -69,7 +69,7 @@ extensions to be created, or registered at startup. In particular:
     the latest instance of the service will be substituted back in place of
     the token stored in the checkpoint.
 
-        i. Firstly, they can call ``PluginServiceHub.registerFlowInitiator`` and 
+        i. Firstly, they can call ``PluginServiceHub.registerServiceFlow`` and
         register flows that will be initiated locally in response to remote flow 
         requests. 
 
@@ -78,15 +78,14 @@ extensions to be created, or registered at startup. In particular:
         to provide Oracle functionality. This Oracle functionality would 
         typically be exposed to other nodes by flows which are given a reference 
         to the service plugin when initiated (as defined by the 
-        ``registerFlowInitiator`` call). The flow can then call into functions 
+        ``registerServiceFlow`` call). The flow can then call into functions
         on the plugin service singleton. Note, care should be taken to not allow 
         flows to hold references to fields which are not
         also ``SingletonSerializeAsToken``, otherwise Quasar suspension in the 
         ``StateMachineManager`` will fail with exceptions. An example oracle can 
         be seen in ``NodeInterestRates.kt`` in the irs-demo sample. 
 
-        iii. The final 
-        use case for service plugins is that they can spawn threads, or register 
+        iii. The final use case for service plugins is that they can spawn threads, or register
         to monitor vault updates. This allows them to provide long lived active 
         functions inside the node, for instance to initiate workflows when 
         certain conditions are met. 

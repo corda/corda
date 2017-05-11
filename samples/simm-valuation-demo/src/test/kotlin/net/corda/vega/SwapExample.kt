@@ -29,7 +29,6 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.ResolvedSwapTrade
 import com.opengamma.strata.product.swap.SwapTrade
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
-import kotlinx.support.jdk8.collections.stream
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.vega.analytics.BimmAnalysisUtils
@@ -39,6 +38,7 @@ import net.corda.vega.analytics.RwamBimmNotProductClassesCalculator
 import java.nio.file.Paths
 import java.time.LocalDate
 import java.util.stream.Collectors.toList
+import kotlin.test.assertEquals
 
 /**
  * A example of calculating the margin for a portfolio of two swaps using Strata and SIMM.
@@ -70,7 +70,7 @@ class SwapExample {
         var totalCurrencyExposure = MultiCurrencyAmount.empty()
 
         for (resolvedTrade in resolvedTrades) {
-            val swap = resolvedTrade.getProduct()
+            val swap = resolvedTrade.product
 
             val pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider).build()
             val sensitivities = combinedRatesProvider.parameterSensitivity(pointSensitivities)
@@ -98,31 +98,31 @@ class SwapExample {
     fun testingEqualitymain(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
         val curveGroupDefinition1 = loadCurveGroup()
         val curveGroupDefinition2 = loadCurveGroup()
-        assert(curveGroupDefinition1 == curveGroupDefinition2)
+        assertEquals(curveGroupDefinition2, curveGroupDefinition1)
 
         val marketData1 = loadMarketData()
         val marketData2 = loadMarketData()
-        assert(marketData1 == marketData2)
+        assertEquals(marketData2, marketData1)
 
         val trades1 = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap())
         val trades2 = ImmutableList.of(createVanillaFixedVsLibor3mSwap(), createVanillaFixedVsLibor6mSwap())
-        assert(trades1 == trades2)
+        assertEquals(trades2, trades1)
 
         val calibrator1 = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
         val calibrator2 = CurveCalibrator.of(1e-9, 1e-9, 100, CalibrationMeasures.PAR_SPREAD)
-        assert(calibrator1 == calibrator2)
+        assertEquals(calibrator2, calibrator1)
 
         val ratesProvider1 = calibrator1.calibrate(curveGroupDefinition1, marketData1, ReferenceData.standard())
         val ratesProvider2 = calibrator1.calibrate(curveGroupDefinition1, marketData1, ReferenceData.standard())
-        assert(ratesProvider1 == ratesProvider2)
+        assertEquals(ratesProvider2, ratesProvider1)
 
         val fxRateProvider1 = MarketDataFxRateProvider.of(marketData1)
         val fxRateProvider2 = MarketDataFxRateProvider.of(marketData2)
-        assert(fxRateProvider1 == fxRateProvider2)
+        assertEquals(fxRateProvider2, fxRateProvider1)
 
         val combinedRatesProvider1 = ImmutableRatesProvider.combined(fxRateProvider1, ratesProvider1)
         val combinedRatesProvider2 = ImmutableRatesProvider.combined(fxRateProvider2, ratesProvider2)
-        assert(combinedRatesProvider1 == combinedRatesProvider2)
+        assertEquals(combinedRatesProvider2, combinedRatesProvider1)
 
         val resolvedTrades = trades1.stream().map({ trade -> trade.resolve(ReferenceData.standard()) }).collect(toList<ResolvedSwapTrade>())
         val pricer = DiscountingSwapProductPricer.DEFAULT
@@ -131,7 +131,7 @@ class SwapExample {
         var totalCurrencyExposure1 = MultiCurrencyAmount.empty()
 
         for (resolvedTrade in resolvedTrades) {
-            val swap = resolvedTrade.getProduct()
+            val swap = resolvedTrade.product
 
             val pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider1).build()
             val sensitivities = combinedRatesProvider1.parameterSensitivity(pointSensitivities)
@@ -146,7 +146,7 @@ class SwapExample {
         var totalCurrencyExposure2 = MultiCurrencyAmount.empty()
 
         for (resolvedTrade in resolvedTrades) {
-            val swap = resolvedTrade.getProduct()
+            val swap = resolvedTrade.product
 
             val pointSensitivities = pricer.presentValueSensitivity(swap, combinedRatesProvider2).build()
             val sensitivities = combinedRatesProvider2.parameterSensitivity(pointSensitivities)
@@ -156,13 +156,13 @@ class SwapExample {
             totalCurrencyExposure2 = totalCurrencyExposure2.plus(currencyExposure)
         }
 
-        assert(totalSensitivities1 == totalSensitivities2)
-        assert(totalCurrencyExposure1 == totalCurrencyExposure2)
+        assertEquals(totalSensitivities2, totalSensitivities1)
+        assertEquals(totalCurrencyExposure2, totalCurrencyExposure1)
 
         val totalSensitivities3 = totalSensitivities1.serialize().deserialize()
-        assert(totalSensitivities1 == totalSensitivities3)
+        assertEquals(totalSensitivities3, totalSensitivities1)
         val totalCurrencyExposure3 = totalCurrencyExposure1.serialize().deserialize()
-        assert(totalCurrencyExposure1 == totalCurrencyExposure3)
+        assertEquals(totalCurrencyExposure3, totalCurrencyExposure1)
 
         val normalizer1 = PortfolioNormalizer(Currency.EUR, combinedRatesProvider1)
         val normalizer2 = PortfolioNormalizer(Currency.EUR, combinedRatesProvider2)

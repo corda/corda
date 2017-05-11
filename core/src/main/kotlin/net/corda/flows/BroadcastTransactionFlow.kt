@@ -1,11 +1,11 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
-
 
 /**
  * Notify the specified parties about a transaction. The remote peers will download this transaction and its
@@ -16,6 +16,7 @@ import net.corda.core.transactions.SignedTransaction
  * @param participants a list of participants involved in the transaction.
  * @return a list of participants who were successfully notified of the transaction.
  */
+@InitiatingFlow
 class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
                                val participants: Set<Party>) : FlowLogic<Unit>() {
     @CordaSerializable
@@ -26,7 +27,7 @@ class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
         // TODO: Messaging layer should handle this broadcast for us
         val msg = NotifyTxRequest(notarisedTransaction)
         participants.filter { it != serviceHub.myInfo.legalIdentity }.forEach { participant ->
-            // This pops out the other side in DataVending.NotifyTransactionHandler.
+            // This pops out the other side in NotifyTransactionHandler
             send(participant, msg)
         }
     }

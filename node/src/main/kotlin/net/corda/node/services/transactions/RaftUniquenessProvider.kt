@@ -1,7 +1,10 @@
 package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
+import io.atomix.catalyst.buffer.BufferInput
+import io.atomix.catalyst.buffer.BufferOutput
 import io.atomix.catalyst.serializer.Serializer
+import io.atomix.catalyst.serializer.TypeSerializer
 import io.atomix.catalyst.transport.Address
 import io.atomix.catalyst.transport.Transport
 import io.atomix.catalyst.transport.netty.NettyTransport
@@ -12,8 +15,8 @@ import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -42,14 +45,20 @@ import javax.annotation.concurrent.ThreadSafe
  * @param config SSL configuration
  */
 @ThreadSafe
-class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterAddresses: List<HostAndPort>,
-                             db: Database, config: SSLConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(
+        val storagePath: Path,
+        val myAddress: HostAndPort,
+        val clusterAddresses: List<HostAndPort>,
+        val db: Database,
+        val config: SSLConfiguration
+) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
         private val DB_TABLE_NAME = "notary_committed_states"
     }
 
-    private val _clientFuture: CompletableFuture<CopycatClient>
+    private lateinit var _clientFuture: CompletableFuture<CopycatClient>
+    private lateinit var server: CopycatServer
     /**
      * Copycat clients are responsible for connecting to the cluster and submitting commands and queries that operate
      * on the cluster's replicated state machine.
@@ -57,15 +66,29 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
     private val client: CopycatClient
         get() = _clientFuture.get()
 
-    init {
+    fun start() {
         log.info("Creating Copycat server, log stored in: ${storagePath.toFile()}")
         val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
-        val address = Address(myAddress.hostText, myAddress.port)
+        val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
         val transport = buildTransport(config)
-        val serializer = Serializer()
+        val serializer = Serializer().apply {
+            // Add serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
+            register(DistributedImmutableMap.Commands.PutAll::class.java) {
+                object : TypeSerializer<DistributedImmutableMap.Commands.PutAll<*, *>> {
+                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj.entries, buffer, serializer)
+                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
+                }
+            }
+            register(LinkedHashMap::class.java) {
+                object : TypeSerializer<LinkedHashMap<*, *>> {
+                    override fun write(obj: LinkedHashMap<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj, buffer, serializer)
+                    override fun read(type: Class<LinkedHashMap<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = readMap(buffer, serializer)
+                }
+            }
+        }
 
-        val server = CopycatServer.builder(address)
+        server = CopycatServer.builder(address)
                 .withStateMachine(stateMachineFactory)
                 .withStorage(storage)
                 .withServerTransport(transport)
@@ -74,7 +97,7 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
 
         val serverFuture = if (clusterAddresses.isNotEmpty()) {
             log.info("Joining an existing Copycat cluster at $clusterAddresses")
-            val cluster = clusterAddresses.map { Address(it.hostText, it.port) }
+            val cluster = clusterAddresses.map { Address(it.host, it.port) }
             server.join(cluster)
         } else {
             log.info("Bootstrapping a Copycat cluster at $address")
@@ -87,6 +110,10 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
                 .withSerializer(serializer)
                 .build()
         _clientFuture = serverFuture.thenCompose { client.connect(address) }
+    }
+
+    fun stop() {
+        server.shutdown()
     }
 
     private fun buildStorage(storagePath: Path): Storage? {
@@ -132,3 +159,15 @@ class RaftUniquenessProvider(storagePath: Path, myAddress: HostAndPort, clusterA
         return items.map { it.key.toStateRef() to it.value.deserialize<UniquenessProvider.ConsumingTx>() }.toMap()
     }
 }
+
+private fun writeMap(map: Map<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = with(map) {
+    buffer.writeInt(size)
+    forEach {
+        with(serializer) {
+            writeObject(it.key, buffer)
+            writeObject(it.value, buffer)
+        }
+    }
+}
+
+private fun readMap(buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = LinkedHashMap<Any, Any>().apply { repeat(buffer.readInt()) { put(serializer.readObject(buffer), serializer.readObject(buffer)) } }

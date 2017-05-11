@@ -1,23 +1,206 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each snapshot release.
+Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
+from the previous milestone release.
 
 UNRELEASED
 ----------
 
-API changes:
+* API changes:
+    * Initiating flows (i.e. those which initiate flows in a counterparty) are now required to be annotated with
+      ``InitiatingFlow``.
 
-* The new Jackson module provides JSON/YAML serialisers for common Corda datatypes. If you have previously been
-  using the JSON support in the standalone web server, please be aware that amounts are now serialised as strings
-  instead of { quantity, token } pairs as before. The old format is still accepted, but new JSON will be produced
-  using strings like "1000.00 USD" when writing. You can use any format supported by ``Amount.parseCurrency``
-  as input.
+    * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
+      marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an
+      ``IllegalArgumentException`` if the initiating flow class is not annotated with it.
+
+    * Also related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
+      removed. Its purpose was to allow subflows to be inlined with the parent flow - i.e. the subflow does not initiate
+      new sessions with parties the parent flow has already started. This allowed flows to be used as building blocks. To
+      achieve the same effect now simply requires the subflow to be *not* annotated wth ``InitiatingFlow`` (i.e. we've made
+      this the default behaviour). If the subflow is not meant to be inlined, and is supposed to initiate flows on the
+      other side, the annotation is required.
+
+    * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
+
+    * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
+
+    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
+      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+
+
+    * There are major changes to the ``Party`` class as part of confidential identities:
+
+         * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
+           backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
+           as possible.
+         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. A new class
+           ``AnonymousParty`` has been added, which is intended to be used in place of ``Party`` or ``PublicKey`` in contract
+           state objects. The exception to this is where the party in a contract state is intended to be well known, such as
+           issuer of a ``Cash`` state.
+         * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
+           name. As a result all node legal names must now be structured as X.500 distinguished names.
+
+* The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
+  number, defaulting to 1 if it's specified. The flow version is included in the flow session request and the counterparty
+  will only respond and start their own flow if the version number matches to the one they've registered with. At some
+  point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
+  compatibility of CorDapp flows.
+
+Milestone 11.0
+--------------
+
+* API changes:
+    * Added extension function ``Database.transaction`` to replace ``databaseTransaction``, which is now deprecated.
+
+    * Starting a flow no longer enables progress tracking by default. To enable it, you must now invoke your flow using
+      one of the new ``CordaRPCOps.startTrackedFlow`` functions. ``FlowHandle`` is now an interface, and its ``progress: Observable``
+      field has been moved to the ``FlowProgressHandle`` child interface. Hence developers no longer need to invoke ``notUsed``
+      on their flows' unwanted progress-tracking observables.
+
+    * Moved ``generateSpend`` and ``generateExit`` functions into ``OnLedgerAsset`` from the vault and
+      ``AbstractConserveAmount`` clauses respectively.
+
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work
+      with composite keys and signatures.
+
+    * ``CompositeKey`` now implements ``java.security.PublicKey`` interface, so that keys can be used on standard classes
+      such as ``Certificate``.
+
+        * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is
+          imposible to create ``CompositeKey`` with only one leaf.
+
+        * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key.
+          Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node.
+          (Long chains of single nodes are shortened.)
+
+        * Use extension function ``PublicKeys.keys`` to access all keys belonging to an instance of ``PublicKey``. For a
+          ``CompositeKey``, this is equivalent to ``CompositeKey.leafKeys``.
+
+        * Introduced ``containsAny``, ``isFulfilledBy``, ``keys`` extension functions on ``PublicKey`` - ``CompositeKey``
+          type checking is done there.
+
+* Corda now requires JDK 8u131 or above in order to run. Our Kotlin now also compiles to JDK8 bytecode, and so you'll need
+  to update your CorDapp projects to do the same. E.g. by adding this to ``build.gradle``:
+
+.. parsed-literal::
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.1"
+            apiVersion = "1.1"
+            jvmTarget = "1.8"
+        }
+    }
+
+..
+
+ or by adjusting ``Settings/Build,Execution,Deployment/Compiler/KotlinCompiler`` in IntelliJ::
+
+ -  Language Version: 1.1
+ -  API Version: 1.1
+ -  Target JVM Version: 1.8
+
+* DemoBench is now installed as ``Corda DemoBench`` instead of ``DemoBench``.
+
+* Rewrote standard test identities to have full X.500 distinguished names. As part of this work we standardised on a
+  smaller set of test identities, to reduce risk of subtle differences (i.e. similar common names varying by whitespace)
+  in naming making it hard to diagnose issues.
+
+Milestone 10.0
+--------------
+
+Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsky <https://github.com/marekdapps>`_,
+`Karel Hajek <https://github.com/polybioz>`_, and `Jonny Chiu <https://github.com/johnnyychiu>`_ for their contributions
+to Corda in M10.
+
+.. warning:: Due to incompatibility between older version of IntelliJ and gradle 3.4, you will need to upgrade Intellij
+   to 2017.1 (with kotlin-plugin v1.1.1) in order to run Corda demos in IntelliJ. You can download the latest IntelliJ
+   from `JetBrains <https://www.jetbrains.com/idea/download/>`_.
+
+.. warning:: The Kapt-generated models are no longer included in our codebase. If you experience ``unresolved references``
+   errors when building in IntelliJ, please rebuild the schema model by running ``gradlew kaptKotlin`` in Windows or
+   ``./gradlew kaptKotlin`` in other systems. Alternatively, perform a full gradle build or install.
+
+.. note:: Kapt is used to generate schema model and entity code (from annotations in the codebase) using the Kotlin Annotation
+   processor.
+
+* Corda DemoBench:
+    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate
+      to your colleagues the fundamentals of Corda in real-time. It has the following features:
+
+        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node
+          before launch, such as its legal name and which CorDapps will be loaded.
+        * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
+        * You can launch an Corda Explorer instance for each node via the DemoBench UI. Credentials are handed to the Corda
+          Explorer so it starts out logged in already.
+        * Some basic statistics are shown about each node, informed via the RPC connection.
+        * Another button launches a database viewer in the system browser.
+        * The configurations of all running nodes can be saved into a single ``.profile`` file that can be reloaded later.
+
+    * You can download Corda DemoBench from `here <https://www.corda.net/downloads/>`_
+
+* Vault:
+    * Soft Locking is a new feature implemented in the vault which prevent a node constructing transactions that attempt
+      to use the same input(s) simultaneously.
+    * Such transactions would result in naturally wasted effort when the notary rejects them as double spend attempts.
+    * Soft locks are automatically applied to coin selection (eg. cash spending) to ensure that no two transactions attempt
+      to spend the same fungible states.
+
+* Corda Shell :
+    * The shell lets developers and node administrators easily command the node by running flows, RPCs and SQL queries.
+    * It provides a variety of commands to monitor the node.
+    * The Corda Shell is based on the popular `CRaSH project <http://www.crashub.org/>`_ and new commands can be easily
+      added to the node by simply dropping Groovy or Java files into the node's ``shell-commands`` directory.
+    * We have many enhancements planned over time including SSH access, more commands and better tab completion.
+
+* API changes:
+    * The new Jackson module provides JSON/YAML serialisers for common Corda datatypes.
+      If you have previously been using the JSON support in the standalone web server,
+      please be aware that Amounts are now serialised as strings instead of { quantity, token } pairs as before.
+      The old format is still accepted, but the new JSON will be produced using strings like "1000.00 USD" when writing.
+      You can use any format supported by ``Amount.parseCurrency`` as input.
+
+    * We have restructured client package in this milestone.
+        * ``CordaClientRPC`` is now in the new ``:client:rpc`` module.
+        * The old ``:client`` module has been split up into ``:client:jfx`` and ``:client:mock``.
+        * We also have a new ``:node-api`` module (package ``net.corda.nodeapi``) which contains the shared code between
+          ``node`` and ``client``.
+
+    * The basic Amount API has been upgraded to have support for advanced financial use cases and to better integrate with
+      currency reference data.
 
 * Configuration:
-    * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration
-    * Replace ``artemisAddress`` with ``p2pAddress`` in node configuration
-    * Added ``rpcAddress`` in node configuration
+    * Replace ``artemisPort`` with ``p2pPort`` in Gradle configuration.
+    * Replace ``artemisAddress`` with ``p2pAddress`` in node configuration.
+    * Added ``rpcAddress`` in node configuration for non-ssl RPC connection.
+
+* Object Serialization:
+    * Pool Kryo instances for efficiency.
+
+* RPC client changes:
+    * RPC clients can now connect to the node without the need for SSL. This requires a separate port on the Artemis broker,
+      SSL must not be used for RPC connection.
+    * CordaRPCClient now needs to connect to ``rpcAddress`` rather than ``p2pAddress``.
+
+* Dependencies changes:
+    * Upgraded Kotlin to v1.1.1.
+    * Upgraded Gradle to v3.4.1.
+    * Upgraded requery to v1.2.1.
+    * Upgraded H2 to v1.4.194.
+    * Replaced kotlinx-support-jdk8 with kotlin-stdlib-jre8.
+
+* Improvements:
+    * Added ``--version`` command line flag to print the version of the node.
+    * Flows written in Java can now execute a sub-flow inside ``UntrustworthyData.unwrap``.
+    * Added optional out-of-process transaction verification. Any number of external verifier processes may be attached
+      to the node which can handle loadbalanced verification requests.
+
+* Bug fixes:
+    * ``--logging-level`` command line flag was previously broken, now correctly sets the logging level.
+    * Fixed bug whereby Cash Exit was not taking into account the issuer reference.
+
 
 Milestone 9.1
 -------------
@@ -77,9 +260,8 @@ Milestone 8
 * Node memory usage and performance improvements, demo nodes now only require 200 MB heap space to run.
 
 * The Corda node no longer runs an internal web server, it's now run in a separate process. Driver and Cordformation have
-  been updated to reflect this change.
-  Existing CorDapps should be updated with additional calls to the new ``startWebserver()`` interface in their Driver logic (if they use the driver e.g. in integration tests).
-  See the IRS demo for an example.
+  been updated to reflect this change. Existing CorDapps should be updated with additional calls to the new ``startWebserver()``
+  interface in their Driver logic (if they use the driver e.g. in integration tests). See the IRS demo for an example.
 
 * Data model: ``Party`` equality is now based on the owning key, rather than the owning key and name. This is important for
   party anonymisation to work, as each key must identify exactly one party.
@@ -293,7 +475,7 @@ New features in this release:
       are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
       boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
       is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
-      key trees in the ":doc:`transaction-data-types`" article.
+      key trees in the ":doc:`key-concepts-core-types`" article.
     * A new tutorial has been added showing how to use transaction attachments in more detail.
 
 * Testnet
@@ -468,8 +650,8 @@ Highlights of this release:
 We have new documentation on:
 
 * :doc:`event-scheduling`
-* :doc:`transaction-data-types`
-* :doc:`consensus`
+* :doc:`key-concepts-core-types`
+* :doc:`key-concepts-consensus-notaries`
 
 Summary of API changes (not exhaustive):
 

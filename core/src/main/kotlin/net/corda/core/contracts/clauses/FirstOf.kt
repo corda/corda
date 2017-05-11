@@ -10,7 +10,7 @@ import java.util.*
 /**
  * Compose a number of clauses, such that the first match is run, and it errors if none is run.
  */
-class FirstOf<S : ContractState, C : CommandData, K : Any>(val firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
+class FirstOf<S : ContractState, C : CommandData, K : Any>(firstClause: Clause<S, C, K>, vararg remainingClauses: Clause<S, C, K>) : CompositeClause<S, C, K>() {
     companion object {
         val logger = loggerFor<FirstOf<*, *, *>>()
     }

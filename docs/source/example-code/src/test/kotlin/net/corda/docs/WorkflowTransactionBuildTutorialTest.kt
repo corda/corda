@@ -13,7 +13,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
 import org.junit.Before
@@ -66,10 +66,10 @@ class WorkflowTransactionBuildTutorialTest {
         // Wait for NodeB to include it's copy in the vault
         nodeBVaultUpdate.get()
         // Fetch the latest copy of the state from both nodes
-        val latestFromA = databaseTransaction(nodeA.database) {
+        val latestFromA = nodeA.database.transaction {
             nodeA.services.latest<TradeApprovalContract.State>(proposalRef.ref)
         }
-        val latestFromB = databaseTransaction(nodeB.database) {
+        val latestFromB = nodeB.database.transaction {
             nodeB.services.latest<TradeApprovalContract.State>(proposalRef.ref)
         }
         // Confirm the state as as expected
@@ -90,10 +90,10 @@ class WorkflowTransactionBuildTutorialTest {
         nodeAVaultUpdate.get()
         secondNodeBVaultUpdate.get()
         // Fetch the latest copies from the vault
-        val finalFromA = databaseTransaction(nodeA.database) {
+        val finalFromA = nodeA.database.transaction {
             nodeA.services.latest<TradeApprovalContract.State>(proposalRef.ref)
         }
-        val finalFromB = databaseTransaction(nodeB.database) {
+        val finalFromB = nodeB.database.transaction {
             nodeB.services.latest<TradeApprovalContract.State>(proposalRef.ref)
         }
         // Confirm the state is as expected

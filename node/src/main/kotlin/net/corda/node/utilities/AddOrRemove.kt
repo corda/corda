@@ -1,5 +1,6 @@
 package net.corda.node.utilities
 
+import net.corda.core.ErrorOr
 import net.corda.core.serialization.CordaSerializable
 
 /**

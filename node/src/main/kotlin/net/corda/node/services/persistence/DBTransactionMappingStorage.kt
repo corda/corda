@@ -31,7 +31,7 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
     private class TransactionMappingsMap : AbstractJDBCHashMap<SecureHash, StateMachineRunId, Table>(Table, loadOnInit = false) {
         override fun keyFromRow(row: ResultRow): SecureHash = row[table.txId]
 
-        override fun valueFromRow(row: ResultRow): StateMachineRunId = StateMachineRunId.wrap(row[table.stateMachineRunId])
+        override fun valueFromRow(row: ResultRow): StateMachineRunId = StateMachineRunId(row[table.stateMachineRunId])
 
         override fun addKeyToInsert(insert: InsertStatement, entry: Map.Entry<SecureHash, StateMachineRunId>, finalizables: MutableList<() -> Unit>) {
             insert[table.txId] = entry.key
@@ -42,10 +42,11 @@ class DBTransactionMappingStorage : StateMachineRecordedTransactionMappingStorag
         }
     }
 
-    private val mutex = ThreadBox(object {
+    private class InnerState {
         val stateMachineTransactionMap = TransactionMappingsMap()
-        val updates = PublishSubject.create<StateMachineTransactionMapping>()
-    })
+        val updates: PublishSubject<StateMachineTransactionMapping> = PublishSubject.create()
+    }
+    private val mutex = ThreadBox(InnerState())
 
     override fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash) {
         mutex.locked {

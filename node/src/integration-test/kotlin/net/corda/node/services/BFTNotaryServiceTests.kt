@@ -4,11 +4,14 @@ import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.Party
+import net.corda.core.crypto.appendToCommonName
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.ALICE
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -16,8 +19,9 @@ import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.Node
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.node.utilities.databaseTransaction
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
@@ -25,16 +29,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class BFTNotaryServiceTests : NodeBasedTest() {
-    private val notaryName = "BFT Notary Server"
+    private companion object {
+        val notaryCommonName = X500Name("CN=BFT Notary Server,O=R3,OU=corda,L=Zurich,C=CH")
+
+        fun buildNodeName(it: Int, notaryName: X500Name): X500Name {
+            return notaryName.appendToCommonName("-$it")
+        }
+    }
 
     @Test
     fun `detect double spend`() {
-        val masterNode = startBFTNotaryCluster(notaryName, 4, BFTNonValidatingNotaryService.type).first()
-        val alice = startNode("Alice").getOrThrow()
+        val masterNode = startBFTNotaryCluster(notaryCommonName, 4, BFTNonValidatingNotaryService.type).first()
+        val alice = startNode(ALICE.name).getOrThrow()
 
-        val notaryParty = alice.netMapCache.getNotary(notaryName)!!
-        val notaryNodeKeyPair = databaseTransaction(masterNode.database) { masterNode.services.notaryIdentityKey }
-        val aliceKey = databaseTransaction(alice.database) { alice.services.legalIdentityKey }
+        val notaryParty = alice.netMapCache.getNotary(notaryCommonName)!!
+        val notaryNodeKeyPair = with(masterNode) { database.transaction { services.notaryIdentityKey } }
+        val aliceKey = with(alice) { database.transaction { services.legalIdentityKey } }
 
         val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
 
@@ -60,7 +70,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
     }
 
     private fun issueState(node: AbstractNode, notary: Party, notaryKey: KeyPair): StateAndRef<*> {
-        return databaseTransaction(node.database) {
+        return node.database.transaction {
             val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
             tx.signWith(node.services.legalIdentityKey)
             tx.signWith(notaryKey)
@@ -70,31 +80,26 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         }
     }
 
-    private fun startBFTNotaryCluster(notaryName: String,
+    private fun startBFTNotaryCluster(notaryName: X500Name,
                                       clusterSize: Int,
                                       serviceType: ServiceType): List<Node> {
+        require(clusterSize > 0)
         val quorum = (2 * clusterSize + 1) / 3
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
+                (0 until clusterSize).map { tempFolder.root.toPath() / "${notaryName.commonName}-$it" },
                 serviceType.id,
                 notaryName,
                 quorum)
 
         val serviceInfo = ServiceInfo(serviceType, notaryName)
-        val masterNode = startNode(
-                "$notaryName-0",
-                advertisedServices = setOf(serviceInfo),
-                configOverrides = mapOf("notaryNodeId" to 0)
-        ).getOrThrow()
-
-        val remainingNodes = (1 until clusterSize).map {
+        val nodes = (0 until clusterSize).map {
             startNode(
-                    "$notaryName-$it",
+                    buildNodeName(it, notaryName),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf("notaryNodeId" to it)
             ).getOrThrow()
         }
 
-        return remainingNodes + masterNode
+        return nodes
     }
 }

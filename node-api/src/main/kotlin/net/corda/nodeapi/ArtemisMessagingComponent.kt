@@ -2,15 +2,16 @@ package net.corda.nodeapi
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.net.HostAndPort
-import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.nodeapi.config.SSLConfiguration
 import java.security.KeyStore
+import java.security.PublicKey
 
 /**
  * The base class for Artemis services that defines shared data structures and SSL transport configuration.
@@ -29,10 +30,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
         const val SERVICES_PREFIX = "${INTERNAL_PREFIX}services."
-        const val CLIENTS_PREFIX = "clients."
         const val P2P_QUEUE = "p2p.inbound"
-        const val RPC_REQUESTS_QUEUE = "rpc.requests"
-        const val RPC_QUEUE_REMOVALS_QUEUE = "rpc.qremovals"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
         const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
 
@@ -76,11 +74,11 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     @CordaSerializable
     data class NodeAddress(override val queueName: String, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(peerIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asPeer(peerIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
 
-            fun asService(serviceIdentity: CompositeKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asService(serviceIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
                 return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }
@@ -95,7 +93,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      *
      * @param identity The service identity's owning key.
      */
-    data class ServiceAddress(val identity: CompositeKey) : ArtemisAddress, MessageRecipientGroup {
+    data class ServiceAddress(val identity: PublicKey) : ArtemisAddress, MessageRecipientGroup {
         override val queueName: String = "$SERVICES_PREFIX${identity.toBase58String()}"
     }
 

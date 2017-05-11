@@ -1,7 +1,9 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSessionException
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 
@@ -12,7 +14,10 @@ import net.corda.core.utilities.UntrustworthyData
 @CordaSerializable
 interface SessionMessage
 
-data class SessionInit(val initiatorSessionId: Long, val flowName: String, val firstPayload: Any?) : SessionMessage
+data class SessionInit(val initiatorSessionId: Long,
+                       val clientFlowClass: Class<out FlowLogic<*>>,
+                       val flowVerison: Int,
+                       val firstPayload: Any?) : SessionMessage
 
 interface ExistingSessionMessage : SessionMessage {
     val recipientSessionId: Long
@@ -26,6 +31,7 @@ interface SessionInitResponse : ExistingSessionMessage {
     val initiatorSessionId: Long
     override val recipientSessionId: Long get() = initiatorSessionId
 }
+
 data class SessionConfirm(override val initiatorSessionId: Long, val initiatedSessionId: Long) : SessionInitResponse
 data class SessionReject(override val initiatorSessionId: Long, val errorMessage: String) : SessionInitResponse
 
@@ -43,11 +49,3 @@ fun <T> ReceivedSessionMessage<SessionData>.checkPayloadIs(type: Class<T>): Untr
                 "${message.payload.javaClass.name} (${message.payload})")
     }
 }
-
-/**
- * Thrown when a flow session ends unexpectedly due to a type mismatch (the other side sent an object of a type
- * that we were not expecting), or the other side had an internal error, or the other side terminated when we
- * were waiting for a response.
- */
-@CordaSerializable
-class FlowSessionException(message: String) : RuntimeException(message)

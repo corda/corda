@@ -1,24 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
 
-repositories {
-    mavenCentral()
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'http://oss.sonatype.org/content/repositories/snapshots'
-    }
-}
-
 dependencies {
     compile project(':core')
-}
-
-sourceSets {
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
 }

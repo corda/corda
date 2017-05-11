@@ -12,7 +12,7 @@ class LocalWebServer : WebServer() {
     @Throws(SQLException::class)
     override fun addSession(conn: Connection): String {
         val session = createNewSession("local")
-        session.setConnection(conn)
+        session.connection = conn
         session.put("url", conn.metaData.url)
         val s = session.get("sessionId") as String
         return url + "/frame.jsp?jsessionid=" + s

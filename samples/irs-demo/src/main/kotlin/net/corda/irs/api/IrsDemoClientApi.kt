@@ -13,7 +13,7 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
     private val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
 
     fun runTrade(tradeId: String): Boolean {
-        val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("example-irs-trade.json"))
+        val fileContents = IOUtils.toString(javaClass.classLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", tradeId)
         return api.postJson("deals", tradeFile)
     }
@@ -24,9 +24,9 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
 
     // TODO: Add uploading of files to the HTTP API
     fun runUploadRates() {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"))
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$hostAndPort/upload/interest-rates")
-        assert(uploadFile(url, fileContents))
+        check(uploadFile(url, fileContents))
     }
 
     private companion object {

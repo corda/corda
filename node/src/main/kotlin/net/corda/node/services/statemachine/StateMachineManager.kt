@@ -6,31 +6,28 @@ import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import co.paralleluniverse.strands.Strand
 import com.codahale.metrics.Gauge
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.KryoException
+import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
-import kotlinx.support.jdk8.collections.removeIf
-import net.corda.core.ThreadBox
-import net.corda.core.bufferUntilSubscribed
-import net.corda.core.crypto.Party
+import io.requery.util.CloseableIterator
+import net.corda.core.*
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.commonName
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.ReceivedMessage
-import net.corda.core.messaging.TopicSession
-import net.corda.core.messaging.send
-import net.corda.core.random63BitValue
+import net.corda.core.flows.*
 import net.corda.core.serialization.*
-import net.corda.core.then
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.ReceivedMessage
+import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
@@ -75,26 +72,44 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val quasarKryoPool = KryoPool.Builder {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
         DefaultKryoCustomizer.customize(serializer.kryo)
+        serializer.kryo.addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+        serializer.kryo
     }.build()
+
+    private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
+        override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
+            val message = if (closeable is CloseableIterator<*>) {
+                "A live Iterator pointing to the database has been detected during flow checkpointing. This may be due " +
+                        "to a Vault query - move it into a private method."
+            } else {
+                "${closeable.javaClass.name}, which is a closeable resource, has been detected during flow checkpointing. " +
+                        "Restoring such resources across node restarts is not supported. Make sure code accessing it is " +
+                        "confined to a private method or the reference is nulled out."
+            }
+            throw UnsupportedOperationException(message)
+        }
+        override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
+    }
 
     companion object {
         private val logger = loggerFor<StateMachineManager>()
         internal val sessionTopic = TopicSession("platform.session")
+
         init {
             Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
                 (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
             }
         }
-
     }
 
     val scheduler = FiberScheduler()
 
-    data class Change(
-            val logic: FlowLogic<*>,
-            val addOrRemove: AddOrRemove,
-            val id: StateMachineRunId
-    )
+    sealed class Change {
+        abstract val logic: FlowLogic<*>
+
+        data class Add(override val logic: FlowLogic<*>): Change()
+        data class Removed(override val logic: FlowLogic<*>, val result: ErrorOr<*>): Change()
+    }
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
@@ -102,12 +117,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         var started = false
         val stateMachines = LinkedHashMap<FlowStateMachineImpl<*>, Checkpoint>()
         val changesPublisher = PublishSubject.create<Change>()!!
-        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash,  FlowStateMachineImpl<*>>()!!
+        val fibersWaitingForLedgerCommit = HashMultimap.create<SecureHash, FlowStateMachineImpl<*>>()!!
 
-        fun notifyChangeObservers(fiber: FlowStateMachineImpl<*>, addOrRemove: AddOrRemove) {
-            changesPublisher.bufferUntilDatabaseCommit().onNext(Change(fiber.logic, addOrRemove, fiber.id))
+        fun notifyChangeObservers(change: Change) {
+            changesPublisher.bufferUntilDatabaseCommit().onNext(change)
         }
     }
+
     private val mutex = ThreadBox(InnerState())
 
     // True if we're shutting down, so don't resume anything.
@@ -131,7 +147,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     // Context for tokenized services in checkpoints
-    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryo())
+    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
@@ -232,7 +248,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             started = true
             stateMachines.keys.forEach { resumeRestoredFiber(it) }
         }
-        serviceHub.networkService.addMessageHandler(sessionTopic) { message, reg ->
+        serviceHub.networkService.addMessageHandler(sessionTopic) { message, _ ->
             executor.checkOnThread()
             onSessionMessage(message)
         }
@@ -243,7 +259,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val waitingForResponse = fiber.waitingForResponse
         if (waitingForResponse != null) {
             if (waitingForResponse is WaitForLedgerCommit) {
-                val stx = databaseTransaction(database) {
+                val stx = database.transaction {
                     serviceHub.storageService.validatedTransactions.getTransaction(waitingForResponse.hash)
                 }
                 if (stx != null) {
@@ -264,12 +280,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun onSessionMessage(message: ReceivedMessage) {
         val sessionMessage = message.data.deserialize<SessionMessage>()
-        // TODO Look up the party with the full X.500 name instead of just the legal name
-        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer.commonName)?.legalIdentity
+        val sender = serviceHub.networkMapCache.getNodeByLegalName(message.peer)?.legalIdentity
         if (sender != null) {
             when (sessionMessage) {
                 is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, sender)
-                is SessionInit -> onSessionInit(sessionMessage, sender)
+                is SessionInit -> onSessionInit(sessionMessage, message, sender)
             }
         } else {
             logger.error("Unknown peer ${message.peer} in $sessionMessage")
@@ -280,6 +295,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val session = openSessions[message.recipientSessionId]
         if (session != null) {
             session.fiber.logger.trace { "Received $message on $session from $sender" }
+            if (session.retryable) {
+                if (message is SessionConfirm && session.state is FlowSessionState.Initiated) {
+                    session.fiber.logger.trace { "Ignoring duplicate confirmation for session ${session.ourSessionId} – session is idempotent" }
+                    return
+                }
+                if (message !is SessionConfirm) {
+                    serviceHub.networkService.cancelRedelivery(session.ourSessionId)
+                }
+            }
             if (message is SessionEnd) {
                 openSessions.remove(message.recipientSessionId)
             }
@@ -302,7 +326,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                     logger.trace { "Ignoring session end message for already closed session: $message" }
                 }
             } else {
-                logger.warn("Received a session message for unknown session: $message")
+                logger.warn("Received a session message for unknown session: $message, from $sender")
             }
         }
     }
@@ -315,30 +339,35 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
     }
 
-    private fun onSessionInit(sessionInit: SessionInit, sender: Party) {
+    private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
         logger.trace { "Received $sessionInit from $sender" }
         val otherPartySessionId = sessionInit.initiatorSessionId
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val markerClass = try {
-            Class.forName(sessionInit.flowName)
-        } catch (e: Exception) {
-            logger.warn("Received invalid $sessionInit", e)
-            sendSessionReject("Don't know ${sessionInit.flowName}")
-            return
-        }
-
-        val flowFactory = serviceHub.getFlowFactory(markerClass)
-        if (flowFactory == null) {
-            logger.warn("Unknown flow marker class in $sessionInit")
-            sendSessionReject("Don't know ${markerClass.name}")
+        val serviceFlowInfo = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
+        if (serviceFlowInfo == null) {
+            logger.warn("${sessionInit.clientFlowClass} has not been registered with a service flow: $sessionInit")
+            sendSessionReject("Don't know ${sessionInit.clientFlowClass.name}")
             return
         }
 
         val session = try {
-            val flow = flowFactory(sender)
-            val fiber = createFiber(flow)
+            val flow = when (serviceFlowInfo) {
+                is ServiceFlowInfo.CorDapp -> {
+                    // TODO Add support for multiple versions of the same flow when CorDapps are loaded in separate class loaders
+                    if (sessionInit.flowVerison != serviceFlowInfo.version) {
+                        logger.warn("Version mismatch - ${sessionInit.clientFlowClass} is only registered for version " +
+                                "${serviceFlowInfo.version}: $sessionInit")
+                        sendSessionReject("Version not supported")
+                        return
+                    }
+                    serviceFlowInfo.factory(sender)
+                }
+                is ServiceFlowInfo.Core -> serviceFlowInfo.factory(sender, receivedMessage.platformVersion)
+            }
+
+            val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
                 session.receivedMessages += ReceivedSessionMessage(sender, SessionData(session.ourSessionId, sessionInit.firstPayload))
@@ -354,32 +383,32 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using marker ${markerClass.name}" }
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.clientFlowClass.name}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }
 
     private fun serializeFiber(fiber: FlowStateMachineImpl<*>): SerializedBytes<FlowStateMachineImpl<*>> {
-        return quasarKryo().run { kryo ->
+        return quasarKryoPool.run { kryo ->
             // add the map of tokens -> tokenizedServices to the kyro context
-            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-            fiber.serialize(kryo)
+            kryo.withSerializationContext(serializationContext) {
+                fiber.serialize(kryo)
+            }
         }
     }
 
     private fun deserializeFiber(checkpoint: Checkpoint): FlowStateMachineImpl<*> {
-        return quasarKryo().run { kryo ->
+        return quasarKryoPool.run { kryo ->
             // put the map of token -> tokenized into the kryo context
-            SerializeAsTokenSerializer.setContext(kryo, serializationContext)
-            checkpoint.serializedFiber.deserialize(kryo).apply { fromCheckpoint = true }
+            kryo.withSerializationContext(serializationContext) {
+                checkpoint.serializedFiber.deserialize(kryo)
+            }.apply { fromCheckpoint = true }
         }
     }
 
-    private fun quasarKryo(): KryoPool = quasarKryoPool
-
-    private fun <T> createFiber(logic: FlowLogic<T>): FlowStateMachineImpl<T> {
+    private fun <T> createFiber(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         val id = StateMachineRunId.createRandom()
-        return FlowStateMachineImpl(id, logic, scheduler).apply { initFiber(this) }
+        return FlowStateMachineImpl(id, logic, scheduler, flowInitiator).apply { initFiber(this) }
     }
 
     private fun initFiber(fiber: FlowStateMachineImpl<*>) {
@@ -393,13 +422,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             processIORequest(ioRequest)
             decrementLiveFibers()
         }
-        fiber.actionOnEnd = { exception, propagated ->
+        fiber.actionOnEnd = { resultOrError, propagated ->
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(fiber, AddOrRemove.REMOVE)
+                    notifyChangeObservers(Change.Removed(fiber.logic, resultOrError))
                 }
-                endAllFiberSessions(fiber, exception, propagated)
+                endAllFiberSessions(fiber, resultOrError.error, propagated)
             } finally {
                 fiber.commitTransaction()
                 decrementLiveFibers()
@@ -410,7 +439,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         mutex.locked {
             totalStartedFlows.inc()
             unfinishedFibers.countUp()
-            notifyChangeObservers(fiber, AddOrRemove.ADD)
+            notifyChangeObservers(Change.Add(fiber.logic))
         }
     }
 
@@ -450,15 +479,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      *
      * Note that you must be on the [executor] thread.
      */
-    fun <T> add(logic: FlowLogic<T>): FlowStateMachine<T> {
+    fun <T> add(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         // TODO: Check that logic has @Suspendable on its call method.
         executor.checkOnThread()
         // We swap out the parent transaction context as using this frequently leads to a deadlock as we wait
         // on the flow completion future inside that context. The problem is that any progress checkpoints are
         // unable to acquire the table lock and move forward till the calling transaction finishes.
         // Committing in line here on a fresh context ensure we can progress.
-        val fiber = isolatedTransaction(database) {
-            val fiber = createFiber(logic)
+        val fiber = database.isolatedTransaction {
+            val fiber = createFiber(logic, flowInitiator)
             updateCheckpoint(fiber)
             fiber
         }
@@ -497,42 +526,66 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun processIORequest(ioRequest: FlowIORequest) {
         executor.checkOnThread()
-        if (ioRequest is SendRequest) {
-            if (ioRequest.message is SessionInit) {
-                openSessions[ioRequest.session.ourSessionId] = ioRequest.session
+        when (ioRequest) {
+            is SendRequest -> processSendRequest(ioRequest)
+            is WaitForLedgerCommit -> processWaitForCommitRequest(ioRequest)
+        }
+    }
+
+    private fun processSendRequest(ioRequest: SendRequest) {
+        val retryId = if (ioRequest.message is SessionInit) {
+            with(ioRequest.session) {
+                openSessions[ourSessionId] = this
+                if (retryable) ourSessionId else null
             }
-            sendSessionMessage(ioRequest.session.state.sendToParty, ioRequest.message, ioRequest.session.fiber)
-            if (ioRequest !is ReceiveRequest<*>) {
-                // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                resumeFiber(ioRequest.session.fiber)
-            }
-        } else if (ioRequest is WaitForLedgerCommit) {
-            // Is it already committed?
-            val stx = databaseTransaction(database) {
-                serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
-            }
-            if (stx != null) {
-                resumeFiber(ioRequest.fiber)
-            } else {
-                // No, then register to wait.
-                //
-                // We assume this code runs on the server thread, which is the only place transactions are committed
-                // currently. When we liberalise our threading somewhat, handing of wait requests will need to be
-                // reworked to make the wait atomic in another way. Otherwise there is a race between checking the
-                // database and updating the waiting list.
-                mutex.locked {
-                    fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
-                }
+        } else null
+        sendSessionMessage(ioRequest.session.state.sendToParty, ioRequest.message, ioRequest.session.fiber, retryId)
+        if (ioRequest !is ReceiveRequest<*>) {
+            // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
+            resumeFiber(ioRequest.session.fiber)
+        }
+    }
+
+    private fun processWaitForCommitRequest(ioRequest: WaitForLedgerCommit) {
+        // Is it already committed?
+        val stx = database.transaction {
+            serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
+        }
+        if (stx != null) {
+            resumeFiber(ioRequest.fiber)
+        } else {
+            // No, then register to wait.
+            //
+            // We assume this code runs on the server thread, which is the only place transactions are committed
+            // currently. When we liberalise our threading somewhat, handing of wait requests will need to be
+            // reworked to make the wait atomic in another way. Otherwise there is a race between checking the
+            // database and updating the waiting list.
+            mutex.locked {
+                fibersWaitingForLedgerCommit[ioRequest.hash] += ioRequest.fiber
             }
         }
     }
 
-    private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null) {
+    private fun sendSessionMessage(party: Party, message: SessionMessage, fiber: FlowStateMachineImpl<*>? = null, retryId: Long? = null) {
         val partyInfo = serviceHub.networkMapCache.getPartyInfo(party)
                 ?: throw IllegalArgumentException("Don't know about party $party")
         val address = serviceHub.networkService.getAddressOfParty(partyInfo)
         val logger = fiber?.logger ?: logger
-        logger.trace { "Sending $message to party $party @ $address" }
-        serviceHub.networkService.send(sessionTopic, message, address)
+        logger.trace { "Sending $message to party $party @ $address" + if (retryId != null) " with retry $retryId" else "" }
+
+        val serialized = try {
+            message.serialize()
+        } catch (e: KryoException) {
+            if (message !is ErrorSessionEnd || message.errorResponse == null) throw e
+            logger.warn("Something in ${message.errorResponse.javaClass.name} is not serialisable. " +
+                    "Instead sending back an exception which is serialisable to ensure session end occurs properly.", e)
+            // The subclass may have overridden toString so we use that
+            val exMessage = message.errorResponse.let { if (it.javaClass != FlowException::class.java) it.toString() else it.message }
+            message.copy(errorResponse = FlowException(exMessage)).serialize()
+        }
+
+        serviceHub.networkService.apply {
+            send(createMessage(sessionTopic, serialized.bytes), address, retryId = retryId)
+        }
     }
 }

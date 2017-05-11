@@ -2,10 +2,9 @@ package net.corda.core.transactions
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.MerkleTree
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.SerializedBytes
@@ -30,7 +29,7 @@ class WireTransaction(
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         override val commands: List<Command>,
         notary: Party?,
-        signers: List<CompositeKey>,
+        signers: List<PublicKey>,
         type: TransactionType,
         timestamp: Timestamp?
 ) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTransaction {
@@ -71,16 +70,36 @@ class WireTransaction(
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
+        return toLedgerTransaction(
+                resolveIdentity = { services.identityService.partyFromKey(it) },
+                resolveAttachment = { services.storageService.attachments.openAttachment(it) },
+                resolveStateRef = { services.loadState(it) }
+        )
+    }
+
+    /**
+     * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
+     * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
+     *
+     * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
+     * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
+     */
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?
+    ): LedgerTransaction {
         // Look up public keys to authenticated identities. This is just a stub placeholder and will all change in future.
         val authenticatedArgs = commands.map {
-            val parties = it.signers.mapNotNull { pk -> services.identityService.partyFromKey(pk) }
+            val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
             AuthenticatedObject(it.signers, parties, it.value)
         }
         // Open attachments specified in this transaction. If we haven't downloaded them, we fail.
-        val attachments = attachments.map {
-            services.storageService.attachments.openAttachment(it) ?: throw AttachmentResolutionException(it)
+        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
+        val resolvedInputs = inputs.map { ref ->
+            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val resolvedInputs = inputs.map { StateAndRef(services.loadState(it), it) }
         return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)
     }
 
@@ -102,7 +121,7 @@ class WireTransaction(
      * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
      */
     fun filterWithFun(filtering: (Any) -> Boolean): FilteredLeaves {
-        fun notNullFalse(elem: Any?): Any? = if(elem == null || !filtering(elem)) null else elem
+        fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering(elem)) null else elem
         return FilteredLeaves(
                 inputs.filter { filtering(it) },
                 attachments.filter { filtering(it) },

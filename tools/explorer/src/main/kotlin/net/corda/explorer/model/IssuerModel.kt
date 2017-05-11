@@ -1,14 +1,14 @@
 package net.corda.explorer.model
 
 import javafx.collections.ObservableList
-import net.corda.client.jfx.utils.ChosenList
-import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.model.NetworkIdentityModel
 import net.corda.client.jfx.model.observableList
 import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.utils.ChosenList
+import net.corda.client.jfx.utils.map
 import net.corda.core.contracts.currency
 import net.corda.core.node.NodeInfo
-import tornadofx.observable
+import tornadofx.*
 
 val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF)")
 

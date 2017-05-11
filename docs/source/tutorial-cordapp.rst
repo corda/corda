@@ -53,8 +53,8 @@ for you from our `public Maven repository <https://bintray.com/r3/corda>`_.
 **Using a Corda SNAPSHOT build.** Alternatively, if you wish to work from the master branch of the Corda repo which contains
 the most up-to-date Corda feature set then you will need to clone the ``corda`` repository and publish the latest master
 build (or previously tagged releases) to your local Maven repository. You will then need to ensure that Gradle
-grabs the correct dependencies for you from Maven local by changing the ``corda_version`` in ``build.gradle``. This will be
-covered below in `Using a SNAPSHOT release`_.
+grabs the correct dependencies for you from Maven local by changing the ``corda_release_version`` in ``build.gradle``.
+This will be covered below in `Using a SNAPSHOT release`_.
 
 Firstly, follow the :doc:`getting set up <getting-set-up>` page to download the JDK, IntelliJ and git if you didn't
 already have it.
@@ -145,10 +145,10 @@ if you are trying out new features, in this case you can change ``version`` for 
 
 .. note:: **A quick point on corda version numbers used by Gradle.**
 
-  In the ``build.gradle`` file for your CorDapp, you can specify the ``corda_version`` to use. It is important that when
-  developing your CorDapp that you use the correct version number. For example, when wanting to work from a SNAPSHOT
+  In the ``build.gradle`` file for your CorDapp, you can specify the ``corda_release_version`` to use. It is important
+  that when developing your CorDapp that you use the correct version number. For example, when wanting to work from a SNAPSHOT
   release, the release numbers are suffixed with 'SNAPSHOT', e.g. if the latest milestone release is M6 then the
-  SNAPSHOT release will be 0.7-SNAPSHOT, and so on. As such, you will set your ``corda_version`` to ``'0.7-SNAPSHOT'``
+  SNAPSHOT release will be 0.7-SNAPSHOT, and so on. As such, you will set your ``corda_release_version`` to ``'0.7-SNAPSHOT'``
   in the ``build.gradle`` file in your CorDapp. Gradle will automatically grab the SNAPSHOT dependencies from your local
   Maven repository. Alternatively, if working from a milestone release, you will use the version number only, for example
   ``0.6`` or ``0.7``.
@@ -224,7 +224,7 @@ see all available Gradle tasks.
 * For the Corda repo there will be many project listed, the root project ``corda`` and associated sub-projects: ``core``,
   ``finance``, ``node``, etc.
 
-.. note:: It's worth noting that when you change branch in the example CorDapp, the ``corda_version`` will change to
+.. note:: It's worth noting that when you change branch in the example CorDapp, the ``corda_release_version`` will change to
    reflect the version of the branch you are working from.
 
 To execute a task, double click it. The output will be shown in a console window.
@@ -459,14 +459,14 @@ To check what validation is performed over the IOU data, have a look at the ``IO
 .. sourcecode:: kotlin
 
   // Generic constraints around the IOU transaction.
-  "No inputs should be consumed when issuing an IOU." by (tx.inputs.isEmpty())
-  "Only one output state should be created." by (tx.outputs.size == 1)
+  "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
+  "Only one output state should be created." using (tx.outputs.size == 1)
   val out = tx.outputs.single() as IOUState
-  "The sender and the recipient cannot be the same entity." by (out.sender != out.recipient)
-  "All of the participants must be signers." by (command.signers.containsAll(out.participants))
+  "The sender and the recipient cannot be the same entity." using (out.sender != out.recipient)
+  "All of the participants must be signers." using (command.signers.containsAll(out.participants))
 
   // IOU-specific constraints.
-  "The IOU's value must be non-negative." by (out.iou.value > 0)
+  "The IOU's value must be non-negative." using (out.iou.value > 0)
 
 **Once an IOU has been submitted:**
 
@@ -712,15 +712,15 @@ are available for use in the rest of the build script. It also specifies version
 things.
 
 If you are working from a Corda SNAPSHOT release which you have publish to Maven local then ensure that
-``corda_version`` is the same as the version of the Corda core modules you published to Maven local. If not then change the
-``kotlin_version`` property. Also, if you are working from a previous cordapp-tutorial milestone release, then be sure to ``git checkout``
-the correct version of the example CorDapp from the ``cordapp-tutorial`` repo.
+``corda_release_version`` is the same as the version of the Corda core modules you published to Maven local. If not then
+change the ``kotlin_version`` property. Also, if you are working from a previous cordapp-tutorial milestone release, then
+be sure to ``git checkout`` the correct version of the example CorDapp from the ``cordapp-tutorial`` repo.
 
 .. sourcecode:: groovy
 
   buildscript {
       ext.kotlin_version = '1.0.4'
-      ext.corda_version = '0.5-SNAPSHOT' // Ensure this version is the same as the corda core modules you are using.
+      ext.corda_release_version = '0.5-SNAPSHOT' // Ensure this version is the same as the corda core modules you are using.
       ext.quasar_version = '0.7.6'
       ext.jersey_version = '2.23.1'
 
@@ -747,12 +747,12 @@ code snippet.package. Use the standard format:
       testCompile group: 'junit', name: 'junit', version: '4.11'
 
       // Corda integration dependencies
-      compile "net.corda:client:$corda_version"
-      compile "net.corda:core:$corda_version"
-      compile "net.corda:contracts:$corda_version"
-      compile "net.corda:node:$corda_version"
-      compile "net.corda:corda:$corda_version"
-      compile "net.corda:test-utils:$corda_version"
+      compile "net.corda:client:$corda_release_version"
+      compile "net.corda:core:$corda_release_version"
+      compile "net.corda:contracts:$corda_release_version"
+      compile "net.corda:node:$corda_release_version"
+      compile "net.corda:corda:$corda_release_version"
+      compile "net.corda:test-utils:$corda_release_version"
 
       ...
 
@@ -772,11 +772,11 @@ like to deploy for testing. See further details below:
 
 .. sourcecode:: groovy
 
-  task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['build']) {
+  task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['jar']) {
       directory "./kotlin-source/build/nodes"                            // The output directory.
-      networkMap "Controller"                              // The artemis address of the node to be used as the network map.
+      networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node to be used as the network map.
       node {
-          name "Controller"                                // Artemis name of node to be deployed.
+          name "CN=Controller,O=R3,OU=corda,L=London,C=UK" // Distinguished name of node to be deployed.
           nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           p2pPort 10002
@@ -785,7 +785,7 @@ like to deploy for testing. See further details below:
           cordapps = []                                    // Add package names of CordaApps.
       }
       node {                                               // Create an additional node.
-          name "NodeA"
+          name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
           nearestCity "London"
           advertisedServices = []
           p2pPort 10005

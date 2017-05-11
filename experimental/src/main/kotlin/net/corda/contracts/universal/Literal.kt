@@ -2,7 +2,7 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Frequency
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.*
@@ -196,4 +196,4 @@ class RollOutBuilder<T>(val startDate: LocalDate, val endDate: LocalDate, val fr
             RollOut(startDate, endDate, frequency, super.final())
 }
 
-class Dummy {}
+class Dummy

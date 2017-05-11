@@ -1,6 +1,11 @@
 buildscript {
-    // TODO: Unify with the one in the main project
-    ext.kotlin_version = '1.0.5-2'
+    // For sharing constants between builds
+    Properties constants = new Properties()
+    file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
+
+    ext.kotlin_version = constants.getProperty("kotlinVersion")
+    ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
+    ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
 
     repositories {
         mavenCentral()
@@ -39,11 +44,13 @@ dependencies {
     compile gradleApi()
     compile localGroovy()
 
-    noderunner "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
     // TypeSafe Config: for simple and human friendly config files.
-    // TODO: Add a common versions file between Corda and gradle plugins to de-duplicate this version number
-    compile "com.typesafe:config:1.3.1"
+    compile "com.typesafe:config:$typesafe_config_version"
+
+    // Bouncy Castle: for X.500 distinguished name manipulation
+    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
 }
 
 task createNodeRunner(type: Jar, dependsOn: [classes]) {

@@ -12,27 +12,14 @@ apply plugin: 'application'
 sourceCompatibility = 1.8
 mainClassName = 'net.corda.explorer.Main'
 
-sourceSets {
-    main {
-        resources {
-            srcDir "../../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../../config/test"
-        }
-    }
-}
-
-repositories {
-    jcenter()
-    mavenCentral()
-    mavenLocal()
+// Use manual resource copying of log4j2.xml rather than source sets.
+// This prevents problems in IntelliJ with regard to duplicate source roots.
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 

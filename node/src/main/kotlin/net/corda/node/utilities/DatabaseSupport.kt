@@ -3,7 +3,6 @@ package net.corda.node.utilities
 import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
@@ -32,11 +31,40 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
+@Deprecated("Use Database.transaction instead.")
+fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T) = db.transaction(statement)
+
 // TODO: Handle commit failure due to database unavailable.  Better to shutdown and await database reconnect/recovery.
-fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T): T {
+fun <T> Database.transaction(statement: Transaction.() -> T): T {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-    StrandLocalTransactionManager.database = db
+    StrandLocalTransactionManager.database = this
     return org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
+}
+
+fun Database.createTransaction(): Transaction {
+    // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
+    StrandLocalTransactionManager.database = this
+    return TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
+}
+
+fun configureDatabase(props: Properties): Pair<Closeable, Database> {
+    val config = HikariConfig(props)
+    val dataSource = HikariDataSource(config)
+    val database = Database.connect(dataSource) { db -> StrandLocalTransactionManager(db) }
+    // Check not in read-only mode.
+    database.transaction {
+        check(!database.metadata.isReadOnly) { "Database should not be readonly." }
+    }
+    return Pair(dataSource, database)
+}
+
+fun <T> Database.isolatedTransaction(block: Transaction.() -> T): T {
+    val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
+    return try {
+        transaction(block)
+    } finally {
+        StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
+    }
 }
 
 /**
@@ -51,41 +79,15 @@ inline fun <T> withFinalizables(statement: (MutableList<() -> Unit>) -> T): T {
     }
 }
 
-fun createDatabaseTransaction(db: Database): Transaction {
-    // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
-    StrandLocalTransactionManager.database = db
-    return TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
-}
-
-fun configureDatabase(props: Properties): Pair<Closeable, Database> {
-    val config = HikariConfig(props)
-    val dataSource = HikariDataSource(config)
-    val database = Database.connect(dataSource) { db -> StrandLocalTransactionManager(db) }
-    // Check not in read-only mode.
-    databaseTransaction(database) {
-        check(!database.metadata.isReadOnly) { "Database should not be readonly." }
-    }
-    return Pair(dataSource, database)
-}
-
-fun <T> isolatedTransaction(database: Database, block: Transaction.() -> T): T {
-    val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
-    return try {
-        databaseTransaction(database, block)
-    } finally {
-        StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
-    }
-}
-
 /**
- * A relatively close copy of the [ThreadLocalTransactionManager] in Exposed but with the following adjustments to suit
- * our environment:
+ * A relatively close copy of the [org.jetbrains.exposed.sql.transactions.ThreadLocalTransactionManager]
+ * in Exposed but with the following adjustments to suit our environment:
  *
  * Because the construction of a [Database] instance results in replacing the singleton [TransactionManager] instance,
  * our tests involving two [MockNode]s effectively replace the database instances of each other and continue to trample
  * over each other.  So here we use a companion object to hold them as [ThreadLocal] and [StrandLocalTransactionManager]
  * is otherwise effectively stateless so it's replacement does not matter.  The [ThreadLocal] is then set correctly and
- * explicitly just prior to initiating a transaction in [databaseTransaction] and [createDatabaseTransaction] above.
+ * explicitly just prior to initiating a transaction in [transaction] and [createTransaction] above.
  *
  * The [StrandLocalTransactionManager] instances have an [Observable] of the transaction close [Boundary]s which
  * facilitates the use of [Observable.afterDatabaseCommit] to create event streams that only emit once the database
@@ -113,7 +115,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
 
         var database: Database
             get() = threadLocalDb.get() ?: throw IllegalStateException("Was expecting to find database set on current strand: ${Strand.currentStrand()}")
-            set(value: Database) {
+            set(value) {
                 threadLocalDb.set(value)
             }
 
@@ -133,7 +135,7 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
     init {
         // Found a unit test that was forgetting to close the database transactions.  When you close() on the top level
         // database transaction it will reset the threadLocalTx back to null, so if it isn't then there is still a
-        // databae transaction open.  The [databaseTransaction] helper above handles this in a finally clause for you
+        // databae transaction open.  The [transaction] helper above handles this in a finally clause for you
         // but any manual database transaction management is liable to have this problem.
         if (threadLocalTx.get() != null) {
             throw IllegalStateException("Was not expecting to find existing database transaction on current strand when setting database: ${Strand.currentStrand()}, ${threadLocalTx.get()}")
@@ -209,7 +211,7 @@ private class DatabaseTransactionWrappingSubscriber<U>(val db: Database?) : Subs
     val delegates = CopyOnWriteArrayList<Subscriber<in U>>()
 
     fun forEachSubscriberWithDbTx(block: Subscriber<in U>.() -> Unit) {
-        databaseTransaction(db ?: StrandLocalTransactionManager.database) {
+        (db ?: StrandLocalTransactionManager.database).transaction {
             delegates.filter { !it.isUnsubscribed }.forEach {
                 it.block()
             }
@@ -266,13 +268,14 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null)
         // Add the subscriber to the wrapping subscriber, which will invoke the original subscribers together inside a database transaction.
         wrappingSubscriber.delegates.add(toBeWrappedInDbTx)
         // If we are the first subscriber, return the shared subscriber, otherwise return a subscriber that does nothing.
-        if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber<T>(toBeWrappedInDbTx)
+        if (wrappingSubscriber.delegates.size == 1) wrappingSubscriber else NoOpSubscriber(toBeWrappedInDbTx)
         // Clean up the shared list of subscribers when they unsubscribe.
     }.doOnUnsubscribe { wrappingSubscriber.cleanUp() }
 }
 
 // Composite columns for use with below Exposed helpers.
-data class PartyColumns(val name: Column<String>, val owningKey: Column<CompositeKey>)
+data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
+
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 
@@ -281,9 +284,8 @@ data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>
  */
 fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
 
-fun Table.compositeKey(name: String) = this.registerColumn<CompositeKey>(name, CompositeKeyColumnType)
 fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
-fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.compositeKey(keyColumnName))
+fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
 fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
@@ -294,21 +296,15 @@ fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteCo
 /**
  * [ColumnType] for marshalling to/from database on behalf of [PublicKey].
  */
+// TODO Rethink how we store CompositeKeys in db. Currently they are stored as Base58 strings and as we don't know the size
+//  of a CompositeKey they could be CLOB fields. Given the time to fetch these types and that they are unsuitable as table keys,
+//  having a shorter primary key (such as SHA256 hash or a UUID generated on demand) that references a common composite key table may make more sense.
 object PublicKeyColumnType : ColumnType() {
-    override fun sqlType(): String = "VARCHAR(255)"
+    override fun sqlType(): String = "VARCHAR"
 
     override fun valueFromDB(value: Any): Any = parsePublicKeyBase58(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is PublicKey) value.toBase58String() else value
-}
-
-/**
- * [ColumnType] for marshalling to/from database on behalf of [CompositeKey].
- */
-object CompositeKeyColumnType : ColumnType() {
-    override fun sqlType(): String = "VARCHAR"
-    override fun valueFromDB(value: Any): Any = CompositeKey.parseFromBase58(value.toString())
-    override fun notNullValueToDB(value: Any): Any = if (value is CompositeKey) value.toBase58String() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? PublicKey)?.toBase58String() ?: value
 }
 
 /**
@@ -319,7 +315,7 @@ object SecureHashColumnType : ColumnType() {
 
     override fun valueFromDB(value: Any): Any = SecureHash.parse(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is SecureHash) value.toString() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? SecureHash)?.toString() ?: value
 }
 
 /**
@@ -330,7 +326,7 @@ object UUIDStringColumnType : ColumnType() {
 
     override fun valueFromDB(value: Any): Any = UUID.fromString(value.toString())
 
-    override fun notNullValueToDB(value: Any): Any = if (value is UUID) value.toString() else value
+    override fun notNullValueToDB(value: Any): Any = (value as? UUID)?.toString() ?: value
 }
 
 /**

@@ -1,20 +1,19 @@
 package net.corda.node.services.events
 
-import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
-import kotlinx.support.jdk8.collections.compute
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledActivity
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.node.services.SchedulerService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.ProgressTracker
+import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.services.api.FlowLogicRefFactoryInternal
+import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -28,7 +27,7 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A first pass of a simple [SchedulerService] that works with [MutableClock]s for testing, demonstrations and simulations
- * that also encompasses the [Vault] observer for processing transactions.
+ * that also encompasses the [net.corda.core.node.services.Vault] observer for processing transactions.
  *
  * This will observe transactions as they are stored and schedule and unschedule activities based on the States consumed
  * or produced.
@@ -44,14 +43,16 @@ import javax.annotation.concurrent.ThreadSafe
  * activity.  Only replace this for unit testing purposes.  This is not the executor the [FlowLogic] is launched on.
  */
 @ThreadSafe
-class NodeSchedulerService(private val database: Database,
-                           private val services: ServiceHubInternal,
-                           private val flowLogicRefFactory: FlowLogicRefFactory,
+class NodeSchedulerService(private val services: ServiceHubInternal,
+                           private val database: Database,
+                           private val flowLogicRefFactory: FlowLogicRefFactoryInternal,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch())
     : SchedulerService, SingletonSerializeAsToken() {
 
-    private val log = loggerFor<NodeSchedulerService>()
+    companion object {
+        private val log = loggerFor<NodeSchedulerService>()
+    }
 
     private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}scheduled_states") {
         val output = stateRef("transaction_id", "output_index")
@@ -130,11 +131,12 @@ class NodeSchedulerService(private val database: Database,
     }
 
     /**
-     * This method first cancels the [Future] for any pending action so that the [awaitWithDeadline] used below
-     * drops through without running the action.  We then create a new [Future] for the new action (so it too can be
-     * cancelled), and then await the arrival of the scheduled time.  If we reach the scheduled time (the deadline)
-     * without the [Future] being cancelled then we run the scheduled action.  Finally we remove that action from the
-     * scheduled actions and recompute the next scheduled action.
+     * This method first cancels the [java.util.concurrent.Future] for any pending action so that the
+     * [awaitWithDeadline] used below drops through without running the action.  We then create a new
+     * [java.util.concurrent.Future] for the new action (so it too can be cancelled), and then await the arrival of the
+     * scheduled time.  If we reach the scheduled time (the deadline) without the [java.util.concurrent.Future] being
+     * cancelled then we run the scheduled action.  Finally we remove that action from the scheduled actions and
+     * recompute the next scheduled action.
      */
     internal fun rescheduleWakeUp() {
         // Note, we already have the mutex but we need the scope again here
@@ -159,72 +161,62 @@ class NodeSchedulerService(private val database: Database,
     }
 
     private fun onTimeReached(scheduledState: ScheduledStateRef) {
-        services.startFlow(RunScheduled(scheduledState, this@NodeSchedulerService))
+        database.transaction {
+            val scheduledFlow = getScheduledFlow(scheduledState)
+            if (scheduledFlow != null) {
+                // TODO Because the flow is executed asynchronously, there is a small window between this tx we're in
+                // committing and the flow's first checkpoint when it starts in which we can lose the flow if the node
+                // goes down.
+                // See discussion in https://github.com/corda/corda/pull/639#discussion_r115257437
+                val future = services.startFlow(scheduledFlow, FlowInitiator.Scheduled(scheduledState)).resultFuture
+                future.then {
+                    unfinishedSchedules.countDown()
+                }
+            }
+        }
     }
 
-    class RunScheduled(val scheduledState: ScheduledStateRef, val scheduler: NodeSchedulerService) : FlowLogic<Unit>() {
-        companion object {
-            object RUNNING : ProgressTracker.Step("Running scheduled...")
-
-            fun tracker() = ProgressTracker(RUNNING)
-        }
-
-        override val progressTracker = tracker()
-
-        @Suspendable
-        override fun call(): Unit {
-            progressTracker.currentStep = RUNNING
-
-            // Ensure we are still scheduled.
-            val scheduledLogic: FlowLogic<*>? = getScheduledLogic()
-            if (scheduledLogic != null) {
-                subFlow(scheduledLogic)
-                scheduler.unfinishedSchedules.countDown()
-            }
-        }
-
-        private fun getScheduledaActivity(): ScheduledActivity? {
-            val txState = serviceHub.loadState(scheduledState.ref)
-            val state = txState.data as SchedulableState
-            return try {
-                // This can throw as running contract code.
-                state.nextScheduledActivity(scheduledState.ref, scheduler.flowLogicRefFactory)
-            } catch(e: Exception) {
-                logger.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
-                null
-            }
-        }
-
-        private fun getScheduledLogic(): FlowLogic<*>? {
-            val scheduledActivity = getScheduledaActivity()
-            var scheduledLogic: FlowLogic<*>? = null
-            scheduler.mutex.locked {
-                // need to remove us from those scheduled, but only if we are still next
-                scheduledStates.compute(scheduledState.ref) { ref, value ->
-                    if (value === scheduledState) {
-                        if (scheduledActivity == null) {
-                            logger.info("Scheduled state $scheduledState has rescheduled to never.")
-                            scheduler.unfinishedSchedules.countDown()
-                            null
-                        } else if (scheduledActivity.scheduledAt.isAfter(serviceHub.clock.instant())) {
-                            logger.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
-                            ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
-                        } else {
-                            // TODO: FlowLogicRefFactory needs to sort out the class loader etc
-                            val logic = scheduler.flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
-                            logger.trace { "Scheduler starting FlowLogic $logic" }
-                            scheduledLogic = logic
-                            null
-                        }
+    private fun getScheduledFlow(scheduledState: ScheduledStateRef): FlowLogic<*>? {
+        val scheduledActivity = getScheduledActivity(scheduledState)
+        var scheduledFlow: FlowLogic<*>? = null
+        mutex.locked {
+            // need to remove us from those scheduled, but only if we are still next
+            scheduledStates.compute(scheduledState.ref) { _, value ->
+                if (value === scheduledState) {
+                    if (scheduledActivity == null) {
+                        log.info("Scheduled state $scheduledState has rescheduled to never.")
+                        unfinishedSchedules.countDown()
+                        null
+                    } else if (scheduledActivity.scheduledAt.isAfter(services.clock.instant())) {
+                        log.info("Scheduled state $scheduledState has rescheduled to ${scheduledActivity.scheduledAt}.")
+                        ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
                     } else {
-                        value
+                        // TODO: FlowLogicRefFactory needs to sort out the class loader etc
+                        val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
+                        log.trace { "Scheduler starting FlowLogic $flowLogic" }
+                        scheduledFlow = flowLogic
+                        null
                     }
+                } else {
+                    value
                 }
-                // and schedule the next one
-                recomputeEarliest()
-                scheduler.rescheduleWakeUp()
             }
-            return scheduledLogic
+            // and schedule the next one
+            recomputeEarliest()
+            rescheduleWakeUp()
+        }
+        return scheduledFlow
+    }
+
+    private fun getScheduledActivity(scheduledState: ScheduledStateRef): ScheduledActivity? {
+        val txState = services.loadState(scheduledState.ref)
+        val state = txState.data as SchedulableState
+        return try {
+            // This can throw as running contract code.
+            state.nextScheduledActivity(scheduledState.ref, flowLogicRefFactory)
+        } catch (e: Exception) {
+            log.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
+            null
         }
     }
 }

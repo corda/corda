@@ -4,11 +4,16 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 
 object AddressUtils {
+    private val REACHABLE_TIMEOUT_MS = 1000
+
     /** Returns the first public IP address found on any of the network interfaces, or `null` if none found. */
     fun tryDetectPublicIP(): InetAddress? {
         for (int in NetworkInterface.getNetworkInterfaces()) {
+            if (int.isLoopback) continue
+
             for (address in int.inetAddresses) {
-                if (isPublic(address)) return address
+                if (isPublic(address) && address.isReachable(REACHABLE_TIMEOUT_MS))
+                    return address
             }
         }
         return null

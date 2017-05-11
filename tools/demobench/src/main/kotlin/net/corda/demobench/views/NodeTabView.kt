@@ -1,17 +1,35 @@
 package net.corda.demobench.views
 
-import java.nio.file.Path
-import java.text.DecimalFormat
-import java.util.*
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
+import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory
 import javafx.application.Platform
-import javafx.scene.control.SelectionMode.MULTIPLE
+import javafx.beans.InvalidationListener
+import javafx.geometry.Pos
+import javafx.scene.control.ComboBox
+import javafx.scene.image.Image
+import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.Pane
+import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
-import javafx.util.converter.NumberStringConverter
+import javafx.util.StringConverter
+import net.corda.core.div
+import net.corda.core.exists
+import net.corda.core.node.CityDatabase
+import net.corda.core.node.PhysicalLocation
+import net.corda.core.readAllLines
+import net.corda.core.utilities.normaliseLegalName
+import net.corda.core.utilities.validateLegalName
+import net.corda.core.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import org.bouncycastle.asn1.x500.style.RFC4519Style.name
+import org.controlsfx.control.CheckListView
 import tornadofx.*
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.util.*
 
 class NodeTabView : Fragment() {
     override val root = stackpane {}
@@ -20,17 +38,27 @@ class NodeTabView : Fragment() {
     private val showConfig by param(true)
 
     private companion object : Component() {
-        const val textWidth = 200.0
-        const val numberWidth = 100.0
-        const val maxNameLength = 15
-
-        val integerFormat = DecimalFormat()
-        val notNumber = "[^\\d]".toRegex()
+        const val textWidth = 465.0
 
         val jvm by inject<JVMConfig>()
+        val cordappPathsFile = jvm.dataHome / "cordapp-paths.txt"
+
+        fun loadDefaultCordappPaths(): MutableList<Path> {
+            if (cordappPathsFile.exists())
+                return cordappPathsFile.readAllLines().map { Paths.get(it) }.filter { it.exists() }.toMutableList()
+            else
+                return ArrayList()
+        }
+
+        // This is shared between tabs.
+        private val cordapps = loadDefaultCordappPaths().observable()
 
         init {
-            integerFormat.isGroupingUsed = false
+            // Save when the list is changed.
+            cordapps.addListener(InvalidationListener {
+                log.info("Writing cordapp paths to $cordappPathsFile")
+                cordappPathsFile.writeLines(cordapps.map { it.toAbsolutePath().toString() })
+            })
         }
     }
 
@@ -39,66 +67,95 @@ class NodeTabView : Fragment() {
     private val chooser = FileChooser()
 
     private val model = NodeDataModel()
-    private val cordapps = LinkedList<Path>().observable()
     private val availableServices: List<String> = if (nodeController.hasNetworkMap()) serviceController.services else serviceController.notaries
 
     private val nodeTerminalView = find<NodeTerminalView>()
     private val nodeConfigView = stackpane {
         isVisible = showConfig
+        styleClass += "config-view"
 
         form {
             fieldset("Configuration") {
                 isFillWidth = false
 
-                field("Node Name", op = { nodeNameField() })
-                field("Nearest City", op = { nearestCityField() })
-                field("P2P Port", op = { p2pPortField() })
-                field("RPC port", op = { rpcPortField() })
-                field("Web Port", op = { webPortField() })
-                field("Database Port", op = { databasePortField() })
+                field("Legal name") { nodeNameField() }
+                field("Nearest city") { nearestCityField() }
             }
 
             hbox {
                 styleClass.addAll("node-panel")
+                vboxConstraints { vGrow = Priority.ALWAYS }
 
-                fieldset("Services") {
-                    styleClass.addAll("services-panel")
-
-                    listview(availableServices.observable()) {
-                        selectionModel.selectionMode = MULTIPLE
-                        model.item.extraServices.set(selectionModel.selectedItems)
-                    }
-                }
-
-                fieldset("Cordapps") {
+                fieldset("CorDapps") {
+                    hboxConstraints { hGrow = Priority.ALWAYS }
                     styleClass.addAll("cordapps-panel")
 
                     listview(cordapps) {
+                        vboxConstraints { vGrow = Priority.ALWAYS }
                         setOnKeyPressed { key ->
                             if ((key.code == KeyCode.DELETE) && !selectionModel.isEmpty) {
                                 cordapps.remove(selectionModel.selectedItem)
                             }
                             key.consume()
                         }
-                    }
-                    button("Add Cordapp") {
-                        setOnAction {
-                            val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
-                            if (!cordapps.contains(app)) {
-                                cordapps.add(app)
+                        cellCache { item ->
+                            hbox {
+                                label(item.fileName.toString())
+                                pane {
+                                    hboxConstraints { hgrow = Priority.ALWAYS }
+                                }
+                                val delete = FontAwesomeIconView(FontAwesomeIcon.MINUS_CIRCLE)
+                                delete.setOnMouseClicked {
+                                    cordapps.remove(selectionModel.selectedItem)
+                                }
+                                delete.style += "; -fx-cursor: hand"
+                                addChildIfPossible(delete)
                             }
                         }
                     }
                 }
+
+                fieldset("Services") {
+                    styleClass.addAll("services-panel")
+
+                    val servicesList = CheckListView(availableServices.observable()).apply {
+                        vboxConstraints { vGrow = Priority.ALWAYS }
+                        model.item.extraServices.set(checkModel.checkedItems)
+                        if (!nodeController.hasNetworkMap()) {
+                            checkModel.check(0)
+                        }
+                    }
+                    add(servicesList)
+                }
             }
 
-            button("Create Node") {
-                setOnAction {
-                    if (model.validate()) {
-                        launch()
-                        main.enableAddNodes()
-                        main.enableSaveProfile()
+            hbox {
+                button("Add CorDapp") {
+                    setOnAction {
+                        val app = (chooser.showOpenDialog(null) ?: return@setOnAction).toPath()
+                        if (!cordapps.contains(app)) {
+                            cordapps.add(app)
+                        }
                     }
+
+                    FontAwesomeIconFactory.get().setIcon(this, FontAwesomeIcon.PLUS)
+                }
+
+                // Spacer pane.
+                pane {
+                    hboxConstraints { hGrow = Priority.ALWAYS }
+                }
+
+                button("Start node") {
+                    styleClass += "start-button"
+                    setOnAction {
+                        if (model.validate()) {
+                            launch()
+                            main.enableAddNodes()
+                            main.enableSaveProfile()
+                        }
+                    }
+                    graphic = FontAwesomeIconView(FontAwesomeIcon.PLAY_CIRCLE).apply { style += "-fx-fill: white" }
                 }
             }
         }
@@ -111,19 +168,25 @@ class NodeTabView : Fragment() {
         nodeTab.setOnCloseRequest {
             nodeTerminalView.destroy()
         }
+        nodeTab.graphic = FontAwesomeIconView(FontAwesomeIcon.BANK)
 
         root.add(nodeConfigView)
         root.add(nodeTerminalView)
 
-        model.legalName.value = if (nodeController.hasNetworkMap()) "" else "Notary"
         model.p2pPort.value = nodeController.nextPort
         model.rpcPort.value = nodeController.nextPort
         model.webPort.value = nodeController.nextPort
         model.h2Port.value = nodeController.nextPort
 
-        chooser.title = "Cordapps"
+        val defaults = SuggestedDetails.nextBank
+        model.legalName.value = defaults.first
+        model.nearestCity.value = CityDatabase[defaults.second]
+
+        chooser.title = "CorDapps"
         chooser.initialDirectory = jvm.dataHome.toFile()
-        chooser.extensionFilters.add(FileChooser.ExtensionFilter("Cordapps (*.jar)", "*.jar", "*.JAR"))
+        chooser.extensionFilters.add(FileChooser.ExtensionFilter("CorDapps (*.jar)", "*.jar", "*.JAR"))
+
+        model.validate(focusFirstError = true)
     }
 
     private fun Pane.nodeNameField() = textfield(model.legalName) {
@@ -131,127 +194,50 @@ class NodeTabView : Fragment() {
         validator {
             if (it == null) {
                 error("Node name is required")
+            } else if (nodeController.nameExists(normaliseLegalName(it))) {
+                error("Node with this name already exists")
             } else {
-                val name = it.trim()
-                if (name.isEmpty()) {
-                    error("Node name is required")
-                } else if (nodeController.nameExists(name)) {
-                    error("Node with this name already exists")
-                } else if (name.length > maxNameLength) {
-                    error("Name is too long")
-                } else {
+                try {
+                    validateLegalName(normaliseLegalName(it))
                     null
+                } catch (e: IllegalArgumentException) {
+                    error(e.message)
                 }
             }
         }
     }
 
-    private fun Pane.nearestCityField() = textfield(model.nearestCity) {
-        minWidth = textWidth
-        validator {
-            if (it == null) {
-                error("Nearest city is required")
-            } else if (it.trim().isEmpty()) {
-                error("Nearest city is required")
-            } else {
-                null
-            }
-        }
+    private val flags = runAsync {
+        CityDatabase.cityMap.values.map { it.countryCode }.toSet().map { it to Image(resources["/net/corda/demobench/flags/$it.png"]) }.toMap()
     }
 
-    private fun Pane.p2pPortField() = textfield(model.p2pPort, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
+    private fun Pane.nearestCityField(): ComboBox<PhysicalLocation> {
+        return combobox(model.nearestCity, CityDatabase.cityMap.values.toList().sortedBy { it.description }) {
+            minWidth = textWidth
+            styleClass += "city-picker"
+            cellFormat {
+                graphic = hbox(spacing = 10) {
+                    imageview {
+                        image = flags.get()[it.countryCode]
+                    }
+                    label(it.description)
+                    alignment = Pos.CENTER_LEFT
                 }
             }
-        }
-    }
 
-    private fun Pane.rpcPortField() = textfield(model.rpcPort, NumberStringConverter(integerFormat)) {
-        minWidth = 100.0
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
-                }
+            validator {
+                if (it == null) error("Please select a city") else null
             }
-        }
-    }
 
-    private fun Pane.webPortField() = textfield(model.webPort, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.h2Port.value) {
-                    error("Clashes with database port")
-                } else {
-                    null
-                }
+            converter = object : StringConverter<PhysicalLocation>() {
+                override fun toString(loc: PhysicalLocation?) = loc?.description ?: ""
+                override fun fromString(string: String): PhysicalLocation? = CityDatabase[string]
             }
-        }
-    }
 
-    private fun Pane.databasePortField() = textfield(model.h2Port, NumberStringConverter(integerFormat)) {
-        minWidth = numberWidth
-        validator {
-            if ((it == null) || it.isEmpty()) {
-                error("Port number required")
-            } else if (it.contains(notNumber)) {
-                error("Invalid port number")
-            } else {
-                val port = it.toInt()
-                if (!nodeController.isPortAvailable(port)) {
-                    error("Port $it is unavailable")
-                } else if (port == model.p2pPort.value) {
-                    error("Clashes with P2P port")
-                } else if (port == model.rpcPort.value) {
-                    error("Clashes with RPC port")
-                } else if (port == model.webPort.value) {
-                    error("Clashes with web port")
-                } else {
-                    null
-                }
-            }
+            value = CityDatabase["London"]
+
+            isEditable = true
+            makeAutocompletable()
         }
     }
 
@@ -277,22 +263,24 @@ class NodeTabView : Fragment() {
     }
 
     private fun launchNode(config: NodeConfig) {
-        nodeTab.text = config.legalName
-        nodeTerminalView.open(config, onExit = { onTerminalExit(config) })
+        val countryCode = CityDatabase.cityMap[config.nearestCity ?: "Nowhere"]?.countryCode
+        if (countryCode != null) {
+            nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
+        }
+        nodeTab.text = config.legalName.toString()
+        nodeTerminalView.open(config) { exitCode ->
+            Platform.runLater {
+                if (exitCode == 0)
+                    nodeTab.requestClose()
+                nodeController.dispose(config)
+                main.forceAtLeastOneTab()
+            }
+        }
 
         nodeTab.setOnSelectionChanged {
             if (nodeTab.isSelected) {
-                // Doesn't work yet
-                nodeTerminalView.refreshTerminal()
+                nodeTerminalView.takeFocus()
             }
-        }
-    }
-
-    private fun onTerminalExit(config: NodeConfig) {
-        Platform.runLater {
-            nodeTab.requestClose()
-            nodeController.dispose(config)
-            main.forceAtLeastOneTab()
         }
     }
 }

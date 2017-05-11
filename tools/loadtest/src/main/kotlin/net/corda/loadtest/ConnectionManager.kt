@@ -5,16 +5,15 @@ import com.jcraft.jsch.*
 import com.jcraft.jsch.agentproxy.AgentProxy
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
-import kotlinx.support.jdk8.collections.parallelStream
-import kotlinx.support.jdk8.streams.toList
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.node.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
-import java.nio.file.Path
 import java.util.*
+import kotlin.streams.toList
 
 private val log = LoggerFactory.getLogger(ConnectionManager::class.java)
 
@@ -79,7 +78,7 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
         log.info("Connected to $nodeHost!")
 
         log.info("Creating tunnel from $nodeHost:$remoteMessagingPort to $localTunnelAddress...")
-        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.hostText, remoteMessagingPort)
+        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.host, remoteMessagingPort)
         log.info("Tunnel created!")
 
         val connection = NodeConnection(nodeHost, session, localTunnelAddress, rpcUsername, rpcPassword)
@@ -93,16 +92,15 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
  * safely cleaned up if an exception is thrown.
  *
  * @param username The UNIX username to use for SSH authentication.
- * @param nodeHostsAndCertificatesPaths The list of hosts and associated remote paths to the nodes' certificate directories.
+ * @param nodeHosts The list of hosts.
  * @param remoteMessagingPort The Artemis messaging port nodes are listening on.
  * @param tunnelPortAllocation A local port allocation strategy for creating SSH tunnels.
- * @param certificatesBaseDirectory A local directory to put downloaded certificates in.
  * @param withConnections An action to run once we're connected to the nodes.
  * @return The return value of [withConnections]
  */
 fun <A> connectToNodes(
         username: String,
-        nodeHostsAndCertificatesPaths: List<Pair<String, Path>>,
+        nodeHosts: List<String>,
         remoteMessagingPort: Int,
         tunnelPortAllocation: PortAllocation,
         rpcUsername: String,
@@ -110,9 +108,9 @@ fun <A> connectToNodes(
         withConnections: (List<NodeConnection>) -> A
 ): A {
     val manager = ConnectionManager(username, setupJSchWithSshAgent())
-    val connections = nodeHostsAndCertificatesPaths.parallelStream().map { nodeHostAndCertificatesPath ->
+    val connections = nodeHosts.parallelStream().map { nodeHost ->
         manager.connectToNode(
-                nodeHost = nodeHostAndCertificatesPath.first,
+                nodeHost = nodeHost,
                 remoteMessagingPort = remoteMessagingPort,
                 localTunnelAddress = tunnelPortAllocation.nextHostAndPort(),
                 rpcUsername = rpcUsername,
@@ -140,9 +138,9 @@ class NodeConnection(
         private val rpcUsername: String,
         private val rpcPassword: String
 ) : Closeable {
-    private var client: CordaRPCClient? = null
-    private var _proxy: CordaRPCOps? = null
-    val proxy: CordaRPCOps get() = _proxy ?: throw IllegalStateException("proxy requested, but the client is not running")
+    private val client = CordaRPCClient(localTunnelAddress)
+    private var connection: CordaRPCConnection? = null
+    val proxy: CordaRPCOps get() = connection?.proxy ?: throw IllegalStateException("proxy requested, but the client is not running")
 
     data class ShellCommandOutput(
             val originalShellCommand: String,
@@ -165,32 +163,24 @@ class NodeConnection(
     }
 
     fun <A> doWhileClientStopped(action: () -> A): A {
-        val client = client
-        val proxy = _proxy
-        require(client != null && proxy != null) { "doWhileClientStopped called with no running client" }
+        val connection = connection
+        require(connection != null) { "doWhileClientStopped called with no running client" }
         log.info("Stopping RPC proxy to $hostName, tunnel at $localTunnelAddress")
-        client!!.close()
+        connection!!.close()
         try {
             return action()
         } finally {
             log.info("Starting new RPC proxy to $hostName, tunnel at $localTunnelAddress")
-            val newClient = CordaRPCClient(localTunnelAddress)
             // TODO expose these somehow?
-            newClient.start(rpcUsername, rpcPassword)
-            val newProxy = newClient.proxy()
-            this.client = newClient
-            this._proxy = newProxy
+            val newConnection = client.start(rpcUsername, rpcPassword)
+            this.connection = newConnection
         }
     }
 
     fun startClient() {
         log.info("Creating RPC proxy to $hostName, tunnel at $localTunnelAddress")
-        val client = CordaRPCClient(localTunnelAddress)
-        client.start(rpcUsername, rpcPassword)
-        val proxy = client.proxy()
+        connection = client.start(rpcUsername, rpcPassword)
         log.info("Proxy created")
-        this.client = client
-        this._proxy = proxy
     }
 
     /**
@@ -232,7 +222,7 @@ class NodeConnection(
     }
 
     override fun close() {
-        client?.close()
+        connection?.close()
         jSchSession.disconnect()
     }
 }

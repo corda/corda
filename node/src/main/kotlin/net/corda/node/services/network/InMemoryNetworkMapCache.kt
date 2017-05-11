@@ -4,23 +4,22 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.map
-import net.corda.core.messaging.MessagingService
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.messaging.createMessage
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.node.services.NetworkCacheError
-import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.sendRequest
+import net.corda.node.services.api.NetworkCacheError
+import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.createMessage
+import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.NetworkMapService.FetchMapResponse
 import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
@@ -28,6 +27,7 @@ import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
@@ -36,7 +36,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Extremely simple in-memory cache of the network map.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCache {
+open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }
@@ -52,15 +52,15 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
 
     private var registeredForPush = false
-    protected var registeredNodes: MutableMap<CompositeKey, NodeInfo> = Collections.synchronizedMap(HashMap())
+    protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val node = registeredNodes[party.owningKey]
         if (node != null) {
             return PartyInfo.Node(node)
         }
-        for (entry in registeredNodes) {
-            for (service in entry.value.advertisedServices) {
+        for ((_, value) in registeredNodes) {
+            for (service in value.advertisedServices) {
                 if (service.identity == party) {
                     return PartyInfo.Service(service)
                 }
@@ -69,7 +69,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         return null
     }
 
-    override fun getNodeByLegalIdentityKey(compositeKey: CompositeKey): NodeInfo? = registeredNodes[compositeKey]
+    override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {
@@ -81,7 +81,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            net.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, r ->
+            net.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
                     val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID,
@@ -99,9 +99,9 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress)
-        val future = net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { resp ->
+        val future = net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
-            resp.nodes?.forEach { processRegistration(it) }
+            nodes?.forEach { processRegistration(it) }
             Unit
         }
         _registrationFuture.setFuture(future)

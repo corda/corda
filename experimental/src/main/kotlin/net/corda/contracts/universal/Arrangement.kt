@@ -1,7 +1,7 @@
 package net.corda.contracts.universal
 
 import net.corda.core.contracts.Frequency
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -11,7 +11,7 @@ import java.util.*
 interface Arrangement
 
 // A base arrangement with no rights and no obligations. Contract cancellation/termination is a transition to ``Zero``.
-class Zero() : Arrangement {
+class Zero : Arrangement {
     override fun hashCode(): Int {
         return 0
     }
@@ -46,7 +46,7 @@ data class RollOut(val startDate: LocalDate, val endDate: LocalDate, val frequen
 
 // Continuation of roll out
 // May only be used inside template for RollOut
-class Continuation() : Arrangement {
+class Continuation : Arrangement {
     override fun hashCode(): Int {
         return 1
     }
