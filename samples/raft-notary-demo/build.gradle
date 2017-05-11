@@ -75,8 +75,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         name "CN=Alice Corp,O=Alice Corp,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
-        p2pPort 10001
-        rpcPort 10002
+        p2pPort 10002
+        rpcPort 10003
         cordapps = []
         rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
                 'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
@@ -87,38 +87,38 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         name "CN=Bob Plc,O=Bob Plc,L=London,C=UK"
         nearestCity "New York"
         advertisedServices = []
-        p2pPort 10004
-        rpcPort 10005
+        p2pPort 10005
+        rpcPort 10006
         cordapps = []
     }
     node {
         name "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10008
-        rpcPort 10009
+        p2pPort 10009
+        rpcPort 10010
         cordapps = []
-        notaryNodePort 10007
+        notaryNodePort 10008
     }
     node {
         name "CN=Notary 2,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10012
-        rpcPort 10013
+        p2pPort 10013
+        rpcPort 10014
         cordapps = []
-        notaryNodePort 10011
-        notaryClusterAddresses = ["localhost:10007"]
+        notaryNodePort 10012
+        notaryClusterAddresses = ["localhost:10008"]
     }
     node {
         name "CN=Notary 3,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10016
-        rpcPort 10017
+        p2pPort 10017
+        rpcPort 10018
         cordapps = []
-        notaryNodePort 10015
-        notaryClusterAddresses = ["localhost:10007"]
+        notaryNodePort 10016
+        notaryClusterAddresses = ["localhost:10008"]
     }
 }
 

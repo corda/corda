@@ -21,7 +21,7 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
-    val host = HostAndPort.fromString("localhost:10002")
+    val host = HostAndPort.fromString("localhost:10003")
     println("Connecting to the recipient node ($host)")
     CordaRPCClient(host).start("demo", "demo").use {
         val api = NotaryDemoClientApi(it.proxy)
