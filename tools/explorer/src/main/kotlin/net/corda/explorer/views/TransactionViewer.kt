@@ -246,7 +246,7 @@ class TransactionViewer : CordaView("Transactions") {
                                 val anonymousIssuer: AnonymousParty = data.amount.token.issuer.party
                                 val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
                                 // TODO: Anonymous should probably be italicised or similar
-                                label(issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
+                                label(issuer.nameOrNull?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
                                     tooltip(anonymousIssuer.owningKey.toBase58String())
                                 }
                             }

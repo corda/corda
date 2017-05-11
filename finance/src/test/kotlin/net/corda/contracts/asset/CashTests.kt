@@ -164,7 +164,9 @@ class CashTests {
         assertTrue(tx.inputs.isEmpty())
         val s = tx.outputs[0].data as Cash.State
         assertEquals(100.DOLLARS `issued by` MINI_CORP.ref(12, 34), s.amount)
-        assertEquals(MINI_CORP as AbstractParty, s.amount.token.issuer.party)
+        // We have to anonymise MINI_CORP before passing it in, as full parties and anonymous parties are not intended to
+        // be tested against each other.
+        assertEquals(MINI_CORP.toAnonymous(), s.amount.token.issuer.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(tx.commands[0].value is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, tx.commands[0].signers[0])

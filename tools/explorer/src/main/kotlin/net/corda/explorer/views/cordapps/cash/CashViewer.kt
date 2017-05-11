@@ -128,10 +128,10 @@ class CashViewer : CordaView("Cash") {
             }
             equivLabel.textProperty().bind(equivAmount.map { it.token.currencyCode.toString() })
             // TODO: Anonymous should probably be italicised or similar
-            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull()?.let {
+            issuerValueLabel.textProperty().bind(SimpleStringProperty(resolvedIssuer.nameOrNull?.let {
                 PartyNameFormatter.short.format(it)
             } ?: "Anonymous"))
-            issuerValueLabel.apply { tooltip(resolvedIssuer.nameOrNull()?.let { PartyNameFormatter.full.format(it) } ?: "Anonymous") }
+            issuerValueLabel.apply { tooltip(resolvedIssuer.nameOrNull?.let { PartyNameFormatter.full.format(it) } ?: "Anonymous") }
             originatedValueLabel.text = stateRow.originated.toString()
             amountValueLabel.text = amountFormatter.format(amountNoIssuer)
             equivValueLabel.textProperty().bind(equivAmount.map { equivFormatter.format(it) })
@@ -235,7 +235,7 @@ class CashViewer : CordaView("Cash") {
             val node = it.value.value
             when (node) {
             // TODO: Anonymous should probably be italicised or similar
-                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous")
+                is ViewerNode.IssuerNode -> SimpleStringProperty(node.issuer.nameOrNull?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous")
                 is ViewerNode.CurrencyNode -> node.amount.map { it.token.toString() }
             }
         }

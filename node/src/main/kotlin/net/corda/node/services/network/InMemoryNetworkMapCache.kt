@@ -25,6 +25,7 @@ import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -52,6 +53,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override val mapServiceRegistered: ListenableFuture<Unit> get() = _registrationFuture
 
     private var registeredForPush = false
+    protected var registeredNodesByName: MutableMap<X500Name, NodeInfo> = Collections.synchronizedMap(HashMap())
     protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
 
     override fun getPartyInfo(party: Party): PartyInfo? {
@@ -69,6 +71,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         return null
     }
 
+    override fun getNodeByLegalName(name: X500Name): NodeInfo? = registeredNodesByName[name]
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
@@ -112,6 +115,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun addNode(node: NodeInfo) {
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentity.owningKey, node)
+            registeredNodesByName.put(node.legalIdentity.name, node)
             if (previousNode == null) {
                 changePublisher.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
@@ -123,6 +127,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentity.owningKey)
+            registeredNodesByName.remove(node.legalIdentity.name)
             changePublisher.onNext(MapChange.Removed(node))
         }
     }
