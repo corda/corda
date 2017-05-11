@@ -3,12 +3,12 @@ package net.corda.services.messaging
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.utilities.ALICE

@@ -3,6 +3,7 @@ package net.corda.verifier
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import java.io.ByteArrayInputStream

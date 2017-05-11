@@ -1,8 +1,8 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 

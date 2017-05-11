@@ -2,7 +2,7 @@ package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable

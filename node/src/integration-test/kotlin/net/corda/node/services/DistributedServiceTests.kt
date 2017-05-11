@@ -3,7 +3,7 @@ package net.corda.node.services
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate

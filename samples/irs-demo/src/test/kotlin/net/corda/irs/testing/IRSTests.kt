@@ -1,7 +1,7 @@
 package net.corda.irs.testing
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.AnonymousParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY

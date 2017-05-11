@@ -1,6 +1,6 @@
 package net.corda.flows;
 
-import net.corda.core.crypto.*;
+import net.corda.core.identity.Party;
 import net.corda.core.utilities.*;
 import org.jetbrains.annotations.*;
 

@@ -2,15 +2,13 @@ package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import net.corda.core.crypto.DummyPublicKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getTestX509Name
-import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
 

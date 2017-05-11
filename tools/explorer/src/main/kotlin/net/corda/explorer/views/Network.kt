@@ -26,7 +26,7 @@ import javafx.util.Duration
 import net.corda.client.jfx.model.*
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.formatters.PartyNameFormatter

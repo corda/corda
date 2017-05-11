@@ -11,7 +11,7 @@ import com.opengamma.strata.market.param.CurrencyParameterSensitivities
 import com.opengamma.strata.market.param.CurrencyParameterSensitivity
 import com.opengamma.strata.market.param.TenorDateParameterMetadata
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.vega.analytics.CordaMarketData

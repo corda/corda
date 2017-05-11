@@ -1,7 +1,7 @@
 package net.corda.explorer.plugin
 
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.flows.IssuerFlow

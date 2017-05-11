@@ -6,11 +6,9 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
