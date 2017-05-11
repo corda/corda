@@ -1,7 +1,7 @@
 package net.corda.core.node
 
-import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 
 /**
  * A service hub to be used by the [CordaPluginRegistry]

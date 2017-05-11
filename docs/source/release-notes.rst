@@ -10,6 +10,9 @@ We've added the ability for flows to be versioned by their CorDapp developers. T
 version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future
 release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
 
+There are major changes to the ``Party`` class as part of confidential identities. See :doc:`changelog` for full details.
+
+
 Milestone 11
 ------------
 

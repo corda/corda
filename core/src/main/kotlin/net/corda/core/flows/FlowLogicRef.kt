@@ -9,11 +9,12 @@ import net.corda.core.serialization.CordaSerializable
  * the flow to run at the scheduled time.
  */
 interface FlowLogicRefFactory {
-    fun create(type: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
+    fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef
 }
 
 @CordaSerializable
-class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentException("${FlowLogicRef::class.java.simpleName} cannot be constructed for ${FlowLogic::class.java.simpleName} of type ${type.name} $msg")
+class IllegalFlowLogicException(type: Class<*>, msg: String) : IllegalArgumentException(
+        "${FlowLogicRef::class.java.simpleName} cannot be constructed for ${FlowLogic::class.java.simpleName} of type ${type.name} $msg")
 
 /**
  * A handle interface representing a [FlowLogic] instance which would be possible to safely pass out of the contract sandbox.

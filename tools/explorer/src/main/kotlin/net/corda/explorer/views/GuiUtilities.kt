@@ -15,8 +15,8 @@ import net.corda.client.jfx.model.NetworkIdentityModel
 import net.corda.client.jfx.utils.map
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import tornadofx.*
 
 /**

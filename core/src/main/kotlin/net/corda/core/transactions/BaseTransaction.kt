@@ -1,7 +1,7 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import java.security.PublicKey
 import java.util.*
 

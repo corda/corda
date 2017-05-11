@@ -4,6 +4,8 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub

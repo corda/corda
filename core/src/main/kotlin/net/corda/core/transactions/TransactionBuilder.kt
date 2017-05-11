@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey

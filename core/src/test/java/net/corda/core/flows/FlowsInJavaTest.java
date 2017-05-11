@@ -1,7 +1,7 @@
 package net.corda.core.flows;
 
 import co.paralleluniverse.fibers.*;
-import net.corda.core.crypto.*;
+import net.corda.core.identity.Party;
 import net.corda.testing.node.*;
 import org.junit.*;
 

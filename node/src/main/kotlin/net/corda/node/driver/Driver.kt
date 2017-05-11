@@ -8,10 +8,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -104,7 +104,7 @@ interface DriverDSLExposedInterface {
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
      * to set networkMapStrategy to FalseNetworkMap in your [driver] call.
      */
-    fun startNetworkMapService()
+    fun startNetworkMapService(): ListenableFuture<Unit>
 
     fun waitForAllNodesToFinish()
 
@@ -557,7 +557,7 @@ class DriverDSL(
         }
     }
 
-    override fun startNetworkMapService() {
+    override fun startNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
         val networkMapLegalName = networkMapStrategy.legalName
@@ -578,6 +578,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
+        return startNode.flatMap { addressMustBeBound(executorService, networkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
@@ -612,6 +613,10 @@ class DriverDSL(
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
+                // TODO Add this once we upgrade to quasar 0.7.8, this causes startup time to halve.
+                // val excludePattern = x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
+                // val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                //        "-javaagent:$quasarJarPath=$excludePattern"
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"

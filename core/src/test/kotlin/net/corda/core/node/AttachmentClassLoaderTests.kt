@@ -4,8 +4,8 @@ import com.esotericsoftware.kryo.Kryo
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.*
@@ -24,7 +24,10 @@ import java.net.URLClassLoader
 import java.security.PublicKey
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 interface DummyContractBackdoor {
     fun generateInitial(owner: PartyAndReference, magicNumber: Int, notary: Party): TransactionBuilder

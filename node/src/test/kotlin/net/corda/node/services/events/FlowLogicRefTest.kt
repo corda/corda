@@ -1,9 +1,8 @@
 package net.corda.node.services.events
 
-import net.corda.core.days
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
-import org.junit.Before
 import org.junit.Test
 import java.time.Duration
 
@@ -31,67 +30,51 @@ class FlowLogicRefTest {
         override fun call() = Unit
     }
 
-    @Suppress("UNUSED_PARAMETER") // We will never use A or b
-    class NotWhiteListedKotlinFlowLogic(A: Int, b: String) : FlowLogic<Unit>() {
+    class NonSchedulableFlow : FlowLogic<Unit>() {
         override fun call() = Unit
     }
 
-    lateinit var factory: FlowLogicRefFactoryImpl
-
-    @Before
-    fun setup() {
-        // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
-        factory = FlowLogicRefFactoryImpl(mapOf(Pair(KotlinFlowLogic::class.java.name, setOf(ParamType1::class.java.name, ParamType2::class.java.name)),
-                Pair(KotlinNoArgFlowLogic::class.java.name, setOf())))
+    @Test
+    fun `create kotlin no arg`() {
+        FlowLogicRefFactoryImpl.createForRPC(KotlinNoArgFlowLogic::class.java)
     }
 
     @Test
-    fun testCreateKotlinNoArg() {
-        factory.create(KotlinNoArgFlowLogic::class.java)
-    }
-
-    @Test
-    fun testCreateKotlin() {
+    fun `create kotlin`() {
         val args = mapOf(Pair("A", ParamType1(1)), Pair("b", ParamType2("Hello Jack")))
-        factory.createKotlin(KotlinFlowLogic::class.java, args)
+        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
-    fun testCreatePrimary() {
-        factory.create(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun testCreateNotWhiteListed() {
-        factory.create(NotWhiteListedKotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
+    fun `create primary`() {
+        FlowLogicRefFactoryImpl.createForRPC(KotlinFlowLogic::class.java, ParamType1(1), ParamType2("Hello Jack"))
     }
 
     @Test
-    fun testCreateKotlinVoid() {
-        factory.createKotlin(KotlinFlowLogic::class.java, emptyMap())
+    fun `create kotlin void`() {
+        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, emptyMap())
     }
 
     @Test
-    fun testCreateKotlinNonPrimary() {
+    fun `create kotlin non primary`() {
         val args = mapOf(Pair("C", ParamType2("Hello Jack")))
-        factory.createKotlin(KotlinFlowLogic::class.java, args)
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun testCreateArgNotWhiteListed() {
-        val args = mapOf(Pair("illegal", 1.days))
-        factory.createKotlin(KotlinFlowLogic::class.java, args)
+        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
-    fun testCreateJavaPrimitiveNoRegistrationRequired() {
+    fun `create java primitive no registration required`() {
         val args = mapOf(Pair("primitive", "A string"))
-        factory.createKotlin(KotlinFlowLogic::class.java, args)
+        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
     }
 
     @Test
-    fun testCreateKotlinPrimitiveNoRegistrationRequired() {
+    fun `create kotlin primitive no registration required`() {
         val args = mapOf(Pair("kotlinType", 3))
-        factory.createKotlin(KotlinFlowLogic::class.java, args)
+        FlowLogicRefFactoryImpl.createKotlin(KotlinFlowLogic::class.java, args)
+    }
+
+    @Test(expected = IllegalFlowLogicException::class)
+    fun `create for non-schedulable flow logic`() {
+        FlowLogicRefFactoryImpl.create(NonSchedulableFlow::class.java)
     }
 }

@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.flows.TxKeyFlowUtilities
 import java.security.PublicKey

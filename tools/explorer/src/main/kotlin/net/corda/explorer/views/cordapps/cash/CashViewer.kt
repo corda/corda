@@ -23,7 +23,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
-import net.corda.core.crypto.AbstractParty
+import net.corda.core.identity.AbstractParty
 import net.corda.core.crypto.commonName
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.PartyNameFormatter

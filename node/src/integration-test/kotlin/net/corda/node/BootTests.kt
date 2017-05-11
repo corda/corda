@@ -1,10 +1,11 @@
 package net.corda.node
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.div
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.ALICE
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
@@ -48,18 +49,12 @@ class BootTests {
     }
 }
 
+@StartableByRPC
 class ObjectInputStreamFlow : FlowLogic<Unit>() {
-
+    @Suspendable
     override fun call() {
         System.clearProperty("jdk.serialFilter") // This checks that the node has already consumed the property.
         val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
         ObjectInputStream(data.inputStream()).use { it.readObject() }
     }
-
-}
-
-class BootTestsPlugin : CordaPluginRegistry() {
-
-    override val requiredFlows: Map<String, Set<String>> = mapOf(ObjectInputStreamFlow::class.java.name to setOf())
-
 }

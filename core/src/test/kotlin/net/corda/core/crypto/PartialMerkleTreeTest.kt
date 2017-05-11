@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
+import net.corda.core.identity.Party
 import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction

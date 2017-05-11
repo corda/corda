@@ -1,8 +1,8 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.serialization.CordaSerializable

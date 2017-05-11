@@ -2,7 +2,7 @@ package net.corda.contracts.universal
 
 import net.corda.core.contracts.BusinessCalendar
 import net.corda.core.contracts.Tenor
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Type
 import java.math.BigDecimal
