@@ -16,7 +16,7 @@ import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 fun main(args: Array<String>) {
     val host = HostAndPort.fromString("localhost:10003")
     println("Connecting to the recipient node ($host)")
-    CordaRPCClient(host).start("demo", "demo").use {
+    CordaRPCClient(host).start(notaryDemoUser.username, notaryDemoUser.password).use {
         val api = NotaryDemoClientApi(it.proxy)
         api.startNotarisation()
     }

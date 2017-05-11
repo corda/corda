@@ -236,22 +236,19 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    var shutdownHook: Thread? = null
+    var shutdownHook: ShutdownHook? = null
     try {
         driverDsl.start()
-        shutdownHook = Thread({
+        shutdownHook = atexit {
             driverDsl.shutdown()
-        })
-        Runtime.getRuntime().addShutdownHook(shutdownHook)
+        }
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
         driverDsl.shutdown()
-        if (shutdownHook != null) {
-            Runtime.getRuntime().removeShutdownHook(shutdownHook)
-        }
+        shutdownHook?.cancel()
     }
 }
 
@@ -558,21 +555,19 @@ class DriverDSL(
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
+        val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
-
-        val serviceInfo = ServiceInfo(type, notaryName)
-        val advertisedService = setOf(serviceInfo)
+        val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster
-        val firstNotaryFuture = startNode(nodeNames.first(), advertisedService, rpcUsers, verifierType, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
+        val firstNotaryFuture = startNode(nodeNames.first(), advertisedServices, rpcUsers, verifierType, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         // All other nodes will join the cluster
         val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
-            startNode(it, advertisedService, rpcUsers, verifierType, configOverride)
+            startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
         }
 
         return firstNotaryFuture.flatMap { firstNotary ->

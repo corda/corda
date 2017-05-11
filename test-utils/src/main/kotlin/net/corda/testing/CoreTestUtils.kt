@@ -189,7 +189,7 @@ fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): 
             rpcAddress = HostAndPort.fromParts("localhost", basePort + 1),
             messagingServerAddress = null,
             extraAdvertisedServiceIds = emptyList(),
-            notaryNodeId = null,
+            bftReplicaId = null,
             notaryNodeAddress = null,
             notaryClusterAddresses = emptyList(),
             certificateChainCheckPolicies = emptyList(),

@@ -133,12 +133,14 @@ abstract class NodeBasedTest {
         }
     }
 
+    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.commonName
+
     private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
-        val baseDirectory = (tempFolder.root.toPath() / legalName.commonName).createDirectories()
+        val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,

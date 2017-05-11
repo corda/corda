@@ -32,10 +32,10 @@ system.communication.defaultkeys = true
 ############################################
 
 #Number of servers in the group
-system.servers.num = 4
+system.servers.num = %s
 
 #Maximum number of faulty replicas
-system.servers.f = 1
+system.servers.f = %s
 
 #Timeout to asking for a client request
 system.totalordermulticast.timeout = 2000

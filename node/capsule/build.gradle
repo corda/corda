@@ -43,7 +43,6 @@ task buildCordaJAR(type: FatCapsule) {
         // javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
-        systemProperties['jdk.serialFilter'] = 'maxbytes=0'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']

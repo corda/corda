@@ -61,6 +61,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
 import java.lang.reflect.Modifier.*
+import java.net.InetAddress
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -518,10 +519,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
-                val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")
-                val client = BFTSMaRt.Client(nodeId)
-                tokenizableServices += client
-                BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
+                val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
+                BFTSMaRtConfig(notaryClusterAddresses).use { config ->
+                    val client = BFTSMaRt.Client(config, replicaId).also { tokenizableServices += it } // (Ab)use replicaId for clientId.
+                    BFTNonValidatingNotaryService(config, services, timestampChecker, replicaId, database, client)
+                }
             }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
