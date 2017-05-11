@@ -558,9 +558,10 @@ object Crypto {
     fun createCertificate(issuer: X500Name, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
                           keyUsage: KeyUsage, purposes: List<KeyPurposeId>,
-                          signatureScheme: SignatureScheme, validityWindow: Pair<Date, Date>,
+                          validityWindow: Pair<Date, Date>,
                           pathLength: Int? = null, subjectAlternativeName: List<GeneralName>? = null): X509Certificate {
 
+        val signatureScheme = findSignatureScheme(issuerKeyPair.private)
         val provider = providerMap[signatureScheme.providerName]
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { purposes.forEach { add(it) } })
