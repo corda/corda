@@ -8,9 +8,7 @@ import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ClassInfo
 import net.corda.core.*
-import net.corda.core.crypto.KeyStoreUtilities
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.replaceCommonName
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -24,7 +22,6 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.flows.*
@@ -60,6 +57,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
@@ -93,10 +91,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
-    companion object {
-        val PRIVATE_KEY_FILE_NAME = "identity-private-key"
-        val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
-    }
 
     // TODO: Persist this, as well as whether the node is registered.
     /**
@@ -396,7 +390,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return advertisedServices.map {
             val serviceId = it.type.id
             val serviceName = it.name ?: configuration.myLegalName.replaceCommonName(serviceId)
-            val identity = obtainKeyPair(configuration.baseDirectory, serviceId + "-private-key", serviceId + "-public", serviceName).first
+            val identity = obtainKeyPair(serviceId, serviceName).first
             ServiceEntry(it, identity)
         }
     }
@@ -592,39 +586,56 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
 
-    protected fun obtainLegalIdentity(): Party = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).first
-    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair(configuration.baseDirectory, PRIVATE_KEY_FILE_NAME, PUBLIC_IDENTITY_FILE_NAME).second
+    protected fun obtainLegalIdentity(): Party = obtainKeyPair().first
+    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair().second
 
-    private fun obtainKeyPair(dir: Path, privateKeyFileName: String, publicKeyFileName: String, serviceName: X500Name? = null): Pair<Party, KeyPair> {
+    private fun obtainKeyPair(serviceId: String = "identity", serviceName: X500Name = configuration.myLegalName): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
         // the public key. Obviously in a real system this would need to be a certificate chain of some kind to ensure
         // the legal name is actually validated in some way.
-        val privKeyFile = dir / privateKeyFileName
-        val pubIdentityFile = dir / publicKeyFileName
-        val identityPrincipal: X500Name = serviceName ?: configuration.myLegalName
 
-        val identityAndKey = if (!privKeyFile.exists()) {
-            log.info("Identity key not found, generating fresh key!")
-            val keyPair: KeyPair = generateKeyPair()
-            keyPair.serialize().writeToFile(privKeyFile)
-            val myIdentity = Party(identityPrincipal, keyPair.public)
-            // We include the Party class with the file here to help catch mixups when admins provide files of the
-            // wrong type by mistake.
-            myIdentity.serialize().writeToFile(pubIdentityFile)
-            Pair(myIdentity, keyPair)
-        } else {
+        // TODO: Integrate with Key management service?
+        val keystore = KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+        val privateKeyAlias = "$serviceId-private-key"
+        val privKeyFile = configuration.baseDirectory / privateKeyAlias
+        val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
+
+        val identityAndKey = if (configuration.keyStoreFile.exists() && keystore.containsAlias(privateKeyAlias)) {
+            // Get keys from keystore.
+            val (cert, keyPair) = keystore.getCertificateAndKey(privateKeyAlias, configuration.keyStorePassword)
+            val loadedServiceName = X509CertificateHolder(cert.encoded).subject
+            if (X509CertificateHolder(cert.encoded).subject != serviceName) {
+                throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +
+                        "$serviceName vs $loadedServiceName")
+            }
+            Pair(Party(loadedServiceName, keyPair.public), keyPair)
+        } else if (privKeyFile.exists()) {
+            // Get keys from key file.
+            // TODO: this is here to smooth out the key storage transition, remove this in future release.
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
             val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
-            if (myIdentity.name != identityPrincipal)
+            if (myIdentity.name != serviceName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
-                        "$identityPrincipal vs ${myIdentity.name}")
+                        "$serviceName vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
+            // TODO: Use a proper certificate chain.
+            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
+            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
             Pair(myIdentity, keyPair)
+        } else {
+            // Create new keys and store in keystore.
+            log.info("Identity key not found, generating fresh key!")
+            val keyPair: KeyPair = generateKeyPair()
+            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
+            keystore.addOrReplaceKey(privateKeyAlias, selfSignCert.keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
+            Pair(Party(serviceName, selfSignCert.keyPair.public), selfSignCert.keyPair)
         }
         partyKeys += identityAndKey.second
         return identityAndKey
