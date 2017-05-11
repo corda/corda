@@ -619,5 +619,5 @@ object Crypto {
     private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey) = publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
-    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes.getOrElse(signatureScheme.schemeCodeName, { false }) == signatureScheme
+    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes[signatureScheme.schemeCodeName] == signatureScheme
 }
