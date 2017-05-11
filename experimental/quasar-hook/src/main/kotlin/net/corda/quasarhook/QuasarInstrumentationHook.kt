@@ -13,8 +13,7 @@ import java.util.*
  */
 class ClassRecorder {
     val usedInstrumentedClasses = HashSet<String>()
-    val instrumentedClassesWithAnnotation = HashSet<String>()
-    val instrumentedClassesWithoutAnnotation = HashSet<String>()
+    val instrumentedClasses = HashSet<String>()
     val scannedClasses = HashSet<String>()
 }
 
@@ -52,17 +51,11 @@ fun recordUsedInstrumentedCallStack() {
 }
 
 /**
- * This is a hook called from the method instrumentor visitor. Note that this visitor is only accept()ed once we know
- * for sure that instrumentation will happen.
- * [hasAnnotation] may be false for classes that are forced to be instrumented. In quasar 0.7.7 for example they
- * instrument all lambdas, irregardless of actual usage.
+ * This is a hook called from the method instrumentor visitor. Note that this should only be called once we're sure
+ * instrumentation will happen.
  */
-fun recordInstrumentedClass(className: String, hasAnnotation: Boolean) {
-    if (hasAnnotation) {
-        classRecorder.instrumentedClassesWithAnnotation.add(className)
-    } else {
-        classRecorder.instrumentedClassesWithoutAnnotation.add(className)
-    }
+fun recordInstrumentedClass(className: String) {
+    classRecorder.instrumentedClasses.add(className)
 }
 
 /**
@@ -111,12 +104,8 @@ class QuasarInstrumentationHookAgent {
             }
 
             Runtime.getRuntime().addShutdownHook(Thread {
-                println("Instrumented classes (with Suspendable): ${classRecorder.instrumentedClassesWithAnnotation.size}")
-                classRecorder.instrumentedClassesWithAnnotation.forEach {
-                    println("  $it")
-                }
-                println("Instrumented classes (without Suspendable): ${classRecorder.instrumentedClassesWithoutAnnotation.size}")
-                classRecorder.instrumentedClassesWithoutAnnotation.forEach {
+                println("Instrumented classes: ${classRecorder.instrumentedClasses.size}")
+                classRecorder.instrumentedClasses.forEach {
                     println("  $it")
                 }
                 println("Used instrumented classes: ${classRecorder.usedInstrumentedClasses.size}")
@@ -129,7 +118,7 @@ class QuasarInstrumentationHookAgent {
                 }
                 println("  (...)")
                 val scannedTree = PackageTree.fromStrings(classRecorder.scannedClasses.toList(), '/')
-                val instrumentedTree = PackageTree.fromStrings(classRecorder.instrumentedClassesWithAnnotation.toList(), '/')
+                val instrumentedTree = PackageTree.fromStrings(classRecorder.instrumentedClasses.toList(), '/')
                 println("Suggested exclude globs:")
                 val truncate = arguments.truncate?.let { PackageTree.fromStrings(it, arguments.separator) }
                 // The separator append is a hack, it causes a package with an empty name to be added to the exclude tree,
@@ -165,9 +154,9 @@ object QuasarInstrumentationHook : ClassFileTransformer {
             },
             "co/paralleluniverse/fibers/instrument/InstrumentMethod" to { clazz ->
                 // This is called on each instrumented method
-                val acceptMethod = clazz.methods.single { it.name == "accept" }
+                val acceptMethod = clazz.declaredMethods.single { it.name == "collectCodeBlocks" }
                 acceptMethod.insertBefore(
-                        "$hookClassName.${::recordInstrumentedClass.name}(this.className, hasAnnotation);"
+                        "$hookClassName.${::recordInstrumentedClass.name}(this.className);"
                 )
             },
             "co/paralleluniverse/fibers/instrument/QuasarInstrumentor" to { clazz ->
