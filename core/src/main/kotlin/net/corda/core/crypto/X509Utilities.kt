@@ -110,9 +110,9 @@ object X509Utilities {
     }
 
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
-        return createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
-    }
+    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
+                               validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey
+            = createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
