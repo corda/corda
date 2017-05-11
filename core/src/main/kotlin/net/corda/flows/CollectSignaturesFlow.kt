@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -60,6 +61,8 @@ import java.security.PublicKey
  *
  */
 
+// TODO: AbstractStateReplacementFlow needs updating to use this flow.
+// TODO: TwoPartyTradeFlow needs updating to use this flow.
 // TODO: Update this flow to handle randomly generated keys when that works is complete.
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
                             override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
@@ -133,7 +136,6 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
     }
 }
 
-
 /**
  * The [SignTransactionFlow] should be called in response to the [CollectSignaturesFlow]. It automates the signing of
  * a transaction providing the transaction:
@@ -171,7 +173,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  *          }
  *      }
  *
- * @param party The counter-party which is providing you a transaction to sign.
+ * @param otherParty The counter-party which is providing you a transaction to sign.
  *
  */
 abstract class SignTransactionFlow(val otherParty: Party,
@@ -204,7 +206,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
 
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
-        val mySignature = serviceHub.legalIdentityKey.signWithECDSA(checkedProposal.id)
+        val mySignature = serviceHub.legalIdentityKey.sign(checkedProposal.id)
         send(otherParty, mySignature)
 
         // Return the fully signed transaction once it has been committed.

@@ -3,11 +3,11 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
@@ -36,12 +36,6 @@ object TwoPartyDealFlow {
     data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
 
     /**
-     * [Primary] at the end sends the signed tx to all the regulator parties. This a seperate workflow which needs a
-     * sepearate session with the regulator. This interface is used to do that in [Primary.getCounterpartyMarker].
-     */
-    interface MarkerForBogusRegulatorFlow
-
-    /**
      * Abstracted bilateral deal flow participant that initiates communication/handshake.
      */
     abstract class Primary(override val progressTracker: ProgressTracker = Primary.tracker()) : FlowLogic<SignedTransaction>() {
@@ -56,14 +50,6 @@ object TwoPartyDealFlow {
         abstract val otherParty: Party
         abstract val myKeyPair: KeyPair
 
-        override fun getCounterpartyMarker(party: Party): Class<*> {
-            return if (serviceHub.networkMapCache.regulatorNodes.any { it.legalIdentity == party }) {
-                MarkerForBogusRegulatorFlow::class.java
-            } else {
-                super.getCounterpartyMarker(party)
-            }
-        }
-
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
@@ -75,7 +61,7 @@ object TwoPartyDealFlow {
                 override fun checkTransaction(stx: SignedTransaction) = checkProposal(stx)
             }
 
-            subFlow(signTransactionFlow, shareParentSessions = true)
+            subFlow(signTransactionFlow)
 
             val txHash = receive<SecureHash>(otherParty).unwrap { it }
 
@@ -115,7 +101,7 @@ object TwoPartyDealFlow {
             logger.trace { "Signed proposed transaction." }
 
             progressTracker.currentStep = COLLECTING_SIGNATURES
-            val stx = subFlow(CollectSignaturesFlow(ptx), shareParentSessions = true)
+            val stx = subFlow(CollectSignaturesFlow(ptx))
 
             logger.trace { "Got signatures from other party, verifying ... " }
 

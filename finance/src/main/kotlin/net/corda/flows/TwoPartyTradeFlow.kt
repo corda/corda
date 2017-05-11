@@ -4,9 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.expandedCompositeKeys
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party

@@ -5,8 +5,8 @@ import net.corda.core.contracts.Command
 import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.Party
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -59,8 +59,10 @@ class CollectSignaturesFlowTests {
     // This flow is a more simplifed version of the "TwoPartyTrade" flow and is a useful example of how both the
     // "collectSignaturesFlow" and "SignTransactionFlow" can be used in practise.
     object TestFlow {
+        @InitiatingFlow
         class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: Party) : FlowLogic<SignedTransaction>() {
-            @Suspendable override fun call(): SignedTransaction {
+            @Suspendable
+            override fun call(): SignedTransaction {
                 send(otherParty, state)
 
                 val flow = object : SignTransactionFlow(otherParty) {
@@ -73,7 +75,7 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                val stx = subFlow(flow, shareParentSessions = true)
+                val stx = subFlow(flow)
                 val ftx = waitForLedgerCommit(stx.id)
 
                 return ftx
@@ -81,14 +83,15 @@ class CollectSignaturesFlowTests {
         }
 
         class Responder(val otherParty: Party) : FlowLogic<SignedTransaction>() {
-            @Suspendable override fun call(): SignedTransaction {
+            @Suspendable
+            override fun call(): SignedTransaction {
                 val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
                 val command = Command(DummyContract.Commands.Create(), state.participants)
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
                 val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
-                val stx = subFlow(CollectSignaturesFlow(ptx), shareParentSessions = true)
+                val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx
@@ -100,13 +103,15 @@ class CollectSignaturesFlowTests {
     // override "checkTransaction" and add whatever logic their require to verify the SignedTransaction they are
     // receiving off the wire.
     object TestFlowTwo {
+        @InitiatingFlow
         class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: Party) : FlowLogic<SignedTransaction>() {
-            @Suspendable override fun call(): SignedTransaction {
+            @Suspendable
+            override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
                 val command = Command(DummyContract.Commands.Create(), state.participants)
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
                 val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
-                val stx = subFlow(CollectSignaturesFlow(ptx), shareParentSessions = true)
+                val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
                 return ftx
@@ -125,7 +130,7 @@ class CollectSignaturesFlowTests {
                     }
                 }
 
-                val stx = subFlow(flow, shareParentSessions = true)
+                val stx = subFlow(flow)
 
                 return waitForLedgerCommit(stx.id)
             }
