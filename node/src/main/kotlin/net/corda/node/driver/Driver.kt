@@ -578,7 +578,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
-        return startNode.flatMap { addressMustBeBound(executorService, networkMapAddress, it) }
+        return startNode.flatMap { addressMustBeBound(executorService, dedicatedNetworkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
