@@ -184,7 +184,7 @@ class RPCServer(
             it.session.close()
             it.sessionFactory.close()
         }
-        lifeCycle.transition(State.FINISHED)
+        lifeCycle.justTransition(State.FINISHED)
     }
 
     private fun bindingRemovalArtemisMessageHandler(artemisMessage: ClientMessage) {

@@ -46,7 +46,7 @@ class RPCStabilityTests {
                 values.poll()
             }
             val first = values.peek()
-            if (values.size == 5 && values.all { it == first } ) {
+            if (values.size == 5 && values.all { it == first }) {
                 first
             } else {
                 null
@@ -63,11 +63,11 @@ class RPCStabilityTests {
                 startRpcClient<RPCOps>(server.get().hostAndPort).get()
             }
         }
-        for (i in 1 .. 5) {
+        repeat(5) {
             startAndStop()
         }
         val numberOfThreadsBefore = waitUntilNumberOfThreadsStable(executor)
-        for (i in 1 .. 5) {
+        repeat(5) {
             startAndStop()
         }
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
@@ -87,11 +87,11 @@ class RPCStabilityTests {
                 ErrorOr.catch { startRpcClient<RPCOps>(server.get().hostAndPort, configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)).get() }
             }
         }
-        for (i in 1 .. 5) {
+        repeat(5) {
             startAndStop()
         }
         val numberOfThreadsBefore = waitUntilNumberOfThreadsStable(executor)
-        for (i in 1 .. 5) {
+        repeat(5) {
             startAndStop()
         }
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)

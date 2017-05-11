@@ -281,7 +281,7 @@ class RPCClientProxyHandler(
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
         observationExecutors.forEach { it.shutdownNow() }
-        lifeCycle.transition(State.FINISHED)
+        lifeCycle.justTransition(State.FINISHED)
     }
 
     /**

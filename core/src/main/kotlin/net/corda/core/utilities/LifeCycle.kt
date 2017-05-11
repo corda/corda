@@ -37,7 +37,7 @@ class LifeCycle<S : Enum<S>>(initial: S) {
     }
 
     /** Transition the state to [to] without performing a current state check. */
-    fun transition(to: S) {
+    fun justTransition(to: S) {
         lock.writeLock().withLock {
             state = to
         }
