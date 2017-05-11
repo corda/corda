@@ -2,7 +2,7 @@ package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import com.opengamma.strata.product.common.BuySell
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.SwapData
 import net.corda.vega.portfolio.Portfolio

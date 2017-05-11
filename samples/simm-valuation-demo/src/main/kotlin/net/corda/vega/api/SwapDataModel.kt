@@ -1,7 +1,7 @@
 package net.corda.vega.api
 
 import com.opengamma.strata.product.common.BuySell
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.vega.contracts.SwapData
 import java.math.BigDecimal
 import java.time.LocalDate

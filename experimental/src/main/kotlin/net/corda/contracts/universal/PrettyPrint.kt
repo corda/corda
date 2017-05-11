@@ -1,7 +1,8 @@
 package net.corda.contracts.universal
 
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.commonName
+import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.Party
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.Instant
@@ -65,7 +66,7 @@ private class PrettyPrint(arr : Arrangement) {
 
     init {
         parties.forEach {
-            println( "val ${createPartyName(it)} = Party(\"${it.name.commonName}\", \"${it.owningKey}\")" )
+            println( "val ${createPartyName(it)} = Party(\"${it.name.commonName}\", \"${it.owningKey.toStringShort()}\")" )
         }
     }
 

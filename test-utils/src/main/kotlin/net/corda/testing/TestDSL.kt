@@ -2,6 +2,7 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
@@ -297,7 +298,7 @@ data class TestLedgerDSLInterpreter private constructor(
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
-            val transactionWithLocation = transactionWithLocations[exception.tx.id]
+            val transactionWithLocation = transactionWithLocations[exception.txId]
             val transactionName = transactionWithLocation?.label ?: transactionWithLocation?.location ?: "<unknown>"
             throw VerifiesFailed(transactionName, exception)
         }

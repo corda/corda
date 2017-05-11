@@ -6,6 +6,8 @@ import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name

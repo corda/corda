@@ -1,8 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -27,12 +27,20 @@ import rx.Observable
  *
  * If you'd like to use another FlowLogic class as a component of your own, construct it on the fly and then pass
  * it to the [subFlow] method. It will return the result of that flow when it completes.
+ *
+ * If your flow (whether it's a top-level flow or a subflow) is supposed to initiate a session with the counterparty
+ * and request they start their counterpart flow, then make sure it's annotated with [InitiatingFlow]. This annotation
+ * also has a version property to allow you to version your flow and enables a node to restrict support for the flow to
+ * that particular version.
  */
 abstract class FlowLogic<out T> {
     /** This is where you should log things to. */
     val logger: Logger get() = stateMachine.logger
 
-    /** Returns a wrapped [UUID] object that identifies this state machine run (i.e. subflows have the same identifier as their parents). */
+    /**
+     * Returns a wrapped [java.util.UUID] object that identifies this state machine run (i.e. subflows have the same
+     * identifier as their parents).
+     */
     val runId: StateMachineRunId get() = stateMachine.id
 
     /**
@@ -60,7 +68,9 @@ abstract class FlowLogic<out T> {
      *
      * @returns an [UntrustworthyData] wrapper around the received object.
      */
-    inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any) = sendAndReceive(R::class.java, otherParty, payload)
+    inline fun <reified R : Any> sendAndReceive(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return sendAndReceive(R::class.java, otherParty, payload)
+    }
 
     /**
      * Serializes and queues the given [payload] object for sending to the [otherParty]. Suspends until a response
@@ -75,11 +85,13 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     open fun <R : Any> sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow)
+        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions)
     }
 
     /** @see sendAndReceiveWithRetry */
-    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any) = sendAndReceiveWithRetry(R::class.java, otherParty, payload)
+    internal inline fun <reified R : Any> sendAndReceiveWithRetry(otherParty: Party, payload: Any): UntrustworthyData<R> {
+        return sendAndReceiveWithRetry(R::class.java, otherParty, payload)
+    }
 
     /**
      * Similar to [sendAndReceive] but also instructs the `payload` to be redelivered until the expected message is received.
@@ -92,7 +104,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     internal open fun <R : Any> sendAndReceiveWithRetry(receiveType: Class<R>, otherParty: Party, payload: Any): UntrustworthyData<R> {
-        return stateMachine.sendAndReceive(receiveType, otherParty, payload, sessionFlow, true)
+        return stateMachine.sendAndReceive(receiveType, otherParty, payload, flowUsedForSessions, true)
     }
 
     /**
@@ -115,7 +127,7 @@ abstract class FlowLogic<out T> {
      */
     @Suspendable
     open fun <R : Any> receive(receiveType: Class<R>, otherParty: Party): UntrustworthyData<R> {
-        return stateMachine.receive(receiveType, otherParty, sessionFlow)
+        return stateMachine.receive(receiveType, otherParty, flowUsedForSessions)
     }
 
     /**
@@ -126,30 +138,27 @@ abstract class FlowLogic<out T> {
      * network's event horizon time.
      */
     @Suspendable
-    open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, sessionFlow)
+    open fun send(otherParty: Party, payload: Any) = stateMachine.send(otherParty, payload, flowUsedForSessions)
 
     /**
      * Invokes the given subflow. This function returns once the subflow completes successfully with the result
-     * returned by that subflows [call] method. If the subflow has a progress tracker, it is attached to the
+     * returned by that subflow's [call] method. If the subflow has a progress tracker, it is attached to the
      * current step in this flow's progress tracker.
      *
-     * @param shareParentSessions In certain situations the need arises to use the same sessions the parent flow has
-     * already established. However this also prevents the subflow from creating new sessions with those parties.
-     * For this reason the default value is false.
+     * If the subflow is not an initiating flow (i.e. not annotated with [InitiatingFlow]) then it will continue to use
+     * the existing sessions this flow has created with its counterparties. This allows for subflows which can act as
+     * building blocks for other flows, for example removing the boilerplate of common sequences of sends and receives.
      *
      * @throws FlowException This is either thrown by [subLogic] itself or propagated from any of the remote
-     * [FlowLogic]s it communicated with. A subflow retry can be done by catching this exception.
+     * [FlowLogic]s it communicated with. The subflow can be retried by catching this exception.
      */
-    // TODO Rethink the default value for shareParentSessions
-    // TODO shareParentSessions is a bit too low-level and perhaps can be expresed in a better way
     @Suspendable
-    @JvmOverloads
     @Throws(FlowException::class)
-    open fun <R> subFlow(subLogic: FlowLogic<R>, shareParentSessions: Boolean = false): R {
+    open fun <R> subFlow(subLogic: FlowLogic<R>): R {
         subLogic.stateMachine = stateMachine
         maybeWireUpProgressTracking(subLogic)
-        if (shareParentSessions) {
-            subLogic.sessionFlow = this
+        if (!subLogic.javaClass.isAnnotationPresent(InitiatingFlow::class.java)) {
+            subLogic.flowUsedForSessions = flowUsedForSessions
         }
         logger.debug { "Calling subflow: $subLogic" }
         val result = subLogic.call()
@@ -160,9 +169,31 @@ abstract class FlowLogic<out T> {
     }
 
     /**
+     * Flows can call this method to ensure that the active FlowInitiator is authorised for a particular action.
+     * This provides fine grained control over application level permissions, when RPC control over starting the flow is insufficient,
+     * or the permission is runtime dependent upon the choices made inside long lived flow code.
+     * For example some users may have restricted limits on how much cash they can transfer, or whether they can change certain fields.
+     * An audit event is always recorded whenever this method is used.
+     * If the permission is not granted for the FlowInitiator a FlowException is thrown.
+     * @param permissionName is a string representing the desired permission. Each flow is given a distinct namespace for these permissions.
+     * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
+     */
+    @Throws(FlowException::class)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String,String>) = stateMachine.checkFlowPermission(permissionName, extraAuditData)
+
+
+    /**
+     * Flows can call this method to record application level flow audit events
+     * @param eventType is a string representing the type of event. Each flow is given a distinct namespace for these names.
+     * @param comment a general human readable summary of the event.
+     * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
+     */
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>) = stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
+
+    /**
      * Override this to provide a [ProgressTracker]. If one is provided and stepped, the framework will do something
-     * helpful with the progress reports. If this flow is invoked as a subflow of another, then the
-     * tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
+     * helpful with the progress reports e.g record to the audit service. If this flow is invoked as a subflow of another,
+     * then the tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
      * progress.
      *
      * Note that this has to return a tracker before the flow is invoked. You can't change your mind half way
@@ -171,8 +202,7 @@ abstract class FlowLogic<out T> {
     open val progressTracker: ProgressTracker? = null
 
     /**
-     * This is where you fill out your business logic. The returned object will usually be ignored, but can be
-     * helpful if this flow is meant to be used as a subflow.
+     * This is where you fill out your business logic.
      */
     @Suspendable
     @Throws(FlowException::class)
@@ -187,7 +217,7 @@ abstract class FlowLogic<out T> {
     fun track(): Pair<String, Observable<String>>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
-            Pair(it.currentStep.toString(), it.changes.map { it.toString() })
+            it.currentStep.toString() to it.changes.map { it.toString() }
         }
     }
 
@@ -197,9 +227,7 @@ abstract class FlowLogic<out T> {
      * valid by the local node, but that doesn't imply the vault will consider it relevant.
      */
     @Suspendable
-    fun waitForLedgerCommit(hash: SecureHash): SignedTransaction {
-        return stateMachine.waitForLedgerCommit(hash, this)
-    }
+    fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
 
    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -216,8 +244,9 @@ abstract class FlowLogic<out T> {
             _stateMachine = value
         }
 
-    // This points to the outermost flow and is changed when a subflow is invoked.
-    private var sessionFlow: FlowLogic<*> = this
+    // This is the flow used for managing sessions. It defaults to the current flow but if this is an inlined sub-flow
+    // then it will point to the flow it's been inlined to.
+    private var flowUsedForSessions: FlowLogic<*> = this
 
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
         val ours = progressTracker

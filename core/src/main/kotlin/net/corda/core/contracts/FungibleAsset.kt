@@ -1,6 +1,6 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor

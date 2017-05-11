@@ -3,12 +3,12 @@ package net.corda.node
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_PUBKEY_1
@@ -96,5 +96,13 @@ class InteractiveShellTest {
             get() = throw UnsupportedOperationException()
         override val flowInitiator: FlowInitiator
             get() = throw UnsupportedOperationException()
+
+        override fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) {
+            // Do nothing
+        }
+
+        override fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) {
+            // Do nothing
+        }
     }
 }

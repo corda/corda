@@ -1,21 +1,55 @@
 Changelog
 =========
 
-Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code from the previous milestone release.
+Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code
+from the previous milestone release.
 
 UNRELEASED
 ----------
 
 * API changes:
-    * ``PluginServiceHub.registerServiceFlow`` has been deprecated and replaced by ``registerServiceFlow`` with the
-      marker Class restricted to ``FlowLogic``.
+    * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
+      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
 
-    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
-      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+    *  Flows which initiate flows in their counterparties (an example of which is the ``NotaryFlow.Client``) are now
+       required to be annotated with ``@InitiatingFlow``.
+
+    * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
+      marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an
+      ``IllegalArgumentException`` if the initiating flow class is not annotated with it.
+
+    * Also related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
+      removed. Its purpose was to allow subflows to be inlined with the parent flow - i.e. the subflow does not initiate
+      new sessions with parties the parent flow has already started. This allowed flows to be used as building blocks. To
+      achieve the same effect now simply requires the subflow to be *not* annotated wth ``InitiatingFlow`` (i.e. we've made
+      this the default behaviour). If the subflow is not meant to be inlined, and is supposed to initiate flows on the
+      other side, the annotation is required.
 
     * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
 
     * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
+
+    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
+      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+
+
+    * There are major changes to the ``Party`` class as part of confidential identities:
+
+         * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
+           backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
+           as possible.
+         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. A new class
+           ``AnonymousParty`` has been added, which is intended to be used in place of ``Party`` or ``PublicKey`` in contract
+           state objects. The exception to this is where the party in a contract state is intended to be well known, such as
+           issuer of a ``Cash`` state.
+         * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
+           name. As a result all node legal names must now be structured as X.500 distinguished names.
+
+* The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
+  number, defaulting to 1 if it's specified. The flow version is included in the flow session request and the counterparty
+  will only respond and start their own flow if the version number matches to the one they've registered with. At some
+  point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
+  compatibility of CorDapp flows.
 
 Milestone 11.0
 --------------
@@ -31,20 +65,27 @@ Milestone 11.0
     * Moved ``generateSpend`` and ``generateExit`` functions into ``OnLedgerAsset`` from the vault and
       ``AbstractConserveAmount`` clauses respectively.
 
-    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work with
-      composite keys and signatures.
+    * Added ``CompositeSignature`` and ``CompositeSignatureData`` as part of enabling ``java.security`` classes to work
+      with composite keys and signatures.
 
-    * ``CompositeKey`` now implements ``java.security.PublicKey`` interface, so that keys can be used on standard classes such as ``Certificate``. 
+    * ``CompositeKey`` now implements ``java.security.PublicKey`` interface, so that keys can be used on standard classes
+      such as ``Certificate``.
 
-        * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is imposible to create ``CompositeKey`` with only one leaf.
+        * There is no longer a need to transform single keys into composite - ``composite`` extension was removed, it is
+          imposible to create ``CompositeKey`` with only one leaf.
 
-        * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key. Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node. (Long chains of single nodes are shortened.)
+        * Constructor of ``CompositeKey`` class is now private. Use ``CompositeKey.Builder`` to create a composite key.
+          Keys emitted by the builder are normalised so that it's impossible to create a composite key with only one node.
+          (Long chains of single nodes are shortened.)
 
-        * Use extension function ``PublicKeys.keys`` to access all keys belonging to an instance of ``PublicKey``. For a ``CompositeKey``, this is equivalent to ``CompositeKey.leafKeys``.
+        * Use extension function ``PublicKeys.keys`` to access all keys belonging to an instance of ``PublicKey``. For a
+          ``CompositeKey``, this is equivalent to ``CompositeKey.leafKeys``.
 
-        * Introduced ``containsAny``, ``isFulfilledBy``, ``keys`` extension functions on ``PublicKey`` - ``CompositeKey`` type checking is done there.
+        * Introduced ``containsAny``, ``isFulfilledBy``, ``keys`` extension functions on ``PublicKey`` - ``CompositeKey``
+          type checking is done there.
 
-* Corda now requires JDK 8u131 or above in order to run. Our Kotlin now also compiles to JDK8 bytecode, and so you'll need to update your CorDapp projects to do the same. E.g. by adding this to ``build.gradle``:
+* Corda now requires JDK 8u131 or above in order to run. Our Kotlin now also compiles to JDK8 bytecode, and so you'll need
+  to update your CorDapp projects to do the same. E.g. by adding this to ``build.gradle``:
 
 .. parsed-literal::
 
@@ -89,7 +130,8 @@ to Corda in M10.
    processor.
 
 * Corda DemoBench:
-    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
+    * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate
+      to your colleagues the fundamentals of Corda in real-time. It has the following features:
 
         * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node
           before launch, such as its legal name and which CorDapps will be loaded.

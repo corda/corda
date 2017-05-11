@@ -9,6 +9,7 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.LazyPool
@@ -417,6 +418,7 @@ object PrivateKeySerializer : Serializer<PrivateKey>() {
 @ThreadSafe
 object PublicKeySerializer : Serializer<PublicKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PublicKey) {
+        // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.
         output.writeBytesWithLength(obj.encoded)
     }
 

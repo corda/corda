@@ -1,7 +1,8 @@
 package net.corda.flows
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -16,6 +17,7 @@ import java.security.PublicKey
  * Finally, the transaction containing all signatures is sent back to each participant so they can record it and
  * use the new updated state for future transactions.
  */
+@InitiatingFlow
 class NotaryChangeFlow<out T : ContractState>(
         originalState: StateAndRef<T>,
         newNotary: Party,

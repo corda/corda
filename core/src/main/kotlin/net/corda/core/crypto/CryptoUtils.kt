@@ -2,13 +2,10 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
 
@@ -110,12 +107,8 @@ fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean
     return Crypto.isValid(this, signature.bytes, content)
 }
 
-/** Render a public key to a string, using a short form if it's an elliptic curve public key */
-fun PublicKey.toStringShort(): String {
-    return (this as? EdDSAPublicKey)?.let { key ->
-        "DL" + key.abyte.toBase58()   // DL -> Distributed Ledger
-    } ?: toString()
-}
+/** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
+fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
 
 val PublicKey.keys: Set<PublicKey> get() {
     return if (this is CompositeKey) this.leafKeys
@@ -148,16 +141,9 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
- * This currently works for EdDSA ED25519 only.
+ * This currently works for the default signature scheme EdDSA ed25519 only.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair {
-    val params = EdDSANamedCurveTable.getByName("ED25519")
-    val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
-    val priv = EdDSAPrivateKeySpec(bytes, params)
-    val pub = EdDSAPublicKeySpec(priv.a, params)
-    val keyPair = KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
-    return keyPair
-}
+fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.generateKeyPairFromEntropy(entropy)
 
 /**
  * Helper function for signing.

@@ -1,6 +1,8 @@
 package net.corda.flows
 
 import net.corda.core.contracts.*
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -13,6 +15,8 @@ import java.security.PublicKey
  * Finally, the transaction containing all signatures is sent back to each participant so they can record it and
  * use the new updated state for future transactions.
  */
+@InitiatingFlow
+@StartableByRPC
 class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState>(
         originalState: StateAndRef<OldState>,
         newContractClass: Class<out UpgradedContract<OldState, NewState>>

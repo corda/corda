@@ -17,11 +17,11 @@ import java.io.FileWriter
 import java.io.InputStream
 import java.net.InetAddress
 import java.nio.file.Path
+import java.security.InvalidAlgorithmParameterException
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -64,7 +64,7 @@ object X509Utilities {
     }
 
     /**
-     * Return a bogus X509 for dev purposes.
+     * Return a bogus X509 for dev purposes. Use [getX509Name] for something more real.
      */
     @Deprecated("Full legal names should be specified in all configurations")
     fun getDevX509Name(commonName: String): X500Name {
@@ -103,12 +103,16 @@ object X509Utilities {
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
      */
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
-        val keyPair = generateKeyPair(signatureScheme)
+    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, signatureScheme, window, pathLength = 2)
+        val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 2)
         return CertificateAndKey(cert, keyPair)
     }
+
+    @JvmStatic
+    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
+                               validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey
+            = createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
@@ -124,7 +128,7 @@ object X509Utilities {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
-        val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, signatureScheme, window, pathLength = 1)
+        val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 1)
         return CertificateAndKey(cert, keyPair)
     }
 
@@ -145,7 +149,6 @@ object X509Utilities {
                          ca: CertificateAndKey,
                          subjectAlternativeNameDomains: List<String>,
                          subjectAlternativeNameIps: List<String>,
-                         signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
                          validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
 
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
@@ -154,7 +157,35 @@ object X509Utilities {
         val ipAddresses = subjectAlternativeNameIps.filter {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
         }.map { GeneralName(GeneralName.iPAddress, it) }
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CLIENT_KEY_USAGE, CLIENT_KEY_PURPOSES, signatureScheme, window, subjectAlternativeName = dnsNames + ipAddresses)
+        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CLIENT_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses)
+    }
+
+    /**
+     * Build a certificate path from a trusted root certificate to a target certificate. This will always return a path
+     * directly from the root to the target, with no intermediate certificates (presuming that path is valid).
+     *
+     * @param rootCertAndKey trusted root certificate that will be the start of the path.
+     * @param targetCertAndKey certificate the path ends at.
+     * @param revocationEnabled whether revocation of certificates in the path should be checked.
+     */
+    fun createCertificatePath(rootCertAndKey: CertificateAndKey,
+                              targetCertAndKey: CertificateAndKey,
+                              revocationEnabled: Boolean): CertPathBuilderResult {
+        val intermediateCertificates = setOf(targetCertAndKey.certificate)
+        val certStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(intermediateCertificates))
+        val certPathFactory = CertPathBuilder.getInstance("PKIX")
+        val trustAnchor = TrustAnchor(rootCertAndKey.certificate, null)
+        val certPathParameters = try {
+            PKIXBuilderParameters(setOf(trustAnchor), X509CertSelector().apply {
+                certificate = targetCertAndKey.certificate
+            })
+        } catch (ex: InvalidAlgorithmParameterException) {
+            throw RuntimeException(ex)
+        }.apply {
+            addCertStore(certStore)
+            isRevocationEnabled = revocationEnabled
+        }
+        return certPathFactory.build(certPathParameters)
     }
 
     /**
@@ -208,7 +239,7 @@ object X509Utilities {
 
         val serverKey = generateKeyPair(signatureScheme)
         val host = InetAddress.getLocalHost()
-        val serverCert = createServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress), signatureScheme)
+        val serverCert = createServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)

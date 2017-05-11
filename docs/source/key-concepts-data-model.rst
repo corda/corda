@@ -77,7 +77,7 @@ verification logic.
 
 Transactions
 ------------
-Transaction are used to update the ledger by consuming existing state objects and producing new state objects.
+Transactions are used to update the ledger by consuming existing state objects and producing new state objects.
 
 A transaction update is accepted according to the following two aspects of consensus:
 

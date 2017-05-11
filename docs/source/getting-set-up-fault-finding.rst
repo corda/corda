@@ -128,7 +128,7 @@ Other common issues
 Slow localhost resolution
 *************************
 
-Out of the box, Apple Mac's have machine names that end in ".local", by default something like "MacBook-Pro.local".
+Out of the box, Apple Macs have machine names that end in ".local", by default something like "MacBook-Pro.local".
 This can cause long delays with starting Corda nodes as every attempt to look up the name of the local computer triggers
 a five second pause. This is not a bug in Corda but rather `a problem with the macOS networking stack <http://stackoverflow.com/questions/39636792/jvm-takes-a-long-time-to-resolve-ip-address-for-localhost>`_.
 

@@ -1,10 +1,9 @@
 package net.corda.core.contracts
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.transactions.LedgerTransaction
 import java.security.PublicKey
 import java.util.*
 
@@ -95,25 +94,25 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException() {
     override fun toString(): String = "Attachment resolution failure for $hash"
 }
 
-sealed class TransactionVerificationException(val tx: LedgerTransaction, cause: Throwable?) : FlowException(cause) {
-    class ContractRejection(tx: LedgerTransaction, val contract: Contract, cause: Throwable?) : TransactionVerificationException(tx, cause)
-    class MoreThanOneNotary(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
-    class SignersMissing(tx: LedgerTransaction, val missing: List<PublicKey>) : TransactionVerificationException(tx, null) {
+sealed class TransactionVerificationException(val txId: SecureHash, cause: Throwable?) : FlowException(cause) {
+    class ContractRejection(txId: SecureHash, val contract: Contract, cause: Throwable?) : TransactionVerificationException(txId, cause)
+    class MoreThanOneNotary(txId: SecureHash) : TransactionVerificationException(txId, null)
+    class SignersMissing(txId: SecureHash, val missing: List<PublicKey>) : TransactionVerificationException(txId, null) {
         override fun toString(): String = "Signers missing: ${missing.joinToString()}"
     }
 
-    class DuplicateInputStates(tx: LedgerTransaction, val duplicates: Set<StateRef>) : TransactionVerificationException(tx, null) {
+    class DuplicateInputStates(txId: SecureHash, val duplicates: Set<StateRef>) : TransactionVerificationException(txId, null) {
         override fun toString(): String = "Duplicate inputs: ${duplicates.joinToString()}"
     }
 
-    class InvalidNotaryChange(tx: LedgerTransaction) : TransactionVerificationException(tx, null)
-    class NotaryChangeInWrongTransactionType(tx: LedgerTransaction, val outputNotary: Party) : TransactionVerificationException(tx, null) {
+    class InvalidNotaryChange(txId: SecureHash) : TransactionVerificationException(txId, null)
+    class NotaryChangeInWrongTransactionType(txId: SecureHash, val txNotary: Party, val outputNotary: Party) : TransactionVerificationException(txId, null) {
         override fun toString(): String {
-            return "Found unexpected notary change in transaction. Tx notary: ${tx.notary}, found: $outputNotary"
+            return "Found unexpected notary change in transaction. Tx notary: $txNotary, found: $outputNotary"
         }
     }
 
-    class TransactionMissingEncumbranceException(tx: LedgerTransaction, val missing: Int, val inOut: Direction) : TransactionVerificationException(tx, null) {
+    class TransactionMissingEncumbranceException(txId: SecureHash, val missing: Int, val inOut: Direction) : TransactionVerificationException(txId, null) {
         override val message: String get() = "Missing required encumbrance $missing in $inOut"
     }
 

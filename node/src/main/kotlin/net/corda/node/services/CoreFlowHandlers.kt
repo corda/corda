@@ -5,7 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UpgradedContract
 import net.corda.core.contracts.requireThat
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
@@ -63,7 +63,7 @@ class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }
-        subFlow(ResolveTransactionsFlow(request.tx, otherParty), shareParentSessions = true)
+        subFlow(ResolveTransactionsFlow(request.tx, otherParty))
         serviceHub.recordTransactions(request.tx)
     }
 }
