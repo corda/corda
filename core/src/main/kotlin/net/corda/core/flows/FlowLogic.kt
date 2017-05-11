@@ -1,8 +1,8 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -169,9 +169,31 @@ abstract class FlowLogic<out T> {
     }
 
     /**
+     * Flows can call this method to ensure that the active FlowInitiator is authorised for a particular action.
+     * This provides fine grained control over application level permissions, when RPC control over starting the flow is insufficient,
+     * or the permission is runtime dependent upon the choices made inside long lived flow code.
+     * For example some users may have restricted limits on how much cash they can transfer, or whether they can change certain fields.
+     * An audit event is always recorded whenever this method is used.
+     * If the permission is not granted for the FlowInitiator a FlowException is thrown.
+     * @param permissionName is a string representing the desired permission. Each flow is given a distinct namespace for these permissions.
+     * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
+     */
+    @Throws(FlowException::class)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String,String>) = stateMachine.checkFlowPermission(permissionName, extraAuditData)
+
+
+    /**
+     * Flows can call this method to record application level flow audit events
+     * @param eventType is a string representing the type of event. Each flow is given a distinct namespace for these names.
+     * @param comment a general human readable summary of the event.
+     * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
+     */
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>) = stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
+
+    /**
      * Override this to provide a [ProgressTracker]. If one is provided and stepped, the framework will do something
-     * helpful with the progress reports. If this flow is invoked as a subflow of another, then the
-     * tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
+     * helpful with the progress reports e.g record to the audit service. If this flow is invoked as a subflow of another,
+     * then the tracker will be made a child of the current step in the parent. If it's null, this flow doesn't track
      * progress.
      *
      * Note that this has to return a tracker before the flow is invoked. You can't change your mind half way

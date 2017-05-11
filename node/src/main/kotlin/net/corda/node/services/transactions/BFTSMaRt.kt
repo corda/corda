@@ -10,6 +10,7 @@ import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.Timestamp
 import net.corda.core.crypto.*
+import net.corda.core.identity.Party
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable

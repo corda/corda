@@ -7,7 +7,7 @@ import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.days
 import net.corda.core.node.services.Vault

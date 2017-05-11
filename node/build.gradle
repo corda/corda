@@ -150,6 +150,9 @@ dependencies {
     // Requery: object mapper for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
 
+    // FastClasspathScanner: classpath scanning
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.19'
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
 }

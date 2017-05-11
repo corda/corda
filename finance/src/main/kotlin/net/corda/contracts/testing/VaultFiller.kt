@@ -7,7 +7,7 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.*
 import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes

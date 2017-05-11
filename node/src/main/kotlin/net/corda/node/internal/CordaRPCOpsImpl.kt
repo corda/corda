@@ -7,6 +7,7 @@ import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -20,6 +21,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.transaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -39,8 +41,6 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override val protocolVersion: Int = 0
-
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
         return database.transaction {
             services.networkMapCache.track()
@@ -115,12 +115,8 @@ class CordaRPCOpsImpl(
         }
     }
 
-    // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        val rpcContext = getRpcContext()
-        rpcContext.requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
-        val stateMachine = services.invokeFlowAsync(logicType, currentUser, *args)
+        val stateMachine = startFlow(logicType, args)
         return FlowProgressHandleImpl(
                 id = stateMachine.id,
                 returnValue = stateMachine.resultFuture,
@@ -128,13 +124,17 @@ class CordaRPCOpsImpl(
         )
     }
 
-    // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
+        val stateMachine = startFlow(logicType, args)
+        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+    }
+
+    private fun <T : Any> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
+        require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
         val rpcContext = getRpcContext()
         rpcContext.requirePermission(startFlowPermission(logicType))
         val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
-        val stateMachine = services.invokeFlowAsync(logicType, currentUser, *args)
-        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+        return services.invokeFlowAsync(logicType, currentUser, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -171,11 +171,12 @@ class CordaRPCOpsImpl(
 
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
+    @Suppress("DEPRECATION")
     @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name)= services.identityService.partyFromX500Name(x500Name)
 
-    override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
+    override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {

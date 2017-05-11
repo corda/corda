@@ -42,7 +42,8 @@ There are two main steps to implementing scheduled events:
   ``nextScheduledActivity`` to be implemented which returns an optional ``ScheduledActivity`` instance.
   ``ScheduledActivity`` captures what ``FlowLogic`` instance each node will run, to perform the activity, and when it
   will run is described by a ``java.time.Instant``.  Once your state implements this interface and is tracked by the
-  wallet, it can expect to be queried for the next activity when committed to the wallet.
+  wallet, it can expect to be queried for the next activity when committed to the wallet. The ``FlowLogic`` must be
+  annotated with ``@SchedulableFlow``.
 * If nothing suitable exists, implement a ``FlowLogic`` to be executed by each node as the activity itself.
   The important thing to remember is that in the current implementation, each node that is party to the transaction
   will execute the same ``FlowLogic``, so it needs to establish roles in the business process based on the contract
@@ -90,10 +91,7 @@ business process and to take on those roles.  That ``FlowLogic`` will be handed 
 rate swap ``State`` in question, as well as a tolerance ``Duration`` of how long to wait after the activity is triggered
 for the interest rate before indicating an error.
 
-.. note:: This is a way to create a reference to the FlowLogic class and its constructor parameters to
-   instantiate. The reference can be checked against a per-node whitelist of approved and allowable types as
-   part of our overall security sandboxing.
-
+.. note:: This is a way to create a reference to the FlowLogic class and its constructor parameters to instantiate.
 
 As previously mentioned, we currently need a small network handler to assist with session setup until the work to
 automate that is complete.  See the interest rate swap specific implementation ``FixingSessionInitiationHandler`` which

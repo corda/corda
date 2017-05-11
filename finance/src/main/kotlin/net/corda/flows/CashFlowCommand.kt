@@ -1,7 +1,7 @@
 package net.corda.flows
 
 import net.corda.core.contracts.Amount
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow

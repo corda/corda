@@ -1,14 +1,16 @@
 package net.corda.core.flows
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.ContractUpgradeFlow
@@ -27,7 +29,6 @@ import org.junit.Before
 import org.junit.Test
 import java.security.PublicKey
 import java.util.*
-import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -69,10 +70,10 @@ class ContractUpgradeFlowTest {
         requireNotNull(atx)
         requireNotNull(btx)
 
-        // The request is expected to be rejected because party B haven't authorise the upgrade yet.
+        // The request is expected to be rejected because party B hasn't authorised the upgrade yet.
         val rejectedFuture = a.services.startFlow(ContractUpgradeFlow(atx!!.tx.outRef(0), DummyContractV2::class.java)).resultFuture
         mockNet.runNetwork()
-        assertFailsWith(ExecutionException::class) { rejectedFuture.get() }
+        assertFailsWith(FlowSessionException::class) { rejectedFuture.getOrThrow() }
 
         // Party B authorise the contract state upgrade.
         b.services.vaultService.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
@@ -81,7 +82,7 @@ class ContractUpgradeFlowTest {
         val resultFuture = a.services.startFlow(ContractUpgradeFlow(atx.tx.outRef(0), DummyContractV2::class.java)).resultFuture
         mockNet.runNetwork()
 
-        val result = resultFuture.get()
+        val result = resultFuture.getOrThrow()
 
         fun check(node: MockNetwork.MockNode) {
             val nodeStx = node.database.transaction {
@@ -124,12 +125,12 @@ class ContractUpgradeFlowTest {
                     .toSignedTransaction()
 
             val user = rpcTestUser.copy(permissions = setOf(
-                    startFlowPermission<FinalityFlow>(),
+                    startFlowPermission<FinalityInvoker>(),
                     startFlowPermission<ContractUpgradeFlow<*, *>>()
             ))
             val rpcA = startProxy(a, user)
             val rpcB = startProxy(b, user)
-            val handle = rpcA.startFlow(::FinalityFlow, stx, setOf(a.info.legalIdentity, b.info.legalIdentity))
+            val handle = rpcA.startFlow(::FinalityInvoker, stx, setOf(a.info.legalIdentity, b.info.legalIdentity))
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
@@ -143,7 +144,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            assertFailsWith(ExecutionException::class) { rejectedFuture.get() }
+            assertFailsWith(FlowSessionException::class) { rejectedFuture.getOrThrow() }
 
             // Party B authorise the contract state upgrade.
             rpcB.authoriseContractUpgrade(btx!!.tx.outRef<ContractState>(0), DummyContractV2::class.java)
@@ -154,7 +155,7 @@ class ContractUpgradeFlowTest {
                     DummyContractV2::class.java).returnValue
 
             mockNet.runNetwork()
-            val result = resultFuture.get()
+            val result = resultFuture.getOrThrow()
             // Check results.
             listOf(a, b).forEach {
                 val signedTX = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
@@ -209,5 +210,12 @@ class ContractUpgradeFlowTest {
 
         // Dummy Cash contract for testing.
         override val legalContractReference = SecureHash.sha256("")
+    }
+
+    @StartableByRPC
+    class FinalityInvoker(val transaction: SignedTransaction,
+                          val extraRecipients: Set<Party>) : FlowLogic<List<SignedTransaction>>() {
+        @Suspendable
+        override fun call(): List<SignedTransaction> = subFlow(FinalityFlow(transaction, extraRecipients))
     }
 }

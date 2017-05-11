@@ -55,6 +55,12 @@ class ProgressTracker(vararg steps: Step) {
     open class Step(open val label: String) {
         open val changes: Observable<Change> get() = Observable.empty()
         open fun childProgressTracker(): ProgressTracker? = null
+        /**
+         * A flow may populate this property with flow specific context data.
+         * The extra data will be recorded to the audit logs when the flow progresses.
+         * Even if empty the basic details (i.e. label) of the step will be recorded for audit purposes.
+         */
+        open val extraAuditData: Map<String, String> get() = emptyMap()
     }
 
     // Sentinel objects. Overrides equals() to survive process restarts and serialization.

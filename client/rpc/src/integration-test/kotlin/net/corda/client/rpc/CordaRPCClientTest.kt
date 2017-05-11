@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
@@ -9,6 +8,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.utilities.ALICE
+import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.Node
@@ -86,11 +86,10 @@ class CordaRPCClientTest : NodeBasedTest() {
     }
 
     @Test
-    fun `FlowException thrown by flow`() {
+    fun `sub-type of FlowException thrown by flow`() {
         login(rpcUser.username, rpcUser.password)
         val handle = connection!!.proxy.startFlow(::CashPaymentFlow, 100.DOLLARS, node.info.legalIdentity)
-        // TODO Restrict this to CashException once RPC serialisation has been fixed
-        assertThatExceptionOfType(FlowException::class.java).isThrownBy {
+        assertThatExceptionOfType(CashException::class.java).isThrownBy {
             handle.returnValue.getOrThrow()
         }
     }

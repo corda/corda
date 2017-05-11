@@ -1,6 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.node.services.identity.InMemoryIdentityService

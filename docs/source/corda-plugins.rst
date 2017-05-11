@@ -45,19 +45,7 @@ extensions to be created, or registered at startup. In particular:
     jars. These static serving directories will not be available if the
     bundled web server is not started.
 
-    c. The ``requiredFlows`` property is used to declare new protocols in 
-    the plugin jar. Specifically the property must return a map with a key 
-    naming each exposed top level flow class and a value which is a set 
-    naming every parameter class that will be passed to the flow's 
-    constructor. Standard ``java.lang.*`` and ``kotlin.*`` types do not need 
-    to be included, but all other parameter types, or concrete interface 
-    implementations need declaring. Declaring a specific flow in this map 
-    white lists it for activation by the ``FlowLogicRefFactory``. White 
-    listing is not strictly required for ``subFlows`` used internally, but 
-    is required for any top level flow, or a flow which is invoked through 
-    the scheduler. 
-
-    d. The ``servicePlugins`` property returns a list of classes which will 
+    c. The ``servicePlugins`` property returns a list of classes which will
     be instantiated once during the ``AbstractNode.start`` call. These 
     classes must provide a single argument constructor which will receive a 
     ``PluginServiceHub`` reference. They must also extend the abstract class
@@ -90,7 +78,7 @@ extensions to be created, or registered at startup. In particular:
         functions inside the node, for instance to initiate workflows when 
         certain conditions are met. 
 
-    e. The ``customizeSerialization`` function allows classes to be whitelisted
+    d. The ``customizeSerialization`` function allows classes to be whitelisted
     for object serialisation, over and above those tagged with the ``@CordaSerializable``
     annotation. In general the annotation should be preferred.  For
     instance new state types will need to be explicitly registered. This will be called at

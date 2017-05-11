@@ -76,7 +76,6 @@ ext {
 apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
-apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise

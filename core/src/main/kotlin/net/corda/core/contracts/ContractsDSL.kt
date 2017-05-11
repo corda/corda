@@ -2,7 +2,7 @@
 
 package net.corda.core.contracts
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import java.security.PublicKey
 import java.math.BigDecimal
 import java.util.*

@@ -8,8 +8,11 @@ UNRELEASED
 ----------
 
 * API changes:
-    * Initiating flows (i.e. those which initiate flows in a counterparty) are now required to be annotated with
-      ``InitiatingFlow``.
+    * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
+      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
+
+    *  Flows which initiate flows in their counterparties (an example of which is the ``NotaryFlow.Client``) are now
+       required to be annotated with ``@InitiatingFlow``.
 
     * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
       marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an
@@ -28,6 +31,19 @@ UNRELEASED
 
     * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
       manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+
+
+    * There are major changes to the ``Party`` class as part of confidential identities:
+
+         * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
+           backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
+           as possible.
+         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. A new class
+           ``AnonymousParty`` has been added, which is intended to be used in place of ``Party`` or ``PublicKey`` in contract
+           state objects. The exception to this is where the party in a contract state is intended to be well known, such as
+           issuer of a ``Cash`` state.
+         * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
+           name. As a result all node legal names must now be structured as X.500 distinguished names.
 
 * The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
   number, defaulting to 1 if it's specified. The flow version is included in the flow session request and the counterparty
