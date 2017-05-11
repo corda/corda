@@ -325,6 +325,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.toArray()
         }
 
+        if (pluginJars.isEmpty()) return emptyList()
+
         val scanResult = FastClasspathScanner().overrideClasspath(*pluginJars).scan()  // This will only scan the plugin jars and nothing else
 
         fun loadFlowClass(className: String): Class<out FlowLogic<*>>? {
