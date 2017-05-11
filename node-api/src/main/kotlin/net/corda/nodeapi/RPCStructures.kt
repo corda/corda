@@ -8,12 +8,12 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
+import java.io.InputStream
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
 import net.corda.nodeapi.config.OldConfig
-import org.apache.commons.fileupload.MultipartStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Notification
@@ -100,7 +100,7 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
 
         // RPC specific classes
         register(Class::class.java, ClassSerializer)
-        register(MultipartStream.ItemInputStream::class.java, InputStreamSerializer)
+        register(InputStream::class.java, InputStreamSerializer)
         register(MarshalledObservation::class.java, ImmutableClassSerializer(MarshalledObservation::class))
         register(Observable::class.java, observableSerializer)
         @Suppress("UNCHECKED_CAST")
@@ -133,6 +133,9 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
         if (ListenableFuture::class.java.isAssignableFrom(type)) {
             return if (annotated) super.getRegistration(ListenableFuture::class.java)
             else throw IllegalStateException("This RPC was not annotated with @RPCReturnsObservables")
+        }
+        if (InputStream::class.java.isAssignableFrom(type)) {
+            return super.getRegistration(InputStream::class.java)
         }
         if (FlowException::class.java.isAssignableFrom(type))
             return super.getRegistration(FlowException::class.java)
