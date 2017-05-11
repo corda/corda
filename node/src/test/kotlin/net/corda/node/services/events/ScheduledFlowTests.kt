@@ -2,12 +2,13 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.SchedulableFlow
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -46,10 +47,10 @@ class ScheduledFlowTests {
             }
         }
 
-        override val participants: List<PublicKey> = listOf(source.owningKey, destination.owningKey)
+        override val participants: List<AbstractParty> = listOf(source, destination)
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-            return participants.any { it.containsAny(ourKeys) }
+            return participants.any { it.owningKey.containsAny(ourKeys) }
         }
     }
 

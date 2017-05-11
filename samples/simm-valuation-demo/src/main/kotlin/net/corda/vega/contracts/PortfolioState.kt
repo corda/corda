@@ -1,10 +1,10 @@
 package net.corda.vega.contracts
 
 import net.corda.core.contracts.*
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.vega.flows.SimmRevaluation
@@ -19,7 +19,7 @@ import java.time.temporal.ChronoUnit
  */
 data class PortfolioState(val portfolio: List<StateRef>,
                           override val contract: PortfolioSwap,
-                          private val _parties: Pair<AnonymousParty, AnonymousParty>,
+                          private val _parties: Pair<AbstractParty, AbstractParty>,
                           val valuationDate: LocalDate,
                           val valuation: PortfolioValuation? = null,
                           override val linearId: UniqueIdentifier = UniqueIdentifier())
@@ -27,12 +27,12 @@ data class PortfolioState(val portfolio: List<StateRef>,
     @CordaSerializable
     data class Update(val portfolio: List<StateRef>? = null, val valuation: PortfolioValuation? = null)
 
-    override val parties: List<AnonymousParty> get() = _parties.toList()
+    override val parties: List<AbstractParty> get() = _parties.toList()
     override val ref: String = linearId.toString()
-    val valuer: AnonymousParty get() = parties[0]
+    val valuer: AbstractParty get() = parties[0]
 
-    override val participants: List<PublicKey>
-        get() = parties.map { it.owningKey }
+    override val participants: List<AbstractParty>
+        get() = parties
 
     override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity {
         val flow = flowLogicRefFactory.create(SimmRevaluation.Initiator::class.java, thisStateRef, LocalDate.now())

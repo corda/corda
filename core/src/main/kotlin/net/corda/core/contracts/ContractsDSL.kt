@@ -115,7 +115,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
     // Now check the digital signatures on the move command. Every input has an owning public key, and we must
     // see a signature from each of those keys. The actual signatures have been verified against the transaction
     // data by the platform before execution.
-    val owningPubKeys = inputs.map { it.owner }.toSet()
+    val owningPubKeys = inputs.map { it.owner.owningKey }.toSet()
     val command = commands.requireSingleCommand<T>()
     val keysThatSigned = command.signers.toSet()
     requireThat {

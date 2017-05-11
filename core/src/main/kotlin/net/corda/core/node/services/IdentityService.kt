@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import org.bouncycastle.asn1.x500.X500Name
@@ -54,7 +55,7 @@ interface IdentityService {
     fun partyFromName(name: String): Party?
     fun partyFromX500Name(principal: X500Name): Party?
 
-    fun partyFromAnonymous(party: AnonymousParty): Party?
+    fun partyFromAnonymous(party: AbstractParty): Party?
     fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 
     /**

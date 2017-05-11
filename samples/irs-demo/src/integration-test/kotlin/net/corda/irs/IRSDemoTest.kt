@@ -70,7 +70,7 @@ class IRSDemoTest : IntegrationTestCategory {
         val vaultUpdates = proxy.vaultAndUpdates().second
 
         val fixingDates = vaultUpdates.map { update ->
-            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State<*>>()
+            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()
             irsStates.mapNotNull { it.calculation.nextFixingDate() }.max()
         }.cache().toBlocking()
 

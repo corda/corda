@@ -2,14 +2,19 @@ package net.corda.core.serialization
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
+import net.corda.core.utilities.DUMMY_KEY_2
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.generateStateRef
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
 import java.security.SignatureException
 import java.util.*
 import kotlin.test.assertEquals
@@ -27,12 +32,12 @@ class TransactionSerializationTests {
         data class State(
                 val deposit: PartyAndReference,
                 val amount: Amount<Currency>,
-                override val owner: PublicKey) : OwnableState {
+                override val owner: AbstractParty) : OwnableState {
             override val contract: Contract = TEST_PROGRAM_ID
-            override val participants: List<PublicKey>
+            override val participants: List<AbstractParty>
                 get() = listOf(owner)
 
-            override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+            override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
         }
 
         interface Commands : CommandData {
@@ -44,9 +49,9 @@ class TransactionSerializationTests {
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
     val fakeStateRef = generateStateRef()
-    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY), fakeStateRef)
-    val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1), DUMMY_NOTARY)
-    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, DUMMY_KEY_1.public), DUMMY_NOTARY)
+    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), DUMMY_NOTARY), fakeStateRef)
+    val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), DUMMY_NOTARY)
+    val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), DUMMY_NOTARY)
 
 
     lateinit var tx: TransactionBuilder
@@ -54,14 +59,14 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
-                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(DUMMY_KEY_1.public))
+                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey))
         )
     }
 
     @Test
     fun signWireTX() {
         tx.signWith(DUMMY_NOTARY_KEY)
-        tx.signWith(DUMMY_KEY_1)
+        tx.signWith(MEGA_CORP_KEY)
         val signedTX = tx.toSignedTransaction()
 
         // Now check that the signature we just made verifies.
@@ -81,7 +86,7 @@ class TransactionSerializationTests {
             tx.toSignedTransaction()
         }
 
-        tx.signWith(DUMMY_KEY_1)
+        tx.signWith(MEGA_CORP_KEY)
         tx.signWith(DUMMY_NOTARY_KEY)
         val signedTX = tx.toSignedTransaction()
 
@@ -104,7 +109,7 @@ class TransactionSerializationTests {
     @Test
     fun timestamp() {
         tx.setTime(TEST_TX_TIME, 30.seconds)
-        tx.signWith(DUMMY_KEY_1)
+        tx.signWith(MEGA_CORP_KEY)
         tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
         assertEquals(TEST_TX_TIME, stx.tx.timestamp?.midpoint)

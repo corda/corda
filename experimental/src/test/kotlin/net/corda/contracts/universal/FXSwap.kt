@@ -25,18 +25,18 @@ class FXSwap {
     val transfer1 = arrange { highStreetBank.owes(acmeCorp, 1070.K, EUR) }
     val transfer2 = arrange { acmeCorp.owes(highStreetBank, 1.M, USD) }
 
-    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer1)
-    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer2)
+    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY), transfer1)
+    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY), transfer2)
 
     val transferBad1 = arrange { highStreetBank.owes(acmeCorp, 1070.K, USD) } // wrong currency
     val transferBad2 = arrange { acmeCorp.owes(highStreetBank, 900.K, USD) } // wrong amount
     val transferBad3 = arrange { highStreetBank.owes(highStreetBank, 1070.K, EUR) } // wrong party
 
-    val outStateBad1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad1)
-    val outStateBad2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad2)
-    val outStateBad3 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferBad3)
+    val outStateBad1 = UniversalContract.State(listOf(DUMMY_NOTARY), transferBad1)
+    val outStateBad2 = UniversalContract.State(listOf(DUMMY_NOTARY), transferBad2)
+    val outStateBad3 = UniversalContract.State(listOf(DUMMY_NOTARY), transferBad3)
 
-    val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
+    val inState = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
 
     @Test
     fun `issue - signature`() {

@@ -4,15 +4,13 @@ import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.days
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.core.utilities.*
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
@@ -38,7 +36,7 @@ interface ICommercialPaperTestTemplate {
 class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
             MEGA_CORP.ref(123),
-            MEGA_CORP_PUBKEY,
+            MEGA_CORP,
             1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             TEST_TX_TIME + 7.days
     )
@@ -51,7 +49,7 @@ class JavaCommercialPaperTest : ICommercialPaperTestTemplate {
 class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
-            owner = MEGA_CORP_PUBKEY,
+            owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             maturityDate = TEST_TX_TIME + 7.days
     )
@@ -64,7 +62,7 @@ class KotlinCommercialPaperTest : ICommercialPaperTestTemplate {
 class KotlinCommercialPaperLegacyTest : ICommercialPaperTestTemplate {
     override fun getPaper(): ICommercialPaperState = CommercialPaperLegacy.State(
             issuance = MEGA_CORP.ref(123),
-            owner = MEGA_CORP_PUBKEY,
+            owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             maturityDate = TEST_TX_TIME + 7.days
     )
@@ -91,8 +89,8 @@ class CommercialPaperTestsGeneric {
         val someProfits = 1200.DOLLARS `issued by` issuer
         ledger {
             unverifiedTransaction {
-                output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE_PUBKEY)
-                output("some profits", someProfits.STATE `owned by` MEGA_CORP_PUBKEY)
+                output("alice's $900", 900.DOLLARS.CASH `issued by` issuer `owned by` ALICE)
+                output("some profits", someProfits.STATE `owned by` MEGA_CORP)
             }
 
             // Some CP is issued onto the ledger by MegaCorp.
@@ -108,8 +106,8 @@ class CommercialPaperTestsGeneric {
             transaction("Trade") {
                 input("paper")
                 input("alice's $900")
-                output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP_PUBKEY }
-                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE_PUBKEY }
+                output("borrowed $900") { 900.DOLLARS.CASH `issued by` issuer `owned by` MEGA_CORP }
+                output("alice's paper") { "paper".output<ICommercialPaperState>() `owned by` ALICE }
                 command(ALICE_PUBKEY) { Cash.Commands.Move() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
                 this.verifies()
@@ -122,8 +120,8 @@ class CommercialPaperTestsGeneric {
                 input("some profits")
 
                 fun TransactionDSL<TransactionDSLInterpreter>.outputs(aliceGetsBack: Amount<Issued<Currency>>) {
-                    output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE_PUBKEY }
-                    output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP_PUBKEY }
+                    output("Alice's profit") { aliceGetsBack.STATE `owned by` ALICE }
+                    output("Change") { (someProfits - aliceGetsBack).STATE `owned by` MEGA_CORP }
                 }
 
                 command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
@@ -270,8 +268,8 @@ class CommercialPaperTestsGeneric {
             // Alice pays $9000 to BigCorp to own some of their debt.
             moveTX = run {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, bigCorpServices.key.public)
-                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), aliceServices.key.public)
+                aliceVaultService.generateSpend(ptx, 9000.DOLLARS, AnonymousParty(bigCorpServices.key.public))
+                CommercialPaper().generateMove(ptx, issueTX.tx.outRef(0), AnonymousParty(aliceServices.key.public))
                 ptx.signWith(bigCorpServices.key)
                 ptx.signWith(aliceServices.key)
                 ptx.signWith(DUMMY_NOTARY_KEY)

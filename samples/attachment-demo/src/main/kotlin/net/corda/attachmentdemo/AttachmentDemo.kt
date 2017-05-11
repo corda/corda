@@ -13,6 +13,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.sizedInputStreamAndHash
@@ -179,6 +180,6 @@ class AttachmentContract : Contract {
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
         override val contract: Contract = AttachmentContract()
-        override val participants: List<PublicKey> = emptyList()
+        override val participants: List<AbstractParty> = emptyList()
     }
 }

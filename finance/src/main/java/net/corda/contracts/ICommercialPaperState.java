@@ -1,6 +1,7 @@
 package net.corda.contracts;
 
 import net.corda.core.contracts.*;
+import net.corda.core.identity.AbstractParty;
 
 import java.security.PublicKey;
 import java.time.*;
@@ -12,7 +13,7 @@ import java.util.*;
  * ultimately either language can be used against a common test framework (and therefore can be used for real).
  */
 public interface ICommercialPaperState extends ContractState {
-    ICommercialPaperState withOwner(PublicKey newOwner);
+    ICommercialPaperState withOwner(AbstractParty newOwner);
 
     ICommercialPaperState withFaceValue(Amount<Issued<Currency>> newFaceValue);
 

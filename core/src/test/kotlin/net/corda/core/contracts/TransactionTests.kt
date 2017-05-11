@@ -11,7 +11,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.*
-import net.corda.testing.ALICE_PUBKEY
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
@@ -95,7 +94,7 @@ class TransactionTests {
 
     @Test
     fun `transactions with no inputs can have any notary`() {
-        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
+        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
         val inputs = emptyList<StateAndRef<*>>()
         val outputs = listOf(baseOutState, baseOutState.copy(notary = ALICE), baseOutState.copy(notary = BOB))
         val commands = emptyList<AuthenticatedObject<CommandData>>()
@@ -120,7 +119,7 @@ class TransactionTests {
 
     @Test
     fun `transaction verification fails for duplicate inputs`() {
-        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
+        val baseOutState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
         val stateRef = StateRef(SecureHash.randomSHA256(), 0)
         val stateAndRef = StateAndRef(baseOutState, stateRef)
         val inputs = listOf(stateAndRef, stateAndRef)
@@ -148,7 +147,7 @@ class TransactionTests {
     @Test
     fun `general transactions cannot change notary`() {
         val notary: Party = DUMMY_NOTARY
-        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), notary)
+        val inState = TransactionState(DummyContract.SingleOwnerState(0, ALICE), notary)
         val outState = inState.copy(notary = ALICE)
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState)

@@ -5,6 +5,7 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.StorageService
@@ -53,7 +54,7 @@ class AttachmentClassLoaderTests {
     class AttachmentDummyContract : Contract {
         data class State(val magicNumber: Int = 0) : ContractState {
             override val contract = ATTACHMENT_TEST_PROGRAM_ID
-            override val participants: List<PublicKey>
+            override val participants: List<AbstractParty>
                 get() = listOf()
         }
 

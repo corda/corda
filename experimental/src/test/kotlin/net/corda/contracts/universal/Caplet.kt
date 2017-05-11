@@ -44,11 +44,11 @@ class Caplet {
 
     val contractFinal = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
-    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
+    val stateStart = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
 
-    val stateFixed = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractFixed)
+    val stateFixed = UniversalContract.State(listOf(DUMMY_NOTARY), contractFixed)
 
-    val stateFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractFinal)
+    val stateFinal = UniversalContract.State(listOf(DUMMY_NOTARY), contractFinal)
 
     @Test
     fun issue() {

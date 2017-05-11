@@ -88,7 +88,7 @@ class CollectSignaturesFlowTests {
                 val state = receive<DummyContract.MultiOwnerState>(otherParty).unwrap { it }
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
 
-                val command = Command(DummyContract.Commands.Create(), state.participants)
+                val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
                 val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
@@ -108,7 +108,7 @@ class CollectSignaturesFlowTests {
             @Suspendable
             override fun call(): SignedTransaction {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
-                val command = Command(DummyContract.Commands.Create(), state.participants)
+                val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
                 val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
@@ -142,7 +142,7 @@ class CollectSignaturesFlowTests {
     fun `successfully collects two signatures`() {
         val magicNumber = 1337
         val parties = listOf(a.info.legalIdentity, b.info.legalIdentity, c.info.legalIdentity)
-        val state = DummyContract.MultiOwnerState(magicNumber, parties.map { it.owningKey })
+        val state = DummyContract.MultiOwnerState(magicNumber, parties)
         val flow = a.services.startFlow(TestFlowTwo.Initiator(state, b.info.legalIdentity))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()

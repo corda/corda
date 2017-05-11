@@ -37,7 +37,7 @@ class DataVendingServiceTests {
     @Test
     fun `notify of transaction`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
+        val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = registerNode.info.legalIdentity.ref(1)
         network.runNetwork()
 
@@ -67,7 +67,7 @@ class DataVendingServiceTests {
     @Test
     fun `notify failure`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
+        val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = MEGA_CORP.ref(1)
         network.runNetwork()
 

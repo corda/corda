@@ -3,6 +3,7 @@ package net.corda.flows
 import net.corda.core.contracts.*
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -32,12 +33,12 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
         @JvmStatic
         fun verify(input: ContractState, output: ContractState, commandData: Command) {
             val command = commandData.value as UpgradeCommand
-            val participants: Set<PublicKey> = input.participants.toSet()
+            val participantKeys: Set<PublicKey> = input.participants.map { it.owningKey }.toSet()
             val keysThatSigned: Set<PublicKey> = commandData.signers.toSet()
             @Suppress("UNCHECKED_CAST")
             val upgradedContract = command.upgradedContractClass.newInstance() as UpgradedContract<ContractState, *>
             requireThat {
-                "The signing keys include all participant keys" using keysThatSigned.containsAll(participants)
+                "The signing keys include all participant keys" using keysThatSigned.containsAll(participantKeys)
                 "Inputs state reference the legacy contract" using (input.contract.javaClass == upgradedContract.legacyContract)
                 "Outputs state reference the upgraded contract" using (output.contract.javaClass == command.upgradedContractClass)
                 "Output state must be an upgraded version of the input state" using (output == upgradedContract.upgrade(input))
@@ -53,11 +54,11 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
                     .withItems(
                             stateRef,
                             contractUpgrade.upgrade(stateRef.state.data),
-                            Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants))
+                            Command(UpgradeCommand(upgradedContractClass), stateRef.state.data.participants.map { it.owningKey }))
         }
     }
 
-    override fun assembleTx(): Pair<SignedTransaction, Iterable<PublicKey>> {
+    override fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>> {
         val stx = assembleBareTx(originalState, modification)
                 .signWith(serviceHub.legalIdentityKey)
                 .toSignedTransaction(false)

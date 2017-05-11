@@ -1,12 +1,15 @@
 package net.corda.contracts.asset;
 
-import kotlin.*;
-import net.corda.core.contracts.*;
-import net.corda.core.serialization.*;
-import org.junit.*;
+import kotlin.Unit;
+import net.corda.core.contracts.PartyAndReference;
+import net.corda.core.identity.AnonymousParty;
+import net.corda.core.serialization.OpaqueBytes;
+import org.junit.Test;
 
-import static net.corda.core.contracts.ContractsDSL.*;
-import static net.corda.core.utilities.TestConstants.*;
+import static net.corda.core.contracts.ContractsDSL.DOLLARS;
+import static net.corda.core.contracts.ContractsDSL.issuedBy;
+import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_2;
 import static net.corda.testing.CoreTestUtils.*;
 
 /**
@@ -15,8 +18,8 @@ import static net.corda.testing.CoreTestUtils.*;
 public class CashTestsJava {
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
     private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
-    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), getDUMMY_PUBKEY_1());
-    private final Cash.State outState = new Cash.State(inState.getAmount(), getDUMMY_PUBKEY_2());
+    private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(getDUMMY_PUBKEY_1()));
+    private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(getDUMMY_PUBKEY_2()));
 
     @Test
     public void trivial() {
@@ -26,7 +29,7 @@ public class CashTestsJava {
                 tx.failsWith("the amounts balance");
 
                 tx.tweak(tw -> {
-                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), getDUMMY_PUBKEY_2()));
+                    tw.output(new Cash.State(issuedBy(DOLLARS(2000), defaultIssuer), new AnonymousParty(getDUMMY_PUBKEY_2())));
                     return tw.failsWith("the amounts balance");
                 });
 

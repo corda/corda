@@ -3,6 +3,7 @@ package net.corda.node.services.identity
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.toStringShort
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
@@ -16,7 +17,6 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
-import javax.security.auth.x500.X500Principal
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -44,7 +44,7 @@ class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
     @Deprecated("Use partyFromX500Name")
     override fun partyFromName(name: String): Party? = principalToParties[X500Name(name)]
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]
-    override fun partyFromAnonymous(party: AnonymousParty): Party? = partyFromKey(party.owningKey)
+    override fun partyFromAnonymous(party: AbstractParty): Party? = partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
 
     @Throws(IdentityService.UnknownAnonymousPartyException::class)

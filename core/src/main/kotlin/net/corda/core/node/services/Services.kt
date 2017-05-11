@@ -3,7 +3,9 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -286,7 +288,7 @@ interface VaultService {
     @Suspendable
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: PublicKey,
+                      to: AbstractParty,
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
 
     // DOCSTART VaultStatesQuery

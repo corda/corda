@@ -115,7 +115,7 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
         val proposedTx = proposal.stx.tx
         val expectedTx = ContractUpgradeFlow.assembleBareTx(oldStateAndRef, proposal.modification).toWireTransaction()
         requireThat {
-            "The instigator is one of the participants" using (otherSide.owningKey in oldStateAndRef.state.data.participants)
+            "The instigator is one of the participants" using (otherSide in oldStateAndRef.state.data.participants)
             "The proposed upgrade ${proposal.modification.javaClass} is a trusted upgrade path" using (proposal.modification == authorisedUpgrade)
             "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
         }

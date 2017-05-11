@@ -54,8 +54,8 @@ class CashPaymentFlowTests {
         net.runNetwork()
         val paymentTx = future.getOrThrow()
         val states = paymentTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>()
-        val ourState = states.single { it.owner != payTo.owningKey }
-        val paymentState = states.single { it.owner == payTo.owningKey }
+        val ourState = states.single { it.owner.owningKey != payTo.owningKey }
+        val paymentState = states.single { it.owner.owningKey == payTo.owningKey }
         assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
     }
 

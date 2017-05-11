@@ -5,6 +5,7 @@ import net.corda.core.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -113,7 +114,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {
-        override val participants: List<PublicKey>
+        override val participants: List<AbstractParty>
             get() = throw UnsupportedOperationException()
 
         override val linearId = UniqueIdentifier()

@@ -33,12 +33,12 @@ class ZeroCouponBond {
     val transfer = arrange { highStreetBank.owes(acmeCorp, 100.K, GBP) }
     val transferWrong = arrange { highStreetBank.owes(acmeCorp, 80.K, GBP) }
 
-    val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contract)
+    val inState = UniversalContract.State(listOf(DUMMY_NOTARY), contract)
 
-    val outState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transfer)
-    val outStateWrong = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), transferWrong)
+    val outState = UniversalContract.State(listOf(DUMMY_NOTARY), transfer)
+    val outStateWrong = UniversalContract.State(listOf(DUMMY_NOTARY), transferWrong)
 
-    val outStateMove = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractMove)
+    val outStateMove = UniversalContract.State(listOf(DUMMY_NOTARY), contractMove)
 
     @Test
     fun basic() {

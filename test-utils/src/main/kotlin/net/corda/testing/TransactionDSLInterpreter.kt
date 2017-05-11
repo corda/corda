@@ -79,7 +79,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
         val transaction = ledgerInterpreter._unverifiedTransaction(null, TransactionBuilder(notary = DUMMY_NOTARY)) {
             output { state }
             // Add a dummy randomised output so that the transaction id differs when issuing the same state multiple times
-            val nonceState = DummyContract.SingleOwnerState(Random().nextInt(), DUMMY_NOTARY.owningKey)
+            val nonceState = DummyContract.SingleOwnerState(Random().nextInt(), DUMMY_NOTARY)
             output { nonceState }
         }
         input(transaction.outRef<ContractState>(0).ref)

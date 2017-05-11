@@ -148,7 +148,7 @@ sealed class TransactionType {
          */
         class Builder(notary: Party) : TransactionBuilder(NotaryChange, notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
-                signers.addAll(stateAndRef.state.data.participants)
+                signers.addAll(stateAndRef.state.data.participants.map { it.owningKey })
                 super.addInputState(stateAndRef)
             }
         }
@@ -171,6 +171,6 @@ sealed class TransactionType {
             }
         }
 
-        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputs.flatMap { it.state.data.participants }.toSet()
+        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
     }
 }

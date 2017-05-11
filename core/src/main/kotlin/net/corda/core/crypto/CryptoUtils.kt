@@ -2,10 +2,11 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigInteger
 import java.security.*
 
@@ -17,6 +18,8 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
     override fun toString() = "NULL_KEY"
 }
+
+val NULL_PARTY = AnonymousParty(NullPublicKey)
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable

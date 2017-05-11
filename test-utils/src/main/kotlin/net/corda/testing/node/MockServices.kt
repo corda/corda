@@ -4,6 +4,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
@@ -28,7 +29,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -90,7 +90,7 @@ class MockIdentityService(val identities: List<Party>,
     }
 
     override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
-    override fun partyFromAnonymous(party: AnonymousParty): Party? = keyToParties[party.owningKey]
+    override fun partyFromAnonymous(party: AbstractParty): Party? = keyToParties[party.owningKey]
     override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
     override fun partyFromName(name: String): Party? = nameToParties[X500Name(name)]

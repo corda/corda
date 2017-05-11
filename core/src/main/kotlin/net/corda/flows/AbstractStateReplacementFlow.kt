@@ -7,6 +7,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -59,13 +60,13 @@ abstract class AbstractStateReplacementFlow {
 
             progressTracker.currentStep = SIGNING
 
-            val myKey = serviceHub.myInfo.legalIdentity.owningKey
+            val myKey = serviceHub.myInfo.legalIdentity
             val me = listOf(myKey)
 
             val signatures = if (participants == me) {
                 getNotarySignatures(stx)
             } else {
-                collectSignatures(participants - me, stx)
+                collectSignatures((participants - me).map { it.owningKey }, stx)
             }
 
             val finalTx = stx + signatures
@@ -73,7 +74,7 @@ abstract class AbstractStateReplacementFlow {
             return finalTx.tx.outRef(0)
         }
 
-        abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<PublicKey>>
+        abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>>
 
         @Suspendable
         private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
