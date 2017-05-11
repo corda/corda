@@ -24,7 +24,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
 
     init {
         // Create table if not exists.
-        databaseTransaction(database) {
+        database.transaction {
             SchemaUtils.create(DataTable)
         }
     }
@@ -32,7 +32,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     override fun saveRequest(certificationData: CertificationRequestData): String {
         val legalName = certificationData.request.subject.commonName
         val requestId = SecureHash.randomSHA256().toString()
-        databaseTransaction(database) {
+        database.transaction {
             val duplicate = DataTable.select {
                 // A duplicate legal name is one where a previously approved, or currently pending, request has the same legal name.
                 // A rejected request with the same legal name doesn't count as a duplicate
@@ -65,7 +65,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     }
 
     override fun getResponse(requestId: String): CertificateResponse {
-        return databaseTransaction(database) {
+        return database.transaction {
             val response = DataTable
                     .select { DataTable.requestId eq requestId and DataTable.processTimestamp.isNotNull() }
                     .map { Pair(it[DataTable.certificate], it[DataTable.rejectReason]) }
@@ -84,7 +84,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     }
 
     override fun approveRequest(requestId: String, generateCertificate: CertificationRequestData.() -> Certificate) {
-        databaseTransaction(database) {
+        database.transaction {
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
                 withFinalizables { finalizables ->
@@ -98,7 +98,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     }
 
     override fun rejectRequest(requestId: String, rejectReason: String) {
-        databaseTransaction(database) {
+        database.transaction {
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
                 DataTable.update({ DataTable.requestId eq requestId }) {
@@ -110,13 +110,13 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     }
 
     override fun getRequest(requestId: String): CertificationRequestData? {
-        return databaseTransaction(database) {
+        return database.transaction {
             singleRequestWhere { DataTable.requestId eq requestId }
         }
     }
 
     override fun getPendingRequestIds(): List<String> {
-        return databaseTransaction(database) {
+        return database.transaction {
             DataTable.select { DataTable.processTimestamp.isNull() }.map { it[DataTable.requestId] }
         }
     }

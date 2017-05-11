@@ -11,7 +11,6 @@ import java.net.URL
 import java.security.cert.Certificate
 import java.util.*
 import java.util.zip.ZipInputStream
-import javax.ws.rs.core.MediaType
 
 class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationService {
     companion object {
@@ -46,7 +45,7 @@ class HTTPNetworkRegistrationService(val server: URL) : NetworkRegistrationServi
         val conn = URL("$server/api/certificate").openConnection() as HttpURLConnection
         conn.doOutput = true
         conn.requestMethod = "POST"
-        conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM)
+        conn.setRequestProperty("Content-Type", MediaType.OCTET_STREAM.toString())
         conn.setRequestProperty("Client-Version", clientVersion)
         conn.outputStream.write(request.encoded)
 

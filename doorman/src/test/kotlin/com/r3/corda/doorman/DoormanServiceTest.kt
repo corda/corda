@@ -5,11 +5,11 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.CertificateStream
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.*
+import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
@@ -26,8 +26,8 @@ import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
 class DoormanServiceTest {
-    private val rootCA = X509Utilities.createSelfSignedCACert("Corda Node Root CA")
-    private val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
+    private val rootCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Root CA,L=London"))
+    private val intermediateCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Intermediate CA,L=London"))
     private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
@@ -50,8 +50,8 @@ class DoormanServiceTest {
 
         startSigningServer(storage)
 
-        val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
-        val request = X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair)
+        val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
+        val request = X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName"), keyPair)
         // Post request to signing server via http.
 
         assertEquals(id, submitRequest(request))
@@ -62,7 +62,7 @@ class DoormanServiceTest {
 
     @Test
     fun `retrieve certificate`() {
-        val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
+        val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val id = SecureHash.randomSHA256().toString()
 
         // Mock Storage behaviour.
@@ -74,7 +74,7 @@ class DoormanServiceTest {
             on { approveRequest(eq(id), any()) }.then {
                 @Suppress("UNCHECKED_CAST")
                 val certGen = it.arguments[1] as ((CertificationRequestData) -> Certificate)
-                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest("LegalName", "London", "admin@test.com", keyPair))
+                val request = CertificationRequestData("", "", X509Utilities.createCertificateSigningRequest(X500Name("CN=LegalName,L=London"), keyPair))
                 certificateStore[id] = certGen(request)
                 Unit
             }
