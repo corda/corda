@@ -5,14 +5,13 @@ import net.corda.client.mock.ErrorFlowsEventGenerator
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
-import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.crypto.Party
 import net.corda.core.failure
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
@@ -154,7 +153,7 @@ class ExplorerSimulation(val options: OptionSet) {
                     is CashFlowCommand.IssueCash -> issuers[command.amount.token]?.let {
                         println("${Instant.now()} [$i] ISSUING ${command.amount} with ref ${command.issueRef} to ${command.recipient}")
                         command.startFlow(it).log(i, "${command.amount.token}Issuer")
-                    } ?: command.startFlow(issuers[USD]!!).log(i, "${command.amount.token}Issuer") // TODO workaround
+                    }
                     is CashFlowCommand.ExitCash -> issuers[command.amount.token]?.let {
                         println("${Instant.now()} [$i] EXITING ${command.amount} with ref ${command.issueRef}")
                         command.startFlow(it).log(i, "${command.amount.token}Exit")

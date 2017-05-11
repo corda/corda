@@ -54,7 +54,6 @@ data class PartiallyResolvedTransaction(
     }
 }
 
-// TODO Do we want to have mapping tx <-> StateMachine?
 /**
  * This model provides an observable list of transactions and what state machines/flows recorded them
  */

@@ -146,9 +146,9 @@ class CashViewer : CordaView("Cash") {
          * one which produces more results, which seems to work, as the set of currency strings don't really overlap with
          * issuer strings.
          */
-        val searchField = SearchField(cashStates,
+        val searchField = SearchField(cashStates, listOf(
                 "Currency" to { state, text -> state.state.data.amount.token.product.toString().contains(text, true) },
-                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.commonName?.contains(text, true) ?: false }
+                "Issuer" to { state, text -> state.resolveIssuer().value?.name?.commonName?.contains(text, true) ?: false })
         )
         root.top = hbox(5.0) {
             button("New Transaction", FontAwesomeIconView(FontAwesomeIcon.PLUS)) {

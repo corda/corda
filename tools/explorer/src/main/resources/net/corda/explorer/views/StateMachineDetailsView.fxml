@@ -2,47 +2,54 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TitledPane?>
-<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 
-<GridPane stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane styleClass="smm-detail-grid" stylesheets="@../css/corda.css" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1">
     <padding>
         <Insets bottom="5" left="5" right="5" top="5" />
     </padding>
     <TitledPane fx:id="flowNamePane" collapsible="false" text="Flow name" GridPane.columnSpan="2" GridPane.fillWidth="true" GridPane.rowIndex="0">
-        <!--TODO text styling-->
-        <Label fx:id="flowNameLabel"/>
+        <Label fx:id="flowNameLabel" style="-fx-font-weight: bold"/>
     </TitledPane>
-    <TitledPane fx:id="flowInitiatorPane" collapsible="false" maxHeight="Infinity" text="Flow initiator"
-                GridPane.columnIndex="0" GridPane.fillWidth="true" GridPane.rowIndex="1">
-        <GridPane fx:id="flowInitiatorGrid" vgap="10.0" hgap="10.0">
-            <padding>
-                <Insets bottom="5.0" left="5.0" right="10.0" top="10.0" />
-            </padding>
-            <!--TODO text styling-->
-            <Label fx:id="flowInitiatorTitle" GridPane.columnSpan="2" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.halignment="LEFT"/>
-        </GridPane>
+    <TitledPane fx:id="flowInitiatorPane" collapsible="false" maxHeight="Infinity" text="Flow initiator" GridPane.columnIndex="0" GridPane.fillWidth="true" GridPane.rowIndex="1">
+        <ScrollPane maxHeight="Infinity" minHeight="120">
+            <GridPane fx:id="flowInitiatorGrid" hgap="10.0" vgap="10.0">
+                <padding>
+                    <Insets bottom="5.0" left="5.0" right="10.0" top="10.0" />
+                </padding>
+                <Label fx:id="flowInitiatorTitle" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.halignment="LEFT" GridPane.rowIndex="0" style="-fx-font-weight: bold"/>
+            </GridPane>
+        </ScrollPane>
     </TitledPane>
     <TitledPane fx:id="flowResultPane" collapsible="false" maxHeight="Infinity" text="Result" GridPane.columnIndex="1" GridPane.rowIndex="1">
-        <VBox fx:id="flowResultVBox" spacing="10.0">
+        <ScrollPane maxHeight="Infinity">
+            <VBox fx:id="flowResultVBox" spacing="10.0">
+                <padding>
+                    <Insets bottom="5" left="5" right="5" top="5" />
+                </padding>
+            </VBox>
+        </ScrollPane>
+    </TitledPane>
+    <TitledPane fx:id="flowProgressPane" collapsible="false" text="Progress steps" GridPane.columnSpan="2" GridPane.rowIndex="2">
+        <!--TODO add progress graph-->
+        <VBox fx:id="flowProgressVBox" spacing="10.0">
             <padding>
-                <Insets bottom="5" left="5" right="5" top="5"/>
+                <Insets bottom="5" left="5" right="5" top="5" />
             </padding>
         </VBox>
     </TitledPane>
-    <TitledPane fx:id="flowProgressPane" collapsible="false" maxWidth="Infinity" text="Progress steps" GridPane.columnSpan="2" GridPane.rowIndex="2">
-        <!--TODO add progress graph-->
-    </TitledPane>
     <columnConstraints>
-        <ColumnConstraints minWidth="450.0"/>
-        <ColumnConstraints hgrow="ALWAYS"/>
+        <ColumnConstraints minWidth="450.0" />
+        <ColumnConstraints hgrow="ALWAYS" />
     </columnConstraints>
     <rowConstraints>
-        <RowConstraints vgrow="ALWAYS"/>
-        <RowConstraints vgrow="ALWAYS"/>
-        <RowConstraints vgrow="ALWAYS"/>
+        <RowConstraints vgrow="ALWAYS" />
+        <RowConstraints vgrow="ALWAYS" />
+        <RowConstraints vgrow="ALWAYS" />
     </rowConstraints>
 </GridPane>

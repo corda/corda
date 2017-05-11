@@ -23,7 +23,8 @@ import tornadofx.*
  * TODO : Predictive text?
  * TODO : Regex?
  */
-class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria: Pair<String, (T, String) -> Boolean>) : UIComponent() {
+class SearchField<T>(private val data: ObservableList<T>, val filterCriteria: List<Pair<String, (T, String) -> Boolean>>,
+                     val disabledFields: List<String> = emptyList()) : UIComponent() {
     override val root: Parent by fxml()
     private val textField by fxid<TextField>()
     private val clearButton by fxid<Node>()
@@ -34,7 +35,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
         val text = textField.text
         val category = searchCategory.value
         data.filtered { data ->
-            text.isNullOrBlank() || if (category == ALL) {
+            (text.isNullOrBlank() && textField.isVisible) || if (category == ALL) {
                 filterCriteria.any { it.second(data, text) }
             } else {
                 filterCriteria.toMap()[category]?.invoke(data, text) ?: false
@@ -73,5 +74,7 @@ class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria:
             }
             "Filter by $category."
         })
+        textField.visibleProperty().bind(searchCategory.valueProperty().map { it !in disabledFields })
+        // TODO Maybe it will be better to replace these categories with comboBox? For example Result with choice: succes, in progress, error.
     }
 }

@@ -270,3 +270,10 @@
 .connection-bank-to-regulator {
     -fx-stroke: red;
 }
+
+/* Flow details */
+.smm-detail-grid {
+    -fx-border-color: -color-3;
+    -fx-border-width: 1;
+    -fx-border-radius: 2;
+}

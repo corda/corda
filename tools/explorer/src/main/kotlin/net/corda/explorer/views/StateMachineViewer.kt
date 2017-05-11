@@ -5,14 +5,10 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.binding.Bindings
 import javafx.collections.ObservableList
 import javafx.geometry.HPos
-import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.Parent
 import javafx.scene.control.Label
-import javafx.scene.control.ScrollPane
-import javafx.scene.control.TabPane
 import javafx.scene.control.TableView
-import javafx.scene.control.TitledPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
@@ -37,32 +33,28 @@ import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.ui.setCustomCellFactory
 import tornadofx.*
 
-// TODO Rethink whole idea of showing communication as table, it should be tree view for each StateMachine (with subflows and other communication)
+// TODO Rethink whole idea of showing communication as table, it should be tree view for each StateMachine (with subflows).
 class StateMachineViewer : CordaView("Flow Triage") {
-    override val root by fxml<TabPane>()
+    override val root by fxml<BorderPane>()
     override val icon = FontAwesomeIcon.HEARTBEAT
     override val widgets = listOf(CordaWidget(title, StateMachineViewer.StateMachineWidget())).observable()
-    private val progressViewTable by fxid<TableView<StateMachineData>>()
-    private val doneViewTable by fxid<TableView<StateMachineData>>()
-    private val errorViewTable by fxid<TableView<StateMachineData>>()
+    private val allViewTable by fxid<TableView<StateMachineData>>()
+    private val matchingFlowsLabel by fxid<Label>()
+
+    private val stateMachinesAll by observableList(StateMachineDataModel::stateMachinesAll)
 
     private class StateMachineWidget : BorderPane() {
-        private val flows by observableListReadOnly(StateMachineDataModel::stateMachinesInProgress)
+        private val stateMachinesAll by observableListReadOnly(StateMachineDataModel::stateMachinesAll)
 
-        // TODO can add stats: in progress, errored, maybe done to the widget?
         init {
             right {
                 label {
-                    textProperty().bind(Bindings.size(flows).map(Number::toString))
+                    textProperty().bind(Bindings.size(stateMachinesAll).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }
             }
         }
     }
-
-    private val stateMachinesInProgress by observableList(StateMachineDataModel::stateMachinesInProgress)
-    private val stateMachinesFinished by observableList(StateMachineDataModel::stateMachinesFinished)
-    private val stateMachinesError by observableList(StateMachineDataModel::stateMachinesError)
 
     fun makeColumns(table: TableView<StateMachineData>, tableItems: ObservableList<StateMachineData>, withResult: Boolean = true) {
         table.apply {
@@ -76,23 +68,21 @@ class StateMachineViewer : CordaView("Flow Triage") {
                     maxWidth = 26.0
                 }
             }
-            column("ID", StateMachineData::id) { // TODO kill that ID column
+            // TODO Kill that ID column or replace it with something useful when we will have flow audit utilities.
+            //  For now it's rather for visual purpose, so you can observe flow.
+            column("ID", StateMachineData::id) {
                 minWidth = 100.0
                 maxWidth = 200.0
             }.setCustomCellFactory {
                 label("$it") {
                     val hash = SecureHash.sha256(it.toString())
                     graphic = identicon(hash, 15.0)
-                    tooltip = identiconToolTip(hash) //TODO Have id instead of hash.
+                    tooltip = identiconToolTip(hash, it.toString())
                 }
             }
             column("Flow name", StateMachineData::stateMachineName).cellFormat { text = FlowNameFormatter.boring.format(it) }
             column("Initiator", StateMachineData::flowInitiator).cellFormat { text = FlowInitiatorFormatter.format(it) }
-            column("Flow Status", StateMachineData::stateMachineStatus).cellFormat {
-                if (it == null)
-                    text = "No progress data"
-                else text = it.status
-            } // TODO null
+            column("Flow Status", StateMachineData::stateMachineStatus).cellFormat { text = it.status ?: "No progress data" }
             column("Result", StateMachineData::addRmStatus).setCustomCellFactory {
                 if (it is StateMachineStatus.Removed) {
                     if (it.result.error == null) {
@@ -115,8 +105,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 }
                 else {
                     label("In progress") {
-                        // TODO Other icons: spnner, hourglass-half, hourglass-1, send-o, space-shuttle ;)
-                        graphic = FontAwesomeIconView(FontAwesomeIcon.ROCKET).apply {
+                        graphic = FontAwesomeIconView(FontAwesomeIcon.ROCKET).apply { // Blazing fast! Try not to blink.
                             glyphSize = 15.0
                             textAlignment = TextAlignment.CENTER
                             style = "-fx-fill: lightslategrey"
@@ -128,15 +117,33 @@ class StateMachineViewer : CordaView("Flow Triage") {
     }
 
     init {
-        makeColumns(progressViewTable, stateMachinesInProgress, false)
-        makeColumns(doneViewTable, stateMachinesFinished)
-        makeColumns(errorViewTable, stateMachinesError)
+        val searchField = SearchField(stateMachinesAll, listOf(
+                "Flow name" to { sm, s -> sm.stateMachineName.contains(s, true) },
+                "Initiator" to { sm, s -> FlowInitiatorFormatter.format(sm.flowInitiator).contains(s, true) },
+                "Flow Status" to { sm, s -> val stat = sm.stateMachineStatus.value.status ?: "No progress data"
+                        stat.contains(s, true) },
+                "Error" to { sm, _ -> val smAddRm = sm.addRmStatus.value
+                    if (smAddRm is StateMachineStatus.Removed)
+                        smAddRm.result.error != null
+                    else false },
+                "Done" to { sm, _ -> val smAddRm = sm.addRmStatus.value
+                    if (smAddRm is StateMachineStatus.Removed)
+                        smAddRm.result.error == null
+                    else false  },
+                "In progress" to { sm, _  -> sm.addRmStatus.value !is StateMachineStatus.Removed }),
+                listOf("Error", "Done", "In progress")
+        )
+        root.top = searchField.root
+        makeColumns(allViewTable, searchField.filteredData)
+        matchingFlowsLabel.textProperty().bind(Bindings.size(allViewTable.items).map {
+            "$it matching flow${if (it == 1) "" else "s"}"
+        })
     }
 
     private inner class StateMachineDetailsView(val smmData: StateMachineData) : Fragment() {
         override val root by fxml<Parent>()
         private val flowNameLabel by fxid<Label>()
-        private val flowProgressPane by fxid<TitledPane>()
+        private val flowProgressVBox by fxid<VBox>()
         private val flowInitiatorGrid by fxid<GridPane>()
         private val flowResultVBox by fxid<VBox>()
 
@@ -144,9 +151,10 @@ class StateMachineViewer : CordaView("Flow Triage") {
             flowNameLabel.apply {
                 text = FlowNameFormatter.boring.format(smmData.stateMachineName)
             }
-            flowProgressPane.apply {
-                content = label {
-                    text = smmData.stateMachineStatus.value?.status // TODO later we can do some magic with showing progress steps with subflows
+            //TODO It would be nice to have flow graph with showing progress steps with subflows + timestamps (left it for second iteration).
+            flowProgressVBox.apply {
+                label {
+                    text = smmData.stateMachineStatus.value?.status ?: "No progress data"
                 }
             }
             when (smmData.flowInitiator) {
@@ -164,27 +172,27 @@ class StateMachineViewer : CordaView("Flow Triage") {
 
     private fun <T>makeResultVBox(vbox: VBox, result: T) {
         if (result == null) {
-            vbox.apply { label("No return value from flow.") }
+            vbox.apply { label("No return value from flow.").apply { style { fontWeight = FontWeight.BOLD } } }
         } else if (result is SignedTransaction) {
-//                scrollpane {
-//                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
-//                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
             // TODO Make link to transaction view
             vbox.apply {
-                label("Signed transaction")
+                label("Signed transaction").apply { style { fontWeight = FontWeight.BOLD } }
                 label {
                     text = result.id.toString()
                     graphic = identicon(result.id, 30.0)
                     tooltip = identiconToolTip(result.id)
                 }
-//                }
+
             }
         } else if (result is Unit) {
-            vbox.apply { label("Flow completed with success.") }
+            vbox.apply { label("Flow completed with success.").apply { style { fontWeight = FontWeight.BOLD } } }
         }
         else {
-            // TODO Here we could have sth different than SignedTransaction
-            vbox.apply { label(result.toString()) }
+            // TODO Here we could have sth different than SignedTransaction/Unit
+            vbox.apply {
+                label("Flow completed with success. Result: ").apply { style { fontWeight = FontWeight.BOLD } }
+                label(result.toString())
+            }
         }
     }
 
@@ -198,21 +206,15 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 }
             }
         }
-        // TODO border styling?
         vbox.apply {
             vbox {
                 spacing = 10.0
                 label { text = error::class.simpleName }
-                scrollpane { //TODO do that error scroll pane nicely
-                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
-                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-                    label { text = error.message }
-                }
+                label { text = error.message }
             }
         }
     }
 
-    // TODO test
     private fun makeShellGrid(gridPane: GridPane) {
         val title = gridPane.lookup("#flowInitiatorTitle") as Label
         title.apply {
@@ -226,9 +228,6 @@ class StateMachineViewer : CordaView("Flow Triage") {
             text = "Flow started by a peer node"
         }
         gridPane.apply{
-            //                scrollpane { // TODO scrollbar vbox + hbox
-//                    hbarPolicy = ScrollPane.ScrollBarPolicy.AS_NEEDED
-//                    vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
             row {
                 label("Legal name: ") {
                     gridpaneConstraints { hAlignment = HPos.LEFT }
@@ -236,7 +235,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
                     minWidth = 150.0
                     prefWidth = 150.0
                 }
-                label(initiator.party.name) { gridpaneConstraints { hAlignment = HPos.LEFT } }
+                label(initiator.party.name.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } }
             }
             row {
                 label("Owning key: ") {
@@ -269,7 +268,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
 
     // TODO test
     private fun makeScheduledGrid(gridPane: GridPane, initiator: FlowInitiator.Scheduled) {
-        val title = gridPane.lookup("flowInitiatorTitle") as Label
+        val title = gridPane.lookup("#flowInitiatorTitle") as Label
         title.apply {
             text = "Flow started as scheduled activity"
         }
@@ -280,7 +279,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
                     style { fontWeight = FontWeight.BOLD }
                     prefWidth = 150.0
                 }
-                label(initiator.scheduledState.ref.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
+                label(initiator.scheduledState.ref.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } }
             }
             row {
                 label("Scheduled at: ") {
@@ -288,7 +287,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
                     style { fontWeight = FontWeight.BOLD }
                     prefWidth = 150.0
                 }
-                label(initiator.scheduledState.scheduledAt.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } } //TODO format
+                label(initiator.scheduledState.scheduledAt.toString()) { gridpaneConstraints { hAlignment = HPos.LEFT } }
             }
         }
     }

@@ -1,20 +1,18 @@
 package net.corda.client.jfx.model
 
-import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import net.corda.client.jfx.utils.LeftOuterJoinedMap
-import net.corda.client.jfx.utils.flatten
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.getObservableValues
-import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.recordAsAssociation
 import net.corda.core.ErrorOr
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
+import org.fxmisc.easybind.EasyBind
 import rx.Observable
 
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
@@ -28,20 +26,19 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
     }
 }
 
-data class ProgressStatus(val status: String)
+data class ProgressStatus(val status: String?)
 
 sealed class StateMachineStatus {
     data class Added(val stateMachineName: String, val flowInitiator: FlowInitiator) : StateMachineStatus()
     data class Removed(val result: ErrorOr<*>) : StateMachineStatus()
 }
 
-// TODO StateMachineData and StateMachineInfo
 data class StateMachineData(
         val id: StateMachineRunId,
         val stateMachineName: String,
         val flowInitiator: FlowInitiator,
         val addRmStatus: ObservableValue<StateMachineStatus>,
-        val stateMachineStatus: ObservableValue<ProgressStatus?>
+        val stateMachineStatus: ObservableValue<ProgressStatus>
 )
 
 class StateMachineDataModel {
@@ -65,22 +62,17 @@ class StateMachineDataModel {
         }
     }
 
-    val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
-        val smStatus = status.value as StateMachineStatus.Added // TODO not always added
-        // todo easybind
-        Bindings.createObjectBinding({
-            StateMachineData(id, smStatus.stateMachineName, smStatus.flowInitiator, status, progress.map { it?.let { ProgressStatus(it.message) } })
-        }, arrayOf(progress, status))
-    }.getObservableValues().flatten()
+    private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
+        val smStatus = status.value as StateMachineStatus.Added
+        StateMachineData(id, smStatus.stateMachineName, smStatus.flowInitiator, status,
+                EasyBind.map(progress) {
+                    if (it == null) {
+                        ProgressStatus(null)
+                    } else {
+                        ProgressStatus(it.message)
+                    }
+                })
+    }.getObservableValues()
 
-    val stateMachinesInProgress = stateMachineDataList.filtered { it.addRmStatus.value !is StateMachineStatus.Removed }
-    val stateMachinesDone = stateMachineDataList.filtered { it.addRmStatus.value is StateMachineStatus.Removed }
-    val stateMachinesFinished = stateMachinesDone.filtered {
-        val res = it.addRmStatus.value as StateMachineStatus.Removed
-        res.result.error == null
-    }
-    val stateMachinesError = stateMachinesDone.filtered {
-        val res = it.addRmStatus.value as StateMachineStatus.Removed
-        res.result.error != null
-    }
+    val stateMachinesAll = stateMachineDataList
 }
