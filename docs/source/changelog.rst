@@ -67,13 +67,9 @@ Special thank you to `Qian Hong <https://github.com/fracting>`_, `Marek Skocovsk
 
 * Corda DemoBench:
     * DemoBench is a new tool to make it easy to configure and launch local Corda nodes. A very useful tool to demonstrate to your colleagues the fundamentals of Corda in real-time. It has the following features:
-<<<<<<< HEAD
-        * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node before launch, such as its legal name and which CorDapps will be loaded.
-=======
 
         * Clicking "Add node" creates a new tab that lets you edit the most important configuration properties of the node
           before launch, such as its legal name and which CorDapps will be loaded.
->>>>>>> 31861ae... M11 documentation (#609)
         * Each tab contains a terminal emulator, attached to the pseudoterminal of the node. This lets you see console output.
         * You can launch an Corda Explorer instance for each node via the DemoBench UI. Credentials are handed to the Corda Explorer so it starts out logged in already.
         * Some basic statistics are shown about each node, informed via the RPC connection.
