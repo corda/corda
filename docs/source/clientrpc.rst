@@ -7,9 +7,9 @@ node using a message queue protocol and then provides a simple RPC interface to 
 on a Java object as normal, and the marshalling back and forth is handled for you.
 
 The starting point for the client library is the `CordaRPCClient`_ class. This provides a ``start`` method that
-returns a `CordaRPCConnection`_, holding an implementation of the `CordaRPCOps`_ interface named ``proxy``.
-Observables that are returned by RPCs can be subscribed to in order to receive an ongoing stream of updates from
-the node. More detail on how to use this is provided in the docs for the proxy method.
+returns a `CordaRPCConnection`_, holding an implementation of the `CordaRPCOps`_ that may be accessed with ``proxy``
+in Kotlin and ``getProxy()`` in Java. Observables that are returned by RPCs can be subscribed to in order to receive
+an ongoing stream of updates from the node. More detail on how to use this is provided in the docs for the proxy method.
 
 .. warning:: The returned `CordaRPCConnection`_ is somewhat expensive to create and consumes a small amount of
    server side resources. When you're done with it, call ``close`` on it. Alternatively you may use the ``use``
