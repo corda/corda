@@ -38,6 +38,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
@@ -177,7 +178,11 @@ class Node(override val configuration: FullNodeConfiguration,
             retryIntervalMultiplier = 1.5
             maxRetryInterval = 3.minutes.toMillis()
         }
-        val clientFactory = locator.createSessionFactory()
+        val clientFactory = try {
+            locator.createSessionFactory()
+        } catch (e: ActiveMQNotConnectedException) {
+            throw Exception("Unable to connect to the Network Map Service at $serverAddress for IP address discovery", e)
+        }
 
         val session = clientFactory!!.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
         val requestId = UUID.randomUUID().toString()
@@ -188,7 +193,8 @@ class Node(override val configuration: FullNodeConfiguration,
         session.createQueue(queueName, queueName, false)
 
         val consumer = session.createConsumer(queueName)
-        val artemisMessage: ClientMessage = consumer.receive(5.seconds.toMillis())
+        val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:
+                throw Exception("Did not receive a response from the Network Map Service at $serverAddress")
         val publicHostAndPort = HostAndPort.fromString(artemisMessage.getStringProperty(ipDetectResponseProperty))
         log.info("Detected public address: $publicHostAndPort")
 
