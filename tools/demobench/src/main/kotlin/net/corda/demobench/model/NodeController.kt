@@ -1,12 +1,11 @@
 package net.corda.demobench.model
 
+import net.corda.core.crypto.X509Utilities.getX509Name
 import net.corda.demobench.plugin.PluginController
 import net.corda.demobench.pty.R3Pty
-import org.bouncycastle.asn1.x500.X500Name
 import tornadofx.*
 import java.io.IOException
 import java.lang.management.ManagementFactory
-import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
 import java.text.SimpleDateFormat
@@ -50,9 +49,15 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
      * Validate a Node configuration provided by [net.corda.demobench.views.NodeTabView].
      */
     fun validate(nodeData: NodeData): NodeConfig? {
+        val location = nodeData.nearestCity.value
         val config = NodeConfig(
                 baseDir,
-                X500Name(nodeData.legalName.value.trim()),
+                getX509Name(
+                    myLegalName = nodeData.legalName.value.trim(),
+                    email = "corda@city.${location.countryCode.toLowerCase()}.example",
+                    nearestCity = location.description,
+                    country = location.countryCode
+                ),
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,
                 nodeData.webPort.value,
