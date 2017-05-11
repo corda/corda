@@ -60,7 +60,7 @@ open class MockServiceHubInternal(
         get() = flowFactory ?: throw UnsupportedOperationException()
     override val schemaService: SchemaService
         get() = schemas ?: throw UnsupportedOperationException()
-
+    override val auditService: AuditService = DummyAuditService()
     // We isolate the storage service with writable TXes so that it can't be accessed except via recordTransactions()
     private val txStorageService: TxWritableStorageService
         get() = storage ?: throw UnsupportedOperationException()
@@ -73,7 +73,7 @@ open class MockServiceHubInternal(
         return smm.executor.fetchFrom { smm.add(logic, flowInitiator) }
     }
 
-    override fun registerServiceFlow(clientFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) = Unit
+    override fun registerServiceFlow(initiatingFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) = Unit
 
     override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? = null
 }

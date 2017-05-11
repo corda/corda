@@ -63,7 +63,7 @@ class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }
-        subFlow(ResolveTransactionsFlow(request.tx, otherParty), shareParentSessions = true)
+        subFlow(ResolveTransactionsFlow(request.tx, otherParty))
         serviceHub.recordTransactions(request.tx)
     }
 }

@@ -37,6 +37,7 @@ public class FlowsInJavaTest {
     }
 
     @SuppressWarnings("unused")
+    @InitiatingFlow
     private static class SendInUnwrapFlow extends FlowLogic<String> {
         private final Party otherParty;
 

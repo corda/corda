@@ -92,6 +92,10 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
                     Files.copy(path, destPath)
                 } catch(e: FileAlreadyExistsException) {
                     // OK, don't care ...
+                } catch (e: IOException) {
+                    // Windows 10 might not allow this user to create a symlink
+                    log.warn("Failed to create symlink '{}' for '{}': {}", destPath, path, e.message)
+                    Files.copy(path, destPath)
                 }
             }
         }

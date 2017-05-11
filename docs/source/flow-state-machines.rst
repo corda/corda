@@ -226,27 +226,7 @@ These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` 
 ``progress`` field.
 
 .. note:: The developer `must` then either subscribe to this ``progress`` observable or invoke the ``notUsed()`` extension
-function for it. Otherwise the unused observable will waste resources back in the node.
-
-In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side has to be
-registered by its node to respond to the initiating flow via ``PluginServiceHub.registerServiceFlow``. In our example it
-doesn't matter which flow is the initiator (i.e. client) and which is the initiated (i.e. service). For example, if we
-are to take the seller as the initiator then we would register the buyer as such:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      val services: PluginServiceHub = TODO()
-      services.registerServiceFlow(Seller::class.java) { otherParty ->
-        val notary = services.networkMapCache.notaryNodes[0]
-        val acceptablePrice = TODO()
-        val typeToBuy = TODO()
-        Buyer(otherParty, notary, acceptablePrice, typeToBuy)
-      }
-
-This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
-is a seller (``Seller::class``).
+   function for it. Otherwise the unused observable will waste resources back in the node.
 
 Implementing the seller
 -----------------------
@@ -418,6 +398,47 @@ This code is longer but no more complicated. Here are some things to pay attenti
 
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
+
+Initiating communication
+------------------------
+
+Now that we have both sides of the deal negotation implemented as flows we need a way to start things off. We do this by
+having one side initiate communication and the other respond to it and start their flow. Initiation is typically done using
+RPC with the ``startFlowDynamic`` method. The initiating flow has be to annotated with ``InitiatingFlow``. In our example
+it doesn't matter which flow is the initiator and which is the initiated, which is why neither ``Buyer`` nor ``Seller``
+are annotated with it. For example, if we choose the seller side as the initiator then we need a seller starter flow that
+might look something like this:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @InitiatingFlow
+        class SellerStarter(val otherParty: Party, val assetToSell: StateAndRef<OwnableState>, val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+            @Suspendable
+            override fun call(): SignedTransaction {
+                val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
+                val cpOwnerKey: KeyPair = serviceHub.legalIdentityKey
+                return subFlow(TwoPartyTradeFlow.Seller(otherParty, notary, assetToSell, price, cpOwnerKey))
+            }
+        }
+
+The buyer side would then need to register their flow, perhaps with something like:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val services: PluginServiceHub = TODO()
+        services.registerServiceFlow(SellerStarter::class.java) { otherParty ->
+            val notary = services.networkMapCache.notaryNodes[0]
+            val acceptablePrice = TODO()
+            val typeToBuy = TODO()
+            Buyer(otherParty, notary, acceptablePrice, typeToBuy)
+        }
+
+This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
+is a seller (``SellerStarter::class.java``).
 
 .. _progress-tracking:
 

@@ -1,10 +1,12 @@
 package net.corda.core.crypto
 
 import net.corda.core.random63BitValue
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAKey
-import net.i2p.crypto.eddsa.EdDSASecurityProvider
+import net.i2p.crypto.eddsa.*
+import net.i2p.crypto.eddsa.math.GroupElement
+import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
+import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
+import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.bouncycastle.asn1.DERSequence
@@ -17,9 +19,10 @@ import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
@@ -27,6 +30,8 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
 import java.math.BigInteger
 import java.security.*
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
 import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
@@ -181,19 +186,18 @@ object Crypto {
             if (algorithm == "SPHINCS-256") algorithm = "SPHINCS256" // because encoding may change algorithm name from SPHINCS256 to SPHINCS-256.
             if (algorithm == sig.algorithmName) {
                 // If more than one ECDSA schemes are supported, we should distinguish between them by checking their curve parameters.
-                // TODO: change 'continue' to 'break' if only one EdDSA curve will be used.
                 if (algorithm == "EdDSA") {
-                    if ((key as EdDSAKey).params == sig.algSpec) {
+                    if ((key is EdDSAPublicKey && publicKeyOnCurve(sig, key)) || (key is EdDSAPrivateKey && key.params == sig.algSpec)) {
                         return sig
-                    } else continue
+                    } else break // use continue if in the future we support more than one Edwards curves.
                 } else if (algorithm == "ECDSA") {
-                    if ((key as ECKey).parameters == sig.algSpec) {
+                    if ((key is BCECPublicKey && publicKeyOnCurve(sig, key)) || (key is BCECPrivateKey && key.parameters == sig.algSpec)) {
                         return sig
                     } else continue
                 } else return sig // it's either RSA_SHA256 or SPHINCS-256.
             }
         }
-        throw IllegalArgumentException("Unsupported key/algorithm for the private key: ${key.encoded.toBase58()}")
+        throw IllegalArgumentException("Unsupported key/algorithm for the key: ${key.encoded.toBase58()}")
     }
 
     /**
@@ -511,6 +515,38 @@ object Crypto {
         return keyPairGenerator.generateKeyPair()
     }
 
+    /**
+     * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
+     * and other cases where you want hard-coded private keys.
+     * Currently, [EDDSA_ED25519_SHA512] is the sole scheme supported for this operation.
+     * @param signatureScheme a supported [SignatureScheme], see [Crypto].
+     * @param entropy a [BigInteger] value.
+     * @return a new [KeyPair] from an entropy input.
+     * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
+     */
+    fun generateKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+        when (signatureScheme) {
+            EDDSA_ED25519_SHA512 -> return generateEdDSAKeyPairFromEntropy(entropy)
+        }
+        throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: $signatureScheme.schemeCodeName")
+    }
+
+    /**
+     * Returns a [DEFAULT_SIGNATURE_SCHEME] key pair derived from the given [BigInteger] entropy.
+     * @param entropy a [BigInteger] value.
+     * @return a new [KeyPair] from an entropy input.
+     */
+    fun generateKeyPairFromEntropy(entropy: BigInteger): KeyPair = generateKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
+
+    // custom key pair generator from entropy.
+    private fun generateEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
+        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
+        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // need to pad the entropy to the valid seed length.
+        val priv = EdDSAPrivateKeySpec(bytes, params)
+        val pub = EdDSAPublicKeySpec(priv.a, params)
+        return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    }
+
     /** Check if the requested signature scheme is supported by the system. */
     fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = schemeCodeName in supportedSignatureSchemes
 
@@ -557,4 +593,33 @@ object Crypto {
         override fun generatePublic(keyInfo: SubjectPublicKeyInfo?): PublicKey? = keyInfo?.let { decodePublicKey(signatureScheme, it.encoded) }
         override fun generatePrivate(keyInfo: PrivateKeyInfo?): PrivateKey? = keyInfo?.let { decodePrivateKey(signatureScheme, it.encoded) }
     }
+
+    /**
+     * Check if a point's coordinates are on the expected curve to avoid certain types of ECC attacks.
+     * Point-at-infinity is not permitted as well.
+     * @see <a href="https://safecurves.cr.yp.to/twist.html">Small subgroup and invalid-curve attacks</a> for a more descriptive explanation on such attacks.
+     * We use this function on [findSignatureScheme] for a [PublicKey]; currently used for signature verification only.
+     * Thus, as these attacks are mostly not relevant to signature verification, we should note that
+     * we're doing it out of an abundance of caution and specifically to proactively protect developers
+     * against using these points as part of a DH key agreement or for use cases as yet unimagined.
+     * This method currently applies to BouncyCastle's ECDSA (both R1 and K1 curves) and I2P's EdDSA (ed25519 curve).
+     * @param publicKey a [PublicKey], usually used to validate a signer's public key in on the Curve.
+     * @param signatureScheme a [SignatureScheme] object, retrieved from supported signature schemes, see [Crypto].
+     * @return true if the point lies on the curve or false if it doesn't.
+     * @throws IllegalArgumentException if the requested signature scheme or the key type is not supported.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun publicKeyOnCurve(signatureScheme: SignatureScheme, publicKey: PublicKey): Boolean {
+        if (!isSupportedSignatureScheme(signatureScheme))
+            throw IllegalArgumentException("Unsupported signature scheme: $signatureScheme.schemeCodeName")
+        when (publicKey) {
+            is BCECPublicKey -> return (publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid)
+            is EdDSAPublicKey -> return (publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve)
+            else -> throw IllegalArgumentException("Unsupported key type: ${publicKey::class}")
+        }
+    }
+
+    // return true if EdDSA publicKey is point at infinity.
+    // For EdDSA a custom function is required as it is not supported by the I2P implementation.
+    private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey) = publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
 }

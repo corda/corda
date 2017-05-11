@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.Party
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
@@ -28,6 +29,7 @@ object IssuerFlow {
      * IssuanceRequester should be used by a client to ask a remote node to issue some [FungibleAsset] with the given details.
      * Returns the transaction created by the Issuer to move the cash to the Requester.
      */
+    @InitiatingFlow
     class IssuanceRequester(val amount: Amount<Currency>, val issueToParty: Party, val issueToPartyRef: OpaqueBytes,
                             val issuerBankParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable

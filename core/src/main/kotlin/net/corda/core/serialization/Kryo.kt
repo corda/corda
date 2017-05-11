@@ -417,6 +417,7 @@ object PrivateKeySerializer : Serializer<PrivateKey>() {
 @ThreadSafe
 object PublicKeySerializer : Serializer<PublicKey>() {
     override fun write(kryo: Kryo, output: Output, obj: PublicKey) {
+        // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.
         output.writeBytesWithLength(obj.encoded)
     }
 

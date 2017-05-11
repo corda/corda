@@ -14,6 +14,7 @@ import java.security.cert.Certificate
  */
 object TxKeyFlow {
 
+    @InitiatingFlow
     class Requester(val otherSide: Party,
                     override val progressTracker: ProgressTracker) : FlowLogic<Pair<PublicKey, Certificate?>>() {
         constructor(otherSide: Party) : this(otherSide, tracker())

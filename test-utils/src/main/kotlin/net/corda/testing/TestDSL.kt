@@ -297,7 +297,7 @@ data class TestLedgerDSLInterpreter private constructor(
             }
             return EnforceVerifyOrFail.Token
         } catch (exception: TransactionVerificationException) {
-            val transactionWithLocation = transactionWithLocations[exception.tx.id]
+            val transactionWithLocation = transactionWithLocations[exception.txId]
             val transactionName = transactionWithLocation?.label ?: transactionWithLocation?.location ?: "<unknown>"
             throw VerifiesFailed(transactionName, exception)
         }

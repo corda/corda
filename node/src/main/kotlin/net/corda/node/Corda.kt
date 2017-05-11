@@ -3,7 +3,6 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
-import com.sun.org.apache.xml.internal.serializer.utils.Utils.messages
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -11,6 +10,7 @@ import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.LogHelper.withLevel
 import net.corda.node.internal.Node
+import net.corda.node.internal.enforceSingleNodeIsRunning
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -25,7 +25,6 @@ import java.net.InetAddress
 import java.nio.file.Paths
 import java.util.*
 import kotlin.system.exitProcess
-import kotlin.system.measureTimeMillis
 
 private var renderBasicInfoToConsole = true
 
@@ -37,6 +36,7 @@ fun printBasicNodeInfo(description: String, info: String? = null) {
 }
 
 val LOGS_DIRECTORY_NAME = "logs"
+val LOGS_CAN_BE_FOUND_IN_STRING = "Logs can be found in"
 private val log by lazy { LoggerFactory.getLogger("Main") }
 
 private fun initLogging(cmdlineOptions: CmdLineOptions) {
@@ -64,6 +64,10 @@ fun main(args: Array<String>) {
         argsParser.printHelp(System.out)
         exitProcess(1)
     }
+
+    // We do the single node check before we initialise logging so that in case of a double-node start it doesn't mess
+    // with the running node's logs.
+    enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
     initLogging(cmdlineOptions)
     disableJavaDeserialization() // Should be after initLogging to avoid TMI.
@@ -93,7 +97,7 @@ fun main(args: Array<String>) {
 
     drawBanner(versionInfo)
 
-    printBasicNodeInfo("Logs can be found in", System.getProperty("log-path"))
+    printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
     val conf = try {
         cmdlineOptions.loadConfig()
@@ -125,7 +129,7 @@ fun main(args: Array<String>) {
     log.info("bootclasspath: ${info.bootClassPath}")
     log.info("classpath: ${info.classPath}")
     log.info("VM ${info.vmName} ${info.vmVendor} ${info.vmVersion}")
-    checkForSlowLocalhostResolution()
+    log.info("Machine: ${lookupMachineNameAndMaybeWarn()}")
     log.info("Working Directory: ${cmdlineOptions.baseDirectory}")
     val agentProperties = sun.misc.VMSupport.getAgentProperties()
     if (agentProperties.containsKey("sun.jdwp.listenerAddress")) {
@@ -166,7 +170,7 @@ fun main(args: Array<String>) {
     exitProcess(0)
 }
 
-private fun checkForSlowLocalhostResolution() {
+private fun lookupMachineNameAndMaybeWarn(): String {
     val start = System.currentTimeMillis()
     val hostName: String = InetAddress.getLocalHost().hostName
     val elapsed = System.currentTimeMillis() - start
@@ -188,6 +192,7 @@ private fun checkForSlowLocalhostResolution() {
             print(Ansi.ansi().reset())
         }
     }
+    return hostName
 }
 
 private fun assertCanNormalizeEmptyPath() {
