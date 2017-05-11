@@ -9,8 +9,8 @@ Example usage
 =============
 
 ```
-./gradlew quasar-hook:jar
-java -javaagent:quasar-hook/build/libs/quasar-hook.jar="expand=com,de,org,co;truncate=net.corda" -jar path/to/corda.jar
+./gradlew experimental:quasar-hook:jar
+java -javaagent:experimental/quasar-hook/build/libs/quasar-hook.jar="expand=com,de,org,co;truncate=net.corda" -jar path/to/corda.jar
 ```
 
 The above will run corda.jar and on exit will print information about what classes were scanned/instrumented.
