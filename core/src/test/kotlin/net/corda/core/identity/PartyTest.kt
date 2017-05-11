@@ -27,8 +27,9 @@ class PartyTest {
         val differentKey = entropyToKeyPair(BigInteger.valueOf(7201702L)).public
         val anonymousParty = AnonymousParty(key)
         val party = Party(ALICE.name, key)
-        assertEquals<AbstractParty>(party, anonymousParty)
-        assertEquals<AbstractParty>(anonymousParty, party)
+        // Full parties and anonymouse parties are never equal, they're different types for a reason
+        assertNotEquals<AbstractParty>(party, anonymousParty)
+        assertNotEquals<AbstractParty>(anonymousParty, party)
         assertNotEquals<AbstractParty>(AnonymousParty(differentKey), anonymousParty)
         assertNotEquals<AbstractParty>(AnonymousParty(differentKey), party)
     }

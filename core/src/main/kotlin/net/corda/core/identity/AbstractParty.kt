@@ -9,25 +9,15 @@ import java.security.PublicKey
 /**
  * An [AbstractParty] contains the common elements of [Party] and [AnonymousParty], specifically the owning key of
  * the party. In most cases [Party] or [AnonymousParty] should be used, depending on use-case.
+ *
+ * We don't override equals/hashCode here as [Party] and [AnonymousParty] are intentionally never equal. Equality on
+ * [Party] means "These are the same party", on [AnonymousParty] it means "These have the same key", which are very
+ * different tests. In the unlikely case that the two need to be tested, resolve the anonymous party to the full
+ * party first if possible, or convert the full party to an anonymous party otherwise. Think very carefully about intent
+ * before doing so, though.
  */
 @CordaSerializable
 abstract class AbstractParty(val owningKey: PublicKey) {
-    /** Anonymised parties do not include any detail apart from owning key, so equality is dependent solely on the key */
-    // TODO: Should [AnonymousParty] and [Party] ever be considered equal, or should this be false if they're not the
-    //       same type?
-    override fun equals(other: Any?): Boolean {
-        return if (other is AbstractParty) {
-            if (this.nameOrNull != null && other.nameOrNull != null)
-                this.nameOrNull == other.nameOrNull
-            else
-                this.owningKey == other.owningKey
-        } else {
-            false
-        }
-    }
-
-    override fun hashCode(): Int = nameOrNull?.hashCode() ?: owningKey.hashCode()
-
     abstract fun toAnonymous(): AnonymousParty
     abstract val nameOrNull: X500Name?
 

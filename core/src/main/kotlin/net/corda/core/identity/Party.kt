@@ -27,6 +27,16 @@ import java.security.PublicKey
  */
 // TODO: Remove "open" from [Party] once deprecated crypto.Party class is removed
 open class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
+    override fun equals(other: Any?): Boolean {
+        return if (other is Party) {
+            this.name == other.name
+        } else {
+            false
+        }
+    }
+
+    override fun hashCode(): Int = name.hashCode()
+
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} ($name)"
     override val nameOrNull = name
