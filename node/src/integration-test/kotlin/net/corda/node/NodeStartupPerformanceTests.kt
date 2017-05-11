@@ -1,6 +1,7 @@
 package net.corda.node
 
 import com.google.common.base.Stopwatch
+import net.corda.node.driver.FalseNetworkMap
 import net.corda.node.driver.driver
 import org.junit.Ignore
 import org.junit.Test
@@ -12,7 +13,7 @@ class NodeStartupPerformanceTests {
     // Measure the startup time of nodes. Note that this includes an RPC roundtrip, which causes e.g. Kryo initialisation.
     @Test
     fun `single node startup time`() {
-        driver(automaticallyStartNetworkMap = false) {
+        driver(networkMapStrategy = FalseNetworkMap) {
             startNetworkMapService().get()
             val times = ArrayList<Long>()
             for (i in 1 .. 10) {
