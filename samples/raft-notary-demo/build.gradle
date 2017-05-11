@@ -7,7 +7,7 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
 ext {
-    deployTo = "build/notary-demo-nodes"
+    deployTo = "build/nodes"
     notaryType = "corda.notary.validating.raft"
     notaryName = "CN=Raft,O=R3,OU=corda,L=Zurich,C=CH"
     advertisedNotary = "$notaryType|$notaryName"
