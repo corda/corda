@@ -63,7 +63,7 @@ interface NetworkMapCache {
     fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = getNodesWithService(type).firstOrNull()
 
     /** Look up the node info for a legal name. */
-    fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }
+    fun getNodeByLegalName(name: X500Name): NodeInfo?
 
     /**
      * In general, nodes can advertise multiple identities: a legal identity, and separate identities for each of

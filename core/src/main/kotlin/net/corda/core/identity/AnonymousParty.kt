@@ -15,7 +15,7 @@ class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
     // can put in the key and actual name
     override fun toString() = "${owningKey.toBase58String()} <Anonymous>"
 
-    override fun nameOrNull(): X500Name? = null
+    override val nameOrNull: X500Name? = null
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toAnonymous() = this

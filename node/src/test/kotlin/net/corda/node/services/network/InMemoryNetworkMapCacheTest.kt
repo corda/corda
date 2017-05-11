@@ -23,18 +23,18 @@ class InMemoryNetworkMapCacheTest {
 
     @Test
     fun `key collision`() {
-        val entropy = BigInteger.valueOf(24012017L)
-        val nodeA = network.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, entropy, ServiceInfo(NetworkMapService.type))
-        val nodeB = network.createNode(null, -1, MockNetwork.DefaultFactory, true, BOB.name, null, entropy, ServiceInfo(NetworkMapService.type))
+        // Create two nodes with the same name, but different keys
+        val nodeA = network.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, ServiceInfo(NetworkMapService.type))
+        val nodeB = network.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, ServiceInfo(NetworkMapService.type))
         assertEquals(nodeA.info.legalIdentity, nodeB.info.legalIdentity)
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeA.info)
+        assertEquals(nodeA.info, nodeA.netMapCache.getNodeByLegalName(nodeA.info.legalIdentity.name))
 
         nodeA.database.transaction {
             nodeA.netMapCache.addNode(nodeB.info)
         }
         // The details of node B write over those for node A
-        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeB.info)
+        assertEquals(nodeB.info, nodeA.netMapCache.getNodeByLegalName(nodeA.info.legalIdentity.name))
     }
 }

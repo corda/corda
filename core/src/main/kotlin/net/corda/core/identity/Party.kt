@@ -29,7 +29,7 @@ import java.security.PublicKey
 open class Party(val name: X500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun toAnonymous(): AnonymousParty = AnonymousParty(owningKey)
     override fun toString() = "${owningKey.toBase58String()} ($name)"
-    override fun nameOrNull(): X500Name? = name
+    override val nameOrNull = name
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this.toAnonymous(), bytes)
 }
