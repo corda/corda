@@ -19,7 +19,7 @@ import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.SimpleString
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -73,7 +73,7 @@ class RPCStabilityTests {
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
         // This is a less than check because threads from other tests may be shutting down while this test is running.
         // This is therefore a "best effort" check. When this test is run on its own this should be a strict equality.
-        require(numberOfThreadsBefore >= numberOfThreadsAfter)
+        assertTrue(numberOfThreadsBefore >= numberOfThreadsAfter)
         executor.shutdownNow()
     }
 
@@ -95,7 +95,7 @@ class RPCStabilityTests {
             startAndStop()
         }
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
-        require(numberOfThreadsBefore >= numberOfThreadsAfter)
+        assertTrue(numberOfThreadsBefore >= numberOfThreadsAfter)
         executor.shutdownNow()
     }
 
