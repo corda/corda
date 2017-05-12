@@ -240,6 +240,8 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePrivateKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PrivateKey {
+        if (!isSupportedSignatureScheme(signatureScheme))
+            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         try {
             return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
@@ -289,6 +291,8 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePublicKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PublicKey {
+        if (!isSupportedSignatureScheme(signatureScheme))
+            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         try {
             return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
@@ -334,7 +338,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
     fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        if (!supportedSignatureSchemes.containsKey(signatureScheme.schemeCodeName))
+        if (!isSupportedSignatureScheme(signatureScheme))
             throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         if (clearData.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
@@ -414,7 +418,7 @@ object Crypto {
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        if (!supportedSignatureSchemes.containsKey(signatureScheme.schemeCodeName))
+        if (!isSupportedSignatureScheme(signatureScheme))
             throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
@@ -477,7 +481,7 @@ object Crypto {
      */
     @Throws(SignatureException::class, IllegalArgumentException::class)
     fun isValid(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        if (!supportedSignatureSchemes.containsKey(signatureScheme.schemeCodeName))
+        if (!isSupportedSignatureScheme(signatureScheme))
             throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
@@ -505,7 +509,7 @@ object Crypto {
     @Throws(IllegalArgumentException::class)
     @JvmOverloads
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
-        if (!supportedSignatureSchemes.containsKey(signatureScheme.schemeCodeName))
+        if (!isSupportedSignatureScheme(signatureScheme))
             throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
         val keyPairGenerator = KeyPairGenerator.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
         if (signatureScheme.algSpec != null)
@@ -547,13 +551,8 @@ object Crypto {
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     }
 
-    /** Check if the requested signature scheme is supported by the system. */
-    fun isSupportedSignatureScheme(schemeCodeName: String): Boolean = schemeCodeName in supportedSignatureSchemes
-
-    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = signatureScheme.schemeCodeName in supportedSignatureSchemes
-
     /**
-     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key
+     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key.
      */
     fun createCertificate(issuer: X500Name, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
@@ -623,4 +622,7 @@ object Crypto {
     // return true if EdDSA publicKey is point at infinity.
     // For EdDSA a custom function is required as it is not supported by the I2P implementation.
     private fun isEdDSAPointAtInfinity(publicKey: EdDSAPublicKey) = publicKey.a.toP3() == (EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3)
+
+    /** Check if the requested [SignatureScheme] is supported by the system. */
+    fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes[signatureScheme.schemeCodeName] === signatureScheme
 }
