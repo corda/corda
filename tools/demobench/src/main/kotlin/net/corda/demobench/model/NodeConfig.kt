@@ -4,7 +4,6 @@ import com.typesafe.config.*
 import net.corda.core.crypto.location
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.style.BCStyle
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
