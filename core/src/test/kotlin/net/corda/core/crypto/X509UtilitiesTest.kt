@@ -2,7 +2,6 @@ package net.corda.core.crypto
 
 import net.corda.core.div
 import net.corda.testing.MEGA_CORP
-import net.i2p.crypto.eddsa.EdDSAEngine
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
@@ -177,14 +176,14 @@ class X509UtilitiesTest {
 
         // Load signing intermediate CA cert
         val caKeyStore = KeyStoreUtilities.loadKeyStore(tmpCAKeyStore, "cakeystorepass")
-        val caCertAndKey = caKeyStore.getCertificateAndKey(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY, "cakeypass")
+        val caCertAndKey = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY, "cakeypass")
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         X509Utilities.createKeystoreForSSL(tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass", MEGA_CORP.name)
 
         // Load back server certificate
         val serverKeyStore = KeyStoreUtilities.loadKeyStore(tmpServerKeyStore, "serverstorepass")
-        val serverCertAndKey = serverKeyStore.getCertificateAndKey(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY, "serverkeypass")
+        val serverCertAndKey = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY, "serverkeypass")
 
         serverCertAndKey.certificate.checkValidity(Date())
         serverCertAndKey.certificate.verify(caCertAndKey.certificate.publicKey)
@@ -349,4 +348,18 @@ class X509UtilitiesTest {
 
         return keyStore
     }
+    @Test
+    fun `Get correct private key type from Keystore`() {
+        val keyPair = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val selfSignCert = X509Utilities.createSelfSignedCACert(X500Name("CN=Test"), keyPair)
+        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
+        keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(selfSignCert.certificate))
+
+        val keyFromKeystore = keyStore.getKey("Key", "keypassword".toCharArray())
+        val keyFromKeystoreCasted = keyStore.getSupportedKey("Key", "keypassword")
+
+        assertTrue(keyFromKeystore is java.security.interfaces.ECPrivateKey) // by default JKS returns SUN EC key
+        assertTrue(keyFromKeystoreCasted is org.bouncycastle.jce.interfaces.ECPrivateKey)
+    }
+
 }

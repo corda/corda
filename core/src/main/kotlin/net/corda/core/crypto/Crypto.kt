@@ -21,13 +21,20 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateKey
+import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
+import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
+import sun.security.pkcs.PKCS8Key
+import sun.security.util.DerValue
+import sun.security.x509.X509Key
 import java.math.BigInteger
 import java.security.*
 import java.security.KeyFactory
@@ -140,6 +147,10 @@ object Crypto {
             SPHINCS256_SHA256
     ).associateBy { it.schemeCodeName }
 
+    // We need to group signature schemes per algorithm, so to quickly identify them during decoding.
+    // Please note there are schemes with the same algorithm, e.g. EC (or ECDSA) keys are used for both ECDSA_SECP256K1_SHA256 and ECDSA_SECP256R1_SHA256.
+    private val algorithmGroups = supportedSignatureSchemes.values.groupBy { it.algorithmName }
+
     // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
     // that could cause unexpected and suspicious behaviour.
     // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
@@ -167,37 +178,20 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
-    fun findSignatureScheme(schemeCodeName: String): SignatureScheme = supportedSignatureSchemes[schemeCodeName] ?: throw IllegalArgumentException("Unsupported key/algorithm for metadata schemeCodeName: $schemeCodeName")
+    fun findSignatureScheme(schemeCodeName: String): SignatureScheme = supportedSignatureSchemes[schemeCodeName] ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeCodeName")
 
     /**
      * Retrieve the corresponding [SignatureScheme] based on the type of the input [Key].
      * This function is usually called when requiring to verify signatures and the signing schemes must be defined.
-     * Note that only the Corda platform standard schemes are supported (see [Crypto]).
-     * Note that we always need to add an additional if-else statement when there are signature schemes
-     * with the same algorithmName, but with different parameters (e.g. now there are two ECDSA schemes, each using its own curve).
+     * For the supported signature schemes see [Crypto].
      * @param key either private or public.
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
     fun findSignatureScheme(key: Key): SignatureScheme {
-        for (sig in supportedSignatureSchemes.values) {
-            var algorithm = key.algorithm
-            if (algorithm == "EC") algorithm = "ECDSA" // required to read ECC keys from Keystore, because encoding may change algorithm name from ECDSA to EC.
-            if (algorithm == "SPHINCS-256") algorithm = "SPHINCS256" // because encoding may change algorithm name from SPHINCS256 to SPHINCS-256.
-            if (algorithm == sig.algorithmName) {
-                // If more than one ECDSA schemes are supported, we should distinguish between them by checking their curve parameters.
-                if (algorithm == "EdDSA") {
-                    if ((key is EdDSAPublicKey && publicKeyOnCurve(sig, key)) || (key is EdDSAPrivateKey && key.params == sig.algSpec)) {
-                        return sig
-                    } else break // use continue if in the future we support more than one Edwards curves.
-                } else if (algorithm == "ECDSA") {
-                    if ((key is BCECPublicKey && publicKeyOnCurve(sig, key)) || (key is BCECPrivateKey && key.parameters == sig.algSpec)) {
-                        return sig
-                    } else continue
-                } else return sig // it's either RSA_SHA256 or SPHINCS-256.
-            }
-        }
-        throw IllegalArgumentException("Unsupported key/algorithm for the key: ${key.encoded.toBase58()}")
+        val algorithm = matchingAlgorithmName(key.algorithm)
+        algorithmGroups[algorithm]?.filter { validateKey(it, key) }?.firstOrNull { return it }
+        throw IllegalArgumentException("Unsupported key algorithm: ${key.algorithm} or invalid key format")
     }
 
     /**
@@ -209,11 +203,16 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        for ((_, _, _, providerName, algorithmName) in supportedSignatureSchemes.values) {
+        val algorithm = matchingAlgorithmName(PKCS8Key.parseKey(DerValue(encodedKey)).algorithm)
+        // There are cases where the same key algorithm is applied to different signature schemes.
+        // Currently, this occurs with ECDSA as it applies to either secp256K1 or secp256R1 curves.
+        // In such a case, we should try and identify which of the candidate schemes is the correct one so as
+        // to generate the appropriate key.
+        for (signatureScheme in algorithmGroups[algorithm]!!) {
             try {
-                return KeyFactory.getInstance(algorithmName, providerMap[providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
+                return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                // ignore it - only used to bypass the scheme that causes an exception.
+                // ignore it - only used to bypass the scheme that causes an exception, as it has the same name, but different params.
             }
         }
         throw IllegalArgumentException("This private key cannot be decoded, please ensure it is PKCS8 encoded and the signature scheme is supported.")
@@ -258,11 +257,16 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        for ((_, _, _, providerName, algorithmName) in supportedSignatureSchemes.values) {
+        val algorithm = matchingAlgorithmName(X509Key.parse(DerValue(encodedKey)).algorithm)
+        // There are cases where the same key algorithm is applied to different signature schemes.
+        // Currently, this occurs with ECDSA as it applies to either secp256K1 or secp256R1 curves.
+        // In such a case, we should try and identify which of the candidate schemes is the correct one so as
+        // to generate the appropriate key.
+        for (signatureScheme in algorithmGroups[algorithm]!!) {
             try {
-                return KeyFactory.getInstance(algorithmName, providerMap[providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
+                return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
             } catch (ikse: InvalidKeySpecException) {
-                // ignore it - only used to bypass the scheme that causes an exception.
+                // ignore it - only used to bypass the scheme that causes an exception, as it has the same name, but different params.
             }
         }
         throw IllegalArgumentException("This public key cannot be decoded, please ensure it is X509 encoded and the signature scheme is supported.")
@@ -273,7 +277,7 @@ object Crypto {
      * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
      * @param schemeCodeName a [String] that should match a key in supportedSignatureSchemes map (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
-     * @throws IllegalArgumentException if the requested scheme is not supported
+     * @throws IllegalArgumentException if the requested scheme is not supported.
      * @throws InvalidKeySpecException if the given key specification
      * is inappropriate for this key factory to produce a public key.
      */
@@ -285,7 +289,7 @@ object Crypto {
      * This should be used when the type key is known, e.g. during Kryo deserialisation or with key caches or key managers.
      * @param signatureScheme a signature scheme (e.g. ECDSA_SECP256K1_SHA256).
      * @param encodedKey an X509 encoded public key.
-     * @throws IllegalArgumentException if the requested scheme is not supported
+     * @throws IllegalArgumentException if the requested scheme is not supported.
      * @throws InvalidKeySpecException if the given key specification
      * is inappropriate for this key factory to produce a public key.
      */
@@ -444,7 +448,7 @@ object Crypto {
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(publicKey: PublicKey, transactionSignature: TransactionSignature): Boolean {
-        if (publicKey != transactionSignature.metaData.publicKey) IllegalArgumentException("MetaData's publicKey: ${transactionSignature.metaData.publicKey.encoded.toBase58()} does not match the input clearData: ${publicKey.encoded.toBase58()}")
+        if (publicKey != transactionSignature.metaData.publicKey) IllegalArgumentException("MetaData's publicKey: ${transactionSignature.metaData.publicKey.toStringShort()} does not match")
         return Crypto.doVerify(publicKey, transactionSignature.signatureData, transactionSignature.metaData.bytes())
     }
 
@@ -598,9 +602,9 @@ object Crypto {
      * Check if a point's coordinates are on the expected curve to avoid certain types of ECC attacks.
      * Point-at-infinity is not permitted as well.
      * @see <a href="https://safecurves.cr.yp.to/twist.html">Small subgroup and invalid-curve attacks</a> for a more descriptive explanation on such attacks.
-     * We use this function on [findSignatureScheme] for a [PublicKey]; currently used for signature verification only.
+     * We use this function on [validatePublicKey], which is currently used for signature verification only.
      * Thus, as these attacks are mostly not relevant to signature verification, we should note that
-     * we're doing it out of an abundance of caution and specifically to proactively protect developers
+     * we are doing it out of an abundance of caution and specifically to proactively protect developers
      * against using these points as part of a DH key agreement or for use cases as yet unimagined.
      * This method currently applies to BouncyCastle's ECDSA (both R1 and K1 curves) and I2P's EdDSA (ed25519 curve).
      * @param publicKey a [PublicKey], usually used to validate a signer's public key in on the Curve.
@@ -625,4 +629,66 @@ object Crypto {
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
     fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes[signatureScheme.schemeCodeName] === signatureScheme
+
+    // map algorithm names returned from Keystore (or after encode/decode) to the supported algorithm names.
+    private fun matchingAlgorithmName(algorithm: String): String {
+        return when (algorithm) {
+            "EC" -> "ECDSA"
+            "SPHINCS-256" -> "SPHINCS256"
+            "1.3.6.1.4.1.22554.2.1" -> "SPHINCS256" // Unfortunately, PKCS8Key and X509Key parsing return the OID as the algorithm name and not SPHINCS256.
+            else -> algorithm
+        }
+    }
+
+    // validate a key, by checking its algorithmic params.
+    private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
+        return when (key) {
+            is PublicKey -> validatePublicKey(signatureScheme, key)
+            is PrivateKey -> validatePrivateKey(signatureScheme, key)
+            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
+        }
+    }
+
+    // check if a public key satisfies algorithm specs (for ECC: key should lie on the curve and not being point-at-infinity).
+    private fun validatePublicKey(signatureScheme: SignatureScheme, key: PublicKey): Boolean {
+        when (key) {
+            is BCECPublicKey, is EdDSAPublicKey -> return publicKeyOnCurve(signatureScheme, key)
+            is BCRSAPublicKey, is BCSphincs256PublicKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
+        }
+    }
+
+    // check if a private key satisfies algorithm specs.
+    private fun validatePrivateKey(signatureScheme: SignatureScheme, key: PrivateKey): Boolean {
+        when (key) {
+            is BCECPrivateKey -> return key.parameters == signatureScheme.algSpec
+            is EdDSAPrivateKey -> return key.params == signatureScheme.algSpec
+            is BCRSAPrivateKey, is BCSphincs256PrivateKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
+            else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
+        }
+    }
+
+    /**
+     * Convert a public key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
+     * This method is usually required to retrieve a key (via its corresponding cert) from JKS keystores that by default return SUN implementations.
+     * @param key a public key.
+     * @return a supported implementation of the input public key.
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
+     * is inappropriate for a supported key factory to produce a private key.
+     */
+    fun toSupportedPublicKey(key: PublicKey): PublicKey {
+        return Crypto.decodePublicKey(key.encoded)
+    }
+
+    /**
+     * Convert a private key to a supported implementation. This can be used to convert a SUN's EC key to an BC key.
+     * This method is usually required to retrieve keys from JKS keystores that by default return SUN implementations.
+     * @param key a private key.
+     * @return a supported implementation of the input private key.
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
+     * is inappropriate for a supported key factory to produce a private key.
+     */
+    fun toSupportedPrivateKey(key: PrivateKey): PrivateKey {
+        return Crypto.decodePrivateKey(key.encoded)
+    }
 }
