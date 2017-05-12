@@ -14,6 +14,7 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.node.CityDatabase
@@ -24,7 +25,6 @@ import net.corda.core.utilities.validateLegalName
 import net.corda.core.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
-import org.bouncycastle.asn1.x500.style.RFC4519Style.name
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
@@ -267,7 +267,7 @@ class NodeTabView : Fragment() {
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }
-        nodeTab.text = config.legalName.toString()
+        nodeTab.text = config.legalName.commonName
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
                 if (exitCode == 0)

@@ -127,7 +127,7 @@ distributions {
  * Bundles the application using JavaPackager,
  * using the ZIP distribution as source.
  */
-task javapackage(dependsOn: 'distZip') {
+task javapackage(dependsOn: distZip) {
 
     doLast {
         delete([pkg_source, pkg_outDir])
