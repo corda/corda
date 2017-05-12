@@ -37,4 +37,14 @@ class DoormanParametersTest {
             parseParameters("--keygen", "--keystorePath", testDummyPath, "--configFile", invalidConfigPath)
         }
     }
+
+    @Test
+    fun `should parse jira config correctly`() {
+        val parameter = parseParameters("--configFile", validConfigPath)
+        assertEquals("https://doorman-jira-host.com/", parameter.jiraConfig?.address)
+        assertEquals("TD", parameter.jiraConfig?.projectCode)
+        assertEquals("username", parameter.jiraConfig?.username)
+        assertEquals("password", parameter.jiraConfig?.password)
+        assertEquals(41, parameter.jiraConfig?.doneTransitionCode)
+    }
 }
