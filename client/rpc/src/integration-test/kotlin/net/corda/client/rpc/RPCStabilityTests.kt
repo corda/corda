@@ -6,6 +6,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.util.concurrent.Futures
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.millis
 import net.corda.core.random63BitValue
@@ -21,6 +22,7 @@ import rx.subjects.UnicastSubject
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
 
 
 class RPCStabilityTests {
@@ -54,6 +56,31 @@ class RPCStabilityTests {
                 if (leakObservableOpsImpl.leakedUnsubscribedCount.get() == N) break
                 Thread.sleep(100)
             }
+        }
+    }
+
+    interface ReconnectOps : RPCOps {
+        fun ping(): String
+    }
+
+    @Test
+    fun `client reconnects to rebooted server`() {
+        rpcDriver {
+            val ops = object : ReconnectOps {
+                override val protocolVersion = 0
+                override fun ping() = "pong"
+            }
+            val serverFollower = shutdownManager.follower()
+            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().hostAndPort
+            serverFollower.unfollow()
+            val clientFollower = shutdownManager.follower()
+            val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
+            clientFollower.unfollow()
+            assertEquals("pong", client.ping())
+            serverFollower.shutdown()
+            startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
+            assertEquals("pong", client.ping())
+            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }
     }
 
