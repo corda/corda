@@ -1,6 +1,6 @@
 package net.corda.core.serialization.amqp
 
-import com.google.common.primitives.Primitives
+import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
@@ -8,7 +8,7 @@ import java.lang.reflect.Type
  * Serializer / deserializer for native AMQP types (Int, Float, String etc).
  */
 class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
-    override val typeDescriptor: String = SerializerFactory.primitiveTypeName(Primitives.wrap(clazz))!!
+    override val typeDescriptor: String = SerializerFactory.primitiveTypeName(clazz)!!
     override val type: Type = clazz
 
     // NOOP since this is a primitive type.
@@ -16,8 +16,12 @@ class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
     }
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
-        data.putObject(obj)
+        if (obj is ByteArray) {
+            data.putObject(Binary(obj))
+        } else {
+            data.putObject(obj)
+        }
     }
 
-    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = obj
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = (obj as? Binary)?.array ?: obj
 }

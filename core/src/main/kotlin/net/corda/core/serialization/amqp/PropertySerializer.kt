@@ -1,14 +1,16 @@
 package net.corda.core.serialization.amqp
 
+import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
+import java.lang.reflect.Type
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaGetter
 
 /**
  * Base class for serialization of a property of an object.
  */
-sealed class PropertySerializer(val name: String, val readMethod: Method) {
+sealed class PropertySerializer(val name: String, val readMethod: Method, val resolvedType: Type) {
     abstract fun writeClassInfo(output: SerializationOutput)
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
     abstract fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any?
@@ -18,23 +20,20 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
     val default: String? = generateDefault()
     val mandatory: Boolean = generateMandatory()
 
-    private val isInterface: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isInterface ?: false
-    private val isJVMPrimitive: Boolean get() = (readMethod.genericReturnType as? Class<*>)?.isPrimitive ?: false
+    private val isInterface: Boolean get() = resolvedType.asClass()?.isInterface ?: false
+    private val isJVMPrimitive: Boolean get() = resolvedType.asClass()?.isPrimitive ?: false
 
     private fun generateType(): String {
-        return if (isInterface) "*" else {
-            val primitiveName = SerializerFactory.primitiveTypeName(readMethod.genericReturnType)
-            return primitiveName ?: readMethod.genericReturnType.typeName
-        }
+        return if (isInterface || resolvedType == Any::class.java) "*" else SerializerFactory.nameForType(resolvedType)
     }
 
     private fun generateRequires(): List<String> {
-        return if (isInterface) listOf(readMethod.genericReturnType.typeName) else emptyList()
+        return if (isInterface) listOf(SerializerFactory.nameForType(resolvedType)) else emptyList()
     }
 
     private fun generateDefault(): String? {
         if (isJVMPrimitive) {
-            return when (readMethod.genericReturnType) {
+            return when (resolvedType) {
                 java.lang.Boolean.TYPE -> "false"
                 java.lang.Character.TYPE -> "&#0"
                 else -> "0"
@@ -54,13 +53,13 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
     }
 
     companion object {
-        fun make(name: String, readMethod: Method, factory: SerializerFactory): PropertySerializer {
-            val type = readMethod.genericReturnType
-            if (SerializerFactory.isPrimitive(type)) {
+        fun make(name: String, readMethod: Method, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
+            //val type = readMethod.genericReturnType
+            if (SerializerFactory.isPrimitive(resolvedType)) {
                 // This is a little inefficient for performance since it does a runtime check of type.  We could do build time check with lots of subclasses here.
-                return AMQPPrimitivePropertySerializer(name, readMethod)
+                return AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
             } else {
-                return DescribedTypePropertySerializer(name, readMethod) { factory.get(null, type) }
+                return DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(null, resolvedType) }
             }
         }
     }
@@ -68,35 +67,43 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
     /**
      * A property serializer for a complex type (another object).
      */
-    class DescribedTypePropertySerializer(name: String, readMethod: Method, private val lazyTypeSerializer: () -> AMQPSerializer<Any>) : PropertySerializer(name, readMethod) {
+    class DescribedTypePropertySerializer(name: String, readMethod: Method, resolvedType: Type, private val lazyTypeSerializer: () -> AMQPSerializer<*>) : PropertySerializer(name, readMethod, resolvedType) {
         // This is lazy so we don't get an infinite loop when a method returns an instance of the class.
-        private val typeSerializer: AMQPSerializer<Any> by lazy { lazyTypeSerializer() }
+        private val typeSerializer: AMQPSerializer<*> by lazy { lazyTypeSerializer() }
 
         override fun writeClassInfo(output: SerializationOutput) {
-            typeSerializer.writeClassInfo(output)
+            if (resolvedType != Any::class.java) {
+                typeSerializer.writeClassInfo(output)
+            }
         }
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
-            return input.readObjectOrNull(obj, schema, readMethod.genericReturnType)
+            return input.readObjectOrNull(obj, schema, resolvedType)
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            output.writeObjectOrNull(readMethod.invoke(obj), data, readMethod.genericReturnType)
+            output.writeObjectOrNull(readMethod.invoke(obj), data, resolvedType)
         }
     }
 
     /**
      * A property serializer for an AMQP primitive type (Int, String, etc).
      */
-    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
+    class AMQPPrimitivePropertySerializer(name: String, readMethod: Method, resolvedType: Type) : PropertySerializer(name, readMethod, resolvedType) {
+
         override fun writeClassInfo(output: SerializationOutput) {}
 
         override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
-            return obj
+            return if (obj is Binary) obj.array else obj
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
-            data.putObject(readMethod.invoke(obj))
+            val value = readMethod.invoke(obj)
+            if (value is ByteArray) {
+                data.putObject(Binary(value))
+            } else {
+                data.putObject(value)
+            }
         }
     }
 }

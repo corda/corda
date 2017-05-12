@@ -1,5 +1,6 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.serialization.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -10,7 +11,7 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
+class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
     internal val propertySerializers: Collection<PropertySerializer>
@@ -20,7 +21,9 @@ class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSe
         javaConstructor = kotlinConstructor?.javaConstructor
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
-    private val typeName = clazz.name
+
+    private val typeName = nameForType(clazz)
+
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
     private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
@@ -65,7 +68,7 @@ class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSe
     }
 
     private fun generateProvides(): List<String> {
-        return interfaces.map { it.typeName }
+        return interfaces.map { nameForType(it) }
     }
 
 
