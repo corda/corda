@@ -3,17 +3,18 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
@@ -122,6 +123,10 @@ object FixingFlow {
 
         override val notaryNode: NodeInfo get() {
             return serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == dealToFix.state.notary }
+        }
+
+        @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
+            // Add some constraints here.
         }
     }
 

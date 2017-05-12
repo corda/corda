@@ -53,10 +53,12 @@ data class RPCClientConfiguration(
         val connectionRetryIntervalMultiplier: Double,
         /** Maximum retry interval */
         val connectionMaxRetryInterval: Duration,
+        val maxReconnectAttempts: Int,
         /** Maximum file size */
         val maxFileSize: Int
 ) {
     companion object {
+        val unlimitedReconnectAttempts = -1
         @JvmStatic
         val default = RPCClientConfiguration(
                 minimumServerProtocolVersion = 0,
@@ -68,6 +70,7 @@ data class RPCClientConfiguration(
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
+                maxReconnectAttempts = unlimitedReconnectAttempts,
                 /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
                 maxFileSize = 10485760
         )
@@ -139,6 +142,7 @@ class RPCClient<I : RPCOps>(
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
+                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
             }
 
