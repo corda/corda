@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-class ArraySerializer(override val type: Type) : AMQPSerializer {
+class ArraySerializer(override val type: Type) : AMQPSerializer<Any> {
     private val typeName = type.typeName
 
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"

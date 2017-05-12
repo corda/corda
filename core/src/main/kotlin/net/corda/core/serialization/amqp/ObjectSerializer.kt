@@ -10,7 +10,7 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
+class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
     private val propertySerializers: Collection<PropertySerializer>

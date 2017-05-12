@@ -87,7 +87,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun toString(): String = types.joinToString("\n")
 }
 
-data class Descriptor(val name: String?, val code: UnsignedLong?) : DescribedType {
+data class Descriptor(val name: String?, val code: UnsignedLong? = null) : DescribedType {
     companion object : DescribedTypeConstructor<Descriptor> {
         val DESCRIPTOR = UnsignedLong(3L or DESCRIPTOR_TOP_32BITS)
 

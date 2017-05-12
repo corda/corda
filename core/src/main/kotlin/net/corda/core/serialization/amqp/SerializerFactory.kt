@@ -12,6 +12,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.annotation.concurrent.ThreadSafe
 
 /**
@@ -32,8 +33,9 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: schema evolution solution when the fingerprints do not line up.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
-    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
-    private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer>()
+    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<out Any>>()
+    private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<out Any>>()
+    private val customSerializers = CopyOnWriteArrayList<CustomSerializer<out Any>>()
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -42,7 +44,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
      * restricted type processing).
      */
     @Throws(NotSerializableException::class)
-    fun get(actualType: Class<*>?, declaredType: Type): AMQPSerializer {
+    fun get(actualType: Class<*>?, declaredType: Type): AMQPSerializer<out Any> {
         if (declaredType is ParameterizedType) {
             return serializersByType.computeIfAbsent(declaredType) {
                 // We allow only Collection and Map.
@@ -77,15 +79,23 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     /**
-     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the schema
-     * contained in the [Envelope].
+     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the necessary types
+     * contained in the [Schema].
      */
     @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer {
+    fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer<out Any> {
         return serializersByDescriptor[typeDescriptor] ?: {
             processSchema(schema)
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
         }()
+    }
+
+    /**
+     * TODO: Add docs
+     */
+    fun register(customSerializer: CustomSerializer<out Any>) {
+        customSerializers += customSerializer
+        serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
     }
 
     private fun processSchema(schema: Schema) {
@@ -138,21 +148,33 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeClassSerializer(clazz: Class<*>): AMQPSerializer {
+    private fun makeClassSerializer(clazz: Class<*>): AMQPSerializer<out Any> {
         return serializersByType.computeIfAbsent(clazz) {
-            if (clazz.isArray) {
+            if (isPrimitive(clazz)) {
+                AMQPPrimitiveSerializer(clazz)
+            } else if (clazz.isArray) {
                 whitelisted(clazz.componentType)
                 ArraySerializer(clazz)
-            } else if (isPrimitive(clazz)) {
-                AMQPPrimitiveSerializer(clazz)
             } else {
-                whitelisted(clazz)
-                ObjectSerializer(clazz)
+                findCustomSerializer(clazz) ?: {
+                    whitelisted(clazz)
+                    ObjectSerializer(clazz)
+                }()
             }
         }
     }
 
+    private fun findCustomSerializer(clazz: Class<*>): AMQPSerializer<out Any>? {
+        for (customSerializer in customSerializers) {
+            if (customSerializer.isSerializerFor(clazz)) {
+                return customSerializer
+            }
+        }
+        return null
+    }
+
     private fun whitelisted(clazz: Class<*>): Boolean {
+        // TODO: walk the super class / interfaces like we do for Kryo.
         if (whitelist.hasListed(clazz) || clazz.isAnnotationPresent(CordaSerializable::class.java)) {
             return true
         } else {
@@ -160,7 +182,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer {
+    private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<out Any> {
         val rawType = declaredType.rawType as Class<*>
         rawType.checkNotUnorderedHashMap()
         return MapSerializer(declaredType)
@@ -189,7 +211,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 Char::class.java to "char",
                 Date::class.java to "timestamp",
                 UUID::class.java to "uuid",
-                ByteArray::class.java to "binary",
+                Binary::class.java to "binary",
                 String::class.java to "string",
                 Symbol::class.java to "symbol")
     }
@@ -198,3 +220,4 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         override fun toString(): String = "*"
     }
 }
+

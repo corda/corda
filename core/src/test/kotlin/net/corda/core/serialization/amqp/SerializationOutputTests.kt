@@ -75,7 +75,7 @@ class SerializationOutputTests {
         override fun hashCode(): Int = ginger
     }
 
-    private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory()): Any {
+    private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory(), freshDeserializationFactory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -94,7 +94,7 @@ class SerializationOutputTests {
         val result = decoder.readObject() as Envelope
         assertNotNull(result)
 
-        val des = DeserializationInput()
+        val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes)
         assertTrue(Objects.deepEquals(obj, desObj))
 
@@ -234,7 +234,11 @@ class SerializationOutputTests {
 
     @Test
     fun `test custom serializers on public key`() {
+        val factory = SerializerFactory()
+        factory.register(net.corda.core.serialization.amqp.custom.PublicKeySerializer())
+        val factory2 = SerializerFactory()
+        factory2.register(net.corda.core.serialization.amqp.custom.PublicKeySerializer())
         val obj = MEGA_CORP_PUBKEY
-        serdes(obj)
+        serdes(obj, factory, factory2)
     }
 }

@@ -13,7 +13,7 @@ import kotlin.collections.map
 /**
  * Serialization / deserialization of certain supported [Map] types.
  */
-class MapSerializer(val declaredType: ParameterizedType) : AMQPSerializer {
+class MapSerializer(val declaredType: ParameterizedType) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
