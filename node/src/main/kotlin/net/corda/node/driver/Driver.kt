@@ -102,7 +102,7 @@ interface DriverDSLExposedInterface {
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
-     * to set automaticallyStartNetworkMap to false in your [driver] call.
+     * to set networkMapStrategy to FalseNetworkMap in your [driver] call.
      */
     fun startNetworkMapService(): ListenableFuture<Unit>
 
@@ -201,7 +201,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = true,
+        networkMapStrategy: NetworkMapStrategy = DedicatedNetworkMap,
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -210,7 +210,7 @@ fun <A> driver(
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
-                automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                networkMapStrategy = networkMapStrategy,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -412,10 +412,9 @@ class DriverDSL(
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
-        val automaticallyStartNetworkMap: Boolean
+        val networkMapStrategy: NetworkMapStrategy
 ) : DriverDSLInternalInterface {
-    private val networkMapLegalName = DUMMY_MAP.name
-    private val networkMapAddress = portAllocation.nextHostAndPort()
+    private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
     val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(
             Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
     )
@@ -488,10 +487,7 @@ class DriverDSL(
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to mapOf(
-                        "address" to networkMapAddress.toString(),
-                        "legalName" to networkMapLegalName.toString()
-                ),
+                "networkMapService" to networkMapStrategy.serviceConfig(dedicatedNetworkMapAddress, name, p2pAddress),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -578,7 +574,7 @@ class DriverDSL(
     }
 
     override fun start() {
-        if (automaticallyStartNetworkMap) {
+        if (networkMapStrategy.startDedicated) {
             startNetworkMapService()
         }
     }
@@ -586,6 +582,7 @@ class DriverDSL(
     override fun startNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
+        val networkMapLegalName = networkMapStrategy.legalName
         val baseDirectory = driverDirectory / networkMapLegalName.commonName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
@@ -595,7 +592,7 @@ class DriverDSL(
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
-                        "p2pAddress" to networkMapAddress.toString(),
+                        "p2pAddress" to dedicatedNetworkMapAddress.toString(),
                         "useTestClock" to useTestClock
                 )
         )
@@ -603,7 +600,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
-        return startNode.flatMap { addressMustBeBound(executorService, networkMapAddress, it) }
+        return startNode.flatMap { addressMustBeBound(executorService, dedicatedNetworkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
