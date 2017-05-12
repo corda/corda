@@ -81,7 +81,8 @@ path to the node's base directory.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
         note that the host is the included as the advertised entry in the NetworkMapService. As a result the value listed
-        here must be externally accessible when running nodes across a cluster of machines.
+        here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
+        the node will try to auto-discover its public one.
 
 :rpcAddress: The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC.
 
