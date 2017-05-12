@@ -40,7 +40,7 @@ class IssuerFlowTest {
             bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
 
             // using default IssueTo Party Reference
-            val issueToPartyAndRef = bankClientNode.info.legalIdentity.ref(OpaqueBytes.Companion.of(123))
+            val issueToPartyAndRef = bankClientNode.info.legalIdentity.ref(OpaqueBytes.of(123))
             val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS, issueToPartyAndRef)
             assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 
@@ -62,7 +62,7 @@ class IssuerFlowTest {
             bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name)
 
             // using default IssueTo Party Reference
-            val issueToPartyAndRef = bankOfCordaNode.info.legalIdentity.ref(OpaqueBytes.Companion.of(123))
+            val issueToPartyAndRef = bankOfCordaNode.info.legalIdentity.ref(OpaqueBytes.of(123))
             val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS, issueToPartyAndRef)
             assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 
@@ -80,7 +80,7 @@ class IssuerFlowTest {
             bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
 
             // using default IssueTo Party Reference
-            val issueToPartyAndRef = bankClientNode.info.legalIdentity.ref(OpaqueBytes.Companion.of(123))
+            val issueToPartyAndRef = bankClientNode.info.legalIdentity.ref(OpaqueBytes.of(123))
 
             // this test exercises the Cashflow issue and move subflows to ensure consistent spending of issued states
             val amount = 10000.DOLLARS

@@ -65,9 +65,7 @@ data class CmdLineOptions(val baseDirectory: Path,
                           val isVersion: Boolean,
                           val noLocalShell: Boolean,
                           val sshdServer: Boolean) {
-    fun loadConfig(allowMissingConfig: Boolean = false, configOverrides: Map<String, Any?> = emptyMap()): FullNodeConfiguration {
-        return ConfigHelper
-                .loadConfig(baseDirectory, configFile, allowMissingConfig, configOverrides)
+    fun loadConfig() = ConfigHelper
+                .loadConfig(baseDirectory, configFile)
                 .parseAs<FullNodeConfiguration>()
-    }
 }

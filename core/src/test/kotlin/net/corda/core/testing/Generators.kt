@@ -71,7 +71,7 @@ class SecureHashGenerator : Generator<SecureHash>(SecureHash::class.java) {
 
 class StateRefGenerator : Generator<StateRef>(StateRef::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): StateRef {
-        return StateRef(SecureHash.Companion.sha256(random.nextBytes(16)), random.nextInt(0, 10))
+        return StateRef(SecureHash.sha256(random.nextBytes(16)), random.nextInt(0, 10))
     }
 }
 

@@ -2,23 +2,17 @@ package net.corda.notarydemo
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
-import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.notUsed
 import net.corda.core.crypto.toStringShort
-import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
-import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import org.bouncycastle.asn1.x500.X500Name
-import java.nio.file.Path
-import java.nio.file.Paths
-import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     val host = HostAndPort.fromString("localhost:10003")
@@ -87,26 +81,5 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
         @Suppress("UNSUPPORTED_FEATURE")
         val signatureFutures = transactions.map { rpc.startFlow(NotaryFlow::Client, it).returnValue }
         return Futures.allAsList(signatureFutures).getOrThrow().map { it.map { it.by.toStringShort() }.joinToString() }
-    }
-}
-
-private fun getCertPath(args: Array<String>): String? {
-    val parser = OptionParser()
-    val certsPath = parser.accepts("certificates").withRequiredArg()
-    val options = try {
-        parser.parse(*args)
-    } catch (e: Exception) {
-        println(e.message)
-        exitProcess(1)
-    }
-    return options.valueOf(certsPath)
-}
-
-// TODO: Take this out once we have a dedicated RPC port and allow SSL on it to be optional.
-private fun sslConfigFor(nodename: String, certsPath: String?): SSLConfiguration {
-    return object : SSLConfiguration {
-        override val keyStorePassword: String = "cordacadevpass"
-        override val trustStorePassword: String = "trustpass"
-        override val certificatesDirectory: Path = if (certsPath != null) Paths.get(certsPath) else Paths.get("build") / "nodes" / nodename / "certificates"
     }
 }

@@ -12,6 +12,8 @@ import net.corda.node.driver.addressMustNotBeBound
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.configOf
+import net.corda.node.services.config.plus
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
@@ -141,18 +143,12 @@ abstract class NodeBasedTest {
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
-                configOverrides = mapOf(
+                configOverrides = configOf(
                         "myLegalName" to legalName.toString(),
                         "p2pAddress" to localPort[0].toString(),
                         "rpcAddress" to localPort[1].toString(),
                         "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                        "rpcUsers" to rpcUsers.map {
-                            mapOf(
-                                    "username" to it.username,
-                                    "password" to it.password,
-                                    "permissions" to it.permissions
-                            )
-                        }
+                        "rpcUsers" to rpcUsers.map { it.toMap() }
                 ) + configOverrides
         )
 

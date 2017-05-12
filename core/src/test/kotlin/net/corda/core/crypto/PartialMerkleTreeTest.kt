@@ -61,7 +61,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `building Merkle tree - no hashes`() {
-        assertFailsWith<MerkleTreeException> { MerkleTree.Companion.getMerkleTree(emptyList()) }
+        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList()) }
     }
 
     @Test

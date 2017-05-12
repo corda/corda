@@ -46,9 +46,3 @@ class NodeConfig(
         return if (obj == null) config else body(config, obj).atPath(path)
     }
 }
-
-private fun User.toMap(): Map<String, Any> = mapOf(
-    "username" to username,
-    "password" to password,
-    "permissions" to permissions
-)

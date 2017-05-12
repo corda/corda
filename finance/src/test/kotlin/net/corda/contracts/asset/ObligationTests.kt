@@ -21,7 +21,7 @@ class ObligationTests {
     val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
-    val trustedCashContract = nonEmptySetOf(SecureHash.Companion.randomSHA256() as SecureHash)
+    val trustedCashContract = nonEmptySetOf(SecureHash.randomSHA256() as SecureHash)
     val megaIssuedDollars = nonEmptySetOf(Issued(defaultIssuer, USD))
     val megaIssuedPounds = nonEmptySetOf(Issued(defaultIssuer, GBP))
     val fivePm = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS).plus(17, ChronoUnit.HOURS)
@@ -759,7 +759,7 @@ class ObligationTests {
 
         // States must not be nettable if the cash contract differs
         assertNotEquals(fiveKDollarsFromMegaToMega.bilateralNetState,
-                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = nonEmptySetOf(SecureHash.Companion.randomSHA256()))).bilateralNetState)
+                fiveKDollarsFromMegaToMega.copy(template = megaCorpDollarSettlement.copy(acceptableContracts = nonEmptySetOf(SecureHash.randomSHA256()))).bilateralNetState)
 
         // States must not be nettable if the trusted issuers differ
         val miniCorpIssuer = nonEmptySetOf(Issued(MINI_CORP.ref(1), USD))
