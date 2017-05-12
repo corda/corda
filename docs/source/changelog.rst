@@ -3,6 +3,14 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code from the previous milestone release.
 
+Milestone 11.1
+--------------
+
+* Fix serialisation error when starting a flow.
+* Automatically whitelist subclasses of `InputStream` when serialising.
+* Fix exception in DemoBench on Windows when loading CorDapps into the Node Explorer.
+* Detect when localhost resolution is broken on MacOSX, and provide instructions on how to fix it.
+
 Milestone 11.0
 --------------
 
