@@ -87,6 +87,9 @@ Run from IntelliJ
 """""""""""""""""
 1. Open IntelliJ Community Edition
 2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-template folder
+
+.. warning:: If you click "Import Project" instead of "Open", the project's run configurations will be erased!
+
 3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to C:\Program Files\Java\jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
 4. Click "View > Tool Windows > Event Log", and click "Import Gradle project", then "OK". Wait, and click "OK" again when the "Gradle Project Data To Import" window appears
 5. Wait for indexing to finish (a progress bar will display at the bottom-right of the IntelliJ window until indexing is complete)
