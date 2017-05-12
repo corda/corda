@@ -19,5 +19,5 @@ class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer {
         data.putObject(obj)
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any = obj
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = obj
 }

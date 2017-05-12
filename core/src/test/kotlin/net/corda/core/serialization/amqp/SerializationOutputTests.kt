@@ -2,6 +2,7 @@ package net.corda.core.serialization.amqp
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.EmptyWhitelist
+import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
@@ -228,6 +229,12 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test mismatched property and constructor type`() {
         val obj = MismatchType(456)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test custom serializers on public key`() {
+        val obj = MEGA_CORP_PUBKEY
         serdes(obj)
     }
 }

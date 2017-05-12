@@ -10,7 +10,7 @@ import kotlin.reflect.jvm.javaGetter
  */
 sealed class PropertySerializer(val name: String, val readMethod: Method) {
     abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput)
-    abstract fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any?
+    abstract fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any?
 
     val type: String = generateType()
     val requires: List<String> = generateRequires()
@@ -68,8 +68,8 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
      * A property serializer for a complex type (another object).
      */
     class DescribedTypePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
-        override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
-            return input.readObjectOrNull(obj, envelope, readMethod.genericReturnType)
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
+            return input.readObjectOrNull(obj, schema, readMethod.genericReturnType)
         }
 
         override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput) {
@@ -81,7 +81,7 @@ sealed class PropertySerializer(val name: String, val readMethod: Method) {
      * A property serializer for an AMQP primitive type (Int, String, etc).
      */
     class AMQPPrimitivePropertySerializer(name: String, readMethod: Method) : PropertySerializer(name, readMethod) {
-        override fun readProperty(obj: Any?, envelope: Envelope, input: DeserializationInput): Any? {
+        override fun readProperty(obj: Any?, schema: Schema, input: DeserializationInput): Any? {
             return obj
         }
 

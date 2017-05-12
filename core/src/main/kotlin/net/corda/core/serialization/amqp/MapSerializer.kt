@@ -56,11 +56,11 @@ class MapSerializer(val declaredType: ParameterizedType) : AMQPSerializer {
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
-        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(envelope, input, it) }
+        val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schema, input, it) }
         return concreteBuilder(entries.toMap())
     }
 
-    private fun readEntry(envelope: Envelope, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) = input.readObjectOrNull(entry.key, envelope, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(entry.value, envelope, declaredType.actualTypeArguments[1])
+    private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) = input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
 }

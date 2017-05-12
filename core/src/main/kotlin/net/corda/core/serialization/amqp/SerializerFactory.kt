@@ -76,10 +76,14 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
+    /**
+     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the schema
+     * contained in the [Envelope].
+     */
     @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, envelope: Envelope): AMQPSerializer {
+    fun get(typeDescriptor: Any, schema: Schema): AMQPSerializer {
         return serializersByDescriptor[typeDescriptor] ?: {
-            processSchema(envelope.schema)
+            processSchema(schema)
             serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException("Could not find type matching descriptor $typeDescriptor.")
         }()
     }

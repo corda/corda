@@ -45,13 +45,13 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj is UnsignedInteger) {
             // TODO: Object refs
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         } else if (obj is List<*>) {
             if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
-            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, envelope, input) }
+            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
             return construct(params)
         } else throw NotSerializableException("Body of described type is unexpected $obj")
     }

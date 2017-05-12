@@ -39,8 +39,8 @@ class ArraySerializer(override val type: Type) : AMQPSerializer {
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
-        return (obj as List<*>).map { input.readObjectOrNull(it, envelope, elementType) }.toArrayOfType(elementType)
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+        return (obj as List<*>).map { input.readObjectOrNull(it, schema, elementType) }.toArrayOfType(elementType)
     }
 
     private fun <T> List<T>.toArrayOfType(type: Type): Any {

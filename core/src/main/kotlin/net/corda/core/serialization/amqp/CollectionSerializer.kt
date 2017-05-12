@@ -52,8 +52,8 @@ class CollectionSerializer(val declaredType: ParameterizedType) : AMQPSerializer
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         // TODO: Can we verify the entries in the list?
-        return concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, envelope, declaredType.actualTypeArguments[0]) })
+        return concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
     }
 }
