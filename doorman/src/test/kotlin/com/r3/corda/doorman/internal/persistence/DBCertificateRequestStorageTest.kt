@@ -109,6 +109,22 @@ class DBCertificateRequestStorageTest {
         assertThat(storage.getResponse(requestId2)).isInstanceOf(CertificateResponse.Ready::class.java)
     }
 
+    @Test
+    fun `request with equals symbol in legal name`() {
+        val requestId = storage.saveRequest(createRequest("Bank\\=A").first)
+        assertThat(storage.getPendingRequestIds()).isEmpty()
+        val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
+        assertThat(response.message).contains("=")
+    }
+
+    @Test
+    fun `request with comma in legal name`() {
+        val requestId = storage.saveRequest(createRequest("Bank\\,A").first)
+        assertThat(storage.getPendingRequestIds()).isEmpty()
+        val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
+        assertThat(response.message).contains(",")
+    }
+
     private fun createRequest(legalName: String): Pair<CertificationRequestData, KeyPair> {
         val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val request = CertificationRequestData(
