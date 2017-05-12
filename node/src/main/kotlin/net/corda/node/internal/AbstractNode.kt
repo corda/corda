@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.scanner.ClassInfo
 import net.corda.core.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowInitiator
@@ -325,6 +324,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.toArray()
         }
 
+        if (pluginJars.isEmpty()) return emptyList()
+
         val scanResult = FastClasspathScanner().overrideClasspath(*pluginJars).scan()  // This will only scan the plugin jars and nothing else
 
         fun loadFlowClass(className: String): Class<out FlowLogic<*>>? {
@@ -350,12 +351,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        val classpathURLsField = ClassInfo::class.java.getDeclaredField("classpathElementURLs").apply { isAccessible = true }
-
         flowClasses.groupBy {
-            val classInfo = scanResult.classNameToClassInfo[it.name]
-            @Suppress("UNCHECKED_CAST")
-            (classpathURLsField.get(classInfo) as Set<URL>).first()
+            scanResult.classNameToClassInfo[it.name]!!.classpathElementURLs.first()
         }.forEach { url, classes ->
             log.info("Found flows in plugin ${url.pluginName()}: ${classes.joinToString { it.name }}")
         }

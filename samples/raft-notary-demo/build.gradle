@@ -7,7 +7,7 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
 
 ext {
-    deployTo = "./build/nodes"
+    deployTo = "build/nodes"
     notaryType = "corda.notary.validating.raft"
     notaryName = "CN=Raft,O=R3,OU=corda,L=Zurich,C=CH"
     advertisedNotary = "$notaryType|$notaryName"
@@ -53,7 +53,13 @@ publishing {
     }
 }
 
-task generateNotaryIdentity(type: JavaExec) {
+task cleanNodes {
+    doLast {
+        delete deployTo
+    }
+}
+
+task generateNotaryIdentity(type: JavaExec, dependsOn: 'cleanNodes') {
     classpath = sourceSets.main.runtimeClasspath
     main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
     def nodeDirs = ["$deployTo/Notary1",
@@ -66,7 +72,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
     directory deployTo
     networkMap "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
     node {
-        name "CN=Party,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Alice Corp,O=Alice Corp,L=London,C=UK"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10002
@@ -78,7 +84,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         ]]]
     }
     node {
-        name "CN=Counterparty,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Bob Plc,O=Bob Plc,L=London,C=UK"
         nearestCity "New York"
         advertisedServices = []
         p2pPort 10005
@@ -89,30 +95,30 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateN
         name "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10008
-        rpcPort 10009
+        p2pPort 10009
+        rpcPort 10010
         cordapps = []
-        notaryNodePort 11002
+        notaryNodePort 10008
     }
     node {
         name "CN=Notary 2,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10011
-        rpcPort 10012
+        p2pPort 10013
+        rpcPort 10014
         cordapps = []
-        notaryNodePort 11004
-        notaryClusterAddresses = ["localhost:11002"]
+        notaryNodePort 10012
+        notaryClusterAddresses = ["localhost:10008"]
     }
     node {
         name "CN=Notary 3,O=R3,OU=corda,L=London,C=UK"
         nearestCity "London"
         advertisedServices = [advertisedNotary]
-        p2pPort 10014
-        rpcPort 10015
+        p2pPort 10017
+        rpcPort 10018
         cordapps = []
-        notaryNodePort 11006
-        notaryClusterAddresses = ["localhost:11002"]
+        notaryNodePort 10016
+        notaryClusterAddresses = ["localhost:10008"]
     }
 }
 

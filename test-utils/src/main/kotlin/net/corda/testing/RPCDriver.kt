@@ -108,6 +108,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
+            customPort: HostAndPort? = null,
             ops : I
     ) : ListenableFuture<RpcServerHandle>
 
@@ -193,7 +194,7 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = false,
+        networkMapStrategy: NetworkMapStrategy = FalseNetworkMap,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -203,7 +204,7 @@ fun <A> rpcDriver(
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                        networkMapStrategy = networkMapStrategy,
                         isDebug = isDebug
                 )
         ),
@@ -340,9 +341,10 @@ data class RPCDriverDSL(
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
+            customPort: HostAndPort?,
             ops: I
     ): ListenableFuture<RpcServerHandle> {
-        val hostAndPort = driverDSL.portAllocation.nextHostAndPort()
+        val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
         return driverDSL.executorService.submit<RpcServerHandle> {
             val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)

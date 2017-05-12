@@ -11,6 +11,9 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
 }
 
 sourceSets {
@@ -20,6 +23,24 @@ sourceSets {
             runtimeClasspath += main.output + test.output
             srcDir file('src/integration-test/kotlin')
         }
+    }
+    smokeTest {
+        kotlin {
+            // We must NOT have any Node code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+    }
+}
+
+processSmokeTestResources {
+    from(file("$rootDir/config/test/log4j2.xml")) {
+        rename 'log4j2\\.xml', 'log4j2-test.xml'
+    }
+    from(project(':node:capsule').tasks.buildCordaJAR) {
+        rename 'corda-(.*)', 'corda.jar'
     }
 }
 
@@ -38,11 +59,22 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':client:mock')
 
-    // Integration test helpers
-    integrationTestCompile "junit:junit:$junit_version"
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile project(':finance')
+    smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
+    smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task smokeTest(type: Test) {
+    testClassesDir = sourceSets.smokeTest.output.classesDir
+    classpath = sourceSets.smokeTest.runtimeClasspath
+    systemProperties['build.dir'] = buildDir
 }
