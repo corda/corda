@@ -490,7 +490,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
         val legalIdentityKey = obtainLegalIdentityKey()
-        val request = NetworkMapService.RegistrationRequest(reg.toWire(legalIdentityKey.private), net.myAddress)
+        val request = NetworkMapService.RegistrationRequest(reg.toWire(keyManagement, legalIdentityKey.public), net.myAddress)
         return net.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 

@@ -704,10 +704,10 @@ from the ledger). Finally, we add a Redeem command that should be signed by the 
    versions with a more complete way to express issuer constraints.
 
 A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, we must convert it to something that
-is recognised by the network. The most important next step is for the participating entities to sign it using the
-``signWith()`` method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
-signature inside the ``TransactionBuilder``. Once all parties have signed, you can call ``TransactionBuilder.toSignedTransaction()``
-to get a ``SignedTransaction`` object.
+is recognised by the network. The most important next step is for the participating entities to sign it. Typically,
+an initiating flow will create an initial partially signed ``SignedTransaction`` by calling the ``serviceHub.signInitialTransaction`` method.
+Then the frozen ``SignedTransaction`` can be passed to other nodes by the flow, these can sign using ``serviceHub.createSignature`` and distribute.
+The ``CollectSignaturesFlow`` provides a generic implementation of this process that can be used as a ``subFlow`` .
 
 You can see how transactions flow through the different stages of construction by examining the commercial paper
 unit tests.

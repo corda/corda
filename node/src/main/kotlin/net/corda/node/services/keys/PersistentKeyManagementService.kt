@@ -1,7 +1,10 @@
 package net.corda.node.services.keys
 
 import net.corda.core.ThreadBox
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.keys
+import net.corda.core.crypto.sign
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.*
@@ -10,7 +13,6 @@ import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.util.*
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -50,13 +52,27 @@ class PersistentKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSeria
         }
     }
 
-    override val keys: Map<PublicKey, PrivateKey> get() = mutex.locked { HashMap(keys) }
+    override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
 
-    override fun freshKey(): KeyPair {
+    override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()
         mutex.locked {
             keys[keyPair.public] = keyPair.private
         }
-        return keyPair
+        return keyPair.public
     }
+
+    private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
+        return mutex.locked {
+            val pk = publicKey.keys.first { keys.containsKey(it) }
+            KeyPair(pk, keys[pk]!!)
+        }
+    }
+
+    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+        val keyPair = getSigningKeyPair(publicKey)
+        val signature = keyPair.sign(bytes)
+        return signature
+    }
+
 }

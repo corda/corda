@@ -90,7 +90,7 @@ class CollectSignaturesFlowTests {
 
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
-                val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+                val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
@@ -110,7 +110,7 @@ class CollectSignaturesFlowTests {
                 val notary = serviceHub.networkMapCache.notaryNodes.single().notaryIdentity
                 val command = Command(DummyContract.Commands.Create(), state.participants.map { it.owningKey })
                 val builder = TransactionType.General.Builder(notary = notary).withItems(state, command)
-                val ptx = builder.signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+                val ptx = serviceHub.signInitialTransaction(builder)
                 val stx = subFlow(CollectSignaturesFlow(ptx))
                 val ftx = subFlow(FinalityFlow(stx)).single()
 
@@ -154,7 +154,7 @@ class CollectSignaturesFlowTests {
     @Test
     fun `no need to collect any signatures`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.legalIdentity.ref(1))
-        val ptx = onePartyDummyContract.signWith(a.services.legalIdentityKey).toSignedTransaction(false)
+        val ptx = a.services.signInitialTransaction(onePartyDummyContract)
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
@@ -180,8 +180,9 @@ class CollectSignaturesFlowTests {
                 a.info.legalIdentity.ref(1),
                 b.info.legalIdentity.ref(2),
                 b.info.legalIdentity.ref(3))
-        val ptx = twoPartyDummyContract.signWith(a.services.legalIdentityKey).signWith(b.services.legalIdentityKey).toSignedTransaction(false)
-        val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
+        val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
+        val signedByBoth = b.services.addSignature(signedByA)
+        val flow = a.services.startFlow(CollectSignaturesFlow(signedByBoth))
         mockNet.runNetwork()
         val result = flow.resultFuture.getOrThrow()
         println(result.tx)

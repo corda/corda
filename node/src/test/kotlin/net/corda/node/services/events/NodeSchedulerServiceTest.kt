@@ -271,11 +271,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
                 val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
-                val usefulTX = TransactionType.General.Builder(null).apply {
+                val builder = TransactionType.General.Builder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
-                    addCommand(Command(), freshKey.public)
-                    signWith(freshKey)
-                }.toSignedTransaction()
+                    addCommand(Command(), freshKey)
+                }
+                val usefulTX = services.signInitialTransaction(builder, freshKey)
                 val txHash = usefulTX.id
 
                 services.recordTransactions(usefulTX)

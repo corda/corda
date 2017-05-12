@@ -24,17 +24,15 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
                                      revisions: Int? = 0,
                                      participants: List<AbstractParty> = emptyList()) : Vault<DealState> {
     val freshKey = keyManagementService.freshKey()
-    val freshPublicKey = freshKey.public
-    val recipient = AnonymousParty(freshPublicKey)
+    val recipient = AnonymousParty(freshKey)
 
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(recipient)))
-            signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
-        return@map dummyIssue.toSignedTransaction()
+        return@map signInitialTransaction(dummyIssue)
     }
 
     recordTransactions(transactions)
@@ -52,18 +50,16 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                                             uid: UniqueIdentifier = UniqueIdentifier(),
                                             participants: List<AbstractParty> = emptyList()) : Vault<LinearState> {
     val freshKey = keyManagementService.freshKey()
-    val freshPublicKey = freshKey.public
-    val recipient = AnonymousParty(freshPublicKey)
+    val recipient = AnonymousParty(freshKey)
 
     val transactions: List<SignedTransaction> = (1..numberToCreate).map {
         // Issue a Linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
             addOutputState(DummyLinearContract.State(linearId = uid, participants = participants.plus(recipient)))
-            signWith(freshKey)
             signWith(DUMMY_NOTARY_KEY)
         }
 
-        return@map dummyIssue.toSignedTransaction(true)
+        return@map signInitialTransaction(dummyIssue)
     }
 
     recordTransactions(transactions)

@@ -59,9 +59,8 @@ class ContractUpgradeFlow<OldState : ContractState, out NewState : ContractState
     }
 
     override fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>> {
-        val stx = assembleBareTx(originalState, modification)
-                .signWith(serviceHub.legalIdentityKey)
-                .toSignedTransaction(false)
+        val baseTx = assembleBareTx(originalState, modification)
+        val stx = serviceHub.signInitialTransaction(baseTx)
         return stx to originalState.state.data.participants
     }
 }

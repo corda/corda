@@ -1,10 +1,11 @@
 package net.corda.core.node
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.keys
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.node.services.*
 import net.corda.core.transactions.SignedTransaction
-import java.security.KeyPair
+import net.corda.core.transactions.TransactionBuilder
+import java.security.PublicKey
 import java.time.Clock
 
 /**
@@ -82,23 +83,107 @@ interface ServiceHub : ServicesForResolution {
     }
 
     /**
-     * Helper property to shorten code for fetching the Node's KeyPair associated with the
-     * public legalIdentity Party from the key management service.
+     * Helper property to shorten code for fetching the the [PublicKey] portion of the
+     * Node's primary signing identity.
      * Typical use is during signing in flows and for unit test signing.
-     *
-     * TODO: legalIdentity can now be composed of multiple keys, should we return a list of keyPairs here? Right now
-     *       the logic assumes the legal identity has a composite key with only one node
+     * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
+     * the matching [PrivateKey] will be looked up internally and used to sign.
+     * If the key is actually a CompositeKey, the first leaf key hosted on this node
+     * will be used to create the signature.
      */
-    val legalIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.legalIdentity.owningKey.keys)
+    val legalIdentityKey: PublicKey get() = this.myInfo.legalIdentity.owningKey
 
     /**
-     * Helper property to shorten code for fetching the Node's KeyPair associated with the
-     * public notaryIdentity Party from the key management service. It is assumed that this is only
-     * used in contexts where the Node knows it is hosting a Notary Service. Otherwise, it will throw
-     * an IllegalArgumentException.
+     * Helper property to shorten code for fetching the the [PublicKey] portion of the
+     * Node's Notary signing identity. It is required that the Node hosts a notary service,
+     * otherwise an IllegalArgumentException will be thrown.
      * Typical use is during signing in flows and for unit test signing.
-     *
-     * TODO: same problem as with legalIdentityKey.
+     * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
+     * the matching [PrivateKey] will be looked up internally and used to sign.
+     * If the key is actually a [CompositeKey], the first leaf key hosted on this node
+     * will be used to create the signature.
      */
-    val notaryIdentityKey: KeyPair get() = this.keyManagementService.toKeyPair(this.myInfo.notaryIdentity.owningKey.keys)
+    val notaryIdentityKey: PublicKey get() = this.myInfo.notaryIdentity.owningKey
+
+    /**
+     * Helper method to construct an initial partially signed transaction from a [TransactionBuilder]
+     * using keys stored inside the node.
+     * @param builder The [TransactionBuilder] to seal with the node's signature.
+     * Any existing signatures on the builder will be preserved.
+     * @param publicKey The [PublicKey] matched to the internal [PrivateKey] to use in signing this transaction.
+     * If the passed in key is actually a CompositeKey the code searches for the first child key hosted within this node
+     * to sign with.
+     * @return Returns a SignedTransaction with the new node signature attached.
+     */
+    fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction {
+        val sig = keyManagementService.sign(builder.toWireTransaction().id.bytes, publicKey)
+        builder.addSignatureUnchecked(sig)
+        return builder.toSignedTransaction(false)
+    }
+
+
+    /**
+     * Helper method to construct an initial partially signed transaction from a TransactionBuilder
+     * using the default identity key contained in the node.
+     * @param builder The TransactionBuilder to seal with the node's signature.
+     * Any existing signatures on the builder will be preserved.
+     * @return Returns a SignedTransaction with the new node signature attached.
+     */
+    fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction = signInitialTransaction(builder, legalIdentityKey)
+
+
+    /**
+     * Helper method to construct an initial partially signed transaction from a [TransactionBuilder]
+     * using a set of keys all held in this node.
+     * @param builder The [TransactionBuilder] to seal with the node's signature.
+     * Any existing signatures on the builder will be preserved.
+     * @param signingPubKeys A list of [PublicKeys] used to lookup the matching [PrivateKey] and sign.
+     * @throws IllegalArgumentException is thrown if any keys are unavailable locally.
+     * @return Returns a [SignedTransaction] with the new node signature attached.
+     */
+    fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: List<PublicKey>): SignedTransaction {
+        var stx: SignedTransaction? = null
+        for (pubKey in signingPubKeys) {
+            stx = if (stx == null) {
+                signInitialTransaction(builder, pubKey)
+            } else {
+                addSignature(stx, pubKey)
+            }
+        }
+        return stx!!
+    }
+
+    /**
+     * Helper method to create an additional signature for an existing (partially) [SignedTransaction].
+     * @param signedTransaction The [SignedTransaction] to which the signature will apply.
+     * @param publicKey The [PublicKey] matching to a signing [PrivateKey] hosted in the node.
+     * If the [PublicKey] is actually a [CompositeKey] the first leaf key found locally will be used for signing.
+     * @return The [DigitalSignature.WithKey] generated by signing with the internally held [PrivateKey].
+     */
+    fun createSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): DigitalSignature.WithKey = keyManagementService.sign(signedTransaction.id.bytes, publicKey)
+
+    /**
+     * Helper method to create an additional signature for an existing (partially) SignedTransaction
+     * using the default identity signing key of the node.
+     * @param signedTransaction The SignedTransaction to which the signature will apply.
+     * @return The DigitalSignature.WithKey generated by signing with the internally held identity PrivateKey.
+     */
+    fun createSignature(signedTransaction: SignedTransaction): DigitalSignature.WithKey = createSignature(signedTransaction, legalIdentityKey)
+
+    /**
+     * Helper method to append an additional signature to an existing (partially) [SignedTransaction].
+     * @param signedTransaction The [SignedTransaction] to which the signature will be added.
+     * @param publicKey The [PublicKey] matching to a signing [PrivateKey] hosted in the node.
+     * If the [PublicKey] is actually a [CompositeKey] the first leaf key found locally will be used for signing.
+     * @return A new [SignedTransaction] with the addition of the new signature.
+     */
+    fun addSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): SignedTransaction = signedTransaction + createSignature(signedTransaction, publicKey)
+
+    /**
+     * Helper method to ap-pend an additional signature for an existing (partially) [SignedTransaction]
+     * using the default identity signing key of the node.
+     * @param signedTransaction The [SignedTransaction] to which the signature will be added.
+     * @return A new [SignedTransaction] with the addition of the new signature.
+     */
+    fun addSignature(signedTransaction: SignedTransaction): SignedTransaction = addSignature(signedTransaction, legalIdentityKey)
 }

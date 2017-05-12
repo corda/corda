@@ -8,7 +8,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
@@ -206,11 +205,9 @@ class ForeignExchangeFlow(val tradeId: String,
         builder.withItems(*theirStates.outputs.toTypedArray())
 
         // We have already validated their response and trust our own data
-        // so we can sign
-        builder.signWith(serviceHub.legalIdentityKey)
-        // create a signed transaction, but pass false as parameter, because we know it is not fully signed
-        val signedTransaction = builder.toSignedTransaction(checkSufficientSignatures = false)
-        return signedTransaction
+        // so we can sign. Note the returned SignedTransaction is still not fully signed
+        // and would not pass full verification yet.
+        return serviceHub.signInitialTransaction(builder)
     }
     // DOCEND 3
 }
@@ -260,7 +257,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         }
 
         // assuming we have completed state and business level validation we can sign the trade
-        val ourSignature = serviceHub.legalIdentityKey.sign(proposedTrade.id)
+        val ourSignature = serviceHub.createSignature(proposedTrade)
 
         // send the other side our signature.
         send(source, ourSignature)

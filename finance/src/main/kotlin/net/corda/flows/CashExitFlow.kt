@@ -44,9 +44,6 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }
-        progressTracker.currentStep = SIGNING_TX
-        val myKey = serviceHub.legalIdentityKey
-        builder.signWith(myKey)
 
         // Work out who the owners of the burnt states were
         val inputStatesNullable = serviceHub.vaultService.statesForRefs(builder.inputStates())
@@ -63,9 +60,11 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
                 .map { serviceHub.identityService.partyFromAnonymous(it.owner) }
                 .filterNotNull()
                 .toSet()
+        // Sign transaction
+        progressTracker.currentStep = SIGNING_TX
+        val tx = serviceHub.signInitialTransaction(builder)
 
         // Commit the transaction
-        val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(participants, tx, "Unable to notarise exit")
         return tx

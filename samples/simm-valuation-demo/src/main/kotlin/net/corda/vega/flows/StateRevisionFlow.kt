@@ -21,9 +21,8 @@ object StateRevisionFlow {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
             tx.setTime(serviceHub.clock.instant(), 30.seconds)
-            tx.signWith(serviceHub.legalIdentityKey)
 
-            val stx = tx.toSignedTransaction(false)
+            val stx = serviceHub.signInitialTransaction(tx)
             return Pair(stx, state.participants)
         }
     }

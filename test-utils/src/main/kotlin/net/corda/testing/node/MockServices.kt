@@ -47,7 +47,11 @@ import javax.annotation.concurrent.ThreadSafe
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
+open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+    constructor() : this(generateKeyPair())
+
+    val key: KeyPair get() = keys.first()
+
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
             storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
@@ -59,7 +63,7 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
 
     override val storageService: TxWritableStorageService = MockStorageService()
     override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
-    override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
+    override val keyManagementService: KeyManagementService = MockKeyManagementService(*keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
@@ -106,14 +110,27 @@ class MockIdentityService(val identities: List<Party>,
 
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
-    override val keys: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
+    private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
+
+    override val keys: Set<PublicKey> get() = keyStore.keys
 
     val nextKeys = LinkedList<KeyPair>()
 
-    override fun freshKey(): KeyPair {
+    override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
-        keys[k.public] = k.private
-        return k
+        keyStore[k.public] = k.private
+        return k.public
+    }
+
+    private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
+        val pk = publicKey.keys.first { keyStore.containsKey(it) }
+        return KeyPair(pk, keyStore[pk]!!)
+    }
+
+    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+        val keyPair = getSigningKeyPair(publicKey)
+        val signature = keyPair.sign(bytes)
+        return signature
     }
 }
 

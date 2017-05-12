@@ -402,7 +402,7 @@ class NodeVaultServiceTest {
     fun addNoteToTransaction() {
         database.transaction {
 
-            val freshKey = services.legalIdentityKey.public
+            val freshKey = services.legalIdentityKey
 
             // Issue a txn to Send us some Money
             val usefulTX = TransactionType.General.Builder(null).apply {

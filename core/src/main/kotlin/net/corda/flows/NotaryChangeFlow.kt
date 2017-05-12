@@ -40,10 +40,7 @@ class NotaryChangeFlow<out T : ContractState>(
             participants = resolveEncumbrances(tx)
         }
 
-        val myKey = serviceHub.legalIdentityKey
-        tx.signWith(myKey)
-
-        val stx = tx.toSignedTransaction(false)
+        val stx = serviceHub.signInitialTransaction(tx)
 
         return Pair(stx, participants)
     }

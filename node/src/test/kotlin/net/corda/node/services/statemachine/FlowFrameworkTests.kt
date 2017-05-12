@@ -560,8 +560,7 @@ class FlowFrameworkTests {
     fun `wait for transaction`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
         ptx.addOutputState(DummyState())
-        ptx.signWith(node1.services.legalIdentityKey)
-        val stx = ptx.toSignedTransaction()
+        val stx = node1.services.signInitialTransaction(ptx)
 
         val committerFiber = node1
                 .initiateSingleShotFlow(WaitingFlows.Waiter::class) { WaitingFlows.Committer(it) }
@@ -575,8 +574,7 @@ class FlowFrameworkTests {
     fun `committer throws exception before calling the finality flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
         ptx.addOutputState(DummyState())
-        ptx.signWith(node1.services.legalIdentityKey)
-        val stx = ptx.toSignedTransaction()
+        val stx = node1.services.signInitialTransaction(ptx)
 
         node1.registerServiceFlow(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }

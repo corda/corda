@@ -70,7 +70,7 @@ class P2PSecurityTest : NodeBasedTest() {
     private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): ListenableFuture<NetworkMapService.RegistrationResponse> {
         val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public), MOCK_VERSION_INFO.platformVersion)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
-        val request = RegistrationRequest(registration.toWire(identity.private), net.myAddress)
+        val request = RegistrationRequest(registration.toWire(keyService, identity.public), net.myAddress)
         return net.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.net.myAddress)
     }
 }

@@ -5,7 +5,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
-import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
@@ -135,9 +134,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
                 .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
         tx.setTime(serviceHub.clock.instant(), Duration.ofSeconds(60))
         // We can automatically sign as there is no untrusted data.
-        tx.signWith(serviceHub.legalIdentityKey)
-        // Convert to a SignedTransaction that we can send to the notary
-        val signedTx = tx.toSignedTransaction(false)
+        val signedTx = serviceHub.signInitialTransaction(tx)
         // Notarise and distribute.
         subFlow(FinalityFlow(signedTx, setOf(serviceHub.myInfo.legalIdentity, counterparty)))
         // Return the initial state
@@ -199,9 +196,9 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         tx.setTime(serviceHub.clock.instant(), Duration.ofSeconds(60))
         // We can sign this transaction immediately as we have already checked all the fields and the decision
         // is ultimately a manual one from the caller.
-        tx.signWith(serviceHub.legalIdentityKey)
-        // Convert to SignedTransaction we can pass around certain that it cannot be modified.
-        val selfSignedTx = tx.toSignedTransaction(false)
+        // As a SignedTransaction we can pass the data around certain that it cannot be modified,
+        // although we do require further signatures to complete the process.
+        val selfSignedTx = serviceHub.signInitialTransaction(tx)
         //DOCEND 2
         // Send the signed transaction to the originator and await their signature to confirm
         val allPartySignedTx = sendAndReceive<DigitalSignature.WithKey>(newState.source, selfSignedTx).unwrap {
@@ -257,7 +254,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         }
         // DOCEND 3
         // Having verified the SignedTransaction passed to us we can sign it too
-        val ourSignature = serviceHub.legalIdentityKey.sign(completeTx.tx.id)
+        val ourSignature = serviceHub.createSignature(completeTx)
         // Send our signature to the other party.
         send(source, ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction

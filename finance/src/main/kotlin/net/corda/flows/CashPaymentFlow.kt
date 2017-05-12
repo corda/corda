@@ -4,14 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.expandedCompositeKeys
-import net.corda.core.crypto.toStringShort
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.security.KeyPair
 import java.util.*
 
 /**
@@ -47,13 +44,9 @@ open class CashPaymentFlow(
         }
 
         progressTracker.currentStep = SIGNING_TX
-        keysForSigning.expandedCompositeKeys.forEach {
-            val key = serviceHub.keyManagementService.keys[it] ?: throw IllegalStateException("Could not find signing key for ${it.toStringShort()}")
-            builder.signWith(KeyPair(it, key))
-        }
+        val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val tx = spendTX.toSignedTransaction(checkSufficientSignatures = false)
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
         return tx
     }
