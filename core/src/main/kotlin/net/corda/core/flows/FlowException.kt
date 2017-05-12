@@ -17,3 +17,11 @@ open class FlowException(override val message: String?, override val cause: Thro
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
 }
+
+/**
+ * Thrown when a flow session ends unexpectedly due to a type mismatch (the other side sent an object of a type
+ * that we were not expecting), or the other side had an internal error, or the other side terminated when we
+ * were waiting for a response.
+ */
+@CordaSerializable
+class FlowSessionException(message: String) : RuntimeException(message)

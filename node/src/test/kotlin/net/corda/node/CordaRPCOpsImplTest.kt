@@ -1,9 +1,11 @@
 package net.corda.node
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -15,11 +17,12 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.node.internal.CordaRPCOpsImpl
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.transaction
-import net.corda.nodeapi.CURRENT_RPC_USER
 import net.corda.nodeapi.PermissionException
 import net.corda.nodeapi.User
 import net.corda.testing.expect
@@ -34,7 +37,9 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CordaRPCOpsImplTest {
 
@@ -57,10 +62,10 @@ class CordaRPCOpsImplTest {
         aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
         notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = setOf(
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
                 startFlowPermission<CashPaymentFlow>()
-        )))
+        ))))
 
         aliceNode.database.transaction {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
@@ -117,7 +122,6 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
-
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
@@ -194,7 +198,7 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `cash command by user not permissioned for cash`() {
-        CURRENT_RPC_USER.set(User("user", "pwd", permissions = emptySet()))
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = emptySet())))
         assertThatExceptionOfType(PermissionException::class.java).isThrownBy {
             rpc.startFlow(::CashIssueFlow,
                     Amount(100, USD),
@@ -223,5 +227,20 @@ class CordaRPCOpsImplTest {
         IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
 
         assertArrayEquals(bufferFile.toByteArray(), bufferRpc.toByteArray())
+    }
+
+    @Test
+    fun `attempt to start non-RPC flow`() {
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
+                startFlowPermission<NonRPCFlow>()
+        ))))
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            rpc.startFlow(::NonRPCFlow)
+        }
+    }
+
+    class NonRPCFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = Unit
     }
 }

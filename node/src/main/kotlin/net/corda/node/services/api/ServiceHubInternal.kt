@@ -4,7 +4,6 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -16,6 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -62,10 +62,11 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     abstract val monitoringService: MonitoringService
-    abstract val flowLogicRefFactory: FlowLogicRefFactory
     abstract val schemaService: SchemaService
     abstract override val networkMapCache: NetworkMapCacheInternal
-
+    abstract val schedulerService: SchedulerService
+    abstract val auditService: AuditService
+    abstract val rpcFlows: List<Class<out FlowLogic<*>>>
     abstract val networkService: MessagingService
 
     /**
@@ -100,7 +101,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachine<T>
+    abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
 
 
     /**
@@ -114,10 +115,10 @@ abstract class ServiceHubInternal : PluginServiceHub {
     fun <T : Any> invokeFlowAsync(
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
-            vararg args: Any?): FlowStateMachine<T> {
-        val logicRef = flowLogicRefFactory.create(logicType, *args)
+            vararg args: Any?): FlowStateMachineImpl<T> {
+        val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         @Suppress("UNCHECKED_CAST")
-        val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
+        val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
         return startFlow(logic, flowInitiator)
     }
 

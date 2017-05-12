@@ -3,18 +3,18 @@ package net.corda.vega.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.opengamma.strata.basics.ReferenceData
 import com.opengamma.strata.basics.currency.Currency
-import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import com.opengamma.strata.data.MarketDataFxRateProvider
-import com.opengamma.strata.market.param.CurrencyParameterSensitivities
 import com.opengamma.strata.pricer.curve.CalibrationMeasures
 import com.opengamma.strata.pricer.curve.CurveCalibrator
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.AnonymousParty
-import net.corda.core.crypto.Party
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
@@ -51,6 +51,8 @@ object SimmFlow {
      * Initiates with the other party by sending a portfolio to agree on and then comes to consensus over initial
      * margin using SIMM. If there is an existing state it will update and revalue the portfolio agreement.
      */
+    @InitiatingFlow
+    @StartableByRPC
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
@@ -62,7 +64,7 @@ object SimmFlow {
 
         @Suspendable
         override fun call(): RevisionedState<PortfolioState.Update> {
-            logger.debug("Calling from: ${serviceHub.myInfo.legalIdentity}. Sending to: ${otherParty}")
+            logger.debug("Calling from: ${serviceHub.myInfo.legalIdentity}. Sending to: $otherParty")
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             myIdentity = serviceHub.myInfo.legalIdentity
@@ -88,7 +90,7 @@ object SimmFlow {
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
             logger.info("Awaiting two party deal acceptor")
-            subFlow(TwoPartyDealFlow.Acceptor(otherParty), shareParentSessions = true)
+            subFlow(TwoPartyDealFlow.Acceptor(otherParty))
         }
 
         @Suspendable
@@ -97,7 +99,7 @@ object SimmFlow {
             sendAndReceive<Ack>(otherParty, OfferMessage(notary, stateAndRef.state.data, existing?.ref, valuationDate))
             logger.info("Updating portfolio")
             val update = PortfolioState.Update(portfolio = portfolio.refs)
-            subFlow(StateRevisionFlow.Requester(stateAndRef, update), shareParentSessions = true)
+            subFlow(StateRevisionFlow.Requester(stateAndRef, update))
         }
 
         @Suspendable
@@ -109,7 +111,7 @@ object SimmFlow {
             require(valuer != null) { "Valuer party must be known to this node" }
             val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
             val update = PortfolioState.Update(valuation = valuation)
-            return subFlow(StateRevisionFlow.Requester(stateRef, update), shareParentSessions = true).state.data
+            return subFlow(StateRevisionFlow.Requester(stateRef, update)).state.data
         }
 
         @Suspendable
@@ -143,10 +145,10 @@ object SimmFlow {
             val imBatch = analyticsEngine.calculateMarginBatch(sensBatch, combinedRatesProvider, fxRateProvider, cordaMargin)
             val cordaIMMap = imBatch.map { it.key.info.id.get().value to it.value.toCordaCompatible() }.toMap()
 
-            require(agree<CordaMarketData>(cordaMarketData))
-            require(agree<CurrencyParameterSensitivities>(sensitivities.first.toCordaCompatible()))
-            require(agree<MultiCurrencyAmount>(sensitivities.second.toCordaCompatible()))
-            require(agree<InitialMarginTriple>(cordaMargin))
+            require(agree(cordaMarketData))
+            require(agree(sensitivities.first.toCordaCompatible()))
+            require(agree(sensitivities.second.toCordaCompatible()))
+            require(agree(cordaMargin))
 
             return PortfolioValuation(
                     portfolio.trades.size,
@@ -214,7 +216,7 @@ object SimmFlow {
         @Suspendable
         private fun agree(data: Any): Boolean {
             send(replyToParty, data)
-            return receive<Boolean>(replyToParty).unwrap { it == true }
+            return receive<Boolean>(replyToParty).unwrap { it }
         }
 
         @Suspendable
@@ -306,7 +308,7 @@ object SimmFlow {
                     TwoPartyDealFlow.AutoOffer(offer.notary, offer.dealBeingOffered),
                     serviceHub.legalIdentityKey)
             logger.info("Starting two party deal initiator with: ${replyToParty.name}")
-            return subFlow(seller, shareParentSessions = true)
+            return subFlow(seller)
         }
 
         @Suspendable
@@ -318,7 +320,7 @@ object SimmFlow {
                     super.verifyProposal(proposal)
                     if (proposal.modification.portfolio != portfolio.refs) throw StateReplacementException()
                 }
-            }, shareParentSessions = true)
+            })
         }
 
         @Suspendable
@@ -331,7 +333,7 @@ object SimmFlow {
                     super.verifyProposal(proposal)
                     if (proposal.modification.valuation != valuation) throw StateReplacementException()
                 }
-            }, shareParentSessions = true)
+            })
         }
     }
 }

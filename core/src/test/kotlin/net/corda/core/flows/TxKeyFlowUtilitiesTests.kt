@@ -1,6 +1,6 @@
 package net.corda.core.flows
 
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY

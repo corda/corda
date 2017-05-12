@@ -8,9 +8,9 @@ import net.corda.core.contracts.clauses.AnyOf
 import net.corda.core.contracts.clauses.Clause
 import net.corda.core.contracts.clauses.GroupClauseVerifier
 import net.corda.core.contracts.clauses.verifyClause
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.random63BitValue
 import net.corda.core.schemas.MappedSchema
@@ -81,13 +81,14 @@ class CommercialPaper : Contract {
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
 
+        // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
-                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommericalPaperState(
+                is CommercialPaperSchemaV1 -> CommercialPaperSchemaV1.PersistentCommercialPaperState(
                         issuanceParty = this.issuance.party.owningKey.toBase58String(),
                         issuanceRef = this.issuance.reference.bytes,
                         owner = this.owner.toBase58String(),
@@ -100,6 +101,7 @@ class CommercialPaper : Contract {
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
+        // DOCEND VaultIndexedQueryCriteria
     }
 
     interface Clauses {

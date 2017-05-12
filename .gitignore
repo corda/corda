@@ -33,6 +33,9 @@ lib/dokka.jar
 .idea/shelf
 .idea/dataSources
 
+# Include the -parameters compiler option by default in IntelliJ required for serialization.
+!.idea/compiler.xml
+
 # if you remove the above rule, at least ignore the following:
 
 # User-specific stuff:
@@ -62,6 +65,7 @@ lib/dokka.jar
 
 # IntelliJ
 /out/
+/classes/
 
 # mpeltonen/sbt-idea plugin
 .idea_modules/

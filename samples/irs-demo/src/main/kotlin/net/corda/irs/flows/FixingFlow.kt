@@ -3,15 +3,18 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.SchedulableFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
@@ -24,7 +27,7 @@ object FixingFlow {
 
     class Service(services: PluginServiceHub) {
         init {
-            services.registerServiceFlow(Floater::class.java) { Fixer(it) }
+            services.registerServiceFlow(FixingRoleDecider::class.java) { Fixer(it) }
         }
     }
 
@@ -114,12 +117,17 @@ object FixingFlow {
 
         override val myKeyPair: KeyPair get() {
             val myPublicKey = serviceHub.myInfo.legalIdentity.owningKey
-            val myKeys = dealToFix.state.data.parties.filter { it.owningKey == myPublicKey }.single().owningKey.keys
+            val myKeys = dealToFix.state.data.parties.single { it.owningKey == myPublicKey }.owningKey.keys
             return serviceHub.keyManagementService.toKeyPair(myKeys)
         }
 
-        override val notaryNode: NodeInfo get() =
-        serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == dealToFix.state.notary }.single()
+        override val notaryNode: NodeInfo get() {
+            return serviceHub.networkMapCache.notaryNodes.single { it.notaryIdentity == dealToFix.state.notary }
+        }
+
+        @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
+            // Add some constraints here.
+        }
     }
 
 
@@ -131,11 +139,10 @@ object FixingFlow {
      * This flow looks at the deal and decides whether to be the Fixer or Floater role in agreeing a fixing.
      *
      * It is kicked off as an activity on both participant nodes by the scheduler when it's time for a fixing.  If the
-     * Fixer role is chosen, then that will be initiated by the [FixingSession] message sent from the other party and
-     * handled by the [FixingSessionInitiationHandler].
-     *
-     * TODO: Replace [FixingSession] and [FixingSessionInitiationHandler] with generic session initiation logic once it exists.
+     * Fixer role is chosen, then that will be initiated by the [FixingSession] message sent from the other party.
      */
+    @InitiatingFlow
+    @SchedulableFlow
     class FixingRoleDecider(val ref: StateRef, override val progressTracker: ProgressTracker) : FlowLogic<Unit>() {
         @Suppress("unused") // Used via reflection.
         constructor(ref: StateRef) : this(ref, tracker())

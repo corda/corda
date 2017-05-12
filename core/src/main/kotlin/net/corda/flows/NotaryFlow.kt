@@ -6,6 +6,8 @@ import net.corda.core.contracts.Timestamp
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -26,6 +28,7 @@ object NotaryFlow {
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the timestamp is invalid.
      */
+    @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())
@@ -61,7 +64,7 @@ object NotaryFlow {
             }
 
             val response = try {
-                sendAndReceive<List<DigitalSignature.WithKey>>(notaryParty, payload)
+                sendAndReceiveWithRetry<List<DigitalSignature.WithKey>>(notaryParty, payload)
             } catch (e: NotaryException) {
                 if (e.error is NotaryError.Conflict) {
                     e.error.conflict.verified()
@@ -77,7 +80,7 @@ object NotaryFlow {
 
         private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verifyWithECDSA(data)
+            sig.verify(data)
         }
     }
 
@@ -142,7 +145,7 @@ object NotaryFlow {
 
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
             val mySigningKey = serviceHub.notaryIdentityKey
-            return mySigningKey.signWithECDSA(bits)
+            return mySigningKey.sign(bits)
         }
 
         private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {

@@ -206,9 +206,10 @@ how to register handlers with the messaging system (see ":doc:`messaging`") and 
 when messages arrive. It provides the send/receive/sendAndReceive calls that let the code request network
 interaction and it will save/restore serialised versions of the fiber at the right times.
 
-Flows can be invoked in several ways. For instance, they can be triggered by scheduled events,
-see ":doc:`event-scheduling`" to learn more about this. Or they can be triggered directly via the Java-level node RPC
-APIs from your app code.
+Flows can be invoked in several ways. For instance, they can be triggered by scheduled events (in which case they need to
+be annotated with ``@SchedulableFlow``), see ":doc:`event-scheduling`" to learn more about this. They can also be triggered
+directly via the node's RPC API from your app code (in which case they need to be annotated with `StartableByRPC`). It's
+possible for a flow to be of both types.
 
 You request a flow to be invoked by using the ``CordaRPCOps.startFlowDynamic`` method. This takes a
 Java reflection ``Class`` object that describes the flow class to use (in this case, either ``Buyer`` or ``Seller``).
@@ -226,27 +227,7 @@ These will return a ``FlowProgressHandle``, which is just like a ``FlowHandle`` 
 ``progress`` field.
 
 .. note:: The developer `must` then either subscribe to this ``progress`` observable or invoke the ``notUsed()`` extension
-function for it. Otherwise the unused observable will waste resources back in the node.
-
-In a two party flow only one side is to be manually started using ``CordaRPCOps.startFlow``. The other side has to be
-registered by its node to respond to the initiating flow via ``PluginServiceHub.registerServiceFlow``. In our example it
-doesn't matter which flow is the initiator (i.e. client) and which is the initiated (i.e. service). For example, if we
-are to take the seller as the initiator then we would register the buyer as such:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      val services: PluginServiceHub = TODO()
-      services.registerServiceFlow(Seller::class.java) { otherParty ->
-        val notary = services.networkMapCache.notaryNodes[0]
-        val acceptablePrice = TODO()
-        val typeToBuy = TODO()
-        Buyer(otherParty, notary, acceptablePrice, typeToBuy)
-      }
-
-This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
-is a seller (``Seller::class``).
+   function for it. Otherwise the unused observable will waste resources back in the node.
 
 Implementing the seller
 -----------------------
@@ -418,6 +399,67 @@ This code is longer but no more complicated. Here are some things to pay attenti
 
 As you can see, the flow logic is straightforward and does not contain any callbacks or network glue code, despite
 the fact that it takes minimal resources and can survive node restarts.
+
+Flow sessions
+-------------
+
+Before going any further it will be useful to describe how flows communicate with each other. A node may have many flows
+running at the same time, and perhaps communicating with the same counterparty node but for different purposes. Therefore
+flows need a way to segregate communication channels so that concurrent conversations between flows on the same set of nodes
+do not interfere with each other.
+
+To achieve this the flow framework initiates a new flow session each time a flow starts communicating with a ``Party``
+for the first time. A session is simply a pair of IDs, one for each side, to allow the node to route received messages to
+the correct flow. If the other side accepts the session request then subsequent sends and receives to that same ``Party``
+will use the same session. A session ends when either flow ends, whether as expected or pre-maturely. If a flow ends
+pre-maturely then the other side will be notified of that and they will also end, as the whole point of flows is a known
+sequence of message transfers. Flows end pre-maturely due to exceptions, and as described above, if that exception is
+``FlowException`` or a sub-type then it will propagate to the other side. Any other exception will not propagate.
+
+Taking a step back, we mentioned that the other side has to accept the session request for there to be a communication
+channel. A node accepts a session request if it has registered the flow type (the fully-qualified class name) that is
+making the request - each session initiation includes the initiating flow type. The registration is done by a CorDapp
+which has made available the particular flow communication, using ``PluginServiceHub.registerServiceFlow``. This method
+specifies a flow factory for generating the counter-flow to any given initiating flow. If this registration doesn't exist
+then no further communication takes place and the initiating flow ends with an exception. The initiating flow has to be
+annotated with ``InitiatingFlow``.
+
+Going back to our buyer and seller flows, we need a way to initiate communication between the two. This is typically done
+with one side started manually using the ``startFlowDynamic`` RPC and this initiates the counter-flow on the other side.
+In this case it doesn't matter which flow is the initiator and which is the initiated, which is why neither ``Buyer`` nor
+``Seller`` are annotated with ``InitiatingFlow``. For example, if we choose the seller side as the initiator then we need
+to create a simple seller starter flow that has the annotation we need:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        @InitiatingFlow
+        class SellerStarter(val otherParty: Party, val assetToSell: StateAndRef<OwnableState>, val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+            @Suspendable
+            override fun call(): SignedTransaction {
+                val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
+                val cpOwnerKey: KeyPair = serviceHub.legalIdentityKey
+                return subFlow(TwoPartyTradeFlow.Seller(otherParty, notary, assetToSell, price, cpOwnerKey))
+            }
+        }
+
+The buyer side would then need to register their flow, perhaps with something like:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val services: PluginServiceHub = TODO()
+        services.registerServiceFlow(SellerStarter::class.java) { otherParty ->
+            val notary = services.networkMapCache.notaryNodes[0]
+            val acceptablePrice = TODO()
+            val typeToBuy = TODO()
+            Buyer(otherParty, notary, acceptablePrice, typeToBuy)
+        }
+
+This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
+is a seller (``SellerStarter::class.java``).
 
 .. _progress-tracking:
 

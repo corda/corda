@@ -7,6 +7,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -98,7 +99,7 @@ abstract class AbstractStateReplacementFlow {
             val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
             return response.unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
-                it.verifyWithECDSA(stx.id)
+                it.verify(stx.id)
                 it
             }
         }
@@ -157,7 +158,7 @@ abstract class AbstractStateReplacementFlow {
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifySignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
-                signatures.forEach { it.verifyWithECDSA(stx.id) }
+                signatures.forEach { it.verify(stx.id) }
                 signatures
             }
 
@@ -187,7 +188,7 @@ abstract class AbstractStateReplacementFlow {
 
         private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
             val myKey = serviceHub.legalIdentityKey
-            return myKey.signWithECDSA(stx.id)
+            return myKey.sign(stx.id)
         }
     }
 }

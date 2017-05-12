@@ -153,7 +153,7 @@ And a simple example CorDapp for you to explore basic concepts is available here
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
-By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release instead by running ``git checkout release-M10.1``.
+By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release instead by running ``git checkout release-M11``.
 
 Next steps
 ----------

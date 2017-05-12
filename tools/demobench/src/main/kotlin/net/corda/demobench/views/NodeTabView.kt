@@ -263,11 +263,11 @@ class NodeTabView : Fragment() {
     }
 
     private fun launchNode(config: NodeConfig) {
-        val countryCode = CityDatabase.cityMap[config.nearestCity]?.countryCode
+        val countryCode = CityDatabase.cityMap[config.nearestCity ?: "Nowhere"]?.countryCode
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }
-        nodeTab.text = config.legalName
+        nodeTab.text = config.legalName.toString()
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
                 if (exitCode == 0)

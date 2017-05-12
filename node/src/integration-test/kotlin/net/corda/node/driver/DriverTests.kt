@@ -8,6 +8,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.readLines
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_REGULATOR
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -42,7 +43,7 @@ class DriverTests {
     fun `simple node startup and shutdown`() {
         val handles = driver {
             val notary = startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-            val regulator = startNode("CN=Regulator,O=R3,OU=corda,L=London,C=UK", setOf(ServiceInfo(RegulatorService.type)))
+            val regulator = startNode(DUMMY_REGULATOR.name, setOf(ServiceInfo(RegulatorService.type)))
             listOf(nodeMustBeUp(notary), nodeMustBeUp(regulator))
         }
         handles.map { nodeMustBeDown(it) }

@@ -67,7 +67,7 @@ private class BankOfCordaDriver {
             }, isDebug = true)
         } else {
             try {
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", X500Name(BOC.name))
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name)
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")

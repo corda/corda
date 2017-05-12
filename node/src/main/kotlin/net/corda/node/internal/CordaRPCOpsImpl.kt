@@ -7,20 +7,24 @@ import net.corda.core.contracts.UpgradedContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StateMachineRunId
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.messaging.getRpcContext
 import net.corda.node.services.messaging.requirePermission
 import net.corda.node.services.startFlowPermission
+import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.transaction
 import org.bouncycastle.asn1.x500.X500Name
-import net.corda.nodeapi.CURRENT_RPC_USER
 import org.jetbrains.exposed.sql.Database
 import rx.Observable
 import java.io.InputStream
@@ -37,8 +41,6 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override val protocolVersion: Int = 0
-
     override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
         return database.transaction {
             services.networkMapCache.track()
@@ -49,6 +51,23 @@ class CordaRPCOpsImpl(
         return database.transaction {
             val (vault, updates) = services.vaultService.track()
             Pair(vault.states.toList(), updates)
+        }
+    }
+
+    override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
+                                                  paging: PageSpecification,
+                                                  sorting: Sort): Vault.Page<T> {
+        return database.transaction {
+            services.vaultService.queryBy<T>(criteria, paging, sorting)
+        }
+    }
+
+    @RPCReturnsObservables
+    override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
+                                                  paging: PageSpecification,
+                                                  sorting: Sort): Vault.PageAndUpdates<T> {
+        return database.transaction {
+            services.vaultService.trackBy<T>(criteria, paging, sorting)
         }
     }
 
@@ -96,18 +115,26 @@ class CordaRPCOpsImpl(
         }
     }
 
-    // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T> {
-        requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
-        return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = true) as FlowProgressHandle<T>
+        val stateMachine = startFlow(logicType, args)
+        return FlowProgressHandleImpl(
+                id = stateMachine.id,
+                returnValue = stateMachine.resultFuture,
+                progress = stateMachine.logic.track()?.second ?: Observable.empty()
+        )
     }
 
-    // TODO: Check that this flow is annotated as being intended for RPC invocation
     override fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T> {
-        requirePermission(startFlowPermission(logicType))
-        val currentUser = FlowInitiator.RPC(CURRENT_RPC_USER.get().username)
-        return services.invokeFlowAsync(logicType, currentUser, *args).createHandle(hasProgress = false)
+        val stateMachine = startFlow(logicType, args)
+        return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+    }
+
+    private fun <T : Any> startFlow(logicType: Class<out FlowLogic<T>>, args: Array<out Any?>): FlowStateMachineImpl<T> {
+        require(logicType.isAnnotationPresent(StartableByRPC::class.java)) { "${logicType.name} was not designed for RPC" }
+        val rpcContext = getRpcContext()
+        rpcContext.requirePermission(startFlowPermission(logicType))
+        val currentUser = FlowInitiator.RPC(rpcContext.currentUser.username)
+        return services.invokeFlowAsync(logicType, currentUser, *args)
     }
 
     override fun attachmentExists(id: SecureHash): Boolean {
@@ -144,10 +171,12 @@ class CordaRPCOpsImpl(
 
     override fun waitUntilRegisteredWithNetworkMap() = services.networkMapCache.mapServiceRegistered
     override fun partyFromKey(key: PublicKey) = services.identityService.partyFromKey(key)
+    @Suppress("DEPRECATION")
+    @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
     override fun partyFromX500Name(x500Name: X500Name)= services.identityService.partyFromX500Name(x500Name)
 
-    override fun registeredFlows(): List<String> = services.flowLogicRefFactory.flowWhitelist.keys.sorted()
+    override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
@@ -161,4 +190,5 @@ class CordaRPCOpsImpl(
             }
         }
     }
+
 }

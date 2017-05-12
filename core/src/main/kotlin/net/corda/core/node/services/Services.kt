@@ -5,6 +5,11 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
@@ -16,6 +21,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Instant
 import java.util.*
 
 /**
@@ -88,8 +94,38 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     }
 
     enum class StateStatus {
-        UNCONSUMED, CONSUMED
+        UNCONSUMED, CONSUMED, ALL
     }
+
+    /**
+     * Returned in queries [VaultService.queryBy] and [VaultService.trackBy].
+     * A Page contains:
+     *  1) a [List] of actual [StateAndRef] requested by the specified [QueryCriteria] to a maximum of [MAX_PAGE_SIZE]
+     *  2) a [List] of associated [Vault.StateMetadata], one per [StateAndRef] result
+     *  3) the [PageSpecification] definition used to bound this result set
+     *  4) a total number of states that met the given [QueryCriteria]
+     *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
+     *     further pagination (by issuing new queries).
+     */
+    @CordaSerializable
+    data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
+                                           val statesMetadata: List<Vault.StateMetadata>,
+                                           val pageable: PageSpecification,
+                                           val totalStatesAvailable: Long)
+
+    @CordaSerializable
+    data class StateMetadata(val ref: StateRef,
+                             val contractStateClassName: String,
+                             val recordedTime: Instant,
+                             val consumedTime: Instant?,
+                             val status: Vault.StateStatus,
+                             val notaryName: String,
+                             val notaryKey: String,
+                             val lockId: String?,
+                             val lockUpdateTime: Instant?)
+
+    @CordaSerializable
+    data class PageAndUpdates<out T : ContractState> (val current: Vault.Page<T>, val future: Observable<Vault.Update>? = null)
 }
 
 /**
@@ -129,12 +165,58 @@ interface VaultService {
      * Atomically get the current vault and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("trackBy(QueryCriteria())"))
     fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>>
+
+    // DOCSTART VaultQueryAPI
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.Page] object containing the following:
+     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
+     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
+     *  3. the [PageSpecification] used in the query
+     *  4. a total number of results available (for subsequent paging if necessary)
+     *
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
+     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
+     */
+    fun <T : ContractState> queryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort(emptySet())): Vault.Page<T>
+    /**
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.PageAndUpdates] object containing
+     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
+     * 2) an [Observable] of [Vault.Update]
+     *
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
+     */
+    fun <T : ContractState> trackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                    paging: PageSpecification = PageSpecification(),
+                                    sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
+    // DOCEND VaultQueryAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+    fun <T : ContractState> queryBy(): Vault.Page<T> = queryBy()
+    fun <T : ContractState> queryBy(criteria: QueryCriteria): Vault.Page<T> = queryBy(criteria)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = queryBy(criteria, paging)
+    fun <T : ContractState> queryBy(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = queryBy(criteria, sorting)
+
+    fun <T : ContractState> trackBy(): Vault.PageAndUpdates<T> = trackBy()
+    fun <T : ContractState> trackBy(criteria: QueryCriteria): Vault.PageAndUpdates<T> = trackBy(criteria)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = trackBy(criteria, paging)
+    fun <T : ContractState> trackBy(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = trackBy(criteria, Sort(emptySet()))
 
     /**
      * Return unconsumed [ContractState]s for a given set of [StateRef]s
-     * TODO: revisit and generalize this exposed API function.
      */
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(stateRefs = listOf(<StateRef>)))"))
     fun statesForRefs(refs: List<StateRef>): Map<StateRef, TransactionState<*>?>
 
     /**
@@ -212,6 +294,8 @@ interface VaultService {
      * Return [ContractState]s of a given [Contract] type and [Iterable] of [Vault.StateStatus].
      * Optionally may specify whether to include [StateRef] that have been marked as soft locked (default is true)
      */
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(QueryCriteria())"))
     fun <T : ContractState> states(clazzes: Set<Class<T>>, statuses: EnumSet<Vault.StateStatus>, includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>>
     // DOCEND VaultStatesQuery
 
@@ -257,17 +341,25 @@ interface VaultService {
     fun <T : ContractState> unconsumedStatesForSpending(amount: Amount<Currency>, onlyFromIssuerParties: Set<AbstractParty>? = null, notary: Party? = null, lockId: UUID, withIssuerRefs: Set<OpaqueBytes>? = null): List<StateAndRef<T>>
 }
 
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria())"))
 inline fun <reified T : ContractState> VaultService.unconsumedStates(includeSoftLockedStates: Boolean = true): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED), includeSoftLockedStates)
 
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))"))
 inline fun <reified T : ContractState> VaultService.consumedStates(): Iterable<StateAndRef<T>> =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.CONSUMED))
 
 /** Returns the [linearState] heads only when the type of the state would be considered an 'instanceof' the given type. */
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(linearId = listOf(<UniqueIdentifier>)))"))
 inline fun <reified T : LinearState> VaultService.linearHeadsOfType() =
         states(setOf(T::class.java), EnumSet.of(Vault.StateStatus.UNCONSUMED))
                 .associateBy { it.state.data.linearId }.mapValues { it.value }
 
+// TODO: Remove this from the interface
+// @Deprecated("This function will be removed in a future milestone", ReplaceWith("queryBy(LinearStateQueryCriteria(dealPartyName = listOf(<String>)))"))
 inline fun <reified T : DealState> VaultService.dealsWith(party: AbstractParty) = linearHeadsOfType<T>().values.filter {
     it.state.data.parties.any { it == party }
 }
@@ -361,28 +453,6 @@ interface TxWritableStorageService : StorageService {
      * the transaction data to other nodes that need it.
      */
     override val validatedTransactions: TransactionStorage
-}
-
-/**
- * Provides access to schedule activity at some point in time.  This interface might well be expanded to
- * increase the feature set in the future.
- *
- * If the point in time is in the past, the expectation is that the activity will happen shortly after it is scheduled.
- *
- * The main consumer initially is an observer of the vault to schedule activities based on transactions as they are
- * recorded.
- */
-interface SchedulerService {
-    /**
-     * Schedule a new activity for a TX output, probably because it was just produced.
-     *
-     * Only one activity can be scheduled for a particular [StateRef] at any one time.  Scheduling a [ScheduledStateRef]
-     * replaces any previously scheduled [ScheduledStateRef] for any one [StateRef].
-     */
-    fun scheduleStateActivity(action: ScheduledStateRef)
-
-    /** Unschedule all activity for a TX output, probably because it was consumed. */
-    fun unscheduleStateActivity(ref: StateRef)
 }
 
 /**

@@ -2,8 +2,8 @@ package net.corda.node.services.transactions
 
 import net.corda.core.ThreadBox
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -54,7 +54,7 @@ class PersistentUniquenessProvider : UniquenessProvider, SingletonSerializeAsTok
                                       finalizables: MutableList<() -> Unit>) {
             insert[table.consumingTxHash] = entry.value.id
             insert[table.consumingIndex] = entry.value.inputIndex
-            insert[table.requestingParty.name] = entry.value.requestingParty.name
+            insert[table.requestingParty.name] = entry.value.requestingParty.name.toString()
             insert[table.requestingParty.owningKey] = entry.value.requestingParty.owningKey
         }
     })

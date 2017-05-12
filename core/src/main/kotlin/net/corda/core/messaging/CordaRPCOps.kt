@@ -6,15 +6,18 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UpgradedContract
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import org.bouncycastle.asn1.x500.X500Name
@@ -66,9 +69,63 @@ interface CordaRPCOps : RPCOps {
     fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
 
     /**
+     * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
+     *
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.Page] object containing the following:
+     *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
+     *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
+     *  3. the [PageSpecification] used in the query
+     *  4. a total number of results available (for subsequent paging if necessary)
+     *
+     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
+     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
+     */
+    // DOCSTART VaultQueryByAPI
+    fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                         paging: PageSpecification = PageSpecification(),
+                                         sorting: Sort = Sort(emptySet())): Vault.Page<T>
+    // DOCEND VaultQueryByAPI
+
+    /**
+     * Returns a snapshot (as per queryBy) and an observable of future updates to the vault for the given query criteria.
+     *
+     * Generic vault query function which takes a [QueryCriteria] object to define filters,
+     * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
+     * and returns a [Vault.PageAndUpdates] object containing
+     * 1) a snapshot as a [Vault.Page] (described previously in [queryBy])
+     * 2) an [Observable] of [Vault.Update]
+     *
+     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
+    */
+    // DOCSTART VaultTrackByAPI
+    @RPCReturnsObservables
+    fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
+                                         paging: PageSpecification = PageSpecification(),
+                                         sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T>
+    // DOCEND VaultTrackByAPI
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
+    // Java Helpers
+
+    // DOCSTART VaultQueryAPIJavaHelpers
+    fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria = criteria)
+    fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging = paging)
+    fun <T : ContractState> vaultQueryByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting = sorting)
+
+    fun <T : ContractState> vaultTrackByCriteria(criteria: QueryCriteria): Vault.PageAndUpdates<T> = vaultTrackBy(criteria = criteria)
+    fun <T : ContractState> vaultTrackByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, paging = paging)
+    fun <T : ContractState> vaultTrackByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = vaultTrackBy(criteria, sorting = sorting)
+    // DOCEND VaultQueryAPIJavaHelpers
+
+    /**
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
+    // TODO: Remove this from the interface
+    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**
@@ -91,14 +148,14 @@ interface CordaRPCOps : RPCOps {
     fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
 
     /**
-     * Start the given flow with the given arguments.
+     * Start the given flow with the given arguments. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
      */
     @RPCReturnsObservables
     fun <T : Any> startFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowHandle<T>
 
     /**
      * Start the given flow with the given arguments, returning an [Observable] with a single observation of the
-     * result of running the flow.
+     * result of running the flow. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
      */
     @RPCReturnsObservables
     fun <T : Any> startTrackedFlowDynamic(logicType: Class<out FlowLogic<T>>, vararg args: Any?): FlowProgressHandle<T>
@@ -179,6 +236,7 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] with the given name as it's [Party.name]
      */
+    @Deprecated("Use partyFromX500Name instead")
     fun partyFromName(name: String): Party?
 
     /**

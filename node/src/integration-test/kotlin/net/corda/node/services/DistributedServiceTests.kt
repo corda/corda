@@ -3,7 +3,7 @@ package net.corda.node.services
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.POUNDS
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
@@ -60,8 +60,7 @@ class DistributedServiceTests : DriverBasedTest() {
         // Connect to Alice and the notaries
         fun connectRpc(node: NodeHandle): CordaRPCOps {
             val client = node.rpcClientToNode()
-            client.start("test", "test")
-            return client.proxy()
+            return client.start("test", "test").proxy
         }
         aliceProxy = connectRpc(alice)
         val rpcClientsToNotaries = notaries.map(::connectRpc)

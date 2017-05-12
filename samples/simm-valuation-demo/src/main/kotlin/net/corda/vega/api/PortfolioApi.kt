@@ -7,6 +7,8 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.*
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.DUMMY_MAP
@@ -20,6 +22,7 @@ import net.corda.vega.flows.SimmRevaluation
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
 import net.corda.vega.portfolio.toStateAndRef
+import org.bouncycastle.asn1.x500.X500Name
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -240,7 +243,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 
-    data class ApiParty(val id: String, val text: String)
+    data class ApiParty(val id: String, val text: X500Name)
     data class AvailableParties(val self: ApiParty, val counterparties: List<ApiParty>)
 
     /**

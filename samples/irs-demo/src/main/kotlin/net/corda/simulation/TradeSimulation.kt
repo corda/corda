@@ -36,8 +36,11 @@ class TradeSimulation(runAsync: Boolean, latencyInjector: InMemoryMessagingNetwo
         buyer.services.fillWithSomeTestCash(1500.DOLLARS, notary.info.notaryIdentity)
 
         val issuance = run {
-            val tx = CommercialPaper().generateIssue(seller.info.legalIdentity.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
-                    Instant.now() + 10.days, notary.info.notaryIdentity)
+            val tx = CommercialPaper().generateIssue(
+                    seller.info.legalIdentity.ref(1, 2, 3),
+                    1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
+                    Instant.now() + 10.days,
+                    notary.info.notaryIdentity)
             tx.setTime(Instant.now(), 30.seconds)
             val notaryKey = notary.services.notaryIdentityKey
             val sellerKey = seller.services.legalIdentityKey

@@ -12,6 +12,7 @@ import net.corda.core.utilities.ALICE_KEY
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
@@ -22,6 +23,7 @@ import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
@@ -41,10 +43,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     val testClock = TestClock(stoppedClock)
 
     val schedulerGatedExecutor = AffinityExecutor.Gate(true)
-
-    // We have to allow Java boxed primitives but Kotlin warns we shouldn't be using them
-    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
-    val factory = FlowLogicRefFactory(mapOf(Pair(TestFlowLogic::class.java.name, setOf(NodeSchedulerServiceTest::class.java.name, Integer::class.java.name))))
 
     lateinit var services: MockServiceHubInternal
 
@@ -79,12 +77,17 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         database.transaction {
             val kms = MockKeyManagementService(ALICE_KEY)
-            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(false, InMemoryMessagingNetwork.PeerHandle(0, "None"), AffinityExecutor.ServiceAffinityExecutor("test", 1), database)
+            val nullIdentity = X500Name("cn=None")
+            val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
+                    false,
+                    InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
+                    AffinityExecutor.ServiceAffinityExecutor("test", 1),
+                    database)
             services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, net = mockMessagingService), TestReference {
                 override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
                 override val testReference = this@NodeSchedulerServiceTest
             }
-            scheduler = NodeSchedulerService(services, factory, schedulerGatedExecutor)
+            scheduler = NodeSchedulerService(services, database, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
@@ -266,7 +269,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         database.transaction {
             apply {
                 val freshKey = services.keyManagementService.freshKey()
-                val state = TestState(factory.create(TestFlowLogic::class.java, increment), instant)
+                val state = TestState(FlowLogicRefFactoryImpl.createForRPC(TestFlowLogic::class.java, increment), instant)
                 val usefulTX = TransactionType.General.Builder(null).apply {
                     addOutputState(state, DUMMY_NOTARY)
                     addCommand(Command(), freshKey.public)

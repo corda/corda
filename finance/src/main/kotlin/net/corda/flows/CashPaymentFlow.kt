@@ -4,9 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.crypto.toStringShort
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
@@ -20,6 +21,7 @@ import java.util.*
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
  */
+@StartableByRPC
 open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,

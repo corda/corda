@@ -5,9 +5,9 @@ import net.corda.core.RetryableException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.crypto.Party
+import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
-import net.corda.core.crypto.signWithECDSA
+import net.corda.core.crypto.sign
 import net.corda.core.flows.FlowLogic
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
@@ -19,7 +19,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.irs.flows.FixingFlow
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.utilities.AbstractJDBCHashSet
@@ -32,12 +31,14 @@ import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import java.util.function.Function
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.set
 
 /**
  * An interest rates service is an oracle that signs transactions which contain embedded assertions about an interest
@@ -55,7 +56,6 @@ object NodeInterestRates {
      * Register the flow that is used with the Fixing integration tests.
      */
     class Plugin : CordaPluginRegistry() {
-        override val requiredFlows = mapOf(Pair(FixingFlow.FixingRoleDecider::class.java.name, setOf(Duration::class.java.name, StateRef::class.java.name)))
         override val servicePlugins = listOf(Function(::Service))
     }
 
@@ -224,7 +224,7 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return signingKey.signWithECDSA(ftx.rootHash.bytes, identity)
+            return signingKey.sign(ftx.rootHash.bytes, identity)
         }
         // DOCEND 1
     }

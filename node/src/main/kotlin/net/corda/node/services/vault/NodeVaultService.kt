@@ -15,18 +15,17 @@ import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
-import net.corda.core.crypto.AbstractParty
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
-import net.corda.core.crypto.toBase58String
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
@@ -94,7 +93,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         stateStatus = Vault.StateStatus.UNCONSUMED
                         contractStateClassName = it.value.state.data.javaClass.name
                         contractState = it.value.state.serialize(storageKryo()).bytes
-                        notaryName = it.value.state.notary.name
+                        notaryName = it.value.state.notary.name.toString()
                         notaryKey = it.value.state.notary.owningKey.toBase58String()
                         recordedTime = services.clock.instant()
                     }
@@ -194,6 +193,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                             .map { it ->
                                 val stateRef = StateRef(SecureHash.parse(it.txId), it.index)
                                 val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime)
                                 StateAndRef(state, stateRef)
                             }
                 }
@@ -219,6 +219,26 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 }
 
         return stateAndRefs.associateBy({ it.ref }, { it.state })
+    }
+
+    override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
+
+        TODO("Under construction")
+
+        // If [VaultQueryCriteria.PageSpecification] specified
+        // must return (CloseableIterator) result.get().iterator(skip, take)
+        // where
+        //  skip = Max[(pageNumber - 1),0] * pageSize
+        //  take = pageSize
+    }
+
+    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
+        TODO("Under construction")
+
+//        return mutex.locked {
+//            Vault.PageAndUpdates(queryBy(criteria),
+//                              _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+//        }
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {

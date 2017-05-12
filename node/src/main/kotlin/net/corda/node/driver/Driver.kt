@@ -7,13 +7,11 @@ import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.ThreadBox
-import net.corda.core.crypto.Party
+import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
-import net.corda.core.div
-import net.corda.core.flatMap
-import net.corda.core.map
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -33,13 +31,12 @@ import net.corda.nodeapi.config.parseAs
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x500.X500NameBuilder
-import org.bouncycastle.asn1.x500.style.BCStyle
 import org.slf4j.Logger
 import java.io.File
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
@@ -63,23 +60,6 @@ private val log: Logger = loggerFor<DriverDSL>()
  * This is the interface that's exposed to DSL users.
  */
 interface DriverDSLExposedInterface {
-    /**
-     * Starts a [net.corda.node.internal.Node] in a separate process.
-     *
-     * @param providedName Name of the node, which will be its legal name in [Party].
-     *   Note that this must be unique as the driver uses it as a primary key!
-     * @param advertisedServices The set of services to be advertised by the node. Defaults to empty set.
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
-     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to empty list.
-     * @return The [NodeInfo] of the started up node retrieved from the network map service.
-     */
-    @Deprecated("To be removed once X500Name is used as legal name everywhere")
-    fun startNode(providedName: String?,
-                  advertisedServices: Set<ServiceInfo> = emptySet(),
-                  rpcUsers: List<User> = emptyList(),
-                  verifierType: VerifierType = VerifierType.InMemory,
-                  customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
-
     /**
      * Starts a [net.corda.node.internal.Node] in a separate process.
      *
@@ -107,7 +87,7 @@ interface DriverDSLExposedInterface {
      * @return The [Party] identity of the distributed notary service, and the [NodeInfo]s of the notaries in the cluster.
      */
     fun startNotaryCluster(
-            notaryName: String,
+            notaryName: X500Name,
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
@@ -124,9 +104,29 @@ interface DriverDSLExposedInterface {
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
      * to set automaticallyStartNetworkMap to false in your [driver] call.
      */
-    fun startNetworkMapService()
+    fun startNetworkMapService(): ListenableFuture<Unit>
 
     fun waitForAllNodesToFinish()
+
+    /**
+     * Polls a function until it returns a non-null value. Note that there is no timeout on the polling.
+     *
+     * @param pollName A description of what is being polled.
+     * @param pollInterval The interval of polling.
+     * @param warnCount The number of polls after the Driver gives a warning.
+     * @param check The function being polled.
+     * @return A future that completes with the non-null value [check] has returned.
+     */
+    fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): ListenableFuture<A>
+    /**
+     * Polls the given function until it returns true.
+     * @see pollUntilNonNull
+     */
+    fun pollUntilTrue(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> Boolean): ListenableFuture<Unit> {
+        return pollUntilNonNull(pollName, pollInterval, warnCount) { if (check()) Unit else null }
+    }
+
+    val shutdownManager: ShutdownManager
 }
 
 interface DriverDSLInternalInterface : DriverDSLExposedInterface {
@@ -233,15 +233,13 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     var shutdownHook: Thread? = null
     try {
         driverDsl.start()
-        val returnValue = dsl(coerce(driverDsl))
         shutdownHook = Thread({
             driverDsl.shutdown()
         })
         Runtime.getRuntime().addShutdownHook(shutdownHook)
-        return returnValue
+        return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
-        println("Driver shutting down because of exception $exception")
-        exception.printStackTrace()
+        log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
         driverDsl.shutdown()
@@ -288,7 +286,7 @@ fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort
 fun <A> poll(
         executorService: ScheduledExecutorService,
         pollName: String,
-        pollIntervalMs: Long = 500,
+        pollInterval: Duration = 500.millis,
         warnCount: Int = 120,
         check: () -> A?
 ): ListenableFuture<A> {
@@ -303,7 +301,7 @@ fun <A> poll(
         executorService.schedule(task@ {
             counter++
             if (counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollIntervalMs * warnCount / 1000.0} seconds...")
+                log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
             }
             val result = try {
                 check()
@@ -316,7 +314,7 @@ fun <A> poll(
             } else {
                 resultFuture.set(result)
             }
-        }, pollIntervalMs, MILLISECONDS)
+        }, pollInterval.toMillis(), MILLISECONDS)
     }
     schedulePoll()
     return resultFuture
@@ -332,18 +330,28 @@ class ShutdownManager(private val executorService: ExecutorService) {
 
     fun shutdown() {
         val shutdownFutures = state.locked {
-            require(!isShutdown)
-            isShutdown = true
-            registeredShutdowns
+            if (isShutdown) {
+                emptyList<ListenableFuture<() -> Unit>>()
+            } else {
+                isShutdown = true
+                registeredShutdowns
+            }
         }
-        val shutdownsFuture = Futures.allAsList(shutdownFutures)
-        val shutdowns = try {
-            shutdownsFuture.get(1, SECONDS)
-        } catch (exception: TimeoutException) {
-            /** Could not get all of them, collect what we have */
-            shutdownFutures.filter { it.isDone }.map { it.get() }
+        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
+        shutdowns.reversed().forEach { errorOrShutdown ->
+            errorOrShutdown.match(
+                    onValue = { shutdown ->
+                        try {
+                            shutdown()
+                        } catch (throwable: Throwable) {
+                            log.error("Exception while shutting down", throwable)
+                        }
+                    },
+                    onError = { error ->
+                        log.error("Exception while getting shutdown method, disregarding", error)
+                    }
+            )
         }
-        shutdowns.reversed().forEach { it() }
     }
 
     fun registerShutdown(shutdown: ListenableFuture<() -> Unit>) {
@@ -352,6 +360,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             registeredShutdowns.add(shutdown)
         }
     }
+    fun registerShutdown(shutdown: () -> Unit) = registerShutdown(Futures.immediateFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: ListenableFuture<Process>) {
         val processShutdown = processFuture.map { process ->
@@ -372,6 +381,28 @@ class ShutdownManager(private val executorService: ExecutorService) {
         }
         registerShutdown(processShutdown)
     }
+
+    interface Follower {
+        fun unfollow()
+        fun shutdown()
+    }
+
+    fun follower() = object : Follower {
+        private val start = state.locked { registeredShutdowns.size }
+        private val end = AtomicInteger(start - 1)
+        override fun unfollow() = end.set(state.locked { registeredShutdowns.size })
+        override fun shutdown() = end.get().let { end ->
+            start > end && throw IllegalStateException("You haven't called unfollow.")
+            state.locked {
+                registeredShutdowns.subList(start, end).listIterator(end - start).run {
+                    while (hasPrevious()) {
+                        previous().getOrThrow().invoke()
+                        set(Futures.immediateFuture {}) // Don't break other followers by doing a remove.
+                    }
+                }
+            }
+        }
+    }
 }
 
 class DriverDSL(
@@ -385,8 +416,10 @@ class DriverDSL(
 ) : DriverDSLInternalInterface {
     private val networkMapLegalName = DUMMY_MAP.name
     private val networkMapAddress = portAllocation.nextHostAndPort()
-    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(2))
-    val shutdownManager = ShutdownManager(executorService)
+    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(
+            Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+    )
+    override val shutdownManager = ShutdownManager(executorService)
 
     class State {
         val processes = ArrayList<ListenableFuture<Process>>()
@@ -418,9 +451,6 @@ class DriverDSL(
 
     override fun shutdown() {
         shutdownManager.shutdown()
-
-        // Check that we shut down properly
-        addressMustNotBeBound(executorService, networkMapAddress).get()
         executorService.shutdown()
     }
 
@@ -428,8 +458,9 @@ class DriverDSL(
         val client = CordaRPCClient(nodeAddress, sslConfig)
         return poll(executorService, "for RPC connection") {
             try {
-                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-                return@poll client.proxy()
+                val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+                shutdownManager.registerShutdown { connection.close() }
+                return@poll connection.proxy
             } catch(e: Exception) {
                 log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 null
@@ -444,25 +475,13 @@ class DriverDSL(
             verifierType: VerifierType,
             customOverrides: Map<String, Any?>
     ): ListenableFuture<NodeHandle> {
-        return startNode(providedName?.toString(), advertisedServices, rpcUsers, verifierType, customOverrides)
-    }
-
-    override fun startNode(providedName: String?,
-                           advertisedServices: Set<ServiceInfo>,
-                           rpcUsers: List<User>,
-                           verifierType: VerifierType,
-                           customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val name = providedName.toString() ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}").toString()
-        val commonName = try {
-            X500Name(name).commonName
-        } catch(ex: IllegalArgumentException) {
-            name
-        }
-        val baseDirectory = driverDirectory / commonName
+        // TODO: Derive name from the full picked name, don't just wrap the common name
+        val name = providedName ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}")
+        val baseDirectory = driverDirectory / name.commonName
         val configOverrides = mapOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
@@ -471,7 +490,7 @@ class DriverDSL(
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
-                        "legalName" to networkMapLegalName
+                        "legalName" to networkMapLegalName.toString()
                 ),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
@@ -503,14 +522,14 @@ class DriverDSL(
     }
 
     override fun startNotaryCluster(
-            notaryName: String,
+            notaryName: X500Name,
             clusterSize: Int,
             type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { "Notary Node $it" }
-        val paths = nodeNames.map { driverDirectory / it }
+        val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
+        val paths = nodeNames.map { driverDirectory / it.commonName }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
         val serviceInfo = ServiceInfo(type, notaryName)
@@ -564,20 +583,15 @@ class DriverDSL(
         }
     }
 
-    override fun startNetworkMapService() {
+    override fun startNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val nodeDirectoryName = try {
-            X500Name(networkMapLegalName).commonName
-        } catch(ex: IllegalArgumentException) {
-            networkMapLegalName
-        }
-        val baseDirectory = driverDirectory / nodeDirectoryName
+        val baseDirectory = driverDirectory / networkMapLegalName.commonName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapLegalName,
+                        "myLegalName" to networkMapLegalName.toString(),
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
@@ -589,13 +603,20 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
+        return startNode.flatMap { addressMustBeBound(executorService, networkMapAddress, it) }
+    }
+
+    override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
+        val pollFuture = poll(executorService, pollName, pollInterval, warnCount, check)
+        shutdownManager.registerShutdown { pollFuture.cancel(true) }
+        return pollFuture
     }
 
     companion object {
         val name = arrayOf(
-                X500Name(ALICE.name),
-                X500Name(BOB.name),
-                X500Name(DUMMY_BANK_A.name)
+                ALICE.name,
+                BOB.name,
+                DUMMY_BANK_A.name
         )
 
         fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
@@ -614,8 +635,13 @@ class DriverDSL(
 
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
-                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}"
+                        "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                        "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
+                // TODO Add this once we upgrade to quasar 0.7.8, this causes startup time to halve.
+                // val excludePattern = x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
+                // val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                //        "-javaagent:$quasarJarPath=$excludePattern"
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
@@ -646,7 +672,10 @@ class DriverDSL(
                         className = className, // cannot directly get class for this, so just use string
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
-                        extraJvmArguments = listOf("-Dname=node-${handle.configuration.p2pAddress}-webserver"),
+                        extraJvmArguments = listOf(
+                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                        ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
             }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }

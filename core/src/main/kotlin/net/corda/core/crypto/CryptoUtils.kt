@@ -2,16 +2,10 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAEngine
-import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import net.i2p.crypto.eddsa.KeyPairGenerator
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
-import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
-import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
-import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import java.math.BigInteger
 import java.security.*
 
@@ -40,34 +34,45 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
 @CordaSerializable
 object NullSignature : DigitalSignature.WithKey(NullPublicKey, ByteArray(32))
 
-/** Utility to simplify the act of signing a byte array */
-fun PrivateKey.signWithECDSA(bytes: ByteArray): DigitalSignature {
-    val signer = EdDSAEngine()
-    signer.initSign(this)
-    signer.update(bytes)
-    val sig = signer.sign()
-    return DigitalSignature(sig)
+/**
+ * Utility to simplify the act of signing a byte array.
+ * @param bytesToSign the data/message to be signed in [ByteArray] form (usually the Merkle root).
+ * @return the [DigitalSignature] object on the input message.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+ * @throws InvalidKeyException if the private key is invalid.
+ * @throws SignatureException if signing is not possible due to malformed data or private key.
+ */
+@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+fun PrivateKey.sign(bytesToSign: ByteArray): DigitalSignature {
+    return DigitalSignature(Crypto.doSign(this, bytesToSign))
 }
 
-fun PrivateKey.signWithECDSA(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
-    return DigitalSignature.WithKey(publicKey, signWithECDSA(bytesToSign).bytes)
+fun PrivateKey.sign(bytesToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    return DigitalSignature.WithKey(publicKey, this.sign(bytesToSign).bytes)
 }
 
-val ed25519Curve: EdDSANamedCurveSpec = EdDSANamedCurveTable.getByName("ED25519")
+/**
+ * Helper function to sign with a key pair.
+ * @param bytesToSign the data/message to be signed in [ByteArray] form (usually the Merkle root).
+ * @return the digital signature (in [ByteArray]) on the input message.
+ * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
+ * @throws InvalidKeyException if the private key is invalid.
+ * @throws SignatureException if signing is not possible due to malformed data or private key.
+ */
+@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
+fun KeyPair.sign(bytesToSign: ByteArray) = private.sign(bytesToSign, public)
+fun KeyPair.sign(bytesToSign: OpaqueBytes) = private.sign(bytesToSign.bytes, public)
+fun KeyPair.sign(bytesToSign: OpaqueBytes, party: Party) = sign(bytesToSign.bytes, party)
 
-fun KeyPair.signWithECDSA(bytesToSign: ByteArray) = private.signWithECDSA(bytesToSign, public)
-fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes) = private.signWithECDSA(bytesToSign.bytes, public)
-fun KeyPair.signWithECDSA(bytesToSign: OpaqueBytes, party: Party) = signWithECDSA(bytesToSign.bytes, party)
 // TODO This case will need more careful thinking, as party owningKey can be a CompositeKey. One way of doing that is
 //  implementation of CompositeSignature.
 @Throws(InvalidKeyException::class)
-fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
-    val sig = signWithECDSA(bytesToSign)
+fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
+    val sig = sign(bytesToSign)
     val sigKey = when (party.owningKey) { // Quick workaround when we have CompositeKey as Party owningKey.
         is CompositeKey -> throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
         else -> party.owningKey
     }
-    sigKey.verifyWithECDSA(bytesToSign, sig)
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 
@@ -77,18 +82,14 @@ fun KeyPair.signWithECDSA(bytesToSign: ByteArray, party: Party): DigitalSignatur
  * @throws InvalidKeyException if the key to verify the signature with is not valid (i.e. wrong key type for the
  * signature).
  * @throws SignatureException if the signature is invalid (i.e. damaged), or does not match the key (incorrect).
+ * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
  */
 // TODO: SignatureException should be used only for a damaged signature, as per `java.security.Signature.verify()`,
-// we should use another exception (perhaps IllegalArgumentException) for indicating the signature is valid but does
-// not match.
-@Throws(IllegalStateException::class, SignatureException::class)
-fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
-    if (!isValidForECDSA(content, signature))
-        throw SignatureException("Signature did not match")
-}
+@Throws(SignatureException::class, IllegalArgumentException::class, InvalidKeyException::class)
+fun PublicKey.verify(content: ByteArray, signature: DigitalSignature) = Crypto.doVerify(this, signature.bytes, content)
 
 /**
- * Utility to simplify the act of verifying a signature. In comparison to [verifyWithECDSA] if the key and signature
+ * Utility to simplify the act of verifying a signature. In comparison to [verify] if the key and signature
  * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
  * as it avoids the risk of failing to test the result, but this is for uses such as [java.security.Signature.verify]
  * implementations.
@@ -96,26 +97,18 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
  * @throws InvalidKeyException if the key to verify the signature with is not valid (i.e. wrong key type for the
  * signature).
  * @throws SignatureException if the signature is invalid (i.e. damaged).
+ * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
  * @return whether the signature is correct for this key.
  */
-@Throws(IllegalStateException::class, SignatureException::class)
-fun PublicKey.isValidForECDSA(content: ByteArray, signature: DigitalSignature) : Boolean {
-    val pubKey = when (this) {
-        is CompositeKey -> throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
-        else -> this
-    }
-    val verifier = EdDSAEngine()
-    verifier.initVerify(pubKey)
-    verifier.update(content)
-    return verifier.verify(signature.bytes)
+@Throws(IllegalStateException::class, SignatureException::class, IllegalArgumentException::class)
+fun PublicKey.isValid(content: ByteArray, signature: DigitalSignature) : Boolean {
+    if (this is CompositeKey)
+        throw IllegalStateException("Verification of CompositeKey signatures currently not supported.") // TODO CompositeSignature verification.
+    return Crypto.isValid(this, signature.bytes, content)
 }
 
-/** Render a public key to a string, using a short form if it's an elliptic curve public key */
-fun PublicKey.toStringShort(): String {
-    return (this as? EdDSAPublicKey)?.let { key ->
-        "DL" + key.abyte.toBase58()   // DL -> Distributed Ledger
-    } ?: toString()
-}
+/** Render a public key to its hash (in Base58) of its serialised form using the DL prefix. */
+fun PublicKey.toStringShort(): String  = "DL" + this.toSHA256Bytes().toBase58()
 
 val PublicKey.keys: Set<PublicKey> get() {
     return if (this is CompositeKey) this.leafKeys
@@ -148,26 +141,9 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
 /**
  * Returns a key pair derived from the given private key entropy. This is useful for unit tests and other cases where
  * you want hard-coded private keys.
+ * This currently works for the default signature scheme EdDSA ed25519 only.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair {
-    val params = ed25519Curve
-    val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8)
-    val priv = EdDSAPrivateKeySpec(bytes, params)
-    val pub = EdDSAPublicKeySpec(priv.a, params)
-    val key = KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
-    return key
-}
-
-/**
- * Helper function for signing.
- * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
- * @return the digital signature (in [ByteArray]) on the input message.
- * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
- * @throws InvalidKeyException if the private key is invalid.
- * @throws SignatureException if signing is not possible due to malformed data or private key.
- */
-@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-fun PrivateKey.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this, clearData)
+fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.generateKeyPairFromEntropy(entropy)
 
 /**
  * Helper function for signing.
@@ -179,17 +155,6 @@ fun PrivateKey.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this, clear
  */
 @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
 fun PrivateKey.sign(metaData: MetaData): TransactionSignature = Crypto.doSign(this, metaData)
-
-/**
- * Helper function to sign with a key pair.
- * @param clearData the data/message to be signed in [ByteArray] form (usually the Merkle root).
- * @return the digital signature (in [ByteArray]) on the input message.
- * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
- * @throws InvalidKeyException if the private key is invalid.
- * @throws SignatureException if signing is not possible due to malformed data or private key.
- */
-@Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-fun KeyPair.sign(clearData: ByteArray): ByteArray = Crypto.doSign(this.private, clearData)
 
 /**
  * Helper function to verify a signature.

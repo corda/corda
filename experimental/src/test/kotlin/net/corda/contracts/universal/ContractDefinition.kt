@@ -1,13 +1,14 @@
 package net.corda.contracts.universal
 
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.Party
 import net.corda.core.utilities.ALICE
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import org.junit.Test
 import java.util.*
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 // Test parties
 val acmeCorp = Party(ALICE.name, generateKeyPair().public)

@@ -1,5 +1,6 @@
 package net.corda.simulation
 
+import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
@@ -8,9 +9,12 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.RunOnCallerThread
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.AnonymousParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.flatMap
+import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.map
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.success
@@ -24,6 +28,7 @@ import net.corda.node.utilities.transaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockIdentityService
+import java.security.KeyPair
 import java.time.LocalDate
 import java.util.*
 
@@ -120,16 +125,27 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity.toAnonymous()
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity.toAnonymous()
 
+        @InitiatingFlow
+        class StartDealFlow(val otherParty: Party,
+                            val payload: AutoOffer,
+                            val myKeyPair: KeyPair) : FlowLogic<SignedTransaction>() {
+            @Suspendable
+            override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload, myKeyPair))
+        }
+
         @Suppress("UNCHECKED_CAST")
-        val acceptorTx = node2.initiateSingleShotFlow(Instigator::class) { Acceptor(it) }.flatMap {
+        val acceptorTx = node2.initiateSingleShotFlow(StartDealFlow::class) { Acceptor(it) }.flatMap {
             (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
         showProgressFor(listOf(node1, node2))
         showConsensusFor(listOf(node1, node2, regulators[0]))
 
-        val instigator = Instigator(node2.info.legalIdentity, AutoOffer(notary.info.notaryIdentity, irs), node1.services.legalIdentityKey)
-        val instigatorTx: ListenableFuture<SignedTransaction> = node1.services.startFlow(instigator).resultFuture
+        val instigator = StartDealFlow(
+                node2.info.legalIdentity,
+                AutoOffer(notary.info.notaryIdentity, irs),
+                node1.services.legalIdentityKey)
+        val instigatorTx = node1.services.startFlow(instigator).resultFuture
 
         return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }
     }

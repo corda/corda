@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
@@ -144,6 +146,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
  * Simple flow to complete a proposal submitted by another party and ensure both nodes
  * end up with a fully signed copy of the state either as APPROVED, or REJECTED
  */
+@InitiatingFlow
 class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : FlowLogic<StateAndRef<TradeApprovalContract.State>>() {
     init {
         require(verdict in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED)) {
@@ -250,7 +253,7 @@ class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
         }
         // DOCEND 3
         // Having verified the SignedTransaction passed to us we can sign it too
-        val ourSignature = serviceHub.legalIdentityKey.signWithECDSA(completeTx.tx.id)
+        val ourSignature = serviceHub.legalIdentityKey.sign(completeTx.tx.id)
         // Send our signature to the other party.
         send(source, ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction

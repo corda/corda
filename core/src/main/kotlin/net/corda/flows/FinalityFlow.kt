@@ -4,16 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
-import net.corda.core.crypto.Party
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
 /**
- * Verifies the given transactions, then sends them to the named notaries. If the notary agrees that the transactions
+ * Verifies the given transactions, then sends them to the named notary. If the notary agrees that the transactions
  * are acceptable then they are from that point onwards committed to the ledger, and will be written through to the
  * vault. Additionally they will be distributed to the parties reflected in the participants list of the states.
  *

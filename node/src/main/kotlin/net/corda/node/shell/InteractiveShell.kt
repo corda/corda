@@ -19,10 +19,11 @@ import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
 import net.corda.node.printBasicNodeInfo
+import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
+import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.ANSIProgressRenderer
 import net.corda.nodeapi.ArtemisMessagingComponent
-import net.corda.nodeapi.CURRENT_RPC_USER
 import net.corda.nodeapi.User
 import org.crsh.command.InvocationContext
 import org.crsh.console.jline.JLineProcessor
@@ -120,7 +121,7 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             // Give whoever has local shell access administrator access to the node.
-            CURRENT_RPC_USER.set(User(ArtemisMessagingComponent.NODE_USER, "", setOf()))
+            CURRENT_RPC_CONTEXT.set(RpcContext(User(ArtemisMessagingComponent.NODE_USER, "", setOf())))
             Emoji.renderIfSupported {
                 jlineProcessor.run()
             }
@@ -209,7 +210,7 @@ object InteractiveShell {
      */
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter) {
-        val matches = node.flowLogicFactory.flowWhitelist.keys.filter { nameFragment in it }
+        val matches = node.services.rpcFlows.filter { nameFragment in it.name }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
@@ -218,14 +219,12 @@ object InteractiveShell {
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
-        val match = matches.single()
-        val clazz = Class.forName(match)
-        if (!FlowLogic::class.java.isAssignableFrom(clazz))
-            throw IllegalStateException("Found a non-FlowLogic class in the whitelist? $clazz")
+
+        @Suppress("UNCHECKED_CAST")
+        val clazz = matches.single() as Class<FlowLogic<*>>
         try {
             // TODO Flow invocation should use startFlowDynamic.
-            @Suppress("UNCHECKED_CAST")
-            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz as Class<FlowLogic<*>>)
+            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val latch = CountDownLatch(1)
@@ -274,10 +273,7 @@ object InteractiveShell {
             var paramNamesFromConstructor: List<String>? = null
             fun getPrototype(ctor: Constructor<*>): List<String> {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
-                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { pair ->
-                    val (name, type) = pair
-                    "$name: $type"
-                }
+                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
                 return prototype
             }
             try {

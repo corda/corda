@@ -2,14 +2,13 @@ package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
 import net.corda.core.crypto.DummyPublicKey
-import net.corda.core.crypto.Party
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.testing.MOCK_VERSION_INFO
-import org.bouncycastle.asn1.x500.X500Name
+import net.corda.testing.getTestX509Name
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -18,8 +17,8 @@ import rx.subjects.PublishSubject
  */
 class MockNetworkMapCache : InMemoryNetworkMapCache() {
     private companion object {
-        val BANK_C = Party(X500Name("CN=Bank C,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"), DummyPublicKey("Bank C"))
-        val BANK_D = Party(X500Name("CN=Bank D,OU=Corda QA Department,O=R3 CEV,L=New York,C=US"), DummyPublicKey("Bank D"))
+        val BANK_C = Party(getTestX509Name("Bank C"), DummyPublicKey("Bank C"))
+        val BANK_D = Party(getTestX509Name("Bank D"), DummyPublicKey("Bank D"))
     }
 
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()

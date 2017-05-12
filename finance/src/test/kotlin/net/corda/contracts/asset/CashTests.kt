@@ -3,6 +3,8 @@ package net.corda.contracts.asset
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes

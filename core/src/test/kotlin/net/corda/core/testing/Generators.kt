@@ -2,12 +2,14 @@ package net.corda.core.testing
 
 import com.pholser.junit.quickcheck.generator.GenerationStatus
 import com.pholser.junit.quickcheck.generator.Generator
-import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -51,7 +53,7 @@ class AnonymousPartyGenerator : Generator<AnonymousParty>(AnonymousParty::class.
 
 class PartyGenerator : Generator<Party>(Party::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): Party {
-        return Party(StringGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
+        return Party(X500NameGenerator().generate(random, status), PublicKeyGenerator().generate(random, status))
     }
 }
 
@@ -148,6 +150,6 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
         for (word in 0..wordCount) {
             appendProperNoun(cn, random, status).append(" ")
         }
-        return X509Utilities.getDevX509Name(cn.trim().toString())
+        return getTestX509Name(cn.trim().toString())
     }
 }

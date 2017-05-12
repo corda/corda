@@ -4,9 +4,11 @@ import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.Party
+import net.corda.core.crypto.appendToCommonName
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ALICE
@@ -19,6 +21,7 @@ import net.corda.node.services.transactions.BFTNonValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.security.KeyPair
 import java.util.*
@@ -27,7 +30,11 @@ import kotlin.test.assertFailsWith
 
 class BFTNotaryServiceTests : NodeBasedTest() {
     private companion object {
-        val notaryCommonName = "BFT Notary Server"
+        val notaryCommonName = X500Name("CN=BFT Notary Server,O=R3,OU=corda,L=Zurich,C=CH")
+
+        fun buildNodeName(it: Int, notaryName: X500Name): X500Name {
+            return notaryName.appendToCommonName("-$it")
+        }
     }
 
     @Test
@@ -73,13 +80,13 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         }
     }
 
-    private fun startBFTNotaryCluster(notaryName: String,
+    private fun startBFTNotaryCluster(notaryName: X500Name,
                                       clusterSize: Int,
                                       serviceType: ServiceType): List<Node> {
         require(clusterSize > 0)
         val quorum = (2 * clusterSize + 1) / 3
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { tempFolder.root.toPath() / "$notaryName-$it" },
+                (0 until clusterSize).map { tempFolder.root.toPath() / "${notaryName.commonName}-$it" },
                 serviceType.id,
                 notaryName,
                 quorum)
@@ -87,7 +94,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         val serviceInfo = ServiceInfo(serviceType, notaryName)
         val nodes = (0 until clusterSize).map {
             startNode(
-                    "$notaryName-$it",
+                    buildNodeName(it, notaryName),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf("notaryNodeId" to it)
             ).getOrThrow()
