@@ -12,7 +12,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
 import net.corda.flows.NotaryFlow
 import net.corda.notarydemo.flows.DummyIssueAndMove
-import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) {
     val host = HostAndPort.fromString("localhost:10003")
