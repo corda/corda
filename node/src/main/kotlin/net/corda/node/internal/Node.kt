@@ -43,6 +43,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
+import java.io.IOException
 import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
@@ -181,10 +182,10 @@ class Node(override val configuration: FullNodeConfiguration,
         val clientFactory = try {
             locator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            throw Exception("Unable to connect to the Network Map Service at $serverAddress for IP address discovery", e)
+            throw IOException("Unable to connect to the Network Map Service at $serverAddress for IP address discovery", e)
         }
 
-        val session = clientFactory!!.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
+        val session = clientFactory.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
         val requestId = UUID.randomUUID().toString()
         session.addMetaData(ipDetectRequestProperty, requestId)
         session.start()
@@ -194,7 +195,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
         val consumer = session.createConsumer(queueName)
         val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:
-                throw Exception("Did not receive a response from the Network Map Service at $serverAddress")
+                throw IOException("Did not receive a response from the Network Map Service at $serverAddress")
         val publicHostAndPort = HostAndPort.fromString(artemisMessage.getStringProperty(ipDetectResponseProperty))
         log.info("Detected public address: $publicHostAndPort")
 

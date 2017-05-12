@@ -112,6 +112,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      */
     val networkMapConnectionFuture: SettableFuture<Unit>? get() = _networkMapConnectionFuture
     private var networkChangeHandle: Subscription? = null
+    private val nodeRunsNetworkMapService = config.networkMapService == null
 
     init {
         config.baseDirectory.expectedOnDefaultFileSystem()
@@ -143,15 +144,15 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     // Artemis IO errors
     @Throws(IOException::class, KeyStoreException::class)
     private fun configureAndStartServer() {
-        val config = createArtemisConfig()
+        val artemisConfig = createArtemisConfig()
         val securityManager = createArtemisSecurityManager()
-        activeMQServer = ActiveMQServerImpl(config, securityManager).apply {
+        activeMQServer = ActiveMQServerImpl(artemisConfig, securityManager).apply {
             // Throw any exceptions which are detected during startup
             registerActivationFailureListener { exception -> throw exception }
             // Some types of queue might need special preparation on our side, like dialling back or preparing
             // a lazily initialised subsystem.
             registerPostQueueCreationCallback { deployBridgesFromNewQueue(it.toString()) }
-            registerPostQueueCreationCallback { handleIpDetectionRequest(it.toString()) }
+            if (nodeRunsNetworkMapService) registerPostQueueCreationCallback { handleIpDetectionRequest(it.toString()) }
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
@@ -234,10 +235,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         securityRoles[RPCApi.RPC_SERVER_QUEUE_NAME] = setOf(nodeInternalRole, restrictedRole(RPC_ROLE, send = true))
         // TODO remove the NODE_USER role once the webserver doesn't need it
         securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$NODE_USER.#"] = setOf(nodeInternalRole)
-        securityRoles["$IP_REQUEST_PREFIX*"] = setOf(
-                nodeInternalRole,
-                restrictedRole(PEER_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
-        )
+        if (nodeRunsNetworkMapService) {
+            securityRoles["$IP_REQUEST_PREFIX*"] = setOf(
+                    nodeInternalRole,
+                    restrictedRole(PEER_ROLE, consume = true, createNonDurableQueue = true, deleteNonDurableQueue = true)
+            )
+        }
         for ((username) in userService.users) {
             securityRoles["${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.#"] = setOf(
                     nodeInternalRole,
