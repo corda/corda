@@ -25,8 +25,6 @@ import java.security.PublicKey
  * **WARNING**: This flow ONLY works with [ServiceHub.legalIdentityKey]s and WILL break if used with randomly generated
  * keys by the [ServiceHub.keyManagementService].
  *
- * **IMPORTANT** This flow NEEDS to be called with the 'shareParentSessions" parameter of [subFlow] set to true.
- *
  * Usage:
  *
  * - Call the [CollectSignaturesFlow] flow as a [subFlow] and pass it a [SignedTransaction] which has at least been
@@ -58,9 +56,7 @@ import java.security.PublicKey
  *     val stx = subFlow(CollectSignaturesFlow(ptx))
  *
  * @param partiallySignedTx Transaction to collect the remaining signatures for
- *
  */
-
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
 // TODO: TwoPartyTradeFlow needs updating to use this flow.
 // TODO: Update this flow to handle randomly generated keys when that works is complete.
@@ -149,11 +145,11 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  *
  * - Subclass [SignTransactionFlow] - this can be done inside an existing flow (as shown below)
  * - Override the [checkTransaction] method to add some custom verification logic
- * - Call the flow via subFlow with "shareParentSessions" set to true
+ * - Call the flow via [FlowLogic.subFlow]
  * - The flow returns the fully signed transaction once it has been committed to the ledger
  *
- * Example - checking and signing a transaction involving a [DummyContract], see CollectSignaturesFlowTests.Kt for
- * further examples:
+ * Example - checking and signing a transaction involving a [net.corda.core.contracts.DummyContract], see
+ * CollectSignaturesFlowTests.kt for further examples:
  *
  *     class Responder(val otherParty: Party): FlowLogic<SignedTransaction>() {
  *          @Suspendable override fun call(): SignedTransaction {
@@ -167,14 +163,13 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  *              }
  *
  *              // Invoke the subFlow, in response to the counterparty calling [CollectSignaturesFlow].
- *              val stx = subFlow(flow, shareParentSessions = true)
+ *              val stx = subFlow(flow)
  *
  *              return waitForLedgerCommit(stx.id)
  *          }
  *      }
  *
  * @param otherParty The counter-party which is providing you a transaction to sign.
- *
  */
 abstract class SignTransactionFlow(val otherParty: Party,
                                    override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
@@ -224,7 +219,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
     }
 
     /**
-     * The [CheckTransaction] method allows the caller of this flow to provide some additional checks over the proposed
+     * The [checkTransaction] method allows the caller of this flow to provide some additional checks over the proposed
      * transaction received from the counter-party. For example:
      *
      * - Ensuring that the transaction you are receiving is the transaction you *EXPECT* to receive. I.e. is has the
