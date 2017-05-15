@@ -13,7 +13,7 @@ class LifeCycle<S : Enum<S>>(initial: S) {
     private val lock = ReentrantReadWriteLock()
     private var state = initial
 
-    /** Assert that the lifecycle in the [requiredState] */
+    /** Assert that the lifecycle in the [requiredState]. */
     fun requireState(requiredState: S) {
         requireState({ "Required state to be $requiredState, was $it" }) { it == requiredState }
     }
@@ -28,10 +28,17 @@ class LifeCycle<S : Enum<S>>(initial: S) {
         }
     }
 
-    /** Transition the state from [from] to [to] */
+    /** Transition the state from [from] to [to]. */
     fun transition(from: S, to: S) {
         lock.writeLock().withLock {
             require(state == from) { "Required state to be $from to transition to $to, was $state" }
+            state = to
+        }
+    }
+
+    /** Transition the state to [to] without performing a current state check. */
+    fun justTransition(to: S) {
+        lock.writeLock().withLock {
             state = to
         }
     }

@@ -47,8 +47,8 @@ open class AbstractRPCTest {
                 }.get()
             RPCTestMode.Netty ->
                 startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { server ->
-                    startRpcClient<I>(server.hostAndPort, rpcUser.username, rpcUser.password, clientConfiguration).map {
-                        TestProxy(it, { startArtemisSession(server.hostAndPort, rpcUser.username, rpcUser.password) })
+                    startRpcClient<I>(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
+                        TestProxy(it, { startArtemisSession(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
                     }
                 }.get()
         }

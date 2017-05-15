@@ -13,7 +13,7 @@ import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.FalseNetworkMap
+import net.corda.node.driver.NetworkMapStartStrategy
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.transactions.ValidatingNotaryService
 import org.junit.Test
@@ -35,7 +35,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with requestor`() {
-        verifierDriver(networkMapStrategy = FalseNetworkMap) {
+        verifierDriver {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -52,7 +52,7 @@ class VerifierTests {
 
     @Test
     fun `multiple verifiers work with requestor`() {
-        verifierDriver(networkMapStrategy = FalseNetworkMap) {
+        verifierDriver {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -72,7 +72,7 @@ class VerifierTests {
 
     @Test
     fun `verification redistributes on verifier death`() {
-        verifierDriver(networkMapStrategy = FalseNetworkMap) {
+        verifierDriver {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val numberOfTransactions = 100
             val transactions = generateTransactions(numberOfTransactions)
@@ -100,7 +100,7 @@ class VerifierTests {
 
     @Test
     fun `verification request waits until verifier comes online`() {
-        verifierDriver(networkMapStrategy = FalseNetworkMap) {
+        verifierDriver {
             val aliceFuture = startVerificationRequestor(ALICE.name)
             val transactions = generateTransactions(100)
             val alice = aliceFuture.get()
@@ -112,7 +112,7 @@ class VerifierTests {
 
     @Test
     fun `single verifier works with a node`() {
-        verifierDriver {
+        verifierDriver(networkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true)) {
             val aliceFuture = startNode(ALICE.name)
             val notaryFuture = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)), verifierType = VerifierType.OutOfProcess)
             val alice = aliceFuture.get()
