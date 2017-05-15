@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.loggerFor
 import java.io.File
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -21,7 +20,7 @@ class NodeProcess(
     private companion object {
         val log = loggerFor<NodeProcess>()
         val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-        val corda: URI = this::class.java.getResource("/corda.jar").toURI()
+        val corda = File(this::class.java.getResource("/corda.jar").toURI())
         val buildDir: Path = Paths.get(System.getProperty("build.dir"))
         val capsuleDir: Path = buildDir.resolve("capsule")
     }
@@ -32,9 +31,12 @@ class NodeProcess(
     }
 
     override fun close() {
+        log.info("Stopping node '${config.commonName}'")
         node.destroy()
-        val isDead = node.waitFor(60, SECONDS)
-        assertTrue(isDead, "Node '${config.commonName}' has not shutdown correctly")
+        if (!node.waitFor(60, SECONDS)) {
+            log.warn("Node '${config.commonName}' has not shutdown correctly")
+            node.destroyForcibly()
+        }
 
         log.info("Deleting Artemis directories, because they're large!")
         nodeDir.resolve("artemis").toFile().deleteRecursively()
@@ -42,7 +44,7 @@ class NodeProcess(
 
     class Factory(val nodesDir: Path) {
         init {
-            assertTrue(nodesDir.toFile().forceDirectory(), "Nodes directory does not exist")
+            assertTrue(nodesDir.toFile().forceDirectory(), "Directory '$nodesDir' does not exist")
         }
 
         fun create(config: NodeConfig): NodeProcess {
@@ -60,6 +62,10 @@ class NodeProcess(
             try {
                 setupExecutor.scheduleWithFixedDelay({
                     try {
+                        if (!process.isAlive) {
+                            log.error("Node '${config.commonName}' has died.")
+                            return@scheduleWithFixedDelay
+                        }
                         val conn = client.start(user.username, user.password)
                         conn.close()
 
@@ -71,9 +77,9 @@ class NodeProcess(
                 }, 5, 1, SECONDS)
 
                 val setupOK = setupExecutor.awaitTermination(120, SECONDS)
-                assertTrue(setupOK, "Failed to create RPC connection")
+                assertTrue(setupOK && process.isAlive, "Failed to create RPC connection")
             } catch (e: Exception) {
-                process.destroy()
+                process.destroyForcibly()
                 throw e
             } finally {
                 setupExecutor.shutdownNow()

@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration.ofSeconds
 import java.util.Currency
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.*
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.*
@@ -33,6 +34,7 @@ class StandaloneCordaRPClientTest {
         val nodesDir: Path = buildDir.resolve("nodes")
         val user = User("user1", "test", permissions = setOf("ALL"))
         val factory = NodeProcess.Factory(nodesDir)
+        val port = AtomicInteger(15000)
         const val attachmentSize = 2116
         const val timeout = 60L
     }
@@ -44,9 +46,9 @@ class StandaloneCordaRPClientTest {
 
     private val notaryConfig = NodeConfig(
         party = DUMMY_NOTARY,
-        p2pPort = 10002,
-        rpcPort = 10003,
-        webPort = 10004,
+        p2pPort = port.andIncrement,
+        rpcPort = port.andIncrement,
+        webPort = port.andIncrement,
         extraServices = listOf("corda.notary.validating"),
         users = listOf(user)
     )
@@ -61,14 +63,16 @@ class StandaloneCordaRPClientTest {
 
     @After
     fun done() {
-        client.close()
-        notary.close()
+        try {
+            client.close()
+        } finally {
+            notary.close()
+        }
     }
 
     @Test
     fun `test attachment upload`() {
         val attachment = sizedInputStreamAndHash(attachmentSize)
-
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
         assertEquals(id, attachment.sha256, "Attachment has incorrect SHA256 hash")
@@ -138,7 +142,7 @@ class StandaloneCordaRPClientTest {
         val cashBalance = rpcProxy.getCashBalances()
         log.info("Cash Balances: $cashBalance")
         assertEquals(1, cashBalance.size)
-        assertEquals(629.POUNDS, cashBalance.get(Currency.getInstance("GBP")))
+        assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
     }
 
 
