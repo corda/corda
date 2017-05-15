@@ -9,29 +9,42 @@ import kotlin.test.assertFailsWith
 
 class DoormanParametersTest {
     private val testDummyPath = ".${File.separator}testDummyPath.jks"
+    private val validConfigPath = javaClass.getResource("/node.conf").path
+    private val invalidConfigPath = javaClass.getResource("/node_fail.conf").path
 
     @Test
     fun `parse mode flag arg correctly`() {
-        assertEquals(DoormanParameters.Mode.CA_KEYGEN, DoormanParameters("--keygen").mode)
-        assertEquals(DoormanParameters.Mode.ROOT_KEYGEN, DoormanParameters("--rootKeygen").mode)
-        assertEquals(DoormanParameters.Mode.DOORMAN, DoormanParameters().mode)
+        assertEquals(DoormanParameters.Mode.CA_KEYGEN, parseParameters("--keygen", "--configFile", validConfigPath).mode)
+        assertEquals(DoormanParameters.Mode.ROOT_KEYGEN, parseParameters("--rootKeygen", "--configFile", validConfigPath).mode)
+        assertEquals(DoormanParameters.Mode.DOORMAN, parseParameters("--configFile", validConfigPath).mode)
     }
 
     @Test
     fun `command line arg should override config file`() {
-        val params = DoormanParameters("--keystorePath", testDummyPath, "--port", "1000", "--configFile", javaClass.getResource("/node.conf").path)
+        val params = parseParameters("--keystorePath", testDummyPath, "--port", "1000", "--configFile", validConfigPath)
         assertEquals(testDummyPath, params.keystorePath.toString())
         assertEquals(1000, params.port)
 
-        val params2 = DoormanParameters("--configFile", javaClass.getResource("/node.conf").path)
+        val params2 = parseParameters("--configFile", validConfigPath)
         assertEquals(Paths.get("/opt/doorman/certificates/caKeystore.jks"), params2.keystorePath)
         assertEquals(8080, params2.port)
     }
 
     @Test
     fun `should fail when config missing`() {
-        // dataSourceProperties is missing from node_fail.conf and it should fail when accessed, and shouldn't use default from reference.conf.
-        val params = DoormanParameters("--keygen", "--keystorePath", testDummyPath, "--configFile", javaClass.getResource("/node_fail.conf").path)
-        assertFailsWith<ConfigException.Missing> { params.dataSourceProperties }
+        // dataSourceProperties is missing from node_fail.conf and it should fail during parsing, and shouldn't use default from reference.conf.
+        assertFailsWith<ConfigException.Missing> {
+            parseParameters("--keygen", "--keystorePath", testDummyPath, "--configFile", invalidConfigPath)
+        }
+    }
+
+    @Test
+    fun `should parse jira config correctly`() {
+        val parameter = parseParameters("--configFile", validConfigPath)
+        assertEquals("https://doorman-jira-host.com/", parameter.jiraConfig?.address)
+        assertEquals("TD", parameter.jiraConfig?.projectCode)
+        assertEquals("username", parameter.jiraConfig?.username)
+        assertEquals("password", parameter.jiraConfig?.password)
+        assertEquals(41, parameter.jiraConfig?.doneTransitionCode)
     }
 }

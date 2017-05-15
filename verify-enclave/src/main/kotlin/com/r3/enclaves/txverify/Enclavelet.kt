@@ -3,21 +3,33 @@
 package com.r3.enclaves.txverify
 
 import com.esotericsoftware.minlog.Log
-import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.AttachmentsStorageService
 import net.corda.core.node.services.IdentityService
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.createTestKryo
+import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.WireTransaction
+import org.bouncycastle.asn1.x500.X500Name
 import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
+import java.security.PublicKey
 
 // This file implements the functionality of the SGX transaction verification enclave.
 
 private class ServicesForVerification(dependenciesList: List<WireTransaction>, attachments: Array<ByteArray>) : ServicesForResolution, IdentityService, AttachmentsStorageService, AttachmentStorage {
+    override val attachmentsClassLoaderEnabled: Boolean
+        get() = TODO("not implemented")
     override var automaticallyExtractAttachments: Boolean
         get() = throw UnsupportedOperationException()
         set(value) = throw UnsupportedOperationException()
@@ -37,10 +49,12 @@ private class ServicesForVerification(dependenciesList: List<WireTransaction>, a
     }
 
     // Identities: this stuff will all change in future so we don't bother implementing it now.
-    override fun registerIdentity(party: Party) = throw UnsupportedOperationException()
-    override fun partyFromKey(key: CompositeKey): Party? = null
-    override fun partyFromName(name: String): Party? = null
-    override fun partyFromAnonymous(party: AnonymousParty) = null
+    override fun registerIdentity(party: net.corda.core.identity.Party) = TODO("not implemented")
+
+    override fun partyFromKey(key: PublicKey): net.corda.core.identity.Party? = null
+    override fun partyFromName(name: String): net.corda.core.identity.Party? = null
+    override fun partyFromX500Name(principal: X500Name): net.corda.core.identity.Party? = null
+    override fun partyFromAnonymous(party: AnonymousParty): net.corda.core.identity.Party? = null
 
     // TODO: Implement attachments.
     override val attachments: AttachmentStorage = this

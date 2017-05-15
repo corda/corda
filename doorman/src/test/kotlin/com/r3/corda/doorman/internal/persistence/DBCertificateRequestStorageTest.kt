@@ -3,10 +3,13 @@ package com.r3.corda.doorman.internal.persistence
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
@@ -18,7 +21,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DBCertificateRequestStorageTest {
-    private val intermediateCA = X509Utilities.createSelfSignedCACert("Corda Node Intermediate CA")
+    private val intermediateCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Intermediate CA"))
     private var closeDb: Closeable? = null
     private lateinit var storage: DBCertificateRequestStorage
 
@@ -108,7 +111,7 @@ class DBCertificateRequestStorageTest {
 
     @Test
     fun `request with equals symbol in legal name`() {
-        val requestId = storage.saveRequest(createRequest("Bank=A").first)
+        val requestId = storage.saveRequest(createRequest("Bank\\=A").first)
         assertThat(storage.getPendingRequestIds()).isEmpty()
         val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
         assertThat(response.message).contains("=")
@@ -116,18 +119,18 @@ class DBCertificateRequestStorageTest {
 
     @Test
     fun `request with comma in legal name`() {
-        val requestId = storage.saveRequest(createRequest("Bank,A").first)
+        val requestId = storage.saveRequest(createRequest("Bank\\,A").first)
         assertThat(storage.getPendingRequestIds()).isEmpty()
         val response = storage.getResponse(requestId) as CertificateResponse.Unauthorised
         assertThat(response.message).contains(",")
     }
 
     private fun createRequest(legalName: String): Pair<CertificationRequestData, KeyPair> {
-        val keyPair = X509Utilities.generateECDSAKeyPairForSSL()
+        val keyPair = Crypto.generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val request = CertificationRequestData(
                 "hostname",
                 "0.0.0.0",
-                X509Utilities.createCertificateSigningRequest(legalName, "London", "admin@test.com", keyPair))
+                X509Utilities.createCertificateSigningRequest(X500Name("CN=$legalName"), keyPair))
         return Pair(request, keyPair)
     }
 
