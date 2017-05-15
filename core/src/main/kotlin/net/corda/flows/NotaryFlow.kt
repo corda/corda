@@ -7,6 +7,7 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessException
@@ -29,6 +30,7 @@ object NotaryFlow {
      *                         by another transaction or the timestamp is invalid.
      */
     @InitiatingFlow
+    @StartableByRPC
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
         constructor(stx: SignedTransaction) : this(stx, Client.tracker())

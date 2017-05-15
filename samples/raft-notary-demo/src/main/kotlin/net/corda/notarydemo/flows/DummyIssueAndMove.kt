@@ -4,9 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DummyContract
 import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.transactions.SignedTransaction
 import java.util.*
 
+@StartableByRPC
 class DummyIssueAndMove(private val notary: Party, private val counterpartyNode: Party) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
