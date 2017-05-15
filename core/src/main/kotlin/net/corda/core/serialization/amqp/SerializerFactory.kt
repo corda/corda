@@ -21,8 +21,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
-// TODO: support for custom serialisation of core types (of e.g. PublicKey, Throwables)
-// TODO: exclude schemas for core types that don't need custom serializers that everyone already knows the schema for.
+// TODO: exclude schemas for core types that need custom serializers that everyone already knows the schema for.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
@@ -174,12 +173,18 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     private fun whitelisted(clazz: Class<*>): Boolean {
-        // TODO: walk the super class / interfaces like we do for Kryo.
-        if (whitelist.hasListed(clazz) || clazz.isAnnotationPresent(CordaSerializable::class.java)) {
+        if (whitelist.hasListed(clazz) || hasAnnotationInHierarchy(clazz)) {
             return true
         } else {
             throw NotSerializableException("Class $clazz is not on the whitelist or annotated with @CordaSerializable.")
         }
+    }
+
+    // Recursively check the class, interfaces and superclasses for our annotation.
+    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
+        return type.isAnnotationPresent(CordaSerializable::class.java) ||
+                type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationInHierarchy(it) }
+                || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
     }
 
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<out Any> {

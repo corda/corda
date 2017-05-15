@@ -75,6 +75,11 @@ class SerializationOutputTests {
         override fun hashCode(): Int = ginger
     }
 
+    @CordaSerializable
+    interface AnnotatedInterface
+
+    data class InheritAnnotation(val foo: String) : AnnotatedInterface
+
     private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory(), freshDeserializationFactory: SerializerFactory = SerializerFactory()): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
@@ -240,5 +245,11 @@ class SerializationOutputTests {
         factory2.register(net.corda.core.serialization.amqp.custom.PublicKeySerializer())
         val obj = MEGA_CORP_PUBKEY
         serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test annotation is inherited`() {
+        val obj = InheritAnnotation("blah")
+        serdes(obj, SerializerFactory(EmptyWhitelist))
     }
 }
