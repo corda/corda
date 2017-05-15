@@ -82,7 +82,7 @@ task deployNodes(type: Cordform, dependsOn: ['jar', generateNotaryIdentity]) {
         cordapps = []
         rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
                 'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
-                'StartFlow.net.corda.flows.NotaryFlow$Client'
+                'StartFlow.net.corda.notarydemo.flows.RPCStartableNotaryFlowClient'
         ]]]
     }
     node {

@@ -10,8 +10,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
-import net.corda.flows.NotaryFlow
 import net.corda.notarydemo.flows.DummyIssueAndMove
+import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 
 fun main(args: Array<String>) {
     val host = HostAndPort.fromString("localhost:10003")
@@ -78,7 +78,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<String> {
         // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
         @Suppress("UNSUPPORTED_FEATURE")
-        val signatureFutures = transactions.map { rpc.startFlow(NotaryFlow::Client, it).returnValue }
+        val signatureFutures = transactions.map { rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue }
         return Futures.allAsList(signatureFutures).getOrThrow().map { it.map { it.by.toStringShort() }.joinToString() }
     }
 }
