@@ -22,6 +22,7 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ServerLocator
+import org.apache.activemq.artemis.core.client.impl.ClientConsumerInternal
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -265,16 +266,12 @@ class RPCClientProxyHandler(
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
      */
     fun close() {
-        sessionAndConsumer?.consumer?.close()
-        sessionAndConsumer?.session?.close()
         sessionAndConsumer?.sessionFactory?.close()
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables()
         reaperExecutor?.shutdownNow()
         sessionAndProducerPool.close().forEach {
-            it.producer.close()
-            it.session.close()
             it.sessionFactory.close()
         }
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may

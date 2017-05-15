@@ -173,15 +173,11 @@ class RPCServer(
         rpcExecutor?.shutdownNow()
         reaperExecutor?.shutdownNow()
         sessionAndConsumers.forEach {
-            it.consumer.close()
-            it.session.close()
             it.sessionFactory.close()
         }
         observableMap.invalidateAll()
         reapSubscriptions()
         sessionAndProducerPool.close().forEach {
-            it.producer.close()
-            it.session.close()
             it.sessionFactory.close()
         }
         lifeCycle.justTransition(State.FINISHED)
@@ -257,7 +253,6 @@ class RPCServer(
     }
 
     private fun reapSubscriptions() {
-        lifeCycle.requireState(State.STARTED)
         observableMap.cleanUp()
     }
 

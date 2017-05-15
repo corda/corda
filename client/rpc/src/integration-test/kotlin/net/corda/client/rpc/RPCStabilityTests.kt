@@ -7,18 +7,17 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
+import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.ErrorOr
-import net.corda.core.getOrThrow
+import net.corda.core.*
 import net.corda.core.messaging.RPCOps
-import net.corda.core.millis
-import net.corda.core.random63BitValue
 import net.corda.node.driver.poll
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
 import org.apache.activemq.artemis.api.core.SimpleString
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import rx.Observable
@@ -60,7 +59,7 @@ class RPCStabilityTests {
         fun startAndStop() {
             rpcDriver {
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
-                startRpcClient<RPCOps>(server.get().hostAndPort).get()
+                startRpcClient<RPCOps>(server.get().broker.hostAndPort!!).get()
             }
         }
         repeat(5) {
@@ -84,7 +83,10 @@ class RPCStabilityTests {
             rpcDriver {
                 ErrorOr.catch { startRpcClient<RPCOps>(HostAndPort.fromString("localhost:9999")).get() }
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
-                ErrorOr.catch { startRpcClient<RPCOps>(server.get().hostAndPort, configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)).get() }
+                ErrorOr.catch { startRpcClient<RPCOps>(
+                        server.get().broker.hostAndPort!!,
+                        configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
+                ).get() }
             }
         }
         repeat(5) {
@@ -97,6 +99,85 @@ class RPCStabilityTests {
         val numberOfThreadsAfter = waitUntilNumberOfThreadsStable(executor)
         assertTrue(numberOfThreadsBefore >= numberOfThreadsAfter)
         executor.shutdownNow()
+    }
+
+    fun RpcBrokerHandle.getStats(): Map<String, Any> {
+        return serverControl.run {
+            mapOf(
+                    "connections" to listConnectionIDs().toSet(),
+                    "sessionCount" to listConnectionIDs().flatMap { listSessions(it).toList() }.size,
+                    "consumerCount" to totalConsumerCount
+            )
+        }
+    }
+
+    @Test
+    fun `rpc server close doesnt leak broker resources`() {
+        rpcDriver {
+            fun startAndCloseServer(broker: RpcBrokerHandle) {
+                startRpcServerWithBrokerRunning(
+                        configuration = RPCServerConfiguration.default.copy(consumerPoolSize = 1, producerPoolBound = 1),
+                        ops = DummyOps,
+                        brokerHandle = broker
+                ).rpcServer.close()
+            }
+
+            val broker = startRpcBroker().get()
+            startAndCloseServer(broker)
+            val initial = broker.getStats()
+            repeat(100) {
+                startAndCloseServer(broker)
+            }
+            pollUntilTrue("broker resources to be released") {
+                initial == broker.getStats()
+            }
+        }
+    }
+
+    @Test
+    fun `rpc client close doesnt leak broker resources`() {
+        rpcDriver {
+            val server = startRpcServer(configuration = RPCServerConfiguration.default.copy(consumerPoolSize = 1, producerPoolBound = 1), ops = DummyOps).get()
+            RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password).close()
+            val initial = server.broker.getStats()
+            repeat(100) {
+                val connection = RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password)
+                connection.close()
+            }
+            pollUntilTrue("broker resources to be released") {
+                initial == server.broker.getStats()
+            }
+        }
+    }
+
+    @Test
+    fun `rpc server close is idempotent`() {
+        rpcDriver {
+            val server = startRpcServer(ops = DummyOps).get()
+            repeat(10) {
+                server.rpcServer.close()
+            }
+        }
+    }
+
+    @Test
+    fun `rpc client close is idempotent`() {
+        rpcDriver {
+            val serverShutdown = shutdownManager.follower()
+            val server = startRpcServer(ops = DummyOps).get()
+            serverShutdown.unfollow()
+            // With the server up
+            val connection1 = RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password)
+            repeat(10) {
+                connection1.close()
+            }
+            val connection2 = RPCClient<RPCOps>(server.broker.hostAndPort!!).start(RPCOps::class.java, rpcTestUser.username, rpcTestUser.password)
+            serverShutdown.shutdown()
+            // With the server down
+            repeat(10) {
+                connection2.close()
+            }
+        }
     }
 
     interface LeakObservableOps: RPCOps {
@@ -116,7 +197,7 @@ class RPCStabilityTests {
                 }
             }
             val server = startRpcServer<LeakObservableOps>(ops = leakObservableOpsImpl)
-            val proxy = startRpcClient<LeakObservableOps>(server.get().hostAndPort).get()
+            val proxy = startRpcClient<LeakObservableOps>(server.get().broker.hostAndPort!!).get()
             // Leak many observables
             val N = 200
             (1..N).toList().parallelStream().forEach {
@@ -143,7 +224,7 @@ class RPCStabilityTests {
                 override fun ping() = "pong"
             }
             val serverFollower = shutdownManager.follower()
-            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().hostAndPort
+            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
             val clientFollower = shutdownManager.follower()
             val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
@@ -185,7 +266,7 @@ class RPCStabilityTests {
 
             val numberOfClients = 4
             val clients = Futures.allAsList((1 .. numberOfClients).map {
-                startRandomRpcClient<TrackSubscriberOps>(server.hostAndPort)
+                startRandomRpcClient<TrackSubscriberOps>(server.broker.hostAndPort!!)
             }).get()
 
             // Poll until all clients connect
@@ -230,7 +311,7 @@ class RPCStabilityTests {
 
             // Construct an RPC session manually so that we can hang in the message handler
             val myQueue = "${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.test.${random63BitValue()}"
-            val session = startArtemisSession(server.hostAndPort)
+            val session = startArtemisSession(server.broker.hostAndPort!!)
             session.createTemporaryQueue(myQueue, myQueue)
             val consumer = session.createConsumer(myQueue, null, -1, -1, false)
             consumer.setMessageHandler {
@@ -262,7 +343,7 @@ class RPCStabilityTests {
 
 fun RPCDriverExposedDSLInterface.pollUntilClientNumber(server: RpcServerHandle, expected: Int) {
     pollUntilTrue("number of RPC clients to become $expected") {
-        val clientAddresses = server.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
+        val clientAddresses = server.broker.serverControl.addressNames.filter { it.startsWith(RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX) }
         clientAddresses.size == expected
     }.get()
 }

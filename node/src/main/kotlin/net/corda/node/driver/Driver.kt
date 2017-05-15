@@ -456,10 +456,7 @@ class DriverDSL(
 
     override fun shutdown() {
         _shutdownManager?.shutdown()
-        _executorService?.apply {
-            shutdownNow()
-            require(awaitTermination(1, TimeUnit.SECONDS))
-        }
+        _executorService?.shutdownNow()
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
