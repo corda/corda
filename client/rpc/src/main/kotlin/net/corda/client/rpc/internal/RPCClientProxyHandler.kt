@@ -22,7 +22,6 @@ import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ServerLocator
-import org.apache.activemq.artemis.core.client.impl.ClientConsumerInternal
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
@@ -77,7 +76,7 @@ class RPCClientProxyHandler(
         val log = loggerFor<RPCClientProxyHandler>()
         // Note that this KryoPool is not yet capable of deserialising Observables, it requires Proxy-specific context
         // to do that. However it may still be used for serialisation of RPC requests and related messages.
-        val kryoPool = KryoPool.Builder { RPCKryo(RpcClientObservableSerializer) }.build()
+        val kryoPool: KryoPool = KryoPool.Builder { RPCKryo(RpcClientObservableSerializer) }.build()
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
     }
@@ -209,6 +208,12 @@ class RPCClientProxyHandler(
                 it.session.commit()
             }
             return replyFuture.getOrThrow()
+        } catch (e: RuntimeException) {
+            // Already an unchecked exception, so just rethrow it
+            throw e
+        } catch (e: Exception) {
+            // This must be a checked exception, so wrap it
+            throw RPCException(e.message ?: "", e)
         } finally {
             callSiteMap?.remove(rpcId.toLong)
         }
