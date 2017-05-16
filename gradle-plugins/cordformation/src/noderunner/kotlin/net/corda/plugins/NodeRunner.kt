@@ -94,7 +94,8 @@ end tell""")
             listOf("cmd", "/C", "start ${command.joinToString(" ")}")
         }
         OS.LINUX -> {
-            val command = "${unixCommand()} || sh"
+            // Start shell to keep window open unless java terminated normally or due to SIGTERM:
+            val command = "${unixCommand()}; [ $? -eq 0 -o $? -eq 143 ] || sh"
             if (isTmux()) {
                 listOf("tmux", "new-window", "-n", nodeName, command)
             } else {
