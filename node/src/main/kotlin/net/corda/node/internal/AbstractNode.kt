@@ -306,7 +306,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        keyManagement = makeKeyManagementService()
+        keyManagement = makeKeyManagementService(identity)
         scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
@@ -501,7 +501,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 "has any other map node been configured.")
     }
 
-    protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(partyKeys)
+    protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
+        return PersistentKeyManagementService(identityService, partyKeys)
+    }
 
     open protected fun makeNetworkMapService() {
         inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)

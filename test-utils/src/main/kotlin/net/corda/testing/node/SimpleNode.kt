@@ -6,10 +6,12 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.node.services.RPCUserServiceImpl
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
@@ -26,7 +28,7 @@ import kotlin.concurrent.thread
 
 /**
  * This is a bare-bones node which can only send and receive messages. It doesn't register with a network map service or
- * any other such task that would make it functionable in a network and thus left to the user to do so manually.
+ * any other such task that would make it functional in a network and thus left to the user to do so manually.
  */
 class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeLocalHostAndPort(), rpcAddress: HostAndPort = freeLocalHostAndPort()) : AutoCloseable {
 
@@ -35,7 +37,8 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
-    val keyService: KeyManagementService = E2ETestKeyManagementService(setOf(identity))
+    val identityService: IdentityService = InMemoryIdentityService()
+    val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     val broker = ArtemisMessagingServer(config, address, rpcAddress, InMemoryNetworkMapCache(), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()

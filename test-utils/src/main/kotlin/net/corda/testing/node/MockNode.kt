@@ -171,8 +171,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
-        override fun makeKeyManagementService(): KeyManagementService {
-            return E2ETestKeyManagementService(partyKeys + (overrideServices?.values ?: emptySet()))
+        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
+            return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -369,6 +369,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info.address)
+        }
+        nodes.forEach { node ->
+            nodes.map { it.info.legalIdentity }.forEach { identity ->
+                node.services.identityService.registerIdentity(identity)
+            }
         }
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }

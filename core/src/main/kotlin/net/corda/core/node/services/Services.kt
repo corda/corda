@@ -3,10 +3,10 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.*
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -20,6 +20,8 @@ import net.corda.core.transactions.WireTransaction
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.*
 
@@ -384,6 +386,17 @@ interface KeyManagementService {
      */
     @Suspendable
     fun freshKey(): PublicKey
+
+    /**
+     * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding
+     * [X509Certificate] and adds it to the identity service.
+     *
+     * @param identity identity to generate a key and certificate for. Must be an identity this node has CA privileges for.
+     * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
+     * @return X.509 certificate and path to the trust root.
+     */
+    @Suspendable
+    fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509Certificate, CertPath>
 
     /** Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
      * @param bytes The data to sign over using the chosen key.
