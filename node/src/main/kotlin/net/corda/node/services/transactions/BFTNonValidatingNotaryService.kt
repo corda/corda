@@ -3,8 +3,7 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.identity.Party
-import net.corda.core.flows.FlowLogic
-import net.corda.core.node.services.TimestampChecker
+import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -20,11 +19,11 @@ import kotlin.concurrent.thread
 /**
  * A non-validating notary service operated by a group of parties that don't necessarily trust each other.
  *
- * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and timestamp validity.
+ * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
 class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
                                     services: ServiceHubInternal,
-                                    timestampChecker: TimestampChecker,
+                                    timeWindowChecker: TimeWindowChecker,
                                     serverId: Int,
                                     db: Database,
                                     private val client: BFTSMaRt.Client) : NotaryService {
@@ -32,7 +31,7 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
         val configHandle = config.handle()
         thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
             configHandle.use {
-                Server(configHandle.path, serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
+                Server(configHandle.path, serverId, db, "bft_smart_notary_committed_states", services, timeWindowChecker)
             }
         }
     }
@@ -72,7 +71,7 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
                          db: Database,
                          tableName: String,
                          services: ServiceHubInternal,
-                         timestampChecker: TimestampChecker) : BFTSMaRt.Server(configHome, id, db, tableName, services, timestampChecker) {
+                         timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Server(configHome, id, db, tableName, services, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
@@ -86,7 +85,7 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
                 val id = ftx.rootHash
                 val inputs = ftx.filteredLeaves.inputs
 
-                validateTimestamp(ftx.filteredLeaves.timestamp)
+                validateTimeWindow(ftx.filteredLeaves.timeWindow)
                 commitInputStates(inputs, id, callerIdentity)
 
                 log.debug { "Inputs committed successfully, signing $id" }

@@ -37,9 +37,9 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
-        protected var timestamp: Timestamp? = null) {
+        protected var timeWindow: TimeWindow? = null) {
 
-    val time: Timestamp? get() = timestamp
+    val time: TimeWindow? get() = timeWindow // TODO: rename using a more descriptive name (i.e. timeWindowGetter) or remove if unused.
 
     /**
      * Creates a copy of the builder.
@@ -53,28 +53,28 @@ open class TransactionBuilder(
                     outputs = ArrayList(outputs),
                     commands = ArrayList(commands),
                     signers = LinkedHashSet(signers),
-                    timestamp = timestamp
+                    timeWindow = timeWindow
             )
 
     /**
-     * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
+     * Places a [TimeWindow] in this transaction, removing any existing command if there is one.
      * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
      * The signature can be obtained using [NotaryFlow].
      *
-     * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
+     * The window of time in which the final time-window may lie is defined as [time] +/- [timeTolerance].
      * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
      * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
      * window of time, taking into account factors such as network latency. Transactions being built by a group of
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    fun setTime(time: Instant, timeTolerance: Duration) = setTime(Timestamp(time, timeTolerance))
+    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow(time, timeTolerance))
 
-    fun setTime(newTimestamp: Timestamp) {
-        check(notary != null) { "Only notarised transactions can have a timestamp" }
+    fun addTimeWindow(timeWindow: TimeWindow) {
+        check(notary != null) { "Only notarised transactions can have a time-window" }
         signers.add(notary!!.owningKey)
-        check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
-        this.timestamp = newTimestamp
+        check(currentSigs.isEmpty()) { "Cannot change time-window after signing" }
+        this.timeWindow = timeWindow
     }
 
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -132,7 +132,7 @@ open class TransactionBuilder(
     }
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timestamp)
+            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {

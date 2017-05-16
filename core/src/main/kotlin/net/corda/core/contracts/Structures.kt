@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.*
@@ -407,32 +406,39 @@ data class AuthenticatedObject<out T : Any>(
 
 /**
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
- * between (after, before).
+ * between (fromTime, untilTime).
+ * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.After, TimeWindow.Between.
  */
 @CordaSerializable
-data class Timestamp(
+class TimeWindow private constructor(
         /** The time at which this transaction is said to have occurred is after this moment */
-        val after: Instant?,
+        val fromTime: Instant?,
         /** The time at which this transaction is said to have occurred is before this moment */
-        val before: Instant?
+        val untilTime: Instant?
 ) {
-    init {
-        if (after == null && before == null)
-            throw IllegalArgumentException("At least one of before/after must be specified")
-        if (after != null && before != null)
-            check(after <= before)
+    companion object {
+        @JvmStatic
+        fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
+        @JvmStatic
+        fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
+        @JvmStatic
+        fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
+            if (fromTime >= untilTime)
+                throw IllegalArgumentException("fromTime should be earlier than untilTime")
+            return TimeWindow(fromTime, untilTime)
+        }
     }
 
     constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
 
-    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+    val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
 }
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
- * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
+ * time-window attached to the transaction itself i.e. it is NOT necessarily the current time.
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */

@@ -97,7 +97,7 @@ class CommercialPaperTestsGeneric {
             transaction("Issuance") {
                 output("paper") { thisTest.getPaper() }
                 command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
 
@@ -129,17 +129,17 @@ class CommercialPaperTestsGeneric {
 
                 tweak {
                     outputs(700.DOLLARS `issued by` issuer)
-                    timestamp(TEST_TX_TIME + 8.days)
+                    timeWindow(TEST_TX_TIME + 8.days)
                     this `fails with` "received amount equals the face value"
                 }
                 outputs(1000.DOLLARS `issued by` issuer)
 
 
                 tweak {
-                    timestamp(TEST_TX_TIME + 2.days)
+                    timeWindow(TEST_TX_TIME + 2.days)
                     this `fails with` "must have matured"
                 }
-                timestamp(TEST_TX_TIME + 8.days)
+                timeWindow(TEST_TX_TIME + 8.days)
 
                 tweak {
                     output { "paper".output<ICommercialPaperState>() }
@@ -156,7 +156,7 @@ class CommercialPaperTestsGeneric {
         transaction {
             output { thisTest.getPaper() }
             command(DUMMY_PUBKEY_1) { thisTest.getIssueCommand(DUMMY_NOTARY) }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "output states are issued by a command signer"
         }
     }
@@ -166,7 +166,7 @@ class CommercialPaperTestsGeneric {
         transaction {
             output { thisTest.getPaper().withFaceValue(0.DOLLARS `issued by` issuer) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
     }
@@ -176,7 +176,7 @@ class CommercialPaperTestsGeneric {
         transaction {
             output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "maturity date is not in the past"
         }
     }
@@ -187,7 +187,7 @@ class CommercialPaperTestsGeneric {
             input(thisTest.getPaper())
             output { thisTest.getPaper() }
             command(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand(DUMMY_NOTARY) }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "output values sum to more than the inputs"
         }
     }
@@ -259,7 +259,7 @@ class CommercialPaperTestsGeneric {
         val issuance = bigCorpServices.myInfo.legalIdentity.ref(1)
         val issueTX: SignedTransaction =
                 CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                    setTime(TEST_TX_TIME, 30.seconds)
+                    addTimeWindow(TEST_TX_TIME, 30.seconds)
                     signWith(bigCorpServices.key)
                     signWith(DUMMY_NOTARY_KEY)
                 }.toSignedTransaction()
@@ -289,7 +289,7 @@ class CommercialPaperTestsGeneric {
         databaseBigCorp.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
-                ptx.setTime(time, 30.seconds)
+                ptx.addTimeWindow(time, 30.seconds)
                 CommercialPaper().generateRedeem(ptx, moveTX.tx.outRef(1), bigCorpVaultService)
                 ptx.signWith(aliceServices.key)
                 ptx.signWith(bigCorpServices.key)

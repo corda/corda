@@ -1,8 +1,8 @@
 package net.corda.testing
 
 import net.corda.core.contracts.*
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -51,10 +51,10 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
-     * Adds a timestamp to the transaction.
-     * @param data The [TimestampCommand].
+     * Adds a time-window to the transaction.
+     * @param data the [TimeWindow] (validation window).
      */
-    fun timestamp(data: Timestamp)
+    fun timeWindow(data: TimeWindow)
 
     /**
      * Creates a local scoped copy of the transaction.
@@ -115,11 +115,11 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
 
     /**
-     * Adds a timestamp command to the transaction.
-     * @param time The [Instant] of the [TimestampCommand].
-     * @param tolerance The tolerance of the [TimestampCommand].
+     * Adds a [TimeWindow] command to the transaction.
+     * @param time The [Instant] of the [TimeWindow].
+     * @param tolerance The tolerance of the [TimeWindow].
      */
     @JvmOverloads
-    fun timestamp(time: Instant, tolerance: Duration = 30.seconds) =
-            timestamp(Timestamp(time, tolerance))
+    fun timeWindow(time: Instant, tolerance: Duration = 30.seconds) =
+            timeWindow(TimeWindow(time, tolerance))
 }

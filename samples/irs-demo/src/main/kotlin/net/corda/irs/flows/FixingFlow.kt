@@ -77,9 +77,9 @@ object FixingFlow {
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
 
-                    // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
-                    // to have one.
-                    ptx.setTime(serviceHub.clock.instant(), 30.seconds)
+                    // And add a request for a time-window: it may be that none of the contracts need this!
+                    // But it can't hurt to have one.
+                    ptx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
                 }
 
                 @Suspendable

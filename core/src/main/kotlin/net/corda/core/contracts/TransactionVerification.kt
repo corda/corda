@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.*
@@ -19,7 +19,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
                                   val origHash: SecureHash,
                                   val inputNotary: Party? = null,
-                                  val timestamp: Timestamp? = null) {
+                                  val timeWindow: TimeWindow? = null) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 

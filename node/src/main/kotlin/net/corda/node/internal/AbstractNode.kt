@@ -509,20 +509,20 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open protected fun makeNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>) {
-        val timestampChecker = TimestampChecker(platformClock, 30.seconds)
+        val timeWindowChecker = TimeWindowChecker(platformClock, 30.seconds)
         val uniquenessProvider = makeUniquenessProvider(type)
         tokenizableServices.add(uniquenessProvider)
 
         val notaryService = when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(timestampChecker, uniquenessProvider)
-            ValidatingNotaryService.type -> ValidatingNotaryService(timestampChecker, uniquenessProvider)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
+            SimpleNotaryService.type -> SimpleNotaryService(timeWindowChecker, uniquenessProvider)
+            ValidatingNotaryService.type -> ValidatingNotaryService(timeWindowChecker, uniquenessProvider)
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
                 val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
                 BFTSMaRtConfig(notaryClusterAddresses).use { config ->
                     val client = BFTSMaRt.Client(config, replicaId).also { tokenizableServices += it } // (Ab)use replicaId for clientId.
-                    BFTNonValidatingNotaryService(config, services, timestampChecker, replicaId, database, client)
+                    BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database, client)
                 }
             }
             else -> {

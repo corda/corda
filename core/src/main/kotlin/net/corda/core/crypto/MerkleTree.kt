@@ -8,7 +8,7 @@ import java.util.*
  * See: https://en.wikipedia.org/wiki/Merkle_tree
  *
  * Transaction is split into following blocks: inputs, attachments' refs, outputs, commands, notary,
- * signers, tx type, timestamp. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
+ * signers, tx type, time-window. Merkle Tree is kept in a recursive data structure. Building is done bottom up,
  * from all leaves' hashes. If number of leaves is not a power of two, the tree is padded with zero hashes.
  */
 sealed class MerkleTree {

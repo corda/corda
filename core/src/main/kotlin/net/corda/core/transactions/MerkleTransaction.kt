@@ -33,7 +33,7 @@ interface TraversableTransaction {
     val notary: Party?
     val mustSign: List<PublicKey>
     val type: TransactionType?
-    val timestamp: Timestamp?
+    val timeWindow: TimeWindow?
 
     /**
      * Returns a flattened list of all the components that are present in the transaction, in the following order:
@@ -45,7 +45,7 @@ interface TraversableTransaction {
      * - The notary [Party], if present
      * - Each required signer ([mustSign]) that is present
      * - The type of the transaction, if present
-     * - The timestamp of the transaction, if present
+     * - The time-window of the transaction, if present
      */
     val availableComponents: List<Any>
         get() {
@@ -56,7 +56,7 @@ interface TraversableTransaction {
             notary?.let { result += it }
             result.addAll(mustSign)
             type?.let { result += it }
-            timestamp?.let { result += it }
+            timeWindow?.let { result += it }
             return result
         }
 
@@ -81,7 +81,7 @@ class FilteredLeaves(
         override val notary: Party?,
         override val mustSign: List<PublicKey>,
         override val type: TransactionType?,
-        override val timestamp: Timestamp?
+        override val timeWindow: TimeWindow?
 ) : TraversableTransaction {
     /**
      * Function that checks the whole filtered structure.

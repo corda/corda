@@ -5,7 +5,8 @@ import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
@@ -118,9 +119,9 @@ class DurationGenerator : Generator<Duration>(Duration::class.java) {
     }
 }
 
-class TimestampGenerator : Generator<Timestamp>(Timestamp::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Timestamp {
-        return Timestamp(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
+class TimeWindowGenerator : Generator<TimeWindow>(TimeWindow::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): TimeWindow {
+        return TimeWindow(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
     }
 }
 

@@ -10,7 +10,6 @@ import net.corda.core.contracts.TransactionForContract.*;
 import net.corda.core.contracts.clauses.*;
 import net.corda.core.crypto.*;
 import net.corda.core.identity.AbstractParty;
-import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.*;
@@ -20,7 +19,6 @@ import org.jetbrains.annotations.*;
 import java.time.*;
 import java.util.*;
 import java.util.stream.*;
-import java.security.PublicKey;
 
 import static kotlin.collections.CollectionsKt.*;
 import static net.corda.core.contracts.ContractsDSL.*;
@@ -206,14 +204,14 @@ public class JavaCommercialPaper implements Contract {
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
-                Timestamp timestamp = tx.getTimestamp();
-                Instant time = null == timestamp
+                TimeWindow timeWindow = tx.getTimeWindow();
+                Instant time = null == timeWindow
                         ? null
-                        : timestamp.getBefore();
+                        : timeWindow.getUntilTime();
                 Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
                 requireThat(require -> {
-                    require.using("must be timestamped", timestamp != null);
+                    require.using("must be timestamped", timeWindow != null);
                     require.using("received amount equals the face value: "
                             + received + " vs " + input.getFaceValue(), received.equals(input.getFaceValue()));
                     require.using("the paper must have matured", time != null && !time.isBefore(input.getMaturityDate()));
@@ -243,15 +241,15 @@ public class JavaCommercialPaper implements Contract {
                                                  State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
                 State output = single(outputs);
-                Timestamp timestampCommand = tx.getTimestamp();
-                Instant time = null == timestampCommand
+                TimeWindow timeWindowCommand = tx.getTimeWindow();
+                Instant time = null == timeWindowCommand
                         ? null
-                        : timestampCommand.getBefore();
+                        : timeWindowCommand.getUntilTime();
 
                 requireThat(require -> {
                     require.using("output values sum to more than the inputs", inputs.isEmpty());
                     require.using("output values sum to more than the inputs", output.faceValue.getQuantity() > 0);
-                    require.using("must be timestamped", timestampCommand != null);
+                    require.using("must be timestamped", timeWindowCommand != null);
                     require.using("the maturity date is not in the past", time != null && time.isBefore(output.getMaturityDate()));
                     require.using("output states are issued by a command signer", cmd.getSigners().contains(output.issuance.getParty().getOwningKey()));
                     return Unit.INSTANCE;
