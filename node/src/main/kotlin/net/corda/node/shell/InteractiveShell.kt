@@ -15,6 +15,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
@@ -70,6 +71,7 @@ import kotlin.concurrent.thread
 // TODO: Make it notice new shell commands added after the node started.
 
 object InteractiveShell {
+    private val log = loggerFor<InteractiveShell>()
     private lateinit var node: Node
 
     /**
@@ -129,6 +131,7 @@ object InteractiveShell {
         thread(name = "Command line shell terminator", isDaemon = true) {
             // Wait for the shell to finish.
             jlineProcessor.closed()
+            log.info("Command shell has exited")
             terminal.restore()
             node.stop()
         }
