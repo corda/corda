@@ -17,8 +17,8 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
     }
 
     private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.rpcPort))
+    private var rpcConnection: CordaRPCConnection? = null
     private val timer = Timer()
-    private val connections = Collections.synchronizedCollection(ArrayList<CordaRPCConnection>())
 
     init {
         val setupTask = object : TimerTask() {
@@ -26,7 +26,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
                 try {
                     val user = config.users.elementAt(0)
                     val connection = rpcClient.start(user.username, user.password)
-                    connections.add(connection)
+                    rpcConnection = connection
                     val ops = connection.proxy
 
                     // Cancel the "setup" task now that we've created the RPC client.
@@ -53,7 +53,11 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
 
     override fun close() {
         timer.cancel()
-        connections.forEach(CordaRPCConnection::close)
+        try {
+            rpcConnection?.close()
+        } catch (e: Exception) {
+            log.error("Failed to close RPC connection (Error: {})", e.message)
+        }
     }
 
 }

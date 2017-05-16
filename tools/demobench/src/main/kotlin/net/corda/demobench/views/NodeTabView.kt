@@ -270,8 +270,13 @@ class NodeTabView : Fragment() {
         nodeTab.text = config.legalName.commonName
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
-                if (exitCode == 0)
+                if (exitCode == 0) {
                     nodeTab.requestClose()
+                } else {
+                    // The node did not shut down cleanly. Keep the
+                    // terminal open but ensure that it is disabled.
+                    nodeTerminalView.shutdown()
+                }
                 nodeController.dispose(config)
                 main.forceAtLeastOneTab()
             }

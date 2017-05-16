@@ -229,16 +229,21 @@ class NodeTerminalView : Fragment() {
         }
     }
 
+    fun shutdown() {
+        header.isDisable = true
+        subscriptions.forEach {
+            // Don't allow any exceptions here to halt tab destruction.
+            try { it.unsubscribe() } catch (e: Exception) {}
+        }
+        webServer.close()
+        explorer.close()
+        viewer.close()
+        rpc?.close()
+    }
+
     fun destroy() {
         if (!isDestroyed) {
-            subscriptions.forEach {
-                // Don't allow any exceptions here to halt tab destruction.
-                try { it.unsubscribe() } catch (e: Exception) {}
-            }
-            webServer.close()
-            explorer.close()
-            viewer.close()
-            rpc?.close()
+            shutdown()
             pty?.close()
             isDestroyed = true
         }
