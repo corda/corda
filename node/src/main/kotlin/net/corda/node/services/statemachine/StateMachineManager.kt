@@ -348,7 +348,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val serviceFlowInfo = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
         if (serviceFlowInfo == null) {
             logger.warn("${sessionInit.clientFlowClass} has not been registered with a service flow: $sessionInit")
-            sendSessionReject("Don't know ${sessionInit.clientFlowClass.name}")
+            sendSessionReject("${sessionInit.clientFlowClass.name} has not been registered with a service flow")
             return
         }
 

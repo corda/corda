@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -55,8 +56,30 @@ interface IdentityService {
     fun partyFromName(name: String): Party?
     fun partyFromX500Name(principal: X500Name): Party?
 
+    /**
+     * Resolve the well known identity of a party. If the party passed in is already a well known identity
+     * (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity, or null if unknown.
+     */
     fun partyFromAnonymous(party: AbstractParty): Party?
+
+    /**
+     * Resolve the well known identity of a party. If the party passed in is already a well known identity
+     * (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity, or null if unknown.
+     */
     fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
+
+    /**
+     * Resolve the well known identity of a party. Throws an exception if the party cannot be identified.
+     * If the party passed in is already a well known identity (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity.
+     * @throws IllegalArgumentException
+     */
+    fun requirePartyFromAnonymous(party: AbstractParty): Party
 
     /**
      * Get the certificate chain showing an anonymous party is owned by the given party.

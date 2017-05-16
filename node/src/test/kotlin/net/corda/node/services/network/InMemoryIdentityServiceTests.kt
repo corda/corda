@@ -115,4 +115,14 @@ class InMemoryIdentityServiceTests {
             service.assertOwnership(bob, anonymousAlice)
         }
     }
+
+    /**
+     * Ensure if we feed in a full identity, we get the same identity back.
+     */
+    @Test
+    fun `deanonymising a well known identity`() {
+        val expected = ALICE
+        val actual = InMemoryIdentityService().partyFromAnonymous(expected)
+        assertEquals(expected, actual)
+    }
 }

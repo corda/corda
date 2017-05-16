@@ -1,6 +1,8 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
@@ -24,6 +26,7 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 object X509Utilities {
+    val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.EDDSA_ED25519_SHA512
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
     // Aliases for private keys and certificates.
