@@ -21,9 +21,7 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
     protected val currencyMap: MutableMap<Currency, Long> = mutableMapOf(USD to 0L, GBP to 0L) // Used for estimation of how much money we have in general.
 
     protected fun addToMap(ccy: Currency, amount: Long) {
-        val value = currencyMap[ccy]
-        if (value != null)
-            currencyMap[ccy] = Math.max(0L, value + amount)
+        currencyMap.computeIfPresent(ccy) { _, value -> Math.max(0L, value + amount) }
     }
 
     protected val issueCashGenerator = amountGenerator.combine(partyGenerator, issueRefGenerator, currencyGenerator) { amount, to, issueRef, ccy ->

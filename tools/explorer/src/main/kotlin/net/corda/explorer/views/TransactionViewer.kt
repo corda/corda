@@ -105,13 +105,13 @@ class TransactionViewer : CordaView("Transactions") {
             )
         }
 
-        val searchField = SearchField(transactions, listOf(
+        val searchField = SearchField(transactions,
                 "Transaction ID" to { tx, s -> "${tx.id}".contains(s, true) },
                 "Input" to { tx, s -> tx.inputs.resolved.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
                 "Output" to { tx, s -> tx.outputs.any { it.state.data.contract.javaClass.simpleName.contains(s, true) } },
                 "Input Party" to { tx, s -> tx.inputParties.any { it.any { it.value?.legalIdentity?.name?.commonName?.contains(s, true) ?: false } } },
                 "Output Party" to { tx, s -> tx.outputParties.any { it.any { it.value?.legalIdentity?.name?.commonName?.contains(s, true) ?: false } } },
-                "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } })
+                "Command Type" to { tx, s -> tx.commandTypes.any { it.simpleName.contains(s, true) } }
         )
         root.top = searchField.root
         // Transaction table

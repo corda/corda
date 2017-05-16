@@ -102,10 +102,10 @@ class StateMachineViewer : CordaView("Flow Triage") {
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     label("In progress") {
-                        graphic = FontAwesomeIconView(FontAwesomeIcon.ROCKET).apply { // Blazing fast! Try not to blink.
+                        graphic = FontAwesomeIconView(FontAwesomeIcon.ROCKET).apply {
+                            // Blazing fast! Try not to blink.
                             glyphSize = 15.0
                             textAlignment = TextAlignment.CENTER
                             style = "-fx-fill: lightslategrey"
@@ -117,21 +117,27 @@ class StateMachineViewer : CordaView("Flow Triage") {
     }
 
     init {
-        val searchField = SearchField(stateMachinesAll, listOf(
+        val searchField = SearchField(stateMachinesAll,
                 "Flow name" to { sm, s -> sm.stateMachineName.contains(s, true) },
                 "Initiator" to { sm, s -> FlowInitiatorFormatter.format(sm.flowInitiator).contains(s, true) },
-                "Flow Status" to { sm, s -> val stat = sm.stateMachineStatus.value.status ?: "No progress data"
-                        stat.contains(s, true) },
-                "Error" to { sm, _ -> val smAddRm = sm.addRmStatus.value
+                "Flow Status" to { sm, s ->
+                    val stat = sm.stateMachineStatus.value.status ?: "No progress data"
+                    stat.contains(s, true)
+                },
+                "Error" to { sm, _ ->
+                    val smAddRm = sm.addRmStatus.value
                     if (smAddRm is StateMachineStatus.Removed)
                         smAddRm.result.error != null
-                    else false },
-                "Done" to { sm, _ -> val smAddRm = sm.addRmStatus.value
+                    else false
+                },
+                "Done" to { sm, _ ->
+                    val smAddRm = sm.addRmStatus.value
                     if (smAddRm is StateMachineStatus.Removed)
                         smAddRm.result.error == null
-                    else false  },
-                "In progress" to { sm, _  -> sm.addRmStatus.value !is StateMachineStatus.Removed }),
-                listOf("Error", "Done", "In progress")
+                    else false
+                },
+                "In progress" to { sm, _ -> sm.addRmStatus.value !is StateMachineStatus.Removed },
+                disabledFields = listOf("Error", "Done", "In progress")
         )
         root.top = searchField.root
         makeColumns(allViewTable, searchField.filteredData)
@@ -145,6 +151,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
         private val flowNameLabel by fxid<Label>()
         private val flowProgressVBox by fxid<VBox>()
         private val flowInitiatorGrid by fxid<GridPane>()
+        private val flowInitiatorTitle by fxid<Label>()
         private val flowResultVBox by fxid<VBox>()
 
         init {
@@ -158,19 +165,19 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 }
             }
             when (smmData.flowInitiator) {
-                is FlowInitiator.Shell -> makeShellGrid(flowInitiatorGrid) // TODO Extend this when we will have more information on shell user.
-                is FlowInitiator.Peer -> makePeerGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Peer)
-                is FlowInitiator.RPC -> makeRPCGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.RPC)
-                is FlowInitiator.Scheduled -> makeScheduledGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Scheduled)
+                is FlowInitiator.Shell -> makeShellGrid(flowInitiatorGrid, flowInitiatorTitle) // TODO Extend this when we will have more information on shell user.
+                is FlowInitiator.Peer -> makePeerGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.Peer)
+                is FlowInitiator.RPC -> makeRPCGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.RPC)
+                is FlowInitiator.Scheduled -> makeScheduledGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.Scheduled)
             }
             val status = smmData.addRmStatus.value
             if (status is StateMachineStatus.Removed) {
-                status.result.match(onValue =  { makeResultVBox(flowResultVBox, it) }, onError = { makeErrorVBox(flowResultVBox, it) })
+                status.result.match(onValue = { makeResultVBox(flowResultVBox, it) }, onError = { makeErrorVBox(flowResultVBox, it) })
             }
         }
     }
 
-    private fun <T>makeResultVBox(vbox: VBox, result: T) {
+    private fun <T> makeResultVBox(vbox: VBox, result: T) {
         if (result == null) {
             vbox.apply { label("No return value from flow.").apply { style { fontWeight = FontWeight.BOLD } } }
         } else if (result is SignedTransaction) {
@@ -186,8 +193,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
             }
         } else if (result is Unit) {
             vbox.apply { label("Flow completed with success.").apply { style { fontWeight = FontWeight.BOLD } } }
-        }
-        else {
+        } else {
             // TODO Here we could have sth different than SignedTransaction/Unit
             vbox.apply {
                 label("Flow completed with success. Result: ").apply { style { fontWeight = FontWeight.BOLD } }
@@ -215,19 +221,17 @@ class StateMachineViewer : CordaView("Flow Triage") {
         }
     }
 
-    private fun makeShellGrid(gridPane: GridPane) {
-        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+    private fun makeShellGrid(gridPane: GridPane, title: Label) {
         title.apply {
             text = "Flow started by shell user"
         }
     }
 
-    private fun makePeerGrid(gridPane: GridPane, initiator: FlowInitiator.Peer) {
-        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+    private fun makePeerGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.Peer) {
         title.apply {
             text = "Flow started by a peer node"
         }
-        gridPane.apply{
+        gridPane.apply {
             row {
                 label("Legal name: ") {
                     gridpaneConstraints { hAlignment = HPos.LEFT }
@@ -249,8 +253,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
         }
     }
 
-    private fun makeRPCGrid(gridPane: GridPane, initiator: FlowInitiator.RPC) {
-        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+    private fun makeRPCGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.RPC) {
         title.apply {
             text = "Flow started by a RPC user"
         }
@@ -267,8 +270,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
     }
 
     // TODO test
-    private fun makeScheduledGrid(gridPane: GridPane, initiator: FlowInitiator.Scheduled) {
-        val title = gridPane.lookup("#flowInitiatorTitle") as Label
+    private fun makeScheduledGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.Scheduled) {
         title.apply {
             text = "Flow started as scheduled activity"
         }

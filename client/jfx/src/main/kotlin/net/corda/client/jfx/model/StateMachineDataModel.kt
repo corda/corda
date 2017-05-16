@@ -18,8 +18,7 @@ import rx.Observable
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
     companion object {
         fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
-            return stateMachine.progressTrackerStepAndUpdates?.let { pair ->
-                val (current, future) = pair
+            return stateMachine.progressTrackerStepAndUpdates?.let { (current, future) ->
                 future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
             }
         }
@@ -65,13 +64,7 @@ class StateMachineDataModel {
     private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
         val smStatus = status.value as StateMachineStatus.Added
         StateMachineData(id, smStatus.stateMachineName, smStatus.flowInitiator, status,
-                EasyBind.map(progress) {
-                    if (it == null) {
-                        ProgressStatus(null)
-                    } else {
-                        ProgressStatus(it.message)
-                    }
-                })
+                EasyBind.map(progress) { ProgressStatus(it?.message) })
     }.getObservableValues()
 
     val stateMachinesAll = stateMachineDataList

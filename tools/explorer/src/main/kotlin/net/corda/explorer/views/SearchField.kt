@@ -23,7 +23,7 @@ import tornadofx.*
  * TODO : Predictive text?
  * TODO : Regex?
  */
-class SearchField<T>(private val data: ObservableList<T>, val filterCriteria: List<Pair<String, (T, String) -> Boolean>>,
+class SearchField<T>(private val data: ObservableList<T>, vararg filterCriteria: Pair<String, (T, String) -> Boolean>,
                      val disabledFields: List<String> = emptyList()) : UIComponent() {
     override val root: Parent by fxml()
     private val textField by fxid<TextField>()
