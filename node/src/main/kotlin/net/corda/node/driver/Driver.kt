@@ -18,9 +18,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -491,9 +489,9 @@ class DriverDSL(
         val webAddress = portAllocation.nextHostAndPort()
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}")
+        val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
         val baseDirectory = driverDirectory / name.commonName
-        val configOverrides = mapOf(
+        val configOverrides = configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
@@ -511,13 +509,7 @@ class DriverDSL(
                     }
                 },
                 "useTestClock" to useTestClock,
-                "rpcUsers" to rpcUsers.map {
-                    mapOf(
-                            "username" to it.username,
-                            "password" to it.password,
-                            "permissions" to it.permissions
-                    )
-                },
+                "rpcUsers" to rpcUsers.map { it.toMap() },
                 "verifierType" to verifierType.name
         ) + customOverrides
 
@@ -612,7 +604,7 @@ class DriverDSL(
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
-                configOverrides = mapOf(
+                configOverrides = configOf(
                         "myLegalName" to dedicatedNetworkMapLegalName.toString(),
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
@@ -635,13 +627,13 @@ class DriverDSL(
     }
 
     companion object {
-        val name = arrayOf(
+        private val names = arrayOf(
                 ALICE.name,
                 BOB.name,
                 DUMMY_BANK_A.name
         )
 
-        fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
+        private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
         private fun startNode(
                 executorService: ListeningScheduledExecutorService,
