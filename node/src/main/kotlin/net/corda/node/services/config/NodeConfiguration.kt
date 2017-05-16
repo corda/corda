@@ -58,6 +58,7 @@ data class FullNodeConfiguration(
         @OldConfig("artemisAddress")
         val p2pAddress: HostAndPort,
         val rpcAddress: HostAndPort?,
+        val relay: RelayConfiguration?,
         // TODO This field is slightly redundant as p2pAddress is sufficient to hold the address of the node's MQ broker.
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: HostAndPort?,
@@ -116,3 +117,10 @@ data class CertChainPolicyConfig(val role: String, val policy: CertChainPolicyTy
         }
     }
 }
+
+data class RelayConfiguration(val relayHost: String,
+                              val remoteInboundPort: Int,
+                              val username: String,
+                              val privateKeyFile: Path,
+                              val publicKeyFile: Path,
+                              val sshPort: Int = 22)

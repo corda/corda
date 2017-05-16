@@ -140,3 +140,14 @@ path to the node's base directory.
 
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
     obtain SSL certificate. (See :doc:`permissioning` for more information.)
+
+:relay: If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
+    advertised to the network map service instead of the provided ``p2pAddress``.
+
+        :relayHost: Hostname of the relay machine
+        :remoteInboundPort: A port on the relay machine that accepts incoming TCP connections. Traffic will be forwarded
+            from this port to the local port specified in ``p2pAddress``.
+        :username: Username for establishing a SSH connection with the relay.
+        :privateKeyFile: Path to the private key file for SSH authentication. The private key must not have a passphrase.
+        :publicKeyFile: Path to the public key file for SSH authentication.
+        :sshPort: Port to be used for SSH connection, default ``22``.

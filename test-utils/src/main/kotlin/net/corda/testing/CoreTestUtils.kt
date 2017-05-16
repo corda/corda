@@ -193,7 +193,8 @@ fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): 
             notaryNodeAddress = null,
             notaryClusterAddresses = emptyList(),
             certificateChainCheckPolicies = emptyList(),
-            devMode = true)
+            devMode = true,
+            relay = null)
 }
 
 @JvmOverloads

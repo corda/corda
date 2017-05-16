@@ -3,6 +3,8 @@
 package net.corda.node
 
 import com.jcabi.manifests.Manifests
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.JSchException
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
@@ -13,6 +15,7 @@ import net.corda.core.utilities.Emoji
 import net.corda.node.internal.Node
 import net.corda.node.internal.enforceSingleNodeIsRunning
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
@@ -21,6 +24,7 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
+import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
@@ -104,7 +108,11 @@ fun main(args: Array<String>) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
+
     SerialFilter.install(if (conf.bftReplicaId != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+
+    conf.relay?.let { connectToRelay(it, conf.p2pAddress.port) }
+
     if (cmdlineOptions.isRegistration) {
         println()
         println("******************************************************************")
@@ -169,6 +177,37 @@ fun main(args: Array<String>) {
     }
 
     exitProcess(0)
+}
+
+private fun connectToRelay(config: RelayConfiguration, localBrokerPort: Int) {
+    with(config) {
+        val jsh = JSch().apply {
+            val noPassphrase = byteArrayOf()
+            addIdentity(privateKeyFile.toString(), publicKeyFile.toString(), noPassphrase)
+        }
+
+        val session = jsh.getSession(username, relayHost, sshPort).apply {
+            // We don't check the host fingerprints because they may change often
+            setConfig("StrictHostKeyChecking", "no")
+        }
+
+        try {
+            log.info("Connecting to a relay at $relayHost")
+            session.connect()
+        } catch (e: JSchException) {
+            throw IOException("Unable to establish a SSH connection: $username@$relayHost", e)
+        }
+        try {
+            val localhost = "127.0.0.1"
+            log.info("Forwarding ports: $relayHost:$remoteInboundPort -> $localhost:$localBrokerPort")
+            session.setPortForwardingR(remoteInboundPort, localhost, localBrokerPort)
+        } catch (e: JSchException) {
+            throw IOException("Unable to set up port forwarding - is SSH on the remote host configured correctly? " +
+                    "(port forwarding is not enabled by default)", e)
+        }
+    }
+
+    log.info("Relay setup successfully!")
 }
 
 private fun lookupMachineNameAndMaybeWarn(): String {

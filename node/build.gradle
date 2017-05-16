@@ -155,6 +155,9 @@ dependencies {
     // FastClasspathScanner: classpath scanning
     compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
 
+    // Jsh: A SSH implementation for tunneling inbound traffic via a relay
+    compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
+
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
 }
