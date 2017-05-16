@@ -246,7 +246,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val flows = scanForFlows()
             rpcFlows = flows.filter { it.isUserInvokable() && it.isAnnotationPresent(StartableByRPC::class.java) } +
                     // Add any core flows here
-                    listOf(ContractUpgradeFlow::class.java)
+                    listOf(ContractUpgradeFlow::class.java,
+                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
+                            CashIssueFlow::class.java,
+                            CashExitFlow::class.java,
+                            CashPaymentFlow::class.java)
 
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
