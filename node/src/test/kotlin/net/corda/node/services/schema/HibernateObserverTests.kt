@@ -55,7 +55,7 @@ class HibernateObserverTests {
     @Table(name = "Parents")
     class Parent : PersistentState() {
         @OneToMany(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id"), JoinColumn(name = "output_index"))
+        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
         @OrderColumn
         @Cascade(CascadeType.PERSIST)
         var children: MutableSet<Child> = mutableSetOf()
@@ -71,7 +71,7 @@ class HibernateObserverTests {
         var childId: Int? = null
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id"), JoinColumn(name = "output_index"))
+        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
         var parent: Parent? = null
     }
 
