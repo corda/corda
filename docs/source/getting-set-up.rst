@@ -44,6 +44,8 @@ Set-up instructions
 
 The instructions below will allow you to set up a Corda development environment and run a basic CorDapp on a Windows or Mac machine. If you have any issues, please consult the :doc:`getting-set-up-fault-finding` page, or reach out on `Slack <http://slack.corda.net/>`_ or the `forums <https://discourse.corda.net/>`_.
 
+.. note:: The set-up instructions are also available in video form for both `Windows <https://vimeo.com/217462250>`_ and `Mac <https://vimeo.com/217462230>`_.
+
 Windows
 ~~~~~~~
 
@@ -156,7 +158,7 @@ And a simple example CorDapp for you to explore basic concepts is available here
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
-By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release instead by running ``git checkout release-M11``.
+By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release instead by running ``git checkout release-M11.1``.
 
 Next steps
 ----------

@@ -51,6 +51,14 @@ UNRELEASED
   point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
   compatibility of CorDapp flows.
 
+Milestone 11.1
+--------------
+
+* Fix serialisation error when starting a flow.
+* Automatically whitelist subclasses of `InputStream` when serialising.
+* Fix exception in DemoBench on Windows when loading CorDapps into the Node Explorer.
+* Detect when localhost resolution is broken on MacOSX, and provide instructions on how to fix it.
+
 Milestone 11.0
 --------------
 

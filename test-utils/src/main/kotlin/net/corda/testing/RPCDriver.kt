@@ -9,6 +9,7 @@ import net.corda.client.mock.string
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.div
+import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.utilities.ProcessUtilities
@@ -64,7 +65,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
             ops : I
-    ): ListenableFuture<Unit>
+    ): ListenableFuture<RpcServerHandle>
 
     /**
      * Starts an In-VM RPC client.
@@ -156,6 +157,28 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password
     ): ClientSession
+
+    fun startRpcBroker(
+            serverName: String = "driver-rpc-server-${random63BitValue()}",
+            rpcUser: User = rpcTestUser,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
+            customPort: HostAndPort? = null
+    ): ListenableFuture<RpcBrokerHandle>
+
+    fun startInVmRpcBroker(
+            rpcUser: User = rpcTestUser,
+            maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
+            maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE
+    ): ListenableFuture<RpcBrokerHandle>
+
+    fun <I : RPCOps> startRpcServerWithBrokerRunning(
+            rpcUser: User = rpcTestUser,
+            nodeLegalName: X500Name = fakeNodeLegalName,
+            configuration: RPCServerConfiguration = RPCServerConfiguration.default,
+            ops: I,
+            brokerHandle: RpcBrokerHandle
+    ): RpcServerHandle
 }
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startInVmRpcClient(
         username: String = rpcTestUser.username,
@@ -176,9 +199,15 @@ inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
 
 interface RPCDriverInternalDSLInterface : DriverDSLInternalInterface, RPCDriverExposedDSLInterface
 
-data class RpcServerHandle(
-        val hostAndPort: HostAndPort,
+data class RpcBrokerHandle(
+        val hostAndPort: HostAndPort?, /** null if this is an InVM broker */
+        val clientTransportConfiguration: TransportConfiguration,
         val serverControl: ActiveMQServerControl
+)
+
+data class RpcServerHandle(
+        val broker: RpcBrokerHandle,
+        val rpcServer: RPCServer
 )
 
 val rpcTestUser = User("user1", "test", permissions = emptySet())
@@ -194,7 +223,7 @@ fun <A> rpcDriver(
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        networkMapStrategy: NetworkMapStrategy = FalseNetworkMap,
+        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -204,7 +233,7 @@ fun <A> rpcDriver(
                         systemProperties = systemProperties,
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
-                        networkMapStrategy = networkMapStrategy,
+                        networkMapStartStrategy = networkMapStartStrategy,
                         isDebug = isDebug
                 )
         ),
@@ -293,21 +322,9 @@ data class RPCDriverDSL(
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
             ops: I
-    ): ListenableFuture<Unit> {
-        return driverDSL.executorService.submit<Unit> {
-            val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
-            val server = EmbeddedActiveMQ()
-            server.setConfiguration(artemisConfig)
-            server.setSecurityManager(SingleUserSecurityManager(rpcUser))
-            server.start()
-            driverDSL.shutdownManager.registerShutdown {
-                server.activeMQServer.stop()
-                server.stop()
-            }
-            startRpcServerWithBrokerRunning(
-                    rpcUser, nodeLegalName, configuration, ops, inVmClientTransportConfiguration,
-                    server.activeMQServer.activeMQServerControl
-            )
+    ): ListenableFuture<RpcServerHandle> {
+        return startInVmRpcBroker(rpcUser, maxFileSize, maxBufferedBytesPerClient).map { broker ->
+            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
     }
 
@@ -344,22 +361,8 @@ data class RPCDriverDSL(
             customPort: HostAndPort?,
             ops: I
     ): ListenableFuture<RpcServerHandle> {
-        val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
-        addressMustNotBeBound(driverDSL.executorService, hostAndPort)
-        return driverDSL.executorService.submit<RpcServerHandle> {
-            val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
-            val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
-            server.start()
-            driverDSL.shutdownManager.registerShutdown {
-                server.stop()
-                addressMustNotBeBound(driverDSL.executorService, hostAndPort).get()
-            }
-            val transportConfiguration = createNettyClientTransportConfiguration(hostAndPort)
-            startRpcServerWithBrokerRunning(
-                    rpcUser, nodeLegalName, configuration, ops, transportConfiguration,
-                    server.activeMQServerControl
-            )
-            RpcServerHandle(hostAndPort, server.activeMQServerControl)
+        return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
+            startRpcServerWithBrokerRunning(rpcUser, nodeLegalName, configuration, ops, broker)
         }
     }
 
@@ -401,16 +404,58 @@ data class RPCDriverDSL(
         return session
     }
 
+    override fun startRpcBroker(
+            serverName: String,
+            rpcUser: User,
+            maxFileSize: Int,
+            maxBufferedBytesPerClient: Long,
+            customPort: HostAndPort?
+    ): ListenableFuture<RpcBrokerHandle> {
+        val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
+        addressMustNotBeBound(driverDSL.executorService, hostAndPort)
+        return driverDSL.executorService.submit<RpcBrokerHandle> {
+            val artemisConfig = createRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient, driverDSL.driverDirectory / serverName, hostAndPort)
+            val server = ActiveMQServerImpl(artemisConfig, SingleUserSecurityManager(rpcUser))
+            server.start()
+            driverDSL.shutdownManager.registerShutdown {
+                server.stop()
+                addressMustNotBeBound(driverDSL.executorService, hostAndPort).get()
+            }
+            RpcBrokerHandle(
+                    hostAndPort = hostAndPort,
+                    clientTransportConfiguration = createNettyClientTransportConfiguration(hostAndPort),
+                    serverControl = server.activeMQServerControl
+            )
+        }
+    }
 
-    private fun <I : RPCOps> startRpcServerWithBrokerRunning(
+    override fun startInVmRpcBroker(rpcUser: User, maxFileSize: Int, maxBufferedBytesPerClient: Long): ListenableFuture<RpcBrokerHandle> {
+        return driverDSL.executorService.submit<RpcBrokerHandle> {
+            val artemisConfig = createInVmRpcServerArtemisConfig(maxFileSize, maxBufferedBytesPerClient)
+            val server = EmbeddedActiveMQ()
+            server.setConfiguration(artemisConfig)
+            server.setSecurityManager(SingleUserSecurityManager(rpcUser))
+            server.start()
+            driverDSL.shutdownManager.registerShutdown {
+                server.activeMQServer.stop()
+                server.stop()
+            }
+            RpcBrokerHandle(
+                    hostAndPort = null,
+                    clientTransportConfiguration = inVmClientTransportConfiguration,
+                    serverControl = server.activeMQServer.activeMQServerControl
+            )
+        }
+    }
+
+    override fun <I : RPCOps> startRpcServerWithBrokerRunning(
             rpcUser: User,
             nodeLegalName: X500Name,
             configuration: RPCServerConfiguration,
             ops: I,
-            transportConfiguration: TransportConfiguration,
-            serverControl: ActiveMQServerControl
-    ) {
-        val locator = ActiveMQClient.createServerLocatorWithoutHA(transportConfiguration).apply {
+            brokerHandle: RpcBrokerHandle
+    ): RpcServerHandle {
+        val locator = ActiveMQClient.createServerLocatorWithoutHA(brokerHandle.clientTransportConfiguration).apply {
             minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
         }
         val userService = object : RPCUserService {
@@ -430,7 +475,8 @@ data class RPCDriverDSL(
             rpcServer.close()
             locator.close()
         }
-        rpcServer.start(serverControl)
+        rpcServer.start(brokerHandle.serverControl)
+        return RpcServerHandle(brokerHandle, rpcServer)
     }
 }
 

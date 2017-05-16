@@ -104,7 +104,7 @@ interface DriverDSLExposedInterface {
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
      * to set networkMapStrategy to FalseNetworkMap in your [driver] call.
      */
-    fun startNetworkMapService(): ListenableFuture<Unit>
+    fun startDedicatedNetworkMapService(): ListenableFuture<Unit>
 
     fun waitForAllNodesToFinish()
 
@@ -168,6 +168,11 @@ sealed class PortAllocation {
     }
 }
 
+sealed class NetworkMapStartStrategy {
+    data class Dedicated(val startAutomatically: Boolean) : NetworkMapStartStrategy()
+    data class Nominated(val legalName: X500Name, val address: HostAndPort) : NetworkMapStartStrategy()
+}
+
 /**
  * [driver] allows one to start up nodes like this:
  *   driver {
@@ -201,7 +206,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        networkMapStrategy: NetworkMapStrategy = DedicatedNetworkMap,
+        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -210,7 +215,7 @@ fun <A> driver(
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
-                networkMapStrategy = networkMapStrategy,
+                networkMapStartStrategy = networkMapStartStrategy,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -412,13 +417,14 @@ class DriverDSL(
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
-        val networkMapStrategy: NetworkMapStrategy
+        val networkMapStartStrategy: NetworkMapStartStrategy
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
-    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(
-            Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
-    )
-    override val shutdownManager = ShutdownManager(executorService)
+    private val dedicatedNetworkMapLegalName = DUMMY_MAP.name
+    var _executorService: ListeningScheduledExecutorService? = null
+    val executorService get() = _executorService!!
+    var _shutdownManager: ShutdownManager? = null
+    override val shutdownManager get() = _shutdownManager!!
 
     class State {
         val processes = ArrayList<ListenableFuture<Process>>()
@@ -449,8 +455,8 @@ class DriverDSL(
     }
 
     override fun shutdown() {
-        shutdownManager.shutdown()
-        executorService.shutdown()
+        _shutdownManager?.shutdown()
+        _executorService?.shutdownNow()
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
@@ -466,6 +472,12 @@ class DriverDSL(
             }
         }
     }
+
+    // TODO move to cmopanion
+    private fun toServiceConfig(address: HostAndPort, legalName: X500Name) = mapOf(
+            "address" to address.toString(),
+            "legalName" to legalName.toString()
+    )
 
     override fun startNode(
             providedName: X500Name?,
@@ -487,7 +499,17 @@ class DriverDSL(
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to networkMapStrategy.serviceConfig(dedicatedNetworkMapAddress, name, p2pAddress),
+                "networkMapService" to when (networkMapStartStrategy) {
+                    is NetworkMapStartStrategy.Dedicated -> toServiceConfig(dedicatedNetworkMapAddress, dedicatedNetworkMapLegalName)
+                    is NetworkMapStartStrategy.Nominated -> networkMapStartStrategy.run {
+                        if (name != legalName) {
+                            toServiceConfig(address, legalName)
+                        } else {
+                            p2pAddress == address || throw IllegalArgumentException("Passed-in address $address of nominated network map $legalName is wrong, it should be: $p2pAddress")
+                            null
+                        }
+                    }
+                },
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map {
                     mapOf(
@@ -574,21 +596,24 @@ class DriverDSL(
     }
 
     override fun start() {
-        if (networkMapStrategy.startDedicated) {
-            startNetworkMapService()
+        _executorService = MoreExecutors.listeningDecorator(
+                Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+        )
+        _shutdownManager = ShutdownManager(executorService)
+        if (networkMapStartStrategy is NetworkMapStartStrategy.Dedicated && networkMapStartStrategy.startAutomatically) {
+            startDedicatedNetworkMapService()
         }
     }
 
-    override fun startNetworkMapService(): ListenableFuture<Unit> {
+    override fun startDedicatedNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val networkMapLegalName = networkMapStrategy.legalName
-        val baseDirectory = driverDirectory / networkMapLegalName.commonName
+        val baseDirectory = driverDirectory / dedicatedNetworkMapLegalName.commonName
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
                 configOverrides = mapOf(
-                        "myLegalName" to networkMapLegalName.toString(),
+                        "myLegalName" to dedicatedNetworkMapLegalName.toString(),
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
@@ -684,3 +709,4 @@ fun writeConfig(path: Path, filename: String, config: Config) {
     path.toFile().mkdirs()
     File("$path/$filename").writeText(config.root().render(ConfigRenderOptions.defaults()))
 }
+
