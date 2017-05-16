@@ -164,6 +164,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
+            // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
+            // would be the default and the two lines below can be deleted.
+            locator.connectionTTL = -1
+            locator.clientFailureCheckPeriod = -1
             locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             sessionFactory = locator.createSessionFactory()
 
