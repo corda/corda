@@ -196,7 +196,14 @@ abstract class SignTransactionFlow(val otherParty: Party,
             subFlow(ResolveTransactionsFlow(proposal.tx, otherParty))
             proposal.tx.toLedgerTransaction(serviceHub).verify()
             // Perform some custom verification over the transaction.
-            checkTransaction(proposal)
+            try {
+                checkTransaction(proposal)
+            } catch(e: Exception) {
+                if (e is IllegalStateException || e is IllegalArgumentException || e is AssertionError)
+                    throw FlowException(e)
+                else
+                    throw e
+            }
             // All good. Unwrap the proposal.
             proposal
         }
@@ -233,6 +240,9 @@ abstract class SignTransactionFlow(val otherParty: Party,
      *
      * **WARNING**: If appropriate checks, such as the ones listed above, are not defined then it is likely that your
      * node will sign any transaction if it conforms to the contract code in the transaction's referenced contracts.
+     *
+     * [IllegalArgumentException], [IllegalStateException] and [AssertionError] will be caught and rethrown as flow
+     * exceptions i.e. the other side will be given information about what exact check failed.
      *
      * @param stx a partially signed transaction received from your counter-party.
      * @throws FlowException if the proposed transaction fails the checks.
