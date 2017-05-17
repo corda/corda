@@ -130,7 +130,7 @@ A short list of tasks show on-screen to indicate the progress of the command.
 .. image:: resources/yo_flow_progress.png
   :width: 300px
 
-This `video <https://vimeo.com/217880232>`_ summarises these steps.
+This `video <https://vimeo.com/217809526#t=10m20s>`_ summarises these steps.
 
 * **Viewing Yo messages**
 
