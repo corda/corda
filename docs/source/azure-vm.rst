@@ -1,9 +1,9 @@
 Building a Corda Network on Azure Marketplace
 =============================================
 
-To help you design, build and test CorDapps running on Corda a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
+To help you design, build and test Corda CorDapps a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
-This Corda network offering builds a pre-configured network of Corda nodes comprising a Network Map Service node, Notary node and up to nine Corda nodes using a version of Corda that you choose. The simple Yo! CorDapp is pre-installed and helps you learn the basic principles of Corda. When you are ready to go further developing on Corda and start making contributions to the project head over to the `GitHub Repos <https://github.com/corda/>`_.
+This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM) comprising a Network Map Service node, Notary node and up to nine Corda nodes using a version of Corda that you choose. The simple Yo! CorDapp is pre-installed and helps you learn the basic principles of Corda. When you are ready to go further developing on Corda and start making contributions to the project head over to the `GitHub Repos <https://github.com/corda/>`_.
 
 Pre-requisites
 --------------
@@ -19,57 +19,62 @@ Click the 'Create' button.
 
 STEP 1: Basics
 
-* **Name**: Choose an appropriate descriptive name for the VM
-* **VM Disk Type**: Select 'SSD'
-* **Username**: Your preferred user name for the administrator account when accessing via SSH
-* **Authentication type**: Select 'SSH public key', then paste the contents of your SSH public key file (see pre-requisites, above) into the box below. Alternatively select 'Password' to use a password of your choice to administer the VM
+Define the basic parameters which will be used to pre-configure your Corda nodes.
 
-* **Subscription**: Select your subscription name
-* **Resource group**: Select 'Use existing'. From the drop-down menu, select your account group
+* **Resource prefix**: Choose an appropriate descriptive name for your Corda nodes. This name will prefix the node hostnames
+* **VM user name**: This is the user login name on the Ubuntu VM. Leave it as azureuser or define your own
+* **Authentication type**: Select 'SSH public key', then paste the contents of your SSH public key file (see pre-requisites, above) into the box below. Alternatively select 'Password' to use a password of your choice to administer the VM
+* **Restrict accedd by IP address**: Leave this as 'No'
+* **Subscription**: Select which of your Azure subscriptions you want to use
+* **Resource group**: Choose to 'Create new' and provide a useful name of your choice
 * **Location**: Select the geographical location physically closest to you
  
-.. image:: resources/azure_vm_10_00_1.png
+.. image:: resources/azure_multi_node_step1.png
   :width: 300px
 
 Click 'OK'
 
-STEP 2: Size
+STEP 2: Network Size and Performance
 
-A range of available hardware configurations will be presented, along with estimated costs. For the purposes of running the demos, a configuration of 2 cores and at least 14GB is recommended
+Define the number of Corda nodes in your network and the size of VM.
 
-.. image:: resources/azure_vm_10_05_1.png
+* **Number of Network Map nodes**: There can only be one Network Map node in this network. Leave as '1'
+* **Number of Notary nodes**: There can only be one Notary node in this network. Leave as '1'
+* **Number of participant nodes**: This is the number of Corda nodes in your network. At least 2 is recommended (so you can send transactions between them) and there is a limit of 9
+* **Storage performance**: Leave as 'Standard'
+* **Virtual machine size**: It is recommended to use '4x Standard D1 v2' based on performance versus cost
+
+.. image:: resources/azure_multi_node_step2.png
   :width: 300px
  
-Choose the required configuration and click 'Select'.
+Click 'OK'
 
-STEP 3: Settings
+STEP 3: Corda Specific Options
 
-Adjust any configuration settings required. For the purposes of running the Corda demos, all settings may be left as default.
+Define the version of Corda you want on your nodes and the type of notary.
 
-.. image:: resources/azure_vm_10_16_1.png
+* **Corda version (as seen in Maven Central)**: Type the version of Corda you want your nodes to use. The version value must exactly match the directory name in `Maven Central <http://repo1.maven.org/maven2/net/corda/corda/>`_, for example 0.11.0
+* **Notary type**: Select either 'Non Validating" (notary only checks whether a state has been previously used and marked as historic. Faster processing) or 'Validating' (notary performs transaction verification by seeing input and output states. Slower processing). More information on notaries can be found `here <https://vimeo.com/album/4555732/video/214138458>`_
+
+.. image:: resources/azure_multi_node_step3.png
   :width: 300px
+  
+Click 'OK'
 
 STEP 4: Summary
 
-The banner at the top of the dialog should read 'Validation passed' otherwise go back and adjust settings where needed.
+A summary of your selections is shown.
 
-.. image:: resources/azure_vm_10_19.png
+.. image:: resources/azure_multi_node_step4.png
   :width: 300px
 
-Click 'OK' to proceed.
+Click 'OK'
 
-STEP 5: Buy
+The the deployment process will start and typically takes 8-10 minutes to complete.
 
-Click 'Purchase' to complete the configuration and start the VM deployment.
+Once deployed, click 'Overview' to see the virtual machine details. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
 
-The VM will begin the deployment process, which typically takes 4-5 minutes to complete. To see progress, click on the "Deploying" icon displayed.
-
-.. image:: resources/azure_vm_10_20.png
-  :width: 300px
-
-Once deployed, click 'Overview' to see the virtual machine details. Note down the **Public IP address**. You will need this to connect to the demo screens via your web browser:
-
-.. image:: resources/azure_vm_10_26.png
+.. image:: resources/azure_ip.png
   :width: 300px
 
 
@@ -81,34 +86,28 @@ Open a browser tabs and browse to the following URL:
 
 .. sourcecode:: shell
 
-	http://(public IP address):(port)/web/simmvaluationdemo
+	http://(public IP address):(port)/web/yo
 
-where public IP address is the public IP address of one of your Corda nodes on the Azure Corda network. This can be found using the Overview screen in your Azure portal:
+where (public IP address) is the public IP address of one of your Corda nodes on the Azure Corda network and (port) is the web server port number for your Corda node, 10004 by default
 
-.. image:: resources/azure_ip.png
+You will be able to view the Yo! CordDapp web interface:
+
+.. image:: resources/Yo_web_ui.png
   :width: 300px
 
-specifying each of the three ports above in different windows, e.g. 
+* **Sending a Yo message via the web interface**
+
+In the browser window type the following URL to send a Yo message to a target node on your Corda network:
 
 .. sourcecode:: shell
 
-	http://51.140.41.48/12005/web/simmvaluationdemo
+	http://(public IP address):(port)/api/yo/yo?target=(legalname of target node)
+	
+where (public IP address) is the public IP address of one of your Corda nodes on the Azure Corda network and (port) is the web server port number for your Corda node, 10004 by default and (legalname of target node) is the Legal Name for the target node as defined in the node.conf file
 
-You will be able to view the basic web interface identifying the different banks.
+* **Sending a Yo message via the shell**
 
-Now let's take a look at a transaction between Bank A and B which is not visible to Bank C. This illustrates the restricted data sharing feature of Corda, i.e. data is shared on a need-to-know basis. Nodes provide the dependency graph of a transaction they are sending to another node on demand, but there is no global broadcast of all transactions. 
-
-1. In the browser tab for Bank A (the top right hand corner shows which bank you are administering) click 'Create New Trade' from the top navigation bar
-2. Select to trade with Bank B
-3. Select 'EUR Fixed 1y EURIBOR 3m' from the drop down
-4. Click 'Submit' to create the trade
-5. In the browser tab for Bank B click 'View Portfolio' from the top navigation bar to see this new trade
-6. In the browser tab for Bank C click 'View Portfolio' from the top navigation bar and you will not be able to see the trade, as expected
-
-.. image:: resources/azure_vm_10_51.png
-  :width: 300px
-
-.. note:: There is a known issue whereby some users may see a 400 error when navigating the SIMM Valuation demo. If you encounter this error, simply navigate back to the root page (http://*(public IP address)*:*(port)*/*web*/*simmvaluationdemo*) in the browser before continuing.
+You can send basic commands to your Corda node remotely using the `shell framework <https://docs.corda.net/shell.html>`_. 
 
 Viewing the IRS demo
 --------------------
