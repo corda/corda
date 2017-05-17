@@ -259,6 +259,7 @@ class SerializationOutputTests {
     fun `test throwables serialize`() {
         val factory = SerializerFactory()
         factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
+        println()
 
         val factory2 = SerializerFactory()
         factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
@@ -285,7 +286,6 @@ class SerializationOutputTests {
             serdes(t, factory, factory2, false)
         }
     }
-
 
     @Test
     fun `test suppressed throwables serialize`() {

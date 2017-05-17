@@ -5,13 +5,14 @@ import java.lang.reflect.Array
 import java.lang.reflect.Type
 
 abstract class CustomSerializer<T> : AMQPSerializer<T> {
+    abstract val additionalSerializers: Iterable<CustomSerializer<out Any>>
     abstract fun isSerializerFor(clazz: Class<*>): Boolean
     protected abstract val descriptor: Descriptor
     /**
      * This exists purely for documentation and cross-platform purposes. It is not used by our serialization / deserialization
      * code path.
      */
-    abstract val typeNotation: TypeNotation
+    abstract val schemaForDocumentation: Schema
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         data.withDescribed(descriptor) {
@@ -38,12 +39,6 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     }
 
     abstract class Proxy<T, P>(protected val clazz: Class<T>, protected val proxyClass: Class<P>, factory: SerializerFactory, val withInheritance: Boolean = true) : CustomSerializer<T>() {
-        abstract fun registerAdditionalSerializers(factory: SerializerFactory)
-
-        init {
-            registerAdditionalSerializers(factory)
-        }
-
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
         override val type: Type get() = clazz
         override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.simpleName}"
@@ -52,7 +47,13 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
         private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
 
-        override val typeNotation: TypeNotation by lazy { CompositeType(type.typeName, null, emptyList(), descriptor, (proxySerializer.typeNotation as CompositeType).fields) }
+        override val schemaForDocumentation: Schema by lazy {
+            val typeNotations = mutableSetOf<TypeNotation>(CompositeType(type.typeName, null, emptyList(), descriptor, (proxySerializer.typeNotation as CompositeType).fields))
+            for (additional in additionalSerializers) {
+                typeNotations.addAll(additional.schemaForDocumentation.types)
+            }
+            Schema(typeNotations.toList())
+        }
 
         protected abstract fun toProxy(obj: T): P
         protected abstract fun fromProxy(proxy: P): T
@@ -73,7 +74,9 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         }
     }
 
-    abstract class PredefinedArray<T>(protected val elementClazz: Class<T>, factory: SerializerFactory) : CustomSerializer<kotlin.Array<T>>() {
+    abstract class PredefinedArray<T>(protected val elementClazz: Class<T>, private val factory: SerializerFactory) : CustomSerializer<kotlin.Array<T>>() {
+        override val additionalSerializers: Iterable<CustomSerializer<out Any>> get() = listOf(factory.get(elementClazz, elementClazz) as CustomSerializer<out Any>)
+
         private val arrayClazz = Array.newInstance(elementClazz, 0).javaClass
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == arrayClazz
@@ -85,7 +88,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
         private val arraySerializer: ArraySerializer by lazy { ArraySerializer(arrayClazz, factory) }
 
-        override val typeNotation: TypeNotation = RestrictedType(arrayClazz.name, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+        override val schemaForDocumentation: Schema = Schema(listOf(RestrictedType(arrayClazz.name, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())))
 
         override fun writeDescribedObject(obj: kotlin.Array<T>, data: Data, type: Type, output: SerializationOutput) {
             data.withList {

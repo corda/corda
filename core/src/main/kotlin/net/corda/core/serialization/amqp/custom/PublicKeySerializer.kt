@@ -8,7 +8,9 @@ import java.lang.reflect.Type
 import java.security.PublicKey
 
 class PublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::class.java) {
-    override val typeNotation: TypeNotation = RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(Binary::class.java)!!, descriptor, emptyList())
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
+
+    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(Binary::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput) {
         // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.

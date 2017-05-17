@@ -94,9 +94,13 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
      * TODO: Add docs
      */
     fun register(customSerializer: CustomSerializer<out Any>) {
-        customSerializers += customSerializer
-        serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
-        //customSerializer.registerAdditionalSerializers(this)
+        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
+            customSerializers += customSerializer
+            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
+            for (additional in customSerializer.additionalSerializers) {
+                register(additional)
+            }
+        }
     }
 
     private fun processSchema(schema: Schema) {

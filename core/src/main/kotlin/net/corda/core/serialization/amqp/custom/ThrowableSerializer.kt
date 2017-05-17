@@ -5,11 +5,8 @@ import net.corda.core.serialization.amqp.SerializerFactory
 import java.util.*
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
-    override fun registerAdditionalSerializers(factory: SerializerFactory) {
-        factory.register(StackTraceElementSerializer(factory))
-        factory.register(StackTraceElementArraySerializer(factory))
-        factory.register(ThrowableArraySerializer(factory))
-    }
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> =
+            listOf(StackTraceElementSerializer(factory), StackTraceElementArraySerializer(factory), ThrowableArraySerializer(factory))
 
     override fun toProxy(obj: Throwable): ThrowableProxy {
         return ThrowableProxy(obj.javaClass.name, obj.message, obj.stackTrace, obj.cause, obj.suppressed)
@@ -32,8 +29,7 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
 }
 
 class StackTraceElementSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<StackTraceElement, StackTraceElementSerializer.StackTraceElementProxy>(StackTraceElement::class.java, StackTraceElementProxy::class.java, factory) {
-    override fun registerAdditionalSerializers(factory: SerializerFactory) {
-    }
+    override val additionalSerializers: Iterable<CustomSerializer<Any>> = emptyList()
 
     override fun toProxy(obj: StackTraceElement): StackTraceElementProxy = StackTraceElementProxy(obj.className, obj.methodName, obj.fileName, obj.lineNumber)
 
