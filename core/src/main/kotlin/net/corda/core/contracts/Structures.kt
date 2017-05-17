@@ -410,7 +410,12 @@ data class AuthenticatedObject<out T : Any>(
  * between (after, before).
  */
 @CordaSerializable
-data class Timestamp(val after: Instant?, val before: Instant?) {
+data class Timestamp(
+        /** The time at which this transaction is said to have occurred is after this moment */
+        val after: Instant?,
+        /** The time at which this transaction is said to have occurred is before this moment */
+        val before: Instant?
+) {
     init {
         if (after == null && before == null)
             throw IllegalArgumentException("At least one of before/after must be specified")
