@@ -93,13 +93,14 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
                 filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
                 map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
+/** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
 
-// For Java
+/** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<C>) =
         mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as AuthenticatedObject<C> else null }.single()
 
