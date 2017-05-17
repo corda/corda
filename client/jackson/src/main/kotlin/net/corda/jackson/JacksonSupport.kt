@@ -44,18 +44,21 @@ object JacksonSupport {
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
         override fun partyFromPrincipal(principal: X500Name): Party? = rpc.partyFromX500Name(principal)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
     }
 
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
         override fun partyFromPrincipal(principal: X500Name): Party? = identityService.partyFromX500Name(principal)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+        @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
         override fun partyFromPrincipal(principal: X500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
@@ -169,7 +172,11 @@ object JacksonSupport {
                 val principal = X500Name(parser.text)
                 mapper.partyFromPrincipal(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
             } else {
-                val key = parsePublicKeyBase58(parser.text)
+                val key = try {
+                    parsePublicKeyBase58(parser.text)
+                } catch (e: Exception) {
+                    throw JsonParseException(parser, "Could not interpret ${parser.text} as a base58 encoded public key")
+                }
                 mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${key.toStringShort()}")
             }
         }
