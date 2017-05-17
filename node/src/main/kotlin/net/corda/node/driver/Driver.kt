@@ -473,18 +473,20 @@ class DriverDSL(
         }
     }
 
-    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CommonNode>) = networkMapStartStrategy.run {
-        when (this) {
-            is NetworkMapStartStrategy.Dedicated -> {
-                serviceConfig(dedicatedNetworkMapAddress).let {
-                    { _: X500Name -> it }
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CommonNode>): (X500Name) -> Map<String, String>? {
+        return networkMapStartStrategy.run {
+            when (this) {
+                is NetworkMapStartStrategy.Dedicated -> {
+                    serviceConfig(dedicatedNetworkMapAddress).let {
+                        { _: X500Name -> it }
+                    }
                 }
-            }
-            is NetworkMapStartStrategy.Nominated -> {
-                serviceConfig(HostAndPort.fromString(networkMapCandidates.filter {
-                    it.name == legalName.toString()
-                }.single().config.getString("p2pAddress"))).let {
-                    { nodeName: X500Name -> if (nodeName == legalName) null else it }
+                is NetworkMapStartStrategy.Nominated -> {
+                    serviceConfig(HostAndPort.fromString(networkMapCandidates.filter {
+                        it.name == legalName.toString()
+                    }.single().config.getString("p2pAddress"))).let {
+                        { nodeName: X500Name -> if (nodeName == legalName) null else it }
+                    }
                 }
             }
         }
@@ -495,13 +497,13 @@ class DriverDSL(
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
-            customOverrides: Map<String, Any?>) = run {
+            customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
-        startNode(p2pAddress, webAddress, name, configOf(
+        return startNode(p2pAddress, webAddress, name, configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
@@ -533,9 +535,9 @@ class DriverDSL(
         }
     }
 
-    override fun startNodes(nodes: List<CommonNode>) = run {
+    override fun startNodes(nodes: List<CommonNode>): List<ListenableFuture<NodeHandle>> {
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
-        nodes.map {
+        return nodes.map {
             val p2pAddress = HostAndPort.fromString(it.config.getString("p2pAddress")); portAllocation.nextHostAndPort()
             portAllocation.nextHostAndPort() // rpcAddress
             val webAddress = portAllocation.nextHostAndPort()
