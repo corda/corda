@@ -1,4 +1,4 @@
-package net.corda.plugins.cordform;
+package net.corda.cordform;
 
 import static java.util.Collections.emptyList;
 

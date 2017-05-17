@@ -30,8 +30,8 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.plugins.cordform.CommonNode
-import net.corda.plugins.cordform.CordformContext
+import net.corda.cordform.CommonNode
+import net.corda.cordform.CordformContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name

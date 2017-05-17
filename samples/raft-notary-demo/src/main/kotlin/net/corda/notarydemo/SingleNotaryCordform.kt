@@ -12,8 +12,8 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.plugins.cordform.CommonCordform
-import net.corda.plugins.cordform.CordformContext
+import net.corda.cordform.CommonCordform
+import net.corda.cordform.CordformContext
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 

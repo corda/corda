@@ -3,8 +3,8 @@ package net.corda.demorun
 import net.corda.node.driver.NetworkMapStartStrategy
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
-import net.corda.plugins.cordform.CommonCordform
-import net.corda.plugins.cordform.CommonNode
+import net.corda.cordform.CommonCordform
+import net.corda.cordform.CommonNode
 
 fun CommonCordform.node(configure: CommonNode.() -> Unit) = addNode { commonNode -> commonNode.configure() }
 

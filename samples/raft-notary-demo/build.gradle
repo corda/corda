@@ -24,12 +24,10 @@ dependencies {
     compile project(':client:jfx')
     compile project(':client:rpc')
     compile project(':test-utils')
+    compile project(':cordform-common')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-
-    // CommonCordform for deployNodes tasks:
-    compile "net.corda.plugins:cordformation:$gradle_plugins_version"
 }
 
 idea {

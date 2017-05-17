@@ -2,8 +2,8 @@ package net.corda.plugins
 
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 
-import net.corda.plugins.cordform.CordformContext
-import net.corda.plugins.cordform.CommonCordform
+import net.corda.cordform.CordformContext
+import net.corda.cordform.CommonCordform
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask

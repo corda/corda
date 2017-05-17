@@ -14,8 +14,8 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.plugins.cordform.CommonCordform
-import net.corda.plugins.cordform.CordformContext
+import net.corda.cordform.CommonCordform
+import net.corda.cordform.CordformContext
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
