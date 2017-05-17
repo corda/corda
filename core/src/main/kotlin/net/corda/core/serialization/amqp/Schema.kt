@@ -320,9 +320,9 @@ private val ANY_TYPE_HASH: String = "Any type = true"
  * different.
  */
 // TODO: write tests
-internal fun fingerprintForType(type: Type): String = Base58.encode(fingerprintForType(type, HashSet(), Hashing.murmur3_128().newHasher()).hash().asBytes())
+internal fun fingerprintForType(type: Type, factory: SerializerFactory): String = Base58.encode(fingerprintForType(type, HashSet(), Hashing.murmur3_128().newHasher(), factory).hash().asBytes())
 
-private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher: Hasher): Hasher {
+private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     return if (type in alreadySeen) {
         hasher.putUnencodedChars(ALREADY_SEEN_HASH)
     } else {
@@ -331,25 +331,31 @@ private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher
             hasher.putUnencodedChars(ANY_TYPE_HASH)
         } else if (type is Class<*>) {
             if (type.isArray) {
-                fingerprintForType(type.componentType, alreadySeen, hasher).putUnencodedChars(ARRAY_HASH)
+                fingerprintForType(type.componentType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
             } else if (SerializerFactory.isPrimitive(type)) {
                 hasher.putUnencodedChars(type.name)
             } else if (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) {
                 hasher.putUnencodedChars(type.name)
             } else {
-                // Hash the class + properties + interfaces
-                propertiesForSerialization(constructorForDeserialization(type), type).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
-                    fingerprintForType(param.readMethod.genericReturnType, alreadySeen, orig).putUnencodedChars(param.name).putUnencodedChars(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                // Need to check if a custom serializer is applicable
+                val customSerializer = factory.findCustomSerializer(type)
+                if (customSerializer == null) {
+                    // Hash the class + properties + interfaces
+                    propertiesForSerialization(constructorForDeserialization(type), type).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
+                        fingerprintForType(param.readMethod.genericReturnType, alreadySeen, orig, factory).putUnencodedChars(param.name).putUnencodedChars(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
+                    }
+                    interfacesForSerialization(type).map { fingerprintForType(it, alreadySeen, hasher, factory) }
+                    hasher
+                } else {
+                    hasher.putUnencodedChars(customSerializer.typeDescriptor)
                 }
-                interfacesForSerialization(type).map { fingerprintForType(it, alreadySeen, hasher) }
-                hasher
             }
         } else if (type is ParameterizedType) {
             // Hash the rawType + params
-            type.actualTypeArguments.fold(fingerprintForType(type.rawType, alreadySeen, hasher)) { orig, paramType -> fingerprintForType(paramType, alreadySeen, orig) }
+            type.actualTypeArguments.fold(fingerprintForType(type.rawType, alreadySeen, hasher, factory)) { orig, paramType -> fingerprintForType(paramType, alreadySeen, orig, factory) }
         } else if (type is GenericArrayType) {
             // Hash the element type + some array hash
-            fingerprintForType(type.genericComponentType, alreadySeen, hasher).putUnencodedChars(ARRAY_HASH)
+            fingerprintForType(type.genericComponentType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
         } else {
             throw NotSerializableException("Don't know how to hash $type")
         }

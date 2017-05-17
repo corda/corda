@@ -9,12 +9,12 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-class ArraySerializer(override val type: Type) : AMQPSerializer<Any> {
+class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     private val typeName = type.typeName
 
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
-    private val elementType: Type = makeElementType()
+    internal val elementType: Type = makeElementType()
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 

@@ -18,6 +18,7 @@ import javax.annotation.concurrent.ThreadSafe
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  */
+// TODO: enums
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
@@ -51,7 +52,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 if (rawType is Class<*>) {
                     checkParameterisedTypesConcrete(declaredType.actualTypeArguments)
                     if (Collection::class.java.isAssignableFrom(rawType)) {
-                        CollectionSerializer(declaredType)
+                        CollectionSerializer(declaredType, this)
                     } else if (Map::class.java.isAssignableFrom(rawType)) {
                         makeMapSerializer(declaredType)
                     } else {
@@ -64,14 +65,14 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else if (declaredType is Class<*>) {
             // Simple classes allowed
             if (Collection::class.java.isAssignableFrom(declaredType)) {
-                return serializersByType.computeIfAbsent(declaredType) { CollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType), null)) }
+                return serializersByType.computeIfAbsent(declaredType) { CollectionSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType), null), this) }
             } else if (Map::class.java.isAssignableFrom(declaredType)) {
                 return serializersByType.computeIfAbsent(declaredType) { makeMapSerializer(DeserializedParameterizedType(declaredType, arrayOf(AnyType, AnyType), null)) }
             } else {
                 return makeClassSerializer(actualType ?: declaredType)
             }
         } else if (declaredType is GenericArrayType) {
-            return serializersByType.computeIfAbsent(declaredType) { ArraySerializer(declaredType) }
+            return serializersByType.computeIfAbsent(declaredType) { ArraySerializer(declaredType, this) }
         } else {
             throw NotSerializableException("Declared types of $declaredType are not supported.")
         }
@@ -95,6 +96,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     fun register(customSerializer: CustomSerializer<out Any>) {
         customSerializers += customSerializer
         serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
+        //customSerializer.registerAdditionalSerializers(this)
     }
 
     private fun processSchema(schema: Schema) {
@@ -151,19 +153,21 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         return serializersByType.computeIfAbsent(clazz) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
-            } else if (clazz.isArray) {
-                whitelisted(clazz.componentType)
-                ArraySerializer(clazz)
             } else {
                 findCustomSerializer(clazz) ?: {
-                    whitelisted(clazz)
-                    ObjectSerializer(clazz)
+                    if (clazz.isArray) {
+                        whitelisted(clazz.componentType)
+                        ArraySerializer(clazz, this)
+                    } else {
+                        whitelisted(clazz)
+                        ObjectSerializer(clazz, this)
+                    }
                 }()
             }
         }
     }
 
-    private fun findCustomSerializer(clazz: Class<*>): AMQPSerializer<out Any>? {
+    internal fun findCustomSerializer(clazz: Class<*>): AMQPSerializer<out Any>? {
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
                 return customSerializer
@@ -190,7 +194,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<out Any> {
         val rawType = declaredType.rawType as Class<*>
         rawType.checkNotUnorderedHashMap()
-        return MapSerializer(declaredType)
+        return MapSerializer(declaredType, this)
     }
 
     companion object {

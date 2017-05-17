@@ -10,10 +10,10 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer<Any> {
+class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
-    private val propertySerializers: Collection<PropertySerializer>
+    internal val propertySerializers: Collection<PropertySerializer>
 
     init {
         val kotlinConstructor = constructorForDeserialization(clazz)
@@ -21,10 +21,10 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer<Any> {
         propertySerializers = propertiesForSerialization(kotlinConstructor, clazz)
     }
     private val typeName = clazz.name
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
     private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
-    private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
+    internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 
     override fun writeClassInfo(output: SerializationOutput) {
         output.writeTypeNotations(typeNotation)

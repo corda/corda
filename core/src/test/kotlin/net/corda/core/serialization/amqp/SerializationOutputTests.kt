@@ -6,6 +6,7 @@ import net.corda.testing.MEGA_CORP_PUBKEY
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
+import java.io.IOException
 import java.io.NotSerializableException
 import java.nio.ByteBuffer
 import java.util.*
@@ -80,7 +81,7 @@ class SerializationOutputTests {
 
     data class InheritAnnotation(val foo: String) : AnnotatedInterface
 
-    private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory(), freshDeserializationFactory: SerializerFactory = SerializerFactory()): Any {
+    private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory(), freshDeserializationFactory: SerializerFactory = SerializerFactory(), expectedEqual: Boolean = true): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
 
@@ -101,13 +102,14 @@ class SerializationOutputTests {
 
         val des = DeserializationInput(freshDeserializationFactory)
         val desObj = des.deserialize(bytes)
-        assertTrue(Objects.deepEquals(obj, desObj))
+        assertTrue(Objects.deepEquals(obj, desObj) == expectedEqual)
 
         // Now repeat with a re-used factory
         val ser2 = SerializationOutput(factory)
         val des2 = DeserializationInput(factory)
         val desObj2 = des2.deserialize(ser2.serialize(obj))
-        assertTrue(Objects.deepEquals(obj, desObj2))
+        assertTrue(Objects.deepEquals(obj, desObj2) == expectedEqual)
+        assertTrue(Objects.deepEquals(desObj, desObj2))
 
         // TODO: add some schema assertions to check correctly formed.
         return desObj2
@@ -251,5 +253,58 @@ class SerializationOutputTests {
     fun `test annotation is inherited`() {
         val obj = InheritAnnotation("blah")
         serdes(obj, SerializerFactory(EmptyWhitelist))
+    }
+
+    @Test
+    fun `test throwables serialize`() {
+        val factory = SerializerFactory()
+        factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
+
+        val factory2 = SerializerFactory()
+        factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
+
+        val obj = IllegalAccessException("message").fillInStackTrace()
+        serdes(obj, factory, factory2, false)
+    }
+
+    @Test
+    fun `test complex throwables serialize`() {
+        val factory = SerializerFactory()
+        factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
+
+        val factory2 = SerializerFactory()
+        factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
+
+        try {
+            try {
+                throw IOException("Layer 1")
+            } catch(t: Throwable) {
+                throw IllegalStateException("Layer 2", t)
+            }
+        } catch(t: Throwable) {
+            serdes(t, factory, factory2, false)
+        }
+    }
+
+
+    @Test
+    fun `test suppressed throwables serialize`() {
+        val factory = SerializerFactory()
+        factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
+
+        val factory2 = SerializerFactory()
+        factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
+
+        try {
+            try {
+                throw IOException("Layer 1")
+            } catch(t: Throwable) {
+                val e = IllegalStateException("Layer 2")
+                e.addSuppressed(t)
+                throw e
+            }
+        } catch(t: Throwable) {
+            serdes(t, factory, factory2, false)
+        }
     }
 }

@@ -15,7 +15,7 @@ import java.util.*
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-class DeserializationInput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
+class DeserializationInput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
 

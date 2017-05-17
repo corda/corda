@@ -14,7 +14,7 @@ import kotlin.collections.LinkedHashSet
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
+open class SerializationOutput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
     private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
@@ -70,11 +70,11 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
         serializer.writeObject(obj, data, type, this)
     }
 
-    internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
+    open internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
         return schemaHistory.addAll(typeNotation)
     }
 
-    internal fun requireSerializer(type: Type) {
+    open internal fun requireSerializer(type: Type) {
         if (type != SerializerFactory.AnyType) {
             val serializer = serializerFactory.get(null, type)
             if (serializer !in serializerHistory) {

@@ -12,10 +12,10 @@ import kotlin.collections.Set
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
-class CollectionSerializer(val declaredType: ParameterizedType) : AMQPSerializer<Any> {
+class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
     private val typeName = declaredType.toString()
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
         private val supportedTypes: Map<Class<out Collection<*>>, (Collection<*>) -> Collection<*>> = mapOf(
