@@ -25,10 +25,10 @@ class DriverTests {
 
         private val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
-        private fun nodeMustBeUp(handleFuture: ListenableFuture<NodeHandle>) = handleFuture.getOrThrow().apply {
+        private fun nodeMustBeUp(handleFuture: ListenableFuture<out NodeHandle>) = handleFuture.getOrThrow().apply {
             val hostAndPort = ArtemisMessagingComponent.toHostAndPort(nodeInfo.address)
             // Check that the port is bound
-            addressMustBeBound(executorService, hostAndPort, process)
+            addressMustBeBound(executorService, hostAndPort, (this as? NodeHandle.OutOfProcess)?.process)
         }
 
         private fun nodeMustBeDown(handle: NodeHandle) {
