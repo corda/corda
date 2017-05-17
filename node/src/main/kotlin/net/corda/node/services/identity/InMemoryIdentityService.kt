@@ -4,7 +4,10 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
@@ -18,6 +21,7 @@ import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -93,6 +97,24 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
     override fun requirePartyFromAnonymous(party: AbstractParty): Party {
         return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    }
+
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
+        val results = HashSet<Party>()
+        for ((x500name, partyAndCertificate) in principalToParties) {
+            val party = partyAndCertificate.party
+            for (rdn in x500name.rdNs) {
+                val component = rdn.first.value.toString()
+                if (exactMatch && component == query) {
+                    results += party
+                } else if (!exactMatch) {
+                    // We can imagine this being a query over a lucene index in future.
+                    if (component.contains(query, ignoreCase = true))
+                        results += party
+                }
+            }
+        }
+        return results
     }
 
     @Throws(IdentityService.UnknownAnonymousPartyException::class)
