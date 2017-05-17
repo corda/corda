@@ -3,11 +3,11 @@ Building a Corda Network on Azure Marketplace
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
-This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM). The network comprises a Network Map Service node, a Notary node and up to nine Corda nodes using a version of Corda of your choosing. The simple Yo! CorDapp is pre-installed and demonstrates the basic principles of Corda. When you are ready to go further with developing on Corda and start making contributions to the project head over to the `GitHub Repos <https://github.com/corda/>`_.
+This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM). The network comprises of a Network Map Service node, a Notary node and up to nine Corda nodes using a version of Corda of your choosing. The simple Yo! CorDapp is pre-installed and demonstrates the basic principles of Corda. When you are ready to go further with developing on Corda and start making contributions to the project head over to the `GitHub Repos <https://github.com/corda/>`_.
 
 Pre-requisites
 --------------
-* Ensure you have a registered Microsoft Azure account and are logged on to the Azure portal.
+* Ensure you have a registered Microsoft Azure account and are logged on to the Azure portal
 * It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
 
 
@@ -15,6 +15,7 @@ Deploying the Corda Network
 ---------------------------
 
 Search the Azure Marketplace for Corda and select 'Corda Single Ledger Network'.
+
 Click the 'Create' button.
 
 STEP 1: Basics
@@ -70,6 +71,10 @@ A summary of your selections is shown.
 
 Click 'OK'
 
+STEP 5: Buy
+
+Review the Azure Terms of Use and Privacy Policy and click 'Purchase'
+
 The deployment process will start and typically takes 8-10 minutes to complete.
 
 Once deployed click 'Overview' to see the virtual machine details. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
@@ -77,10 +82,9 @@ Once deployed click 'Overview' to see the virtual machine details. Note down the
 .. image:: resources/azure_ip.png
   :width: 300px
 
-
 Using the Yo! CorDapp
 ---------------------
-The pre-loaded Yo! CordDapp on your Corda nodes lets you send simple Yo messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp is running by default when your Corda nodes start. The Yo! CorDapp demonstrates how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network. The Yo! CorDapp also makes use of the network map cache on each Corda node to find the intended target for the message.
+The pre-loaded Yo! CordDapp on your Corda nodes lets you send simple Yo! messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp is running by default when your Corda nodes start. The Yo! CorDapp demonstrates how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network. The Yo! CorDapp also makes use of the network map cache on each Corda node to find the intended target for the message.
 
 Open a browser tab and browse to the following URL:
 
