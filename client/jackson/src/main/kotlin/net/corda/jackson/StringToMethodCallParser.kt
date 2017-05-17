@@ -193,8 +193,7 @@ open class StringToMethodCallParser<in T : Any> @JvmOverloads constructor(
         val parameterString = "{ $args }"
         val tree: JsonNode = om.readTree(parameterString) ?: throw UnparseableCallException(args)
         if (tree.size() > parameters.size) throw UnparseableCallException.TooManyParameters(methodNameHint, args)
-        val inOrderParams: List<Any?> = parameters.mapIndexed { _, param ->
-            val (argName, argType) = param
+        val inOrderParams: List<Any?> = parameters.mapIndexed { _, (argName, argType) ->
             val entry = tree[argName] ?: throw UnparseableCallException.MissingParameter(methodNameHint, argName, args)
             try {
                 om.readValue(entry.traverse(om), argType)
