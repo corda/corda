@@ -6,6 +6,8 @@ import com.jcabi.manifests.Manifests
 import com.typesafe.config.ConfigException
 import joptsimple.OptionException
 import net.corda.core.*
+import net.corda.core.crypto.commonName
+import net.corda.core.crypto.orgName
 import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.LogHelper.withLevel
@@ -146,7 +148,9 @@ fun main(args: Array<String>) {
 
         node.networkMapRegistrationFuture.success {
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
-            printBasicNodeInfo("Node for \"${node.info.legalIdentity.name}\" started up and registered in $elapsed sec")
+            // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
+            val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName
+            printBasicNodeInfo("Node for \"$name\" started up and registered in $elapsed sec")
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
