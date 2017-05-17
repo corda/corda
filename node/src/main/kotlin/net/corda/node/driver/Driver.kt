@@ -557,7 +557,7 @@ class DriverDSL(
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
-        val paths = nodeNames.map { driverDirectory / it.commonName }
+        val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
         val serviceInfo = ServiceInfo(type, notaryName)
