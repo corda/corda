@@ -244,6 +244,16 @@ interface CordaRPCOps : RPCOps {
      */
     fun partyFromX500Name(x500Name: X500Name): Party?
 
+    /**
+     * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
+     * get smarter with time e.g. to correct spelling errors, so you should not hard-code indexes into the results
+     * but rather show them via a user interface and let the user pick the one they wanted.
+     *
+     * @param query The string to check against the X.500 name components
+     * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
+     */
+    fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
+
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
 }

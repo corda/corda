@@ -64,7 +64,7 @@ interface IdentityService {
     // but for now this is not supported.
 
     fun partyFromKey(key: PublicKey): Party?
-    @Deprecated("Use partyFromX500Name")
+    @Deprecated("Use partyFromX500Name or partiesFromName")
     fun partyFromName(name: String): Party?
     fun partyFromX500Name(principal: X500Name): Party?
 
@@ -97,6 +97,16 @@ interface IdentityService {
      * Get the certificate chain showing an anonymous party is owned by the given party.
      */
     fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath?
+
+    /**
+     * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
+     * get smarter with time e.g. to correct spelling errors, so you should not hard-code indexes into the results
+     * but rather show them via a user interface and let the user pick the one they wanted.
+     *
+     * @param query The string to check against the X.500 name components
+     * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
+     */
+    fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
 
     class UnknownAnonymousPartyException(msg: String) : Exception(msg)
 }
