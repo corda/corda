@@ -1,4 +1,4 @@
-package net.corda.simulation
+package net.corda.irs.simulation
 
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -9,12 +9,11 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.RunOnCallerThread
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.success
@@ -121,7 +120,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         // We load the IRS afresh each time because the leg parts of the structure aren't data classes so they don't
         // have the convenient copy() method that'd let us make small adjustments. Instead they're partly mutable.
         // TODO: We should revisit this in post-Excalibur cleanup and fix, e.g. by introducing an interface.
-        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("simulation/trade.json"))
+        val irs = om.readValue<InterestRateSwap.State>(javaClass.classLoader.getResource("net/corda/irs/simulation/trade.json"))
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 

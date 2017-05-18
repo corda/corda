@@ -5,10 +5,11 @@ import net.corda.core.RetryableException
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.identity.Party
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
+import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.Party
 import net.corda.core.math.CubicSplineInterpolator
 import net.corda.core.math.Interpolator
 import net.corda.core.math.InterpolatorFactory
@@ -230,7 +231,7 @@ object NodeInterestRates {
     }
 
     // TODO: can we split into two?  Fix not available (retryable/transient) and unknown (permanent)
-    class UnknownFix(val fix: FixOf) : RetryableException("Unknown fix: $fix")
+    class UnknownFix(val fix: FixOf) : FlowException("Unknown fix: $fix")
 
     /** Fix container, for every fix name & date pair stores a tenor to interest rate map - [InterpolatingRateMap] */
     class FixContainer(val fixes: Set<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
@@ -245,10 +246,9 @@ object NodeInterestRates {
 
         private fun buildContainer(fixes: Set<Fix>): Map<Pair<String, LocalDate>, InterpolatingRateMap> {
             val tempContainer = HashMap<Pair<String, LocalDate>, HashMap<Tenor, BigDecimal>>()
-            for (fix in fixes) {
-                val fixOf = fix.of
+            for ((fixOf, value) in fixes) {
                 val rates = tempContainer.getOrPut(fixOf.name to fixOf.forDay) { HashMap<Tenor, BigDecimal>() }
-                rates[fixOf.ofTenor] = fix.value
+                rates[fixOf.ofTenor] = value
             }
 
             // TODO: the calendar data needs to be specified for every fix type in the input string

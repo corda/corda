@@ -1,8 +1,7 @@
-package net.corda.simulation
+package net.corda.irs.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.crypto.location
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -10,7 +9,6 @@ import net.corda.core.node.CityDatabase
 import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.then
 import net.corda.core.utilities.DUMMY_MAP
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_REGULATOR
@@ -128,7 +126,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
-                    javaClass.classLoader.getResourceAsStream("example.rates.txt").use {
+                    javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                         database.transaction {
                             findService<NodeInterestRates.Service>().upload(it)
                         }
@@ -203,7 +201,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      * A place for simulations to stash human meaningful text about what the node is "thinking", which might appear
      * in the UI somewhere.
      */
-    val extraNodeLabels = Collections.synchronizedMap(HashMap<SimulatedNode, String>())
+    val extraNodeLabels: MutableMap<SimulatedNode, String> = Collections.synchronizedMap(HashMap())
 
     /**
      * Iterates the simulation by one step.
@@ -216,7 +214,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      * @return the message that was processed, or null if no node accepted a message in this round.
      */
     open fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
-
         if (networkSendManuallyPumped) {
             network.messagingNetwork.pumpSend(false)
         }
@@ -287,20 +284,5 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
 
     fun stop() {
         network.stopNodes()
-    }
-
-    /**
-     * Given a function that returns a future, iterates that function with arguments like (0, 1), (1, 2), (2, 3) etc
-     * each time the returned future completes.
-     */
-    fun startTradingCircle(tradeBetween: (indexA: Int, indexB: Int) -> ListenableFuture<*>) {
-        fun next(i: Int, j: Int) {
-            tradeBetween(i, j).then {
-                val ni = (i + 1) % banks.size
-                val nj = (j + 1) % banks.size
-                next(ni, nj)
-            }
-        }
-        next(0, 1)
     }
 }

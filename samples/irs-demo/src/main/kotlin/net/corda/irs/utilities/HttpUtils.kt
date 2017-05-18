@@ -26,7 +26,7 @@ fun postJson(url: URL, data: String): Boolean {
 fun uploadFile(url: URL, file: String): Boolean {
     val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
-            .addFormDataPart("rates", "example.rates.txt", RequestBody.create(MediaType.parse("text/plain"), file))
+            .addFormDataPart("rates", "net/corda/irs/simulation/example.rates.txt", RequestBody.create(MediaType.parse("text/plain"), file))
             .build()
     return makeRequest(Request.Builder().url(url).post(body).build())
 }

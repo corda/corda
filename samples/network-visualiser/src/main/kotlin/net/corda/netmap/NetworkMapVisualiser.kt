@@ -15,13 +15,13 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.deserialize
 import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
+import net.corda.irs.simulation.IRSSimulation
+import net.corda.irs.simulation.Simulation
 import net.corda.netmap.VisualiserViewModel.Style
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.SessionConfirm
 import net.corda.node.services.statemachine.SessionEnd
 import net.corda.node.services.statemachine.SessionInit
-import net.corda.simulation.IRSSimulation
-import net.corda.simulation.Simulation
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import rx.Scheduler
@@ -81,8 +81,7 @@ class NetworkMapVisualiser : Application() {
 
         val simulation = viewModel.simulation
         // Update the white-backgrounded label indicating what flow step it's up to.
-        simulation.allFlowSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
-            val (node, change) = step
+        simulation.allFlowSteps.observeOn(uiThread).subscribe { (node, change) ->
             val label = viewModel.nodesToWidgets[node]!!.statusLabel
             if (change is ProgressTracker.Change.Position) {
                 // Fade in the status label if it's our first step.
@@ -219,9 +218,7 @@ class NetworkMapVisualiser : Application() {
     }
 
     private fun bindSidebar() {
-        viewModel.simulation.allFlowSteps.observeOn(uiThread).subscribe { step: Pair<Simulation.SimulatedNode, ProgressTracker.Change> ->
-            val (node, change) = step
-
+        viewModel.simulation.allFlowSteps.observeOn(uiThread).subscribe { (node, change) ->
             if (change is ProgressTracker.Change.Position) {
                 val tracker = change.tracker.topLevelTracker
                 if (change.newStep == ProgressTracker.DONE) {
@@ -237,7 +234,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.toString()}: $extraLabel" else node.info.legalIdentity.name.toString()
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name.toString()
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget
@@ -264,7 +261,7 @@ class NetworkMapVisualiser : Application() {
                             )
                     )
                     timeline.setOnFinished {
-                        println("Removed: ${tracker}")
+                        println("Removed: $tracker")
                         val vbox = viewModel.trackerBoxes.remove(tracker)?.vbox
                         view.sidebar.children.remove(vbox)
                     }
@@ -296,7 +293,7 @@ class NetworkMapVisualiser : Application() {
                 val tracker: ProgressTracker = step.tracker.topLevelTracker
                 val widget = viewModel.trackerBoxes[tracker] ?: return@runLater
                 val new = view.buildProgressTrackerWidget(widget.label.text, tracker)
-                val prevWidget = viewModel.trackerBoxes[tracker]?.vbox ?: throw AssertionError("No previous widget for tracker: ${tracker}")
+                val prevWidget = viewModel.trackerBoxes[tracker]?.vbox ?: throw AssertionError("No previous widget for tracker: $tracker")
                 val i = (prevWidget.parent as VBox).children.indexOf(viewModel.trackerBoxes[tracker]?.vbox)
                 (prevWidget.parent as VBox).children[i] = new.vbox
                 viewModel.trackerBoxes[tracker] = new
