@@ -1,24 +1,23 @@
 package net.corda.plugins
 
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
-
 import net.corda.cordform.CordformContext
-import net.corda.cordform.CommonCordform
+import net.corda.cordform.CordformDefinition
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.bouncycastle.asn1.x500.X500Name
 import org.gradle.api.DefaultTask
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.TaskAction
-
 import java.nio.file.Path
 import java.nio.file.Paths
+
 /**
  * Creates nodes based on the configuration of this task in the gradle configuration DSL.
  *
  * See documentation for examples.
  */
 class Cordform extends DefaultTask {
-    String common
+    String definitionClass
     protected def directory = Paths.get("build", "nodes")
     private def nodes = new ArrayList<Node>()
     protected String networkMapNodeName
@@ -92,11 +91,14 @@ class Cordform extends DefaultTask {
         }
     }
 
-    private CommonCordform commonCordform() {
+    /**
+     * The definitionClass needn't be compiled until just before our build method, so we load it manually via sourceSets.main.runtimeClasspath.
+     */
+    private CordformDefinition loadCordformDefinition() {
         def plugin = project.convention.getPlugin(JavaPluginConvention.class)
         def classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
         URL[] urls = classpath.files.collect { it.toURI().toURL() }
-        (CommonCordform) new URLClassLoader(urls, CommonCordform.classLoader).loadClass(common).newInstance()
+        (CordformDefinition) new URLClassLoader(urls, CordformDefinition.classLoader).loadClass(definitionClass).newInstance()
     }
 
     /**
@@ -105,22 +107,21 @@ class Cordform extends DefaultTask {
     @TaskAction
     void build() {
         String networkMapNodeName
-        if (null != common) {
-            def cc = commonCordform()
-            networkMapNodeName = cc.networkMapNodeName.toString()
-            cc.nodeConfigurers.each { nc ->
+        if (null != definitionClass) {
+            def cd = loadCordformDefinition()
+            networkMapNodeName = cd.networkMapNodeName.toString()
+            cd.nodeConfigurers.each { nc ->
                 node { Node it ->
                     nc.accept it
                     it.rootDir directory
                 }
             }
-            cc.setUp new CordformContext() {
+            cd.setup new CordformContext() {
                 Path baseDirectory(X500Name nodeName) {
                     project.projectDir.toPath().resolve(getNodeByName(nodeName.toString()).nodeDir.toPath())
                 }
             }
-        }
-        else {
+        } else {
             networkMapNodeName = this.networkMapNodeName
             nodes.each {
                 it.rootDir directory

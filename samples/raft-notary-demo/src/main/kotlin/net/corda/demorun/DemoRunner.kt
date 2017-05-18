@@ -3,12 +3,12 @@ package net.corda.demorun
 import net.corda.node.driver.NetworkMapStartStrategy
 import net.corda.node.driver.PortAllocation
 import net.corda.node.driver.driver
-import net.corda.cordform.CommonCordform
-import net.corda.cordform.CommonNode
+import net.corda.cordform.CordformDefinition
+import net.corda.cordform.CordformNode
 
-fun CommonCordform.node(configure: CommonNode.() -> Unit) = addNode { commonNode -> commonNode.configure() }
+fun CordformDefinition.node(configure: CordformNode.() -> Unit) = addNode { cordformNode -> cordformNode.configure() }
 
-fun CommonCordform.clean() {
+fun CordformDefinition.clean() {
     System.err.println("Deleting: $driverDirectory")
     driverDirectory.toFile().deleteRecursively()
 }
@@ -16,13 +16,13 @@ fun CommonCordform.clean() {
 /**
  * Creates and starts all nodes required for the demo.
  */
-fun CommonCordform.runNodes() = driver(
+fun CordformDefinition.runNodes() = driver(
         isDebug = true,
         driverDirectory = driverDirectory,
         networkMapStartStrategy = NetworkMapStartStrategy.Nominated(networkMapNodeName),
         portAllocation = PortAllocation.Incremental(10001)
 ) {
-    setUp(this)
-    startNodes(nodeConfigurers.map { configurer -> CommonNode().also { configurer.accept(it) } })
+    setup(this)
+    startNodes(nodeConfigurers.map { configurer -> CordformNode().also { configurer.accept(it) } })
     waitForAllNodesToFinish()
 }

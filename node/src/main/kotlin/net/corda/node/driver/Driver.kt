@@ -30,7 +30,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.cordform.CommonNode
+import net.corda.cordform.CordformNode
 import net.corda.cordform.CordformContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -80,7 +80,7 @@ interface DriverDSLExposedInterface : CordformContext {
                   verifierType: VerifierType = VerifierType.InMemory,
                   customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
 
-    fun startNodes(nodes: List<CommonNode>): List<ListenableFuture<NodeHandle>>
+    fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>>
 
     /**
      * Starts a distributed notary cluster.
@@ -473,7 +473,7 @@ class DriverDSL(
         }
     }
 
-    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CommonNode>): (X500Name) -> Map<String, String>? {
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CordformNode>): (X500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
                 is NetworkMapStartStrategy.Dedicated -> {
@@ -535,7 +535,7 @@ class DriverDSL(
         }
     }
 
-    override fun startNodes(nodes: List<CommonNode>): List<ListenableFuture<NodeHandle>> {
+    override fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>> {
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
         return nodes.map {
             val p2pAddress = HostAndPort.fromString(it.config.getString("p2pAddress")); portAllocation.nextHostAndPort()

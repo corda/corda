@@ -14,7 +14,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.cordform.CommonCordform
+import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import org.bouncycastle.asn1.x500.X500Name
 
@@ -22,7 +22,7 @@ fun main(args: Array<String>) = RaftNotaryCordform.runNodes()
 
 private val notaryNames = (1..3).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
 
-object RaftNotaryCordform : CommonCordform("build" / "notary-demo-nodes", notaryNames[0]) {
+object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
     private val advertisedNotary = ServiceInfo(RaftValidatingNotaryService.type, X500Name("CN=Raft,O=R3,OU=corda,L=Zurich,C=CH"))
 
     init {
@@ -67,7 +67,7 @@ object RaftNotaryCordform : CommonCordform("build" / "notary-demo-nodes", notary
         }
     }
 
-    override fun setUp(context: CordformContext) {
+    override fun setup(context: CordformContext) {
         ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, advertisedNotary.type.id, advertisedNotary.name!!)
     }
 }

@@ -1,7 +1,7 @@
 package net.corda.plugins
 
 import com.typesafe.config.*
-import net.corda.cordform.CommonNode
+import net.corda.cordform.CordformNode
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
@@ -12,7 +12,7 @@ import java.nio.file.Path
 /**
  * Represents a node that will be installed.
  */
-class Node extends CommonNode {
+class Node extends CordformNode {
     static final String NODEJAR_NAME = 'corda.jar'
     static final String WEBJAR_NAME = 'corda-webserver.jar'
 

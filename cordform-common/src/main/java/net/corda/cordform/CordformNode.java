@@ -1,15 +1,13 @@
 package net.corda.cordform;
 
 import static java.util.Collections.emptyList;
-
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
-
 import java.util.List;
 import java.util.Map;
 
-public class CommonNode {
+public class CordformNode {
     protected static final String DEFAULT_HOST = "localhost";
 
     /**

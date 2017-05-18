@@ -36,6 +36,7 @@ object ServiceIdentityGenerator {
             val privateKeyFile = "$serviceId-private-key"
             val publicKeyFile = "$serviceId-public"
             notaryParty.writeToFile(dir.resolve(publicKeyFile))
+            // Use storageKryo as our whitelist is not available in the gradle build environment:
             keyPair.serialize(storageKryo()).writeToFile(dir.resolve(privateKeyFile))
         }
     }

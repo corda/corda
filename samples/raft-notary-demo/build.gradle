@@ -50,11 +50,11 @@ publishing {
 }
 
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
-    common = 'net.corda.notarydemo.SingleNotaryCordform'
+    definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
-    common = 'net.corda.notarydemo.RaftNotaryCordform'
+    definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
 }
 
 task notarise(type: JavaExec) {

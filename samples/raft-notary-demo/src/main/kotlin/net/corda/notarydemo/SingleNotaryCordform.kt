@@ -12,12 +12,12 @@ import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import net.corda.cordform.CommonCordform
+import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 
-object SingleNotaryCordform : CommonCordform("build" / "notary-demo-nodes", DUMMY_NOTARY.name) {
+object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name) {
     init {
         node {
             name(ALICE.name.toString())
@@ -42,5 +42,5 @@ object SingleNotaryCordform : CommonCordform("build" / "notary-demo-nodes", DUMM
         }
     }
 
-    override fun setUp(context: CordformContext) {}
+    override fun setup(context: CordformContext) {}
 }
