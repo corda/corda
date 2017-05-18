@@ -17,6 +17,9 @@ import java.nio.file.Paths
  * See documentation for examples.
  */
 class Cordform extends DefaultTask {
+    /**
+     * Optionally the name of a CordformDefinition subclass to which all configuration will be delegated.
+     */
     String definitionClass
     protected def directory = Paths.get("build", "nodes")
     private def nodes = new ArrayList<Node>()
