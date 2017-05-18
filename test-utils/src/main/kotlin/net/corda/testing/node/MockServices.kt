@@ -37,6 +37,7 @@ import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
@@ -81,16 +82,20 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
 @ThreadSafe
 class MockIdentityService(val identities: List<Party>,
-                          val certificates: List<Triple<AnonymousParty, Party, CertPath>> = emptyList()) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<PublicKey, Party>
-        get() = synchronized(identities) { identities.associateBy { it.owningKey } }
-    private val nameToParties: Map<X500Name, Party>
-        get() = synchronized(identities) { identities.associateBy { it.name } }
-    private val anonymousToPath: Map<AnonymousParty, Pair<Party, CertPath>>
-        get() = synchronized(certificates) { certificates.map { Pair(it.first, Pair(it.second, it.third)) }.toMap() }
+                          certificates: List<Triple<AnonymousParty, Party, CertPath>> = emptyList()) : IdentityService, SingletonSerializeAsToken() {
+    private val keyToParties: MutableMap<PublicKey, Party> = ConcurrentHashMap()
+    private val nameToParties: MutableMap<X500Name, Party> = ConcurrentHashMap()
+    private val anonymousToPath: MutableMap<AnonymousParty, Pair<Party, CertPath>> = ConcurrentHashMap()
+
+    init {
+        keyToParties.putAll(identities.associateBy { it.owningKey } )
+        nameToParties.putAll(identities.associateBy { it.name })
+        anonymousToPath.putAll(certificates.map { Pair(it.first, Pair(it.second, it.third)) }.toMap())
+    }
 
     override fun registerIdentity(party: Party) {
-        throw UnsupportedOperationException()
+        this.keyToParties[party.owningKey] = party
+        this.nameToParties[party.name] = party
     }
 
     override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
@@ -105,7 +110,12 @@ class MockIdentityService(val identities: List<Party>,
         check(anonymousToPath[anonymousParty]?.first == party)
     }
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = anonymousToPath[anonymousParty]?.second
-    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) { throw UnsupportedOperationException() }
+
+    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) {
+        // TODO: Check we actually trust the root
+        val party = partyFromX500Name(X500Name(trustedRoot.subjectDN.name)) ?: throw IllegalArgumentException("Unknown trust root")
+        anonymousToPath[anonymousParty] = Pair(party, path)
+    }
 }
 
 
