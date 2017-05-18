@@ -19,6 +19,10 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.config.*
+import net.corda.node.services.config.ConfigHelper
+import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.configOf
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -26,6 +30,8 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
+import net.corda.cordform.CordformNode
+import net.corda.cordform.CordformContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
@@ -57,7 +63,7 @@ private val log: Logger = loggerFor<DriverDSL>()
 /**
  * This is the interface that's exposed to DSL users.
  */
-interface DriverDSLExposedInterface {
+interface DriverDSLExposedInterface : CordformContext {
     /**
      * Starts a [net.corda.node.internal.Node] in a separate process.
      *
@@ -73,6 +79,8 @@ interface DriverDSLExposedInterface {
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
                   customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
+
+    fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>>
 
     /**
      * Starts a distributed notary cluster.
@@ -100,7 +108,7 @@ interface DriverDSLExposedInterface {
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
-     * to set networkMapStrategy to FalseNetworkMap in your [driver] call.
+     * to set networkMapStartStrategy to Dedicated(false) in your [driver] call.
      */
     fun startDedicatedNetworkMapService(): ListenableFuture<Unit>
 
@@ -164,11 +172,6 @@ sealed class PortAllocation {
             }
         }
     }
-}
-
-sealed class NetworkMapStartStrategy {
-    data class Dedicated(val startAutomatically: Boolean) : NetworkMapStartStrategy()
-    data class Nominated(val legalName: X500Name, val address: HostAndPort) : NetworkMapStartStrategy()
 }
 
 /**
@@ -418,7 +421,6 @@ class DriverDSL(
         val networkMapStartStrategy: NetworkMapStartStrategy
 ) : DriverDSLInternalInterface {
     private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
-    private val dedicatedNetworkMapLegalName = DUMMY_MAP.name
     var _executorService: ListeningScheduledExecutorService? = null
     val executorService get() = _executorService!!
     var _shutdownManager: ShutdownManager? = null
@@ -471,63 +473,81 @@ class DriverDSL(
         }
     }
 
-    // TODO move to cmopanion
-    private fun toServiceConfig(address: HostAndPort, legalName: X500Name) = mapOf(
-            "address" to address.toString(),
-            "legalName" to legalName.toString()
-    )
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CordformNode>): (X500Name) -> Map<String, String>? {
+        return networkMapStartStrategy.run {
+            when (this) {
+                is NetworkMapStartStrategy.Dedicated -> {
+                    serviceConfig(dedicatedNetworkMapAddress).let {
+                        { _: X500Name -> it }
+                    }
+                }
+                is NetworkMapStartStrategy.Nominated -> {
+                    serviceConfig(HostAndPort.fromString(networkMapCandidates.filter {
+                        it.name == legalName.toString()
+                    }.single().config.getString("p2pAddress"))).let {
+                        { nodeName: X500Name -> if (nodeName == legalName) null else it }
+                    }
+                }
+            }
+        }
+    }
 
     override fun startNode(
             providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
-            customOverrides: Map<String, Any?>
-    ): ListenableFuture<NodeHandle> {
+            customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
-        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
-        val baseDirectory = driverDirectory / name.commonName
-        val configOverrides = configOf(
+        return startNode(p2pAddress, webAddress, name, configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to when (networkMapStartStrategy) {
-                    is NetworkMapStartStrategy.Dedicated -> toServiceConfig(dedicatedNetworkMapAddress, dedicatedNetworkMapLegalName)
-                    is NetworkMapStartStrategy.Nominated -> networkMapStartStrategy.run {
-                        if (name != legalName) {
-                            toServiceConfig(address, legalName)
-                        } else {
-                            p2pAddress == address || throw IllegalArgumentException("Passed-in address $address of nominated network map $legalName is wrong, it should be: $p2pAddress")
-                            null
-                        }
-                    }
-                },
+                "networkMapService" to networkMapServiceConfigLookup(emptyList())(name),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map { it.toMap() },
                 "verifierType" to verifierType.name
-        ) + customOverrides
+        ) + customOverrides)
+    }
 
+    private fun startNode(p2pAddress: HostAndPort, webAddress: HostAndPort, nodeName: X500Name, configOverrides: Config) = run {
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory,
+                baseDirectory = baseDirectory(nodeName),
                 allowMissingConfig = true,
                 configOverrides = configOverrides)
         val configuration = config.parseAs<FullNodeConfiguration>()
-
         val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
-        return processFuture.flatMap { process ->
+        processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
             establishRpc(p2pAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }
+        }
+    }
+
+    override fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>> {
+        val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
+        return nodes.map {
+            val p2pAddress = HostAndPort.fromString(it.config.getString("p2pAddress")); portAllocation.nextHostAndPort()
+            portAllocation.nextHostAndPort() // rpcAddress
+            val webAddress = portAllocation.nextHostAndPort()
+            val name = X500Name(it.name)
+            startNode(p2pAddress, webAddress, name, it.config + mapOf(
+                    "extraAdvertisedServiceIds" to it.advertisedServices,
+                    "networkMapService" to networkMapServiceConfigLookup(name),
+                    "rpcUsers" to it.rpcUsers,
+                    "notaryClusterAddresses" to it.notaryClusterAddresses
+            ))
         }
     }
 
@@ -539,7 +559,7 @@ class DriverDSL(
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
-        val paths = nodeNames.map { driverDirectory / it.commonName }
+        val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
         val serviceInfo = ServiceInfo(type, notaryName)
@@ -592,20 +612,22 @@ class DriverDSL(
                 Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         )
         _shutdownManager = ShutdownManager(executorService)
-        if (networkMapStartStrategy is NetworkMapStartStrategy.Dedicated && networkMapStartStrategy.startAutomatically) {
+        if (networkMapStartStrategy.startDedicated) {
             startDedicatedNetworkMapService()
         }
     }
 
+    override fun baseDirectory(nodeName: X500Name) = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
+
     override fun startDedicatedNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val baseDirectory = driverDirectory / dedicatedNetworkMapLegalName.commonName
+        val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory,
+                baseDirectory = baseDirectory(networkMapLegalName),
                 allowMissingConfig = true,
                 configOverrides = configOf(
-                        "myLegalName" to dedicatedNetworkMapLegalName.toString(),
+                        "myLegalName" to networkMapLegalName.toString(),
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,

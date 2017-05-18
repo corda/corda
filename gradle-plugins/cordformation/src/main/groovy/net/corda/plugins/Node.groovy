@@ -1,33 +1,21 @@
 package net.corda.plugins
 
 import com.typesafe.config.*
+import net.corda.cordform.CordformNode
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.gradle.api.Project
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Represents a node that will be installed.
  */
-class Node {
+class Node extends CordformNode {
     static final String NODEJAR_NAME = 'corda.jar'
     static final String WEBJAR_NAME = 'corda-webserver.jar'
-    static final String DEFAULT_HOST = 'localhost'
 
-    /**
-     * Name of the node.
-     */
-    public String name
-    /**
-     * A list of advertised services ID strings.
-     */
-    protected List<String> advertisedServices = []
-
-    /**
-     * If running a distributed notary, a list of node addresses for joining the Raft cluster
-     */
-    protected List<String> notaryClusterAddresses = []
     /**
      * Set the list of CorDapps to install to the plugins directory. Each cordapp is a fully qualified Maven
      * dependency name, eg: com.example:product-name:0.1
@@ -35,38 +23,9 @@ class Node {
      * @note Your app will be installed by default and does not need to be included here.
      */
     protected List<String> cordapps = []
-    /**
-     * Set the RPC users for this node. This configuration block allows arbitrary configuration.
-     * The recommended current structure is:
-     * [[['username': "username_here", 'password': "password_here", 'permissions': ["permissions_here"]]]
-     * The above is a list to a map of keys to values using Groovy map and list shorthands.
-     *
-     * @note Incorrect configurations will not cause a DSL error.
-     */
-    protected List<Map<String, Object>> rpcUsers = []
 
-    private Config config = ConfigFactory.empty()
-    private File nodeDir
+    protected File nodeDir
     private Project project
-
-    /**
-     * Set the name of the node.
-     *
-     * @param name The node name.
-     */
-    void name(String name) {
-        this.name = name
-        config = config.withValue("myLegalName", ConfigValueFactory.fromAnyRef(name))
-    }
-
-    /**
-     * Set the nearest city to the node.
-     *
-     * @param nearestCity The name of the nearest city to the node.
-     */
-    void nearestCity(String nearestCity) {
-        config = config.withValue("nearestCity", ConfigValueFactory.fromAnyRef(nearestCity))
-    }
 
     /**
      * Sets whether this node will use HTTPS communication.
@@ -89,26 +48,6 @@ class Node {
     }
 
     /**
-     * Set the Artemis P2P port for this node.
-     *
-     * @param p2pPort The Artemis messaging queue port.
-     */
-    void p2pPort(Integer p2pPort) {
-        config = config.withValue("p2pAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$p2pPort".toString()))
-    }
-
-    /**
-     * Set the Artemis RPC port for this node.
-     *
-     * @param rpcPort The Artemis RPC queue port.
-     */
-    void rpcPort(Integer rpcPort) {
-        config = config.withValue("rpcAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$rpcPort".toString()))
-    }
-
-    /**
      * Set the HTTP web server port for this node.
      *
      * @param webPort The web port number for this node.
@@ -116,14 +55,6 @@ class Node {
     void webPort(Integer webPort) {
         config = config.withValue("webAddress",
                 ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$webPort".toString()))
-    }
-
-    /**
-     * Set the port which to bind the Copycat (Raft) node to
-     */
-    void notaryNodePort(Integer notaryPort) {
-        config = config.withValue("notaryNodeAddress",
-                ConfigValueFactory.fromAnyRef("$DEFAULT_HOST:$notaryPort".toString()))
     }
 
     /**
@@ -155,16 +86,19 @@ class Node {
         this.project = project
     }
 
-    void build(File rootDir) {
+    protected void rootDir(Path rootDir) {
         def dirName
         try {
             X500Name x500Name = new X500Name(name)
             dirName = x500Name.getRDNs(BCStyle.CN).getAt(0).getFirst().getValue().toString()
-        } catch(IllegalArgumentException ex) {
+        } catch(IllegalArgumentException ignore) {
             // Can't parse as an X500 name, use the full string
             dirName = name
         }
-        nodeDir = new File(rootDir, dirName.replaceAll("\\s",""))
+        nodeDir = new File(rootDir.toFile(), dirName.replaceAll("\\s",""))
+    }
+
+    protected void build() {
         configureRpcUsers()
         installCordaJar()
         installWebserverJar()

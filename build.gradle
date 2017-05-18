@@ -41,6 +41,7 @@ buildscript {
     ext.rxjava_version = '1.2.4'
     ext.requery_version = '1.2.1'
     ext.dokka_version = '0.9.13'
+    ext.eddsa_version = '0.2.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
     ext.java8_minUpdateVersion = '131'
@@ -60,6 +61,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-noarg:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:${dokka_version}"
         classpath "org.ajoberstar:grgit:1.1.0"
+        classpath "net.i2p.crypto:eddsa:$eddsa_version" // Needed for ServiceIdentityGenerator in the build environment.
     }
 }
 

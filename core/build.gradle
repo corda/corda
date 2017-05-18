@@ -63,7 +63,7 @@ dependencies {
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
     // Java ed25519 implementation. See https://github.com/str4d/ed25519-java/
-    compile 'net.i2p.crypto:eddsa:0.2.0'
+    compile "net.i2p.crypto:eddsa:$eddsa_version"
 
     // Bouncy castle support needed for X509 certificate manipulation
     compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
