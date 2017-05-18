@@ -18,6 +18,7 @@ import java.util.*
 class DefaultWhitelist : CordaPluginRegistry() {
     override fun customizeSerialization(custom: SerializationCustomization): Boolean {
         custom.apply {
+            // TODO: Turn this into an array and use map {}
             addToWhitelist(Array<Any>(0, {}).javaClass)
             addToWhitelist(Notification::class.java)
             addToWhitelist(Notification.Kind::class.java)
@@ -41,9 +42,23 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(java.lang.Class::class.java)
             addToWhitelist(java.math.BigDecimal::class.java)
             addToWhitelist(java.security.KeyPair::class.java)
+
+            // Matches the list in TimeSerializers.addDefaultSerializers:
             addToWhitelist(java.time.Duration::class.java)
             addToWhitelist(java.time.Instant::class.java)
             addToWhitelist(java.time.LocalDate::class.java)
+            addToWhitelist(java.time.LocalDateTime::class.java)
+            addToWhitelist(java.time.ZoneOffset::class.java)
+            addToWhitelist(java.time.ZoneId::class.java)
+            addToWhitelist(java.time.OffsetTime::class.java)
+            addToWhitelist(java.time.OffsetDateTime::class.java)
+            addToWhitelist(java.time.ZonedDateTime::class.java)
+            addToWhitelist(java.time.Year::class.java)
+            addToWhitelist(java.time.YearMonth::class.java)
+            addToWhitelist(java.time.MonthDay::class.java)
+            addToWhitelist(java.time.Period::class.java)
+            addToWhitelist(java.time.DayOfWeek::class.java)   // No custom serialiser but it's an enum.
+
             addToWhitelist(java.util.Collections.singletonMap("A", "B").javaClass)
             addToWhitelist(java.util.LinkedHashMap::class.java)
             addToWhitelist(BigDecimal::class.java)
