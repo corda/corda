@@ -132,6 +132,8 @@ class Cordform extends DefaultTask {
         }
         installRunScript()
         def networkMapNode = getNodeByName(networkMapNodeName)
+        if (networkMapNode == null)
+            throw new IllegalStateException("The networkMap property refers to a node that isn't configured ($networkMapNodeName)")
         nodes.each {
             if(it != networkMapNode) {
                 it.networkMapAddress(networkMapNode.getP2PAddress(), networkMapNodeName)
