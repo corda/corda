@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
@@ -32,13 +33,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.Iterable
 import kotlin.collections.LinkedHashMap
-import kotlin.collections.List
-import kotlin.collections.filter
-import kotlin.collections.firstOrNull
-import kotlin.collections.fold
-import kotlin.collections.forEach
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -281,7 +276,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
 @CordaSerializable
-abstract class RetryableException(message: String) : Exception(message)
+abstract class RetryableException(message: String) : FlowException(message)
 
 /**
  * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
