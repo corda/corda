@@ -13,6 +13,20 @@ class Cordformation implements Plugin<Project> {
         Configuration cordappConf = project.configurations.create("cordapp")
         cordappConf.transitive = false
         project.configurations.compile.extendsFrom cordappConf
+
+        configureCordappJar(project)
+    }
+
+    /**
+     * Configures this project's JAR as a Cordapp JAR
+     */
+    private void configureCordappJar(Project project) {
+        def task = project.task('clintTest') {
+            doLast {
+                project.tasks.jar.from getDirectNonCordaDependencies(project).collect { project.zipTree(it) }.flatten()
+            }
+        }
+        project.tasks.jar.dependsOn task
     }
 
     /**
@@ -26,5 +40,20 @@ class Cordformation implements Plugin<Project> {
         return project.rootProject.resources.text.fromArchiveEntry(project.rootProject.buildscript.configurations.classpath.find {
             it.name.contains('cordformation')
         }, filePathInJar).asFile()
+    }
+
+    static def getDirectNonCordaDependencies(Project project) {
+        def coreCordaNames = ['jfx', 'mock', 'rpc', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver', 'capsule', 'webcapsule']
+        def excludes = [
+                [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
+                [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
+                [group: 'co.paralleluniverse', name: 'quasar-core']
+        ]
+        // The direct dependencies of this project
+        def directDeps = project.configurations.runtime.allDependencies
+        // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
+        def filteredDeps = directDeps.findAll { !(it.group.contains("net.corda") && coreCordaNames.contains(it.name)) }
+                .findAll { excludes.collect { exclude -> exclude.group == it.group && exclude.name == it.name }.findAll { it }.isEmpty() }
+        return filteredDeps.collect { project.configurations.runtime.files it }.flatten().toSet()
     }
 }
