@@ -3,11 +3,11 @@ package net.corda.core.transactions
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
-import net.corda.core.node.ServiceHub
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.sign
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import java.security.KeyPair
@@ -148,11 +148,12 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
 
     /**
      * Utility to simplify the act of signing the transaction.
-     *
      * @param keyPair the signer's public/private key pair.
-     *
      * @return a digital signature of the transaction.
      */
+    fun signWith(keyPair: KeyPair) = keyPair.sign(this.id.bytes)
+
+    @Deprecated("This is scheduled to be removed in a future release", ReplaceWith("signWith(keyPair)"))
     fun signWithECDSA(keyPair: KeyPair) = keyPair.sign(this.id.bytes)
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
