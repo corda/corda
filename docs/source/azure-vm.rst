@@ -3,7 +3,7 @@ Building a Corda Network on Azure Marketplace
 
 To help you design, build and test applications on Corda, called CorDapps, a Corda network can be deployed on the `Microsoft Azure Marketplace <https://azure.microsoft.com/en-gb/overview/what-is-azure>`_
 
-This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM). The network comprises of a Network Map Service node, a Notary node and up to nine Corda nodes using a version of Corda of your choosing. The simple Yo! CorDapp is pre-installed and demonstrates the basic principles of Corda. When you are ready to go further with developing on Corda and start making contributions to the project head over to the `GitHub Repos <https://github.com/corda/>`_.
+This Corda network offering builds a pre-configured network of Corda nodes as Ubuntu virtual machines (VM). The network comprises of a Network Map Service node, a Notary node and up to nine Corda nodes using a version of Corda of your choosing. The following guide will also show you how to load a simple Yo! CorDapp which demonstrates the basic principles of Corda. When you are ready to go further with developing on Corda and start making contributions to the project head over to the `Corda.net <https://www.corda.net/>`_.
 
 Pre-requisites
 --------------
@@ -84,7 +84,24 @@ Once deployed click 'Overview' to see the virtual machine details. Note down the
 
 Using the Yo! CorDapp
 ---------------------
-The pre-loaded Yo! CordDapp on your Corda nodes lets you send simple Yo! messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp is running by default when your Corda nodes start. The Yo! CorDapp demonstrates how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network. The Yo! CorDapp also makes use of the network map cache on each Corda node to find the intended target for the message.
+Loading the Yo! CordDapp on your Corda nodes lets you send simple Yo! messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp is running by default when your Corda nodes start. The Yo! CorDapp demonstrates how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network. The Yo! CorDapp also makes use of the network map cache on each Corda node to find the intended target for the message.
+
+* **Loading the Yo! CorDapp onto your nodes**
+
+The nodes you will use to send and receive Yo messages require the Yo! CorDapp jar file to be saved to their plugins directory.
+
+Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
+
+.. sourcecode:: shell
+
+	cd /opt/corda/plugins
+	wget https://r3share.mohso.com/dl/y8s8Gawrcc
+
+Now restart your Corda VM from the Azure portal.
+
+Repeat these steps on other Corda nodes you want to send to receive Yo messages.
+
+* **Verify the Yo! CorDapp is running**
 
 Open a browser tab and browse to the following URL:
 
