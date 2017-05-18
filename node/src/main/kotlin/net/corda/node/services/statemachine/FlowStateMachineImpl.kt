@@ -113,7 +113,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             // Check if the FlowException was propagated by looking at where the stack trace originates (see suspendAndExpectReceive).
             val propagated = e.stackTrace[0].className == javaClass.name
             processException(e, propagated)
-            logger.error(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
+            logger.warn(if (propagated) "Flow ended due to receiving exception" else "Flow finished with exception", e)
             return
         } catch (t: Throwable) {
             recordDuration(startTime, success = false)
