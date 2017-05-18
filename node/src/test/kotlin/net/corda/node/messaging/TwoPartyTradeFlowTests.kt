@@ -70,7 +70,6 @@ class TwoPartyTradeFlowTests {
     @Before
     fun before() {
         net = MockNetwork(false)
-        net.identities += MOCK_IDENTITY_SERVICE.identities
         LogHelper.setLevel("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -501,6 +500,8 @@ class TwoPartyTradeFlowTests {
                     serviceHub.legalIdentityKey))
         }
 
+        sellerNode.services.identityService.registerIdentity(buyerNode.info.legalIdentity)
+        buyerNode.services.identityService.registerIdentity(sellerNode.info.legalIdentity)
         val buyerFuture = buyerNode.initiateSingleShotFlow(SellerRunnerFlow::class) { otherParty ->
             Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
         }.map { it.stateMachine }

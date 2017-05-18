@@ -14,6 +14,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -63,7 +64,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
 
     override val storageService: TxWritableStorageService = MockStorageService()
-    override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    override val identityService: IdentityService = InMemoryIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
     override val keyManagementService: KeyManagementService = MockKeyManagementService(*keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
@@ -79,45 +80,6 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
         return vaultService
     }
 }
-
-@ThreadSafe
-class MockIdentityService(val identities: List<Party>,
-                          certificates: List<Triple<AnonymousParty, Party, CertPath>> = emptyList()) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: MutableMap<PublicKey, Party> = ConcurrentHashMap()
-    private val nameToParties: MutableMap<X500Name, Party> = ConcurrentHashMap()
-    private val anonymousToPath: MutableMap<AnonymousParty, Pair<Party, CertPath>> = ConcurrentHashMap()
-
-    init {
-        keyToParties.putAll(identities.associateBy { it.owningKey } )
-        nameToParties.putAll(identities.associateBy { it.name })
-        anonymousToPath.putAll(certificates.map { Pair(it.first, Pair(it.second, it.third)) }.toMap())
-    }
-
-    override fun registerIdentity(party: Party) {
-        this.keyToParties[party.owningKey] = party
-        this.nameToParties[party.name] = party
-    }
-
-    override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
-    override fun partyFromAnonymous(party: AbstractParty): Party? = keyToParties[party.owningKey]
-    override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
-    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
-    override fun partyFromName(name: String): Party? = nameToParties[X500Name(name)]
-    override fun partyFromX500Name(principal: X500Name): Party? = nameToParties[principal]
-
-    @Throws(IllegalStateException::class)
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
-        check(anonymousToPath[anonymousParty]?.first == party)
-    }
-    override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = anonymousToPath[anonymousParty]?.second
-
-    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) {
-        // TODO: Check we actually trust the root
-        val party = partyFromX500Name(X500Name(trustedRoot.subjectDN.name)) ?: throw IllegalArgumentException("Unknown trust root")
-        anonymousToPath[anonymousParty] = Pair(party, path)
-    }
-}
-
 
 class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
     private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })

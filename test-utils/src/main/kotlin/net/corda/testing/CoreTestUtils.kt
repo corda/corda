@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
+import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
@@ -18,17 +19,16 @@ import net.corda.core.utilities.*
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.*
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
-import net.corda.testing.node.MockIdentityService
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
-import java.net.ServerSocket
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -85,7 +85,7 @@ val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-val MOCK_IDENTITY_SERVICE: MockIdentityService get() = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 

@@ -20,9 +20,13 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
+ *
+ * @param identities initial set of identities for the service, typically only used for unit tests.
+ * @param certPaths initial set of certificate paths for the service, typically only used for unit tests.
  */
 @ThreadSafe
-class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
+class InMemoryIdentityService(identities: Iterable<Party> = emptySet(),
+                              certPaths: Map<AnonymousParty, CertPath> = emptyMap()) : SingletonSerializeAsToken(), IdentityService {
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }
@@ -30,6 +34,12 @@ class InMemoryIdentityService : SingletonSerializeAsToken(), IdentityService {
     private val keyToParties = ConcurrentHashMap<PublicKey, Party>()
     private val principalToParties = ConcurrentHashMap<X500Name, Party>()
     private val partyToPath = ConcurrentHashMap<AnonymousParty, CertPath>()
+
+    init {
+        keyToParties.putAll(identities.associateBy { it.owningKey } )
+        principalToParties.putAll(identities.associateBy { it.name })
+        partyToPath.putAll(certPaths)
+    }
 
     override fun registerIdentity(party: Party) {
         log.trace { "Registering identity $party" }
