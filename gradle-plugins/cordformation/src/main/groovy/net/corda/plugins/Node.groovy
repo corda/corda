@@ -104,7 +104,6 @@ class Node extends CordformNode {
         installWebserverJar()
         installBuiltPlugin()
         installCordapps()
-        installDependencies()
         installConfig()
     }
 
@@ -169,23 +168,6 @@ class Node extends CordformNode {
         project.copy {
             from cordapps
             into pluginsDir
-        }
-    }
-
-    /**
-     * Installs other dependencies to this node's dependencies directory.
-     */
-    private void installDependencies() {
-        def cordaJar = verifyAndGetCordaJar()
-        def webJar = verifyAndGetWebserverJar()
-        def depsDir = new File(nodeDir, "dependencies")
-        def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
-        def appDeps = project.configurations.runtime.filter {
-            (it != cordaJar) && (it != webJar) && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
-        }
-        project.copy {
-            from appDeps
-            into depsDir
         }
     }
 
