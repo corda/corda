@@ -530,9 +530,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
         is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
-    // It's potentially of interest to the vault
         is LinearState -> state.isRelevant(ourKeys)
-        else -> false
+        else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
     }
 
     /**
