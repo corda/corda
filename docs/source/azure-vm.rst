@@ -14,7 +14,7 @@ Pre-requisites
 Deploying the Corda Network
 ---------------------------
 
-Search the Azure Marketplace for Corda and select 'Corda Single Ledger Network'.
+Browse to portal.azure.com, login and search the Azure Marketplace for Corda and select 'Corda Single Ledger Network'.
 
 Click the 'Create' button.
 
