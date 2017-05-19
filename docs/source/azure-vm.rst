@@ -160,7 +160,7 @@ You can run commands on your Corda node using the `shell framework <https://docs
 
 Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process.
 
-Stop the Corda process already running the background (the VM automatically starts Corda) and restart Corda to drop into the Shell:
+Stop the Corda process already running in the background (the VM automatically starts Corda) and restart Corda to drop into the Shell:
 
 .. sourcecode:: shell
 
