@@ -11,16 +11,17 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.BOC
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.ledger
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.Test
+import rx.Observable
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -73,7 +74,6 @@ class IssuerFlowTest {
 
     @Test
     fun `test concurrent issuer flow`() {
-
         net = MockNetwork(false, true)
         ledger {
             notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
@@ -96,18 +96,19 @@ class IssuerFlowTest {
         }
     }
 
-    private fun runIssuerAndIssueRequester(issuerNode: MockNode, issueToNode: MockNode,
+    private fun runIssuerAndIssueRequester(issuerNode: MockNode,
+                                           issueToNode: MockNode,
                                            amount: Amount<Currency>,
-                                           party: Party, ref: OpaqueBytes): RunResult {
+                                           party: Party,
+                                           ref: OpaqueBytes): RunResult {
         val issueToPartyAndRef = party.ref(ref)
-        val issuerFuture = issuerNode.initiateSingleShotFlow(IssuerFlow.IssuanceRequester::class) { _ ->
-            IssuerFlow.Issuer(party)
-        }.map { it.stateMachine }
+        val issuerFlows: Observable<IssuerFlow.Issuer> = issuerNode.registerInitiatedFlow(IssuerFlow.Issuer::class.java)
+        val firstIssuerFiber = issuerFlows.toFuture().map { it.stateMachine }
 
         val issueRequest = IssuanceRequester(amount, party, issueToPartyAndRef.reference, issuerNode.info.legalIdentity)
         val issueRequestResultFuture = issueToNode.services.startFlow(issueRequest).resultFuture
 
-        return IssuerFlowTest.RunResult(issuerFuture, issueRequestResultFuture)
+        return IssuerFlowTest.RunResult(firstIssuerFiber, issueRequestResultFuture)
     }
 
     private data class RunResult(

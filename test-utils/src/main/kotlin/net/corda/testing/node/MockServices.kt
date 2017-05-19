@@ -8,6 +8,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -28,6 +29,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -75,6 +77,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
         HibernateObserver(vaultService.rawUpdates, NodeSchemaService())
         return vaultService
     }
+
+    override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw IllegalArgumentException("${type.name} not found")
 }
 
 class MockKeyManagementService(val identityService: IdentityService,
@@ -91,7 +95,9 @@ class MockKeyManagementService(val identityService: IdentityService,
         return k.public
     }
 
-    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
+    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> {
+        return freshKeyAndCert(this, identityService, identity, revocationEnabled)
+    }
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         val pk = publicKey.keys.first { keyStore.containsKey(it) }
@@ -108,7 +114,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 class MockAttachmentStorage : AttachmentStorage {
     val files = HashMap<SecureHash, ByteArray>()
     override var automaticallyExtractAttachments = false
-    override var storePath = Paths.get("")
+    override var storePath: Path = Paths.get("")
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null

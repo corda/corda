@@ -2,12 +2,8 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
@@ -46,6 +42,7 @@ object IssuerFlow {
      * Issuer refers to a Node acting as a Bank Issuer of [FungibleAsset], and processes requests from a [IssuanceRequester] client.
      * Returns the generated transaction representing the transfer of the [Issued] [FungibleAsset] to the issue requester.
      */
+    @InitiatedBy(IssuanceRequester::class)
     class Issuer(val otherParty: Party) : FlowLogic<SignedTransaction>() {
         companion object {
             object AWAITING_REQUEST : ProgressTracker.Step("Awaiting issuance request")
@@ -96,12 +93,6 @@ object IssuerFlow {
             val moveTx = subFlow(moveCashFlow)
             // NOTE: CashFlow PayCash calls FinalityFlow which performs a Broadcast (which stores a local copy of the txn to the ledger)
             return moveTx
-        }
-
-        class Service(services: PluginServiceHub) {
-            init {
-                services.registerServiceFlow(IssuanceRequester::class.java, ::Issuer)
-            }
         }
     }
 }

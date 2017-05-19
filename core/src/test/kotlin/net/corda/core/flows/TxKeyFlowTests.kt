@@ -38,7 +38,7 @@ class TxKeyFlowTests {
         bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentity)
 
         // Run the flows
-        bobNode.registerServiceFlow(TxKeyFlow.Requester::class) { TxKeyFlow.Provider(it) }
+        bobNode.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bob, revocationEnabled))
 
         // Get the results

@@ -126,9 +126,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
+                    registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+                    registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
                     javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                         database.transaction {
-                            findService<NodeInterestRates.Service>().upload(it)
+                            installCordaService(NodeInterestRates.Oracle::class.java).upload(it)
                         }
                     }
                     return this

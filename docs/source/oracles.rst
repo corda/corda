@@ -195,41 +195,37 @@ Here we can see that there are several steps:
    exactly our data source.  The final step, assuming we have got this far, is to generate a signature for the
    transaction and return it.
 
-Binding to the network via a CorDapp plugin
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Binding to the network
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. note:: Before reading any further, we advise that you understand the concept of flows and how to write them and use
    them. See :doc:`flow-state-machines`.  Likewise some understanding of Cordapps, plugins and services will be helpful.
    See :doc:`creating-a-cordapp`.
 
-The first step is to create a service to host the oracle on the network.  Let's see how that's implemented:
+The first step is to create the oracle as a service by annotating its class with ``@CordaService``.  Let's see how that's
+done:
+
+.. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
+   :language: kotlin
+   :start-after: DOCSTART 3
+   :end-before: DOCEND 3
+
+The Corda node scans for any class with this annotation and initialises them. The only requirement is that the class provide
+a constructor with a single parameter of type ``PluginServiceHub```. In our example the oracle class has two constructors.
+The second is used for testing.
 
 .. literalinclude:: ../../samples/irs-demo/src/main/kotlin/net/corda/irs/api/NodeInterestRates.kt
    :language: kotlin
    :start-after: DOCSTART 2
    :end-before: DOCEND 2
 
-This may look complicated, but really it's made up of some relatively simple elements (in the order they appear in the code):
+These two flows leverage the oracle to provide the querying and signing operations. They get reference to the oracle,
+which will have already been initialised by the node, using ``ServiceHub.cordappService``. Both flows are annotated with
+``@InitiatedBy``. This tells the node which initiating flow (which are discussed in the next section) they are meant to
+be executed with.
 
-1. Accept a ``PluginServiceHub`` in the constructor.  This is your interface to the Corda node.
-2. Ensure you extend the abstract class ``SingletonSerializeAsToken`` (see :doc:`corda-plugins`).
-3. Create an instance of your core oracle class that has the ``query`` and ``sign`` methods as discussed above.
-4. Register your client sub-flows (in this case both in ``RatesFixFlow``.  See the next section) for querying and
-   signing as initiating your service flows that actually do the querying and signing using your core oracle class instance.
-5. Implement your service flows that call your core oracle class instance.
-
-The final step is to register your service with the node via the plugin mechanism. Do this by
-implementing a plugin.  Don't forget the resources file to register it with the ``ServiceLoader`` framework
-(see :doc:`corda-plugins`).
-
-.. sourcecode:: kotlin
-
-   class Plugin : CordaPluginRegistry() {
-        override val servicePlugins: List<Class<*>> = listOf(Service::class.java)
-   }
-
-Providing client sub-flows for querying and signing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Providing sub-flows for querying and signing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We mentioned the client sub-flow briefly above.  They are the mechanism that clients, in the form of other flows, will
 interact with your oracle.  Typically there will be one for querying and one for signing.  Let's take a look at

@@ -7,27 +7,26 @@ import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.RunOnCallerThread
+import net.corda.core.*
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.map
 import net.corda.core.node.services.linearHeadsOfType
-import net.corda.core.success
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.TwoPartyDealFlow.Acceptor
 import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
+import net.corda.irs.flows.FixingFlow
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.transaction
-import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
+import rx.Observable
 import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
@@ -126,6 +125,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         irs.fixedLeg.fixedRatePayer = node1.info.legalIdentity
         irs.floatingLeg.floatingRatePayer = node2.info.legalIdentity
 
+        node1.registerInitiatedFlow(FixingFlow.Fixer::class.java)
+        node2.registerInitiatedFlow(FixingFlow.Fixer::class.java)
+
         @InitiatingFlow
         class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer,
@@ -134,8 +136,13 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
             override fun call(): SignedTransaction = subFlow(Instigator(otherParty, payload, myKey))
         }
 
+        @InitiatedBy(StartDealFlow::class)
+        class AcceptDealFlow(otherParty: Party) : Acceptor(otherParty)
+
+        val acceptDealFlows: Observable<AcceptDealFlow> = node2.registerInitiatedFlow(AcceptDealFlow::class.java)
+
         @Suppress("UNCHECKED_CAST")
-        val acceptorTx = node2.initiateSingleShotFlow(StartDealFlow::class) { Acceptor(it) }.flatMap {
+       val acceptorTxFuture = acceptDealFlows.toFuture().flatMap {
             (it.stateMachine as FlowStateMachine<SignedTransaction>).resultFuture
         }
 
@@ -146,9 +153,9 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
                 node2.info.legalIdentity,
                 AutoOffer(notary.info.notaryIdentity, irs),
                 node1.services.legalIdentityKey)
-        val instigatorTx = node1.services.startFlow(instigator).resultFuture
+        val instigatorTxFuture = node1.services.startFlow(instigator).resultFuture
 
-        return Futures.allAsList(instigatorTx, acceptorTx).flatMap { instigatorTx }
+        return Futures.allAsList(instigatorTxFuture, acceptorTxFuture).flatMap { instigatorTxFuture }
     }
 
     override fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {

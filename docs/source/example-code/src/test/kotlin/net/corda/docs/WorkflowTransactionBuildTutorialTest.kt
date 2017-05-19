@@ -4,7 +4,6 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.getOrThrow
-import net.corda.core.node.ServiceEntry
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
@@ -30,7 +29,7 @@ class WorkflowTransactionBuildTutorialTest {
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
         val linearHeads = vaultService.linearHeadsOfType<T>()
         val original = storageService.validatedTransactions.getTransaction(ref.txhash)!!.tx.outRef<T>(ref.index)
-        return linearHeads.get(original.state.data.linearId)!!
+        return linearHeads[original.state.data.linearId]!!
     }
 
     @Before
@@ -43,10 +42,7 @@ class WorkflowTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = net.createPartyNode(notaryNode.info.address)
         nodeB = net.createPartyNode(notaryNode.info.address)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeA.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 
     @After

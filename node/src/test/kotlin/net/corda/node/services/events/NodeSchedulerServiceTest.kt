@@ -92,13 +92,13 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             }
             scheduler = NodeSchedulerService(services, database, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
+            val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()
                 }
             }
-            mockSMM.start()
+            mockSMM.start(listOf(services, scheduler))
             services.smm = mockSMM
             scheduler.start()
         }
