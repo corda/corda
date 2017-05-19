@@ -19,10 +19,10 @@
                     <Insets bottom="25" left="5" right="5" top="5"/>
                 </StackPane.margin>
                 <TitledPane styleClass="networkTile" text="My Identity">
-                    <BorderPane fx:id="myIdentityPane" minHeight="150"/>
+                    <BorderPane fx:id="myIdentityPane" minHeight="150" maxWidth="Infinity"/>
                 </TitledPane>
                 <TitledPane styleClass="networkTile" text="Notaries">
-                    <BorderPane minHeight="150">
+                    <BorderPane minHeight="150" maxWidth="Infinity">
                         <center>
                             <ScrollPane hbarPolicy="NEVER">
                                 <VBox fx:id="notaryList" maxWidth="-Infinity"/>
@@ -31,7 +31,7 @@
                     </BorderPane>
                 </TitledPane>
                 <TitledPane styleClass="networkTile" text="Peers" VBox.vgrow="ALWAYS">
-                    <BorderPane minHeight="150">
+                    <BorderPane minHeight="150" maxWidth="Infinity">
                         <center>
                             <ScrollPane hbarPolicy="NEVER">
                                 <VBox fx:id="peerList" maxWidth="-Infinity">

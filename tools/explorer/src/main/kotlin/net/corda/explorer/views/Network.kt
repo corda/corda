@@ -6,6 +6,7 @@ import javafx.animation.FadeTransition
 import javafx.animation.TranslateTransition
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
 import javafx.geometry.Bounds
 import javafx.geometry.Point2D
@@ -41,6 +42,9 @@ class Network : CordaView() {
     val notaries by observableList(NetworkIdentityModel::notaries)
     val peers by observableList(NetworkIdentityModel::parties)
     val transactions by observableList(TransactionDataModel::partiallyResolvedTransactions)
+    var centralPeer: String? = null
+    private var centralLabel: ObservableValue<Label?>
+
     // UI components
     private val myIdentityPane by fxid<BorderPane>()
     private val notaryList by fxid<VBox>()
@@ -114,7 +118,17 @@ class Network : CordaView() {
         return MapViewComponents(this, button, mapLabel)
     }
 
+    override fun onDock() {
+        centralLabel = mapLabels.firstOrDefault(myMapLabel, { centralPeer?.contains(it.text, true) ?: false })
+    }
+
+    override fun onUndock() {
+        centralPeer = null
+        centralLabel = myMapLabel
+    }
+
     init {
+        centralLabel = mapLabels.firstOrDefault(myMapLabel, { centralPeer?.contains(it.text, true) ?: false })
         myIdentityPane.centerProperty().bind(myButton)
         Bindings.bindContent(notaryList.children, notaryButtons)
         Bindings.bindContent(peerList.children, peerButtons)
@@ -122,7 +136,7 @@ class Network : CordaView() {
         // Run once when the screen is ready.
         // TODO : Find a better way to do this.
         mapPane.heightProperty().addListener { _, old, _ ->
-            if (old == 0.0) myMapLabel.value?.let { mapScrollPane.centerLabel(it) }
+            if (old == 0.0) centralLabel.value?.let { mapScrollPane.centerLabel(it) }
         }
         // Listen on zooming gesture, if device has gesture support.
         mapPane.setOnZoom { zoom(it.zoomFactor, Point2D(it.x, it.y)) }
@@ -142,6 +156,7 @@ class Network : CordaView() {
         }
     }
 
+    // TODO It doesn't work as expected.
     private fun ScrollPane.centerLabel(label: Label) {
         this.hvalue = (label.boundsInParent.width / 2 + label.boundsInParent.minX) / mapImageView.layoutBounds.width
         this.vvalue = (label.boundsInParent.height / 2 + label.boundsInParent.minY) / mapImageView.layoutBounds.height

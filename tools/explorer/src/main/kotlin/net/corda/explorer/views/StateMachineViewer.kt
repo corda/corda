@@ -103,43 +103,29 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 minWidth = 100.0
                 maxWidth = 200.0
             }.setCustomCellFactory {
-                label("$it") {
+                val toDisplay = it.toString().removeSurrounding("[", "]")
+                label(toDisplay) {
                     val hash = SecureHash.sha256(it.toString())
                     graphic = identicon(hash, 15.0)
-                    tooltip = identiconToolTip(hash, it.toString())
+                    tooltip = identiconToolTip(hash, toDisplay)
                 }
             }
-            column("Flow name", StateMachineData::stateMachineName).cellFormat { text = FlowNameFormatter.boring.format(it) }
-            column("Initiator", StateMachineData::flowInitiator).cellFormat { text = FlowInitiatorFormatter.format(it) }
-            column("Flow Status", StateMachineData::stateMachineStatus).cellFormat { text = it.status ?: "No progress data" }
-            column("Result", StateMachineData::addRmStatus).setCustomCellFactory {
-                if (it is StateMachineStatus.Removed) {
-                    if (it.result.error == null) {
-                        label("Success") {
-                            graphic = FontAwesomeIconView(FontAwesomeIcon.CHECK).apply {
-                                glyphSize = 15.0
-                                textAlignment = TextAlignment.CENTER
-                                style = "-fx-fill: green"
-                            }
-                        }
+            column("Flow name", StateMachineData::stateMachineName).cellFormat { text = FlowNameFormatter.camelCase.format(it) }
+            column("Initiator", StateMachineData::flowInitiator).setCustomCellFactory {
+                val (initIcon, initText) = FlowInitiatorFormatter.withIcon(it)
+                label { makeIconLabel(this, initIcon, initText, "-fx-fill: lightgray") }
+            }
+            column("Flow Status", StateMachineData::smmStatus).setCustomCellFactory {
+                val addRm = it.first.value
+                val progress = it.second.value.status ?: "No progress data"
+                if (addRm is StateMachineStatus.Removed) {
+                    if (addRm.result.error == null) {
+                        label { makeIconLabel(this, FontAwesomeIcon.CHECK, "Success", "-fx-fill: green") }
                     } else {
-                        label("Error") {
-                            graphic = FontAwesomeIconView(FontAwesomeIcon.BOLT).apply {
-                                glyphSize = 15.0
-                                textAlignment = TextAlignment.CENTER
-                                style = "-fx-fill: -color-4"
-                            }
-                        }
+                        label { makeIconLabel(this, FontAwesomeIcon.BOLT, progress, "-fx-fill: -color-4") }
                     }
                 } else {
-                    label("In progress") {
-                        graphic = FontAwesomeIconView(FontAwesomeIcon.ROCKET).apply {
-                            // Blazing fast! Try not to blink.
-                            glyphSize = 15.0
-                            textAlignment = TextAlignment.CENTER
-                            style = "-fx-fill: lightslategrey"
-                        }
-                    }
+                    label { makeIconLabel(this, FontAwesomeIcon.ROCKET, progress, "-fx-fill: lightslategrey") }
                 }
             }
         }
@@ -150,22 +136,22 @@ class StateMachineViewer : CordaView("Flow Triage") {
                 "Flow name" to { sm, s -> sm.stateMachineName.contains(s, true) },
                 "Initiator" to { sm, s -> FlowInitiatorFormatter.format(sm.flowInitiator).contains(s, true) },
                 "Flow Status" to { sm, s ->
-                    val stat = sm.stateMachineStatus.value.status ?: "No progress data"
+                    val stat = sm.smmStatus.second.value?.status ?: "No progress data"
                     stat.contains(s, true)
                 },
                 "Error" to { sm, _ ->
-                    val smAddRm = sm.addRmStatus.value
+                    val smAddRm = sm.smmStatus.first.value
                     if (smAddRm is StateMachineStatus.Removed)
                         smAddRm.result.error != null
                     else false
                 },
                 "Done" to { sm, _ ->
-                    val smAddRm = sm.addRmStatus.value
+                    val smAddRm = sm.smmStatus.first.value
                     if (smAddRm is StateMachineStatus.Removed)
                         smAddRm.result.error == null
                     else false
                 },
-                "In progress" to { sm, _ -> sm.addRmStatus.value !is StateMachineStatus.Removed },
+                "In progress" to { sm, _ -> sm.smmStatus.first.value !is StateMachineStatus.Removed },
                 disabledFields = listOf("Error", "Done", "In progress")
         )
         root.top = searchField.root
@@ -175,31 +161,20 @@ class StateMachineViewer : CordaView("Flow Triage") {
         })
     }
 
-    private inner class StateMachineDetailsView(val smmData: StateMachineData) : Fragment() {
+    private inner class StateMachineDetailsView(smmData: StateMachineData) : Fragment() {
         override val root by fxml<Parent>()
-        private val flowNameLabel by fxid<Label>()
-        private val flowProgressVBox by fxid<VBox>()
         private val flowInitiatorGrid by fxid<GridPane>()
-        private val flowInitiatorTitle by fxid<Label>()
         private val flowResultVBox by fxid<VBox>()
 
         init {
-            flowNameLabel.apply {
-                text = FlowNameFormatter.boring.format(smmData.stateMachineName)
-            }
             //TODO It would be nice to have flow graph with showing progress steps with subflows + timestamps (left it for second iteration).
-            flowProgressVBox.apply {
-                label {
-                    text = smmData.stateMachineStatus.value?.status ?: "No progress data"
-                }
-            }
             when (smmData.flowInitiator) {
-                is FlowInitiator.Shell -> makeShellGrid(flowInitiatorGrid, flowInitiatorTitle) // TODO Extend this when we will have more information on shell user.
-                is FlowInitiator.Peer -> makePeerGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.Peer)
-                is FlowInitiator.RPC -> makeRPCGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.RPC)
-                is FlowInitiator.Scheduled -> makeScheduledGrid(flowInitiatorGrid, flowInitiatorTitle, smmData.flowInitiator as FlowInitiator.Scheduled)
+                is FlowInitiator.Shell -> makeShellGrid(flowInitiatorGrid) // TODO Extend this when we will have more information on shell user.
+                is FlowInitiator.Peer -> makePeerGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Peer)
+                is FlowInitiator.RPC -> makeRPCGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.RPC)
+                is FlowInitiator.Scheduled -> makeScheduledGrid(flowInitiatorGrid, smmData.flowInitiator as FlowInitiator.Scheduled)
             }
-            val status = smmData.addRmStatus.value
+            val status = smmData.smmStatus.first.value
             if (status is StateMachineStatus.Removed) {
                 status.result.match(onValue = { makeResultVBox(flowResultVBox, it) }, onError = { makeErrorVBox(flowResultVBox, it) })
             }
@@ -207,22 +182,23 @@ class StateMachineViewer : CordaView("Flow Triage") {
     }
 
     private fun <T> makeResultVBox(vbox: VBox, result: T) {
-        if (result == null) {
-            vbox.apply { label("No return value from flow.").apply { style { fontWeight = FontWeight.BOLD } } }
-        } else if (result is SignedTransaction) {
-            // TODO Make link to transaction view
+        if (result is SignedTransaction) {
             vbox.apply {
                 label("Signed transaction").apply { style { fontWeight = FontWeight.BOLD } }
                 label {
+                    style = "-fx-cursor: hand;"
+                    setOnMouseClicked {
+                        if (it.button == MouseButton.PRIMARY) {
+                            selectedView.value = tornadofx.find<TransactionViewer>().apply { txIdToScroll = result.id }
+                        }
+                    }
                     text = result.id.toString()
                     graphic = identicon(result.id, 30.0)
                     tooltip = identiconToolTip(result.id)
                 }
 
             }
-        } else if (result is Unit) {
-            vbox.apply { label("Flow completed with success.").apply { style { fontWeight = FontWeight.BOLD } } }
-        } else {
+        } else if (result != null && result !is Unit) {
             // TODO Here we could have sth different than SignedTransaction/Unit
             vbox.apply {
                 label("Flow completed with success. Result: ").apply { style { fontWeight = FontWeight.BOLD } }
@@ -233,36 +209,35 @@ class StateMachineViewer : CordaView("Flow Triage") {
 
     private fun makeErrorVBox(vbox: VBox, error: Throwable) {
         vbox.apply {
-            label("Error") {
+            label {
+                text = error::class.simpleName
                 graphic = FontAwesomeIconView(FontAwesomeIcon.BOLT).apply {
                     glyphSize = 30
                     textAlignment = TextAlignment.CENTER
                     style = "-fx-fill: -color-4"
                 }
             }
-        }
-        vbox.apply {
-            vbox {
-                spacing = 10.0
-                label { text = error::class.simpleName }
-                label { text = error.message }
-            }
+            label { text = error.message }
         }
     }
 
-    private fun makeShellGrid(gridPane: GridPane, title: Label) {
-        title.apply {
-            text = "Flow started by shell user"
-        }
-    }
-
-    private fun makePeerGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.Peer) {
-        title.apply {
-            text = "Flow started by a peer node"
-        }
+    private fun makeShellGrid(gridPane: GridPane) {
         gridPane.apply {
+            label("Flow started by shell user")
+        }
+    }
+
+    private fun makePeerGrid(gridPane: GridPane, initiator: FlowInitiator.Peer) {
+        gridPane.apply {
+            style = "-fx-cursor: hand;"
+            setOnMouseClicked {
+                if (it.button == MouseButton.PRIMARY) {
+                    val short = PartyNameFormatter.short.format(initiator.party.name)
+                    selectedView.value = tornadofx.find<Network>().apply { centralPeer = short}
+                }
+            }
             row {
-                label("Legal name: ") {
+                label("Peer legal name: ") {
                     gridpaneConstraints { hAlignment = HPos.LEFT }
                     style { fontWeight = FontWeight.BOLD }
                     minWidth = 150.0
@@ -282,13 +257,10 @@ class StateMachineViewer : CordaView("Flow Triage") {
         }
     }
 
-    private fun makeRPCGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.RPC) {
-        title.apply {
-            text = "Flow started by a RPC user"
-        }
+    private fun makeRPCGrid(gridPane: GridPane, initiator: FlowInitiator.RPC) {
         gridPane.apply {
             row {
-                label("User name: ") {
+                label("RPC user name: ") {
                     gridpaneConstraints { hAlignment = HPos.LEFT }
                     style { fontWeight = FontWeight.BOLD }
                     prefWidth = 150.0
@@ -299,10 +271,7 @@ class StateMachineViewer : CordaView("Flow Triage") {
     }
 
     // TODO test
-    private fun makeScheduledGrid(gridPane: GridPane, title: Label, initiator: FlowInitiator.Scheduled) {
-        title.apply {
-            text = "Flow started as scheduled activity"
-        }
+    private fun makeScheduledGrid(gridPane: GridPane, initiator: FlowInitiator.Scheduled) {
         gridPane.apply {
             row {
                 label("Scheduled state: ") {

@@ -195,6 +195,7 @@ fun identicon(secureHash: SecureHash, size: Double): ImageView {
     return ImageView(IdenticonRenderer.getIdenticon(secureHash)).apply {
         isPreserveRatio = true
         fitWidth = size
+        styleClass += "identicon"
     }
 }
 

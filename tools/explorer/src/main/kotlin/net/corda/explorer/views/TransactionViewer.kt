@@ -76,6 +76,24 @@ class TransactionViewer : CordaView("Transactions") {
 
     data class Inputs(val resolved: ObservableList<StateAndRef<ContractState>>, val unresolved: ObservableList<StateRef>)
 
+    override fun onDock() {
+        txIdToScroll?.let {
+            scrollPosition = transactionViewTable.items.indexOfFirst { it.id == txIdToScroll }
+            if (scrollPosition > 0) {
+                expander.toggleExpanded(scrollPosition)
+                val tx = transactionViewTable.items[scrollPosition]
+                transactionViewTable.scrollTo(tx)
+            }
+        }
+    }
+
+    override fun onUndock() {
+        val isExpanded = expander.getExpandedProperty(transactionViewTable.items[scrollPosition]) // It is evil.
+        if (isExpanded.value) expander.toggleExpanded(scrollPosition)
+        scrollPosition = 0
+        txIdToScroll = null
+    }
+
     /**
      * We map the gathered data about transactions almost one-to-one to the nodes.
      */
@@ -162,7 +180,7 @@ class TransactionViewer : CordaView("Transactions") {
                 titleProperty.bind(reportingCurrency.map { "Total value ($it equiv)" })
             }
 
-            rowExpander {
+            expander = rowExpander {
                 add(ContractStatesView(it).root)
                 prefHeight = 400.0
             }.apply {
@@ -194,6 +212,8 @@ class TransactionViewer : CordaView("Transactions") {
         init {
             right {
                 label {
+                    val hash = SecureHash.randomSHA256()
+                    graphic = identicon(hash, 30.0)
                     textProperty().bind(Bindings.size(partiallyResolvedTransactions).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }

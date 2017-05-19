@@ -1,7 +1,13 @@
 package net.corda.explorer.formatters
 
+import org.apache.commons.lang.StringUtils.splitByCharacterTypeCamelCase
+
 object FlowNameFormatter {
-    val boring = object : Formatter<String> {
-        override fun format(value: String) = value.split('.').last().replace("$", ": ") // TODO Better handling of names.
+    val camelCase = object : Formatter<String> {
+        override fun format(value: String): String {
+            val flowName = value.split('.', '$').last()
+            val split =  splitByCharacterTypeCamelCase(flowName).filter { it.compareTo("Flow", true) != 0 } .joinToString(" ")
+            return split
+        }
     }
 }

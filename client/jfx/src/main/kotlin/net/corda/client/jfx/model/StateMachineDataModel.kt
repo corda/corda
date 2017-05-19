@@ -7,7 +7,6 @@ import javafx.collections.FXCollections
 import net.corda.client.jfx.utils.LeftOuterJoinedMap
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.getObservableValues
-import net.corda.client.jfx.utils.lift
 import net.corda.client.jfx.utils.recordAsAssociation
 import net.corda.core.ErrorOr
 import net.corda.core.flows.FlowInitiator
