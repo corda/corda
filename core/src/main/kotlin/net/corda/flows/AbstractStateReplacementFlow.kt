@@ -4,7 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
@@ -188,8 +189,7 @@ abstract class AbstractStateReplacementFlow {
         }
 
         private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
-            val myKey = serviceHub.legalIdentityKey
-            return myKey.sign(stx.id)
+            return serviceHub.createSignature(stx)
         }
     }
 }

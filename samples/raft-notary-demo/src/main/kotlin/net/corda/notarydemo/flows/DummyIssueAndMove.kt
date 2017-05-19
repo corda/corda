@@ -13,18 +13,16 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
     @Suspendable
     override fun call(): SignedTransaction {
         val random = Random()
-        val myKeyPair = serviceHub.legalIdentityKey
         // Self issue an asset
-        val issueTx = DummyContract.generateInitial(random.nextInt(), notary, serviceHub.myInfo.legalIdentity.ref(0)).apply {
-            signWith(myKeyPair)
-        }
-        serviceHub.recordTransactions(issueTx.toSignedTransaction())
+        val issueTxBuilder = DummyContract.generateInitial(random.nextInt(), notary, serviceHub.myInfo.legalIdentity.ref(0))
+        val issueTx = serviceHub.signInitialTransaction(issueTxBuilder)
+        serviceHub.recordTransactions(issueTx)
         // Move ownership of the asset to the counterparty
-        val asset = issueTx.toWireTransaction().outRef<DummyContract.SingleOwnerState>(0)
-        val moveTx = DummyContract.move(asset, counterpartyNode).apply {
-            signWith(myKeyPair)
-        }
+        val counterPartyKey = counterpartyNode.owningKey
+        val asset = issueTx.tx.outRef<DummyContract.SingleOwnerState>(0)
+        val moveTxBuilder = DummyContract.move(asset, counterpartyNode)
+        val moveTx = serviceHub.signInitialTransaction(moveTxBuilder)
         // We don't check signatures because we know that the notary's signature is missing
-        return moveTx.toSignedTransaction(checkSufficientSignatures = false)
+        return moveTx
     }
 }

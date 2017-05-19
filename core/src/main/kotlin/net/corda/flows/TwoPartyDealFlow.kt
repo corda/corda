@@ -17,7 +17,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import java.security.KeyPair
 import java.security.PublicKey
 
 /**
@@ -48,7 +47,7 @@ object TwoPartyDealFlow {
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
         abstract val otherParty: Party
-        abstract val myKeyPair: KeyPair
+        abstract val myKey: PublicKey
 
         @Suspendable override fun call(): SignedTransaction {
             progressTracker.currentStep = SENDING_PROPOSAL
@@ -138,12 +137,7 @@ object TwoPartyDealFlow {
 
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in signingPubKeys.expandedCompositeKeys) {
-                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
-                ptx.signWith(KeyPair(publicKey, privateKey))
-            }
-
-            return ptx.toSignedTransaction(checkSufficientSignatures = false)
+            return serviceHub.signInitialTransaction(ptx, signingPubKeys)
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
@@ -158,7 +152,7 @@ object TwoPartyDealFlow {
      */
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
-                          override val myKeyPair: KeyPair,
+                          override val myKey: PublicKey,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
 
         override val notaryNode: NodeInfo get() =

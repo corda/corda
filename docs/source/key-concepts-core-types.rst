@@ -55,10 +55,9 @@ resolving the attachment references to the attachments. Commands with valid sign
 When constructing a new transaction from scratch, you use ``TransactionBuilder``, which is a mutable transaction that
 can be signed once its construction is complete. This builder class should be used to create the initial transaction representation
 (before signature, before verification). It is intended to be passed around code that may edit it by adding new states/commands.
-Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from multiple parties.
-It is typical for contract classes to expose helper methods that can contribute to a ``TransactionBuilder``. Once a transaction
-has been constructed using the builders ``toWireTransaction`` or ``toSignedTransaction`` function, it shared with other
-participants using the :doc:`key-concepts-flow-framework`.
+Then once the states and commands are right then an initial DigitalSignature.WithKey can be added to freeze the transaction data.
+Typically, the signInitialTransaction method on the flow's serviceHub object will be used to look up the default node identity PrivateKey,
+sign the transaction and return a partially signed SignedTransaction. This can then be distributed to other participants using the :doc:`key-concepts-flow-framework`.
 
 Here's an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
 contract type in the library):
@@ -69,10 +68,9 @@ contract type in the library):
 
       val notaryToUse: Party = ...
       val txb = TransactionBuilder(notary = notaryToUse).withItems(BananaState(Amount(20, Bananas), fromCountry = "Elbonia"))
-      txb.signWith(myKey)
       txb.setTime(Instant.now(), notaryToUse, 30.seconds)
-      // We must disable the check for sufficient signatures, because this transaction is not yet notarised.
-      val stx = txb.toSignedTransaction(checkSufficientSignatures = false)
+      // Carry out the initial signing of the transaction and creation of a (partial) SignedTransation.
+      val stx = serviceHub.signInitialTransaction(txb)
       // Alternatively, let's just check it verifies pretending it was fully signed. To do this, we get
       // a WireTransaction, which is what the SignedTransaction wraps. Thus by verifying that directly we
       // skip signature checking.

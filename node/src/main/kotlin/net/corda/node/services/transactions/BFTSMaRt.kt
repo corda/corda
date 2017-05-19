@@ -9,7 +9,10 @@ import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.Timestamp
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.sign
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TimestampChecker
 import net.corda.core.node.services.UniquenessProvider
@@ -198,8 +201,7 @@ object BFTSMaRt {
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            val mySigningKey = db.transaction { services.notaryIdentityKey }
-            return mySigningKey.sign(bytes)
+            return db.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
         }
 
         // TODO:

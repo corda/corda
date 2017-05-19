@@ -1,7 +1,9 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
@@ -201,7 +203,7 @@ abstract class SignTransactionFlow(val otherParty: Party,
 
         // Sign and send back our signature to the Initiator.
         progressTracker.currentStep = SIGNING
-        val mySignature = serviceHub.legalIdentityKey.sign(checkedProposal.id)
+        val mySignature = serviceHub.createSignature(checkedProposal)
         send(otherParty, mySignature)
 
         // Return the fully signed transaction once it has been committed.

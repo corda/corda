@@ -62,8 +62,8 @@ class ScheduledFlowTests {
 
             val notary = serviceHub.networkMapCache.getAnyNotary()
             val builder = TransactionType.General.Builder(notary)
-            val tx = builder.withItems(scheduledState).
-                    signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+            builder.withItems(scheduledState)
+            val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(serviceHub.myInfo.legalIdentity)))
         }
     }
@@ -82,8 +82,8 @@ class ScheduledFlowTests {
             val notary = state.state.notary
             val newStateOutput = scheduledState.copy(processed = true)
             val builder = TransactionType.General.Builder(notary)
-            val tx = builder.withItems(state, newStateOutput).
-                    signWith(serviceHub.legalIdentityKey).toSignedTransaction(false)
+            builder.withItems(state, newStateOutput)
+            val tx = serviceHub.signInitialTransaction(builder)
             subFlow(FinalityFlow(tx, setOf(scheduledState.source, scheduledState.destination)))
         }
     }

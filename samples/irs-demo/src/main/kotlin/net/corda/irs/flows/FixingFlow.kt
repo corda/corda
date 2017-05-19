@@ -3,7 +3,6 @@ package net.corda.irs.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
-import net.corda.core.crypto.keys
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -20,7 +19,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import net.corda.flows.TwoPartyDealFlow
 import java.math.BigDecimal
-import java.security.KeyPair
 import java.security.PublicKey
 
 object FixingFlow {
@@ -115,10 +113,9 @@ object FixingFlow {
             StateAndRef(state, payload.ref)
         }
 
-        override val myKeyPair: KeyPair get() {
-            val myPublicKey = serviceHub.myInfo.legalIdentity.owningKey
-            val myKeys = dealToFix.state.data.parties.single { it.owningKey == myPublicKey }.owningKey.keys
-            return serviceHub.keyManagementService.toKeyPair(myKeys)
+        override val myKey: PublicKey get() {
+            dealToFix.state.data.parties.single { it.owningKey == serviceHub.myInfo.legalIdentity.owningKey }
+            return serviceHub.legalIdentityKey
         }
 
         override val notaryNode: NodeInfo get() {

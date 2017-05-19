@@ -15,6 +15,7 @@ import net.corda.core.math.Interpolator
 import net.corda.core.math.InterpolatorFactory
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.FilteredTransaction
@@ -32,6 +33,8 @@ import java.io.InputStream
 import java.math.BigDecimal
 import java.security.KeyPair
 import java.time.Clock
+import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -68,8 +71,8 @@ object NodeInterestRates {
         val oracle: Oracle by lazy {
             val myNodeInfo = services.myInfo
             val myIdentity = myNodeInfo.serviceIdentities(type).first()
-            val mySigningKey = services.keyManagementService.toKeyPair(myIdentity.owningKey.keys)
-            Oracle(myIdentity, mySigningKey, services.clock)
+            val mySigningKey = myIdentity.owningKey.keys.first { services.keyManagementService.keys.contains(it) }
+            Oracle(myIdentity, mySigningKey, services)
         }
 
         init {
@@ -129,7 +132,7 @@ object NodeInterestRates {
      * The oracle will try to interpolate the missing value of a tenor for the given fix name and date.
      */
     @ThreadSafe
-    class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) {
+    class Oracle(val identity: Party, private val signingKey: PublicKey, val services: ServiceHub) {
         private object Table : JDBCHashedTable("demo_interest_rate_fixes") {
             val name = varchar("index_name", length = 255)
             val forDay = localDate("for_day")
@@ -168,7 +171,7 @@ object NodeInterestRates {
 
         // Make this the last bit of initialisation logic so fully constructed when entered into instances map
         init {
-            require(signingKey.public in identity.owningKey.keys)
+            require(signingKey in identity.owningKey.keys)
         }
 
         /**
@@ -179,7 +182,7 @@ object NodeInterestRates {
         @Suspendable
         fun query(queries: List<FixOf>, deadline: Instant): List<Fix> {
             require(queries.isNotEmpty())
-            return mutex.readWithDeadline(clock, deadline) {
+            return mutex.readWithDeadline(services.clock, deadline) {
                 val answers: List<Fix?> = queries.map { container[it] }
                 val firstNull = answers.indexOf(null)
                 if (firstNull != -1) {
@@ -225,7 +228,8 @@ object NodeInterestRates {
             // Note that we will happily sign an invalid transaction, as we are only being presented with a filtered
             // version so we can't resolve or check it ourselves. However, that doesn't matter much, as if we sign
             // an invalid transaction the signature is worthless.
-            return signingKey.sign(ftx.rootHash.bytes, identity)
+            val signature = services.keyManagementService.sign(ftx.rootHash.bytes, signingKey)
+            return DigitalSignature.LegallyIdentifiable(identity, signature.bytes)
         }
         // DOCEND 1
     }

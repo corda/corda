@@ -65,12 +65,12 @@ PersistentKeyManagementService and E2ETestKeyManagementService
 Typical usage of these services is to locate an appropriate 
 ``PrivateKey`` to complete and sign a verified transaction as part of a 
 flow. The normal node legal identifier keys are typically accessed via 
-helper extension methods on the ``ServiceHub``, but these ultimately 
-fetch the keys from the ``KeyManagementService``. The 
+helper extension methods on the ``ServiceHub``, but these ultimately delegate
+signing to internal ``PrivateKeys`` from the ``KeyManagementService``. The
 ``KeyManagementService`` interface also allows other keys to be 
 generated if anonymous keys are needed in a flow. Note that this 
-interface works at the level of individual ``PublicKey``/``PrivateKey`` 
-pairs, but the signing authority will be represented by a 
+interface works at the level of individual ``PublicKey`` and internally
+matched ``PrivateKey` pairs, but the signing authority may be represented by a 
 ``CompositeKey`` on the ``NodeInfo`` to allow key clustering and 
 threshold schemes. 
 

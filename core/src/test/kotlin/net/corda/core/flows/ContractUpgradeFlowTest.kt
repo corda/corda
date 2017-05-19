@@ -58,9 +58,8 @@ class ContractUpgradeFlowTest {
     fun `2 parties contract upgrade`() {
         // Create dummy contract.
         val twoPartyDummyContract = DummyContract.generateInitial(0, notary, a.info.legalIdentity.ref(1), b.info.legalIdentity.ref(1))
-        val stx = twoPartyDummyContract.signWith(a.services.legalIdentityKey)
-                .signWith(b.services.legalIdentityKey)
-                .toSignedTransaction()
+        val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
+        val stx = b.services.addSignature(signedByA)
 
         a.services.startFlow(FinalityFlow(stx, setOf(a.info.legalIdentity, b.info.legalIdentity)))
         mockNet.runNetwork()
@@ -120,9 +119,8 @@ class ContractUpgradeFlowTest {
         rpcDriver {
             // Create dummy contract.
             val twoPartyDummyContract = DummyContract.generateInitial(0, notary, a.info.legalIdentity.ref(1), b.info.legalIdentity.ref(1))
-            val stx = twoPartyDummyContract.signWith(a.services.legalIdentityKey)
-                    .signWith(b.services.legalIdentityKey)
-                    .toSignedTransaction()
+            val signedByA = a.services.signInitialTransaction(twoPartyDummyContract)
+            val stx = b.services.addSignature(signedByA)
 
             val user = rpcTestUser.copy(permissions = setOf(
                     startFlowPermission<FinalityInvoker>(),

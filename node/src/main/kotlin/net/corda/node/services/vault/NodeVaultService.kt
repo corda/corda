@@ -243,7 +243,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {
-        val ourKeys = services.keyManagementService.keys.keys
+        val ourKeys = services.keyManagementService.keys
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
             recordUpdate(netDelta)

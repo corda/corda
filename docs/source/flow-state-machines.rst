@@ -131,7 +131,7 @@ each side.
                             val notaryNode: NodeInfo,
                             val assetToSell: StateAndRef<OwnableState>,
                             val price: Amount<Currency>,
-                            val myKeyPair: KeyPair,
+                            val myKey: PublicKey,
                             override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
               @Suspendable
               override fun call(): SignedTransaction {
@@ -160,7 +160,8 @@ Going through the data needed to become a seller, we have:
   information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
 - ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).
-- ``myKeyPair: KeyPair`` - the key pair that controls the asset being sold. It will be used to sign the transaction.
+- ``myKey: PublicKey`` - the PublicKey part of the node's internal KeyPair that controls the asset being sold.
+The matching PrivateKey stored in the KeyManagementService will be used to sign the transaction.
 
 And for the buyer:
 
@@ -439,7 +440,7 @@ to create a simple seller starter flow that has the annotation we need:
             @Suspendable
             override fun call(): SignedTransaction {
                 val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-                val cpOwnerKey: KeyPair = serviceHub.legalIdentityKey
+                val cpOwnerKey: PublicKey = serviceHub.legalIdentityKey
                 return subFlow(TwoPartyTradeFlow.Seller(otherParty, notary, assetToSell, price, cpOwnerKey))
             }
         }
