@@ -37,6 +37,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
                    override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {
     constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
     constructor(transaction: SignedTransaction) : this(listOf(transaction), emptySet(), tracker())
+    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(listOf(transaction), emptySet(), progressTracker)
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
