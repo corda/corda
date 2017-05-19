@@ -4,7 +4,6 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
@@ -17,7 +16,6 @@ class TxKeyFlowUtilitiesTests {
     @Before
     fun before() {
         net = MockNetwork(false)
-        net.identities += MOCK_IDENTITY_SERVICE.identities
     }
 
     @Test

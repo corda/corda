@@ -1,6 +1,7 @@
 package net.corda.irs.simulation
 
 import co.paralleluniverse.fibers.Suspendable
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.google.common.util.concurrent.FutureCallback
 import com.google.common.util.concurrent.Futures
@@ -13,7 +14,6 @@ import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.core.node.services.linearHeadsOfType
@@ -24,10 +24,10 @@ import net.corda.flows.TwoPartyDealFlow.AutoOffer
 import net.corda.flows.TwoPartyDealFlow.Instigator
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.jackson.JacksonSupport
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.utilities.transaction
 import net.corda.testing.initiateSingleShotFlow
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockIdentityService
 import java.security.PublicKey
 import java.time.LocalDate
 import java.util.*
@@ -37,7 +37,7 @@ import java.util.*
  * A simulation in which banks execute interest rate swaps with each other, including the fixing events.
  */
 class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, latencyInjector: InMemoryMessagingNetwork.LatencyCalculator?) : Simulation(networkSendManuallyPumped, runAsync, latencyInjector) {
-    val om = JacksonSupport.createInMemoryMapper(MockIdentityService(network.identities))
+    lateinit var om: ObjectMapper
 
     init {
         currentDateAndTime = LocalDate.of(2016, 3, 8).atStartOfDay()
@@ -47,6 +47,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
         val future = SettableFuture.create<Unit>()
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentity }))
 
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
