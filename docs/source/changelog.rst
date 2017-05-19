@@ -43,21 +43,26 @@ UNRELEASED
          * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
            name. As a result all node legal names must now be structured as X.500 distinguished names.
 
-    * There are major changes to the ``KeyManagementService`` and transaction signing in flows:
-    
-         * ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair`` it instead returns just the ``PublicKey`` portion of this pair.
-           The ``ServiceHub.notaryIdentityKey`` has changed similarly.
+    * There are major changes to transaction signing in flows:
+
+         * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most
+           of the details of this for you. They may get more complex in future as signing becomes a more featureful
+           operation.
+         * ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair``, it instead returns just the ``PublicKey`` portion of this pair.
+           The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
+           encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
+           and other key management devices.
          * The ``KeyManagementService`` now provides no mechanism to request the node's ``PrivateKey`` objects directly.
            Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
            which of the node's multiple keys to use. This lookup also works for ``CompositeKey`` scenarios
            and the service will search for a leaf key hosted on the node.
          * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
-           with the ``PrivateKey kept internally to the service.
+           with the ``PrivateKey`` kept internally to the service.
          * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
            should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
            generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
            Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
-           provided with two signatures. One version that signs with the default node key, the other which allows key slection
+           provided with two signatures. One version that signs with the default node key, the other which allows key selection
            by passing in the ``PublicKey`` partner of the desired signing key.
          * The original ``KeyPair`` signing methods have been left on the ``TransactionBuilder`` and ``SignedTransaction``, but
            should only be used as part of unit testing.
