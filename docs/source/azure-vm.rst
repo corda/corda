@@ -25,7 +25,7 @@ Define the basic parameters which will be used to pre-configure your Corda nodes
 * **Resource prefix**: Choose an appropriate descriptive name for your Corda nodes. This name will prefix the node hostnames
 * **VM user name**: This is the user login name on the Ubuntu VMs. Leave it as azureuser or define your own
 * **Authentication type**: Select 'SSH public key', then paste the contents of your SSH public key file (see pre-requisites, above) into the box. Alternatively select 'Password' to use a password of your choice to administer the VM
-* **Restrict access by IP address**: Leave this as 'No'
+* **Restrict access by IP address**: Leave this as 'No' to allow access from any internet host, or provide an IP address or a range of IP addresses to limit access
 * **Subscription**: Select which of your Azure subscriptions you want to use
 * **Resource group**: Choose to 'Create new' and provide a useful name of your choice
 * **Location**: Select the geographical location physically closest to you
@@ -41,9 +41,9 @@ Define the number of Corda nodes in your network and the size of VM.
 
 * **Number of Network Map nodes**: There can only be one Network Map node in this network. Leave as '1'
 * **Number of Notary nodes**: There can only be one Notary node in this network. Leave as '1'
-* **Number of participant nodes**: This is the number of Corda nodes in your network. At least 2 is recommended (so you can send transactions between them) and there is an upper limit of 9
+* **Number of participant nodes**: This is the number of Corda nodes in your network. At least 2 nodes in your network is recommended (so you can send transactions between them). You can specific 1 participant node and use the Notary node as a second node. There is an upper limit of 9
 * **Storage performance**: Leave as 'Standard'
-* **Virtual machine size**: It is recommended to use '4x Standard D1 v2' based on performance versus cost
+* **Virtual machine size**: The size of the VM is automatically adjusted to suit the number of participant nodes selected. It is recommended to use the suggested values
 
 .. image:: resources/azure_multi_node_step2.png
   :width: 300px
@@ -54,7 +54,7 @@ STEP 3: Corda Specific Options
 
 Define the version of Corda you want on your nodes and the type of notary.
 
-* **Corda version (as seen in Maven Central)**: Type the version of Corda you want your nodes to use. The version value must exactly match the directory name in `Maven Central <http://repo1.maven.org/maven2/net/corda/corda/>`_, for example 0.11.0
+* **Corda version (as seen in Maven Central)**: Select the version of Corda you want your nodes to use from the drop down list. The version numbers can be seen in `Maven Central <http://repo1.maven.org/maven2/net/corda/corda/>`_, for example 0.11.0
 * **Notary type**: Select either 'Non Validating' (notary only checks whether a state has been previously used and marked as historic. Faster processing) or 'Validating' (notary performs transaction verification by seeing input and output states, attachments and other transaction information. Slower processing). More information on notaries can be found `here <https://vimeo.com/album/4555732/video/214138458>`_
 
 .. image:: resources/azure_multi_node_step3.png
@@ -68,6 +68,8 @@ A summary of your selections is shown.
 
 .. image:: resources/azure_multi_node_step4.png
   :width: 300px
+
+Click 'OK' for your selection to be validated. If everything is ok you will see the message 'Validation passed'
 
 Click 'OK'
 
@@ -84,7 +86,12 @@ Once deployed click 'Overview' to see the virtual machine details. Note down the
 
 Using the Yo! CorDapp
 ---------------------
-Loading the Yo! CordDapp on your Corda nodes lets you send simple Yo! messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp is running by default when your Corda nodes start. The Yo! CorDapp demonstrates how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network. The Yo! CorDapp also makes use of the network map cache on each Corda node to find the intended target for the message.
+Loading the Yo! CordDapp on your Corda nodes lets you send simple Yo! messages to other Corda nodes on the network. A Yo! message is a very simple transaction. The Yo! CorDapp demonstrates:
+
+- how transactions are only sent between Corda nodes which they are intended for and are not shared across the entire network by using the network map
+- uses a pre-defined flow to orchestrate the ledger update automatically
+- the contract imposes rules on the ledger updates
+
 
 * **Loading the Yo! CorDapp onto your nodes**
 
@@ -92,14 +99,28 @@ The nodes you will use to send and receive Yo messages require the Yo! CorDapp j
 
 Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
 
+For Corda release M10
+
 .. sourcecode:: shell
 
 	cd /opt/corda/plugins
 	wget https://r3share.mohso.com/dl/y8s8Gawrcc
 
-Now restart your Corda VM from the Azure portal.
+For Corda release M11
 
-Repeat these steps on other Corda nodes you want to send to receive Yo messages.
+.. sourcecode:: shell
+
+	cd /opt/corda/plugins
+	wget https://r3share.mohso.com/dl/y8s8Gawrcc
+
+Now restart Corda and the Corda webserver using the following commands or restart your Corda VM from the Azure portal:
+
+.. sourcecode:: shell
+
+	sudo systemctl restart corda
+	sudo systemctl restart corda-webserver
+
+Repeat these steps on other Corda nodes on your network which you want to send or receive Yo messages.
 
 * **Verify the Yo! CorDapp is running**
 
@@ -130,25 +151,47 @@ where (public IP address) is the public IP address of one of your Corda nodes on
 
 	http://(public IP address):(port)/api/yo/peers
 
+.. image:: resources/Yo_peers.png
+  :width: 300px
+
 * **Sending a Yo message via the shell**
 
 You can run commands on your Corda node using the `shell framework <https://docs.corda.net/shell.html>`_.
 
-Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
+Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process.
+
+Stop the Corda process already running the background (the VM automatically starts Corda) and restart Corda to drop into the Shell:
+
+.. sourcecode:: shell
+
+	sudo systemctl stop corda
+	cd /opt/corda
+	java -jar corda.jar
+
+You will see the Corda startup banner screen:
+
+.. image:: resources/corda_banner.png
+  :width: 300px
+
+Type the following command to send a Yo message:
 
 .. sourcecode:: shell
 
 	flow start net.corda.yo.YoFlow target: (legalname of target node)
 
-where (legalname of target node) is the Legal Name for the target node as defined in the node.conf file. An easy way to see the Legal Names of Corda nodes on the network is to use the peers screen:
+where (legalname of target node) is the Legal Name for the target node as defined in the node.conf file, for example:
+
+.. sourcecode:: shell
+
+	flow start net.corda.yo.YoFlow target: "CN=Corda 0.11.0 Node 1 in tstyo1, O=Corda 0.11.0 Node 1 in tstyo1, L=London, C=UK"
+
+An easy way to see the Legal Names of Corda nodes on the network is to use the peers screen:
 
 .. sourcecode:: shell
 
 	http://(public IP address):(port)/api/yo/peers
 
-A short list of tasks show on-screen to indicate the progress of the command.
-
-.. image:: resources/yo_flow_progress.png
+.. image:: resources/Yo_peers.png
   :width: 300px
 
 This `video <https://vimeo.com/217809526#t=10m20s>`_ summarises these steps.
@@ -166,15 +209,24 @@ Viewing logs
 Users may wish to view the raw logs generated by each node, which contain more information about the operations performed by each node.
 
 You can access these using an SSH client of your choice (e.g. Putty) and logging into the virtual machine using the public IP address.
-Once logged in, navigate to 
+Once logged in, navigate to the following directory for Corda logs (node-xxxxxx):
 
 .. sourcecode:: shell
 
 	/opt/corda/logs
 
+And navigate to the following directory for system logs (syslog):
+
+.. sourcecode:: shell
+
+	/var/log
+
 You can open log files with any text editor.
 
 .. image:: resources/azure_vm_10_49.png
+  :width: 300px
+
+.. image:: resources/azure_syslog.png
   :width: 300px
   
 Next Steps
