@@ -4,6 +4,7 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
 import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.ObservableList
 import javafx.scene.Node
+import javafx.scene.control.Label
 import tornadofx.*
 
 class CordaViewModel {
@@ -31,4 +32,4 @@ abstract class CordaView(title: String? = null) : View(title) {
     }
 }
 
-data class CordaWidget(val name: String, val node: Node)
+data class CordaWidget(val name: String, val node: Node, val icon: FontAwesomeIcon? = null)

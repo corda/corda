@@ -53,7 +53,11 @@ class TransactionViewer : CordaView("Transactions") {
     private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
-    override val widgets = listOf(CordaWidget(title, TransactionWidget())).observable()
+    override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
+
+    private var scrollPosition: Int = 0
+    private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
+    var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't

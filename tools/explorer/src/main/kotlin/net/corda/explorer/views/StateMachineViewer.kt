@@ -5,10 +5,11 @@ import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.binding.Bindings
 import javafx.collections.ObservableList
 import javafx.geometry.HPos
-import javafx.geometry.Pos
+import javafx.geometry.Insets
 import javafx.scene.Parent
 import javafx.scene.control.Label
 import javafx.scene.control.TableView
+import javafx.scene.input.MouseButton
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
@@ -18,7 +19,8 @@ import net.corda.client.jfx.model.StateMachineData
 import net.corda.client.jfx.model.StateMachineDataModel
 import net.corda.client.jfx.model.StateMachineStatus
 import net.corda.client.jfx.model.observableList
-import net.corda.client.jfx.model.observableListReadOnly
+import net.corda.client.jfx.model.observableValue
+import net.corda.client.jfx.model.writableValue
 import net.corda.client.jfx.utils.map
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
@@ -26,33 +28,60 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.transactions.SignedTransaction
 import net.corda.explorer.formatters.FlowInitiatorFormatter
 import net.corda.explorer.formatters.FlowNameFormatter
+import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
 import net.corda.explorer.model.CordaView
+import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.CordaWidget
 import net.corda.explorer.ui.setCustomCellFactory
 import tornadofx.*
+
 
 // TODO Rethink whole idea of showing communication as table, it should be tree view for each StateMachine (with subflows).
 class StateMachineViewer : CordaView("Flow Triage") {
     override val root by fxml<BorderPane>()
     override val icon = FontAwesomeIcon.HEARTBEAT
-    override val widgets = listOf(CordaWidget(title, StateMachineViewer.StateMachineWidget())).observable()
+    override val widgets = listOf(CordaWidget(title, StateMachineWidget(), icon)).observable()
     private val allViewTable by fxid<TableView<StateMachineData>>()
     private val matchingFlowsLabel by fxid<Label>()
+    private val selectedView by writableValue(CordaViewModel::selectedView)
+
 
     private val stateMachinesAll by observableList(StateMachineDataModel::stateMachinesAll)
 
-    private class StateMachineWidget : BorderPane() {
-        private val stateMachinesAll by observableListReadOnly(StateMachineDataModel::stateMachinesAll)
+    inner private class StateMachineWidget : GridPane() {
+        private val error by observableValue(StateMachineDataModel::error)
+        private val success by observableValue(StateMachineDataModel::success)
+        private val progress by observableValue(StateMachineDataModel::progress)
 
         init {
-            right {
-                label {
-                    textProperty().bind(Bindings.size(stateMachinesAll).map(Number::toString))
-                    BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
-                }
+            padding = Insets(0.0, 5.0, 10.0, 10.0)
+            hgap = 5.0
+            styleClass += "chart-plot-background"
+            row {
+                label { makeIconLabel(this, FontAwesomeIcon.CHECK, "", "-fx-fill: lightslategrey", 30.0) }
+                label { textProperty().bind(success.map(Number::toString)) }
             }
+            row {
+                label { makeIconLabel(this, FontAwesomeIcon.BOLT, "", "-fx-fill: lightslategrey", 30.0) }
+                label { textProperty().bind(error.map(Number::toString)) }
+            }
+            row {
+                label { makeIconLabel(this, FontAwesomeIcon.ROCKET, "", "-fx-fill: lightslategrey", 30.0) }
+                label { textProperty().bind(progress.map(Number::toString)) }
+            }
+        }
+    }
+
+    fun makeIconLabel(labelNode: Label, icon: FontAwesomeIcon, initText: String, customStyle: String? = null, iconSize: Double = 15.0) {
+        labelNode.apply {
+            graphic = FontAwesomeIconView(icon).apply {
+                glyphSize = iconSize
+                textAlignment = TextAlignment.LEFT
+                style = customStyle
+            }
+            text = initText
         }
     }
 
