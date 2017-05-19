@@ -99,19 +99,19 @@ The nodes you will use to send and receive Yo messages require the Yo! CorDapp j
 
 Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
 
-For Corda release M10
+For Corda nodes running release M10
 
 .. sourcecode:: shell
 
 	cd /opt/corda/plugins
-	wget https://r3share.mohso.com/dl/y8s8Gawrcc
+	wget http://downloads.corda.net/cordapps/net/corda/yo/0.10.1/yo-0.10.1.jar
 
-For Corda release M11
+For Corda nodes running release M11
 
 .. sourcecode:: shell
 
 	cd /opt/corda/plugins
-	wget https://r3share.mohso.com/dl/y8s8Gawrcc
+	wget http://downloads.corda.net/cordapps/net/corda/yo/0.11.0/yo-0.11.0.jar
 
 Now restart Corda and the Corda webserver using the following commands or restart your Corda VM from the Azure portal:
 
@@ -145,45 +145,12 @@ In the browser window type the following URL to send a Yo message to a target no
 
 	http://(public IP address):(port)/api/yo/yo?target=(legalname of target node)
 	
-where (public IP address) is the public IP address of one of your Corda nodes on the Azure Corda network and (port) is the web server port number for your Corda node, 10004 by default and (legalname of target node) is the Legal Name for the target node as defined in the node.conf file. An easy way to see the Legal Names of Corda nodes on the network is to use the peers screen:
-
-.. sourcecode:: shell
-
-	http://(public IP address):(port)/api/yo/peers
-
-.. image:: resources/Yo_peers.png
-  :width: 300px
-
-* **Sending a Yo message via the shell**
-
-You can run commands on your Corda node using the `shell framework <https://docs.corda.net/shell.html>`_.
-
-Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process.
-
-Stop the Corda process already running in the background (the VM automatically starts Corda) and restart Corda to drop into the Shell:
-
-.. sourcecode:: shell
-
-	sudo systemctl stop corda
-	cd /opt/corda
-	java -jar corda.jar
-
-You will see the Corda startup banner screen:
-
-.. image:: resources/corda_banner.png
-  :width: 300px
-
-Type the following command to send a Yo message:
-
-.. sourcecode:: shell
-
-	flow start net.corda.yo.YoFlow target: (legalname of target node)
-
-where (legalname of target node) is the Legal Name for the target node as defined in the node.conf file, for example:
+where (public IP address) is the public IP address of one of your Corda nodes on the Azure Corda network and (port) is the web server port number for your Corda node, 10004 by default and (legalname of target node) is the Legal Name for the target node as defined in the node.conf file, for example:
 
 .. sourcecode:: shell
 
 	flow start net.corda.yo.YoFlow target: "CN=Corda 0.11.0 Node 1 in tstyo1, O=Corda 0.11.0 Node 1 in tstyo1, L=London, C=UK"
+
 
 An easy way to see the Legal Names of Corda nodes on the network is to use the peers screen:
 
@@ -194,8 +161,6 @@ An easy way to see the Legal Names of Corda nodes on the network is to use the p
 .. image:: resources/Yo_peers.png
   :width: 300px
 
-This `video <https://vimeo.com/217809526#t=10m20s>`_ summarises these steps.
-
 * **Viewing Yo messages**
 
 To see Yo! messages sent to a particular node open a browser window and browse to the following URL:
@@ -203,6 +168,9 @@ To see Yo! messages sent to a particular node open a browser window and browse t
 .. sourcecode:: shell
 
 	http://(public IP address):(port)/api/yo/yos
+	
+.. image:: resources/azure_yos.png
+  :width: 300px
 
 Viewing logs
 ------------
