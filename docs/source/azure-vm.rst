@@ -7,7 +7,7 @@ This Corda network offering builds a pre-configured network of Corda nodes as Ub
 
 Pre-requisites
 --------------
-* Ensure you have a registered Microsoft Azure account and are logged on to the Azure portal
+* Ensure you have a registered Microsoft Azure account which can create virtual machines under your subscription(s) and you are logged on to the Azure portal (portal.azure.com)
 * It is recommended you generate a private-public SSH key pair (see `here <https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys--2/>`_)
 
 
@@ -55,7 +55,7 @@ STEP 3: Corda Specific Options
 Define the version of Corda you want on your nodes and the type of notary.
 
 * **Corda version (as seen in Maven Central)**: Select the version of Corda you want your nodes to use from the drop down list. The version numbers can be seen in `Maven Central <http://repo1.maven.org/maven2/net/corda/corda/>`_, for example 0.11.0
-* **Notary type**: Select either 'Non Validating' (notary only checks whether a state has been previously used and marked as historic. Faster processing) or 'Validating' (notary performs transaction verification by seeing input and output states, attachments and other transaction information. Slower processing). More information on notaries can be found `here <https://vimeo.com/album/4555732/video/214138458>`_
+* **Notary type**: Select either 'Non Validating' (notary only checks whether a state has been previously used and marked as historic) or 'Validating' (notary performs transaction verification by seeing input and output states, attachments and other transaction information). More information on notaries can be found `here <https://vimeo.com/album/4555732/video/214138458>`_
 
 .. image:: resources/azure_multi_node_step3.png
   :width: 300px
@@ -75,11 +75,13 @@ Click 'OK'
 
 STEP 5: Buy
 
-Review the Azure Terms of Use and Privacy Policy and click 'Purchase'
+Review the Azure Terms of Use and Privacy Policy and click 'Purchase' to buy the Azure VMs which will host your Corda nodes.
 
 The deployment process will start and typically takes 8-10 minutes to complete.
 
-Once deployed click 'Overview' to see the virtual machine details. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
+Once deployed click 'Resources Groups', select the resource group you defined in Step 1 above and click 'Overview' to see the virtual machine details. The names of your VMs will be pre-fixed with the resource prefix value you defined in Step 1 above.
+
+The Newtork Map Service node is suffixed nm0. The Notary node is suffixed not0. Your Corda participant nodes are suffixed node0, node1, node2 etc. Note down the **Public IP address** for your Corda nodes. You will need these to connect to UI screens via your web browser:
 
 .. image:: resources/azure_ip.png
   :width: 300px
@@ -97,7 +99,7 @@ Loading the Yo! CordDapp on your Corda nodes lets you send simple Yo! messages t
 
 The nodes you will use to send and receive Yo messages require the Yo! CorDapp jar file to be saved to their plugins directory.
 
-Connect to one of your Corda nodes using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
+Connect to one of your Corda nodes (make sure this is not the Notary node) using an SSH client of your choice (e.g. Putty) and log into the virtual machine using the public IP address and your SSH key or username / password combination you defined in Step 1 of the Azure build process. Type the following command:
 
 For Corda nodes running release M10
 
