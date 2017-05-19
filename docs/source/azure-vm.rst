@@ -149,8 +149,7 @@ where (public IP address) is the public IP address of one of your Corda nodes on
 
 .. sourcecode:: shell
 
-	flow start net.corda.yo.YoFlow target: "CN=Corda 0.11.0 Node 1 in tstyo1, O=Corda 0.11.0 Node 1 in tstyo1, L=London, C=UK"
-
+	http://40.69.40.42:10004/api/yo/yo?target=Corda 0.10.1 Node 1 in tstyo2
 
 An easy way to see the Legal Names of Corda nodes on the network is to use the peers screen:
 
@@ -158,7 +157,7 @@ An easy way to see the Legal Names of Corda nodes on the network is to use the p
 
 	http://(public IP address):(port)/api/yo/peers
 
-.. image:: resources/Yo_peers.png
+.. image:: resources/yo_peers2.png
   :width: 300px
 
 * **Viewing Yo messages**
