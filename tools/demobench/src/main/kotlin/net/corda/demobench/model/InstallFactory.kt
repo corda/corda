@@ -2,6 +2,8 @@ package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
+import net.corda.core.crypto.location
 import org.bouncycastle.asn1.x500.X500Name
 
 import tornadofx.*
@@ -20,12 +22,19 @@ class InstallFactory : Controller() {
         val rpcPort = config.parsePort("rpcAddress")
         val webPort = config.parsePort("webAddress")
         val h2Port = config.getInt("h2port")
+        val x500name = X500Name(config.getString("myLegalName"))
+        val nearestCity = try {
+            config.getString("nearestCity")
+        } catch (e: ConfigException) {
+            x500name.location
+        }
         val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
         val tempDir = Files.createTempDirectory(baseDir, ".node")
 
         val nodeConfig = NodeConfig(
                 tempDir,
-                X500Name(config.getString("myLegalName")),
+                x500name,
+                nearestCity,
                 p2pPort,
                 rpcPort,
                 webPort,

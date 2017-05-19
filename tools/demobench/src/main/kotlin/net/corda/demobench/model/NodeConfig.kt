@@ -12,6 +12,7 @@ import java.nio.file.StandardCopyOption
 class NodeConfig(
         baseDir: Path,
         legalName: X500Name,
+        val nearestCity: String,
         p2pPort: Int,
         val rpcPort: Int,
         val webPort: Int,
@@ -26,7 +27,6 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String? = legalName.location
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
@@ -45,6 +45,7 @@ class NodeConfig(
      */
     fun toFileConfig(): Config = ConfigFactory.empty()
             .withValue("myLegalName", valueFor(legalName.toString()))
+            .withValue("nearestCity", valueFor(nearestCity.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
             .withFallback(optional("networkMapService", networkMap, { c, n ->
@@ -60,7 +61,7 @@ class NodeConfig(
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-            baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
+            baseDir, legalName, nearestCity, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {
