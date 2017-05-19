@@ -89,7 +89,6 @@ Developers wishing to run DemoBench *without* building a new installer each time
 
 ..
 
-
 Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell . In which case you can still run DemoBench as follows:
 
 .. parsed-literal::
@@ -98,7 +97,9 @@ Unfortunately, DemoBench's ``$CLASSPATH`` may be too long for the Windows shell 
 
 ..
 
-While DemoBench *can* be executed within an IDE, it would be up to the Developer to install all of its runtime dependencies beforehand into their correct locations relative to the value of the ``user.dir`` system property (i.e. the current working directory of the JVM):
+While DemoBench *can* be executed within an IDE, it would be up to the Developer to install all of its runtime
+dependencies beforehand into their correct locations relative to the value of the ``user.dir`` system property (i.e. the
+current working directory of the JVM):
 
 .. parsed-literal::
 
@@ -111,4 +112,10 @@ While DemoBench *can* be executed within an IDE, it would be up to the Developer
         bank-of-corda.jar
 
 ..
+
+Mac users should note that the best way to build a DemoBench DMG is with the `JetBrains JDK <https://github.com/JetBrains/jdk8u>`_
+which has `binary downloads available from BinTray <https://bintray.com/jetbrains/intellij-jdk>`_.
+This JDK has some useful GUI fixes, most notably, when built with this JDK the DemoBench terminal will support emoji
+and as such, the nicer coloured ANSI progress renderer. It also resolves some issues with hidpi rendering on
+Windows.
 
