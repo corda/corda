@@ -1,5 +1,6 @@
 package net.corda.core.serialization.amqp
 
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.EmptyWhitelist
 import net.corda.testing.MEGA_CORP_PUBKEY
@@ -259,7 +260,6 @@ class SerializationOutputTests {
     fun `test throwables serialize`() {
         val factory = SerializerFactory()
         factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
-        println()
 
         val factory2 = SerializerFactory()
         factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
@@ -307,4 +307,17 @@ class SerializationOutputTests {
             serdes(t, factory, factory2, false)
         }
     }
+
+    @Test
+    fun `test corda exception subclasses serialize`() {
+        val factory = SerializerFactory()
+        factory.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory))
+
+        val factory2 = SerializerFactory()
+        factory2.register(net.corda.core.serialization.amqp.custom.ThrowableSerializer(factory2))
+
+        val obj = FlowException("message").fillInStackTrace()
+        serdes(obj, factory, factory2)
+    }
+
 }

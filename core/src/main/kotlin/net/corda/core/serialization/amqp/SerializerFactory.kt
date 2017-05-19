@@ -189,7 +189,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     // Recursively check the class, interfaces and superclasses for our annotation.
-    private fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
+    internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
         return type.isAnnotationPresent(CordaSerializable::class.java) ||
                 type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationInHierarchy(it) }
                 || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))

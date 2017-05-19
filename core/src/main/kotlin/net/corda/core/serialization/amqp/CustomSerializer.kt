@@ -38,7 +38,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
     }
 
-    abstract class Proxy<T, P>(protected val clazz: Class<T>, protected val proxyClass: Class<P>, factory: SerializerFactory, val withInheritance: Boolean = true) : CustomSerializer<T>() {
+    abstract class Proxy<T, P>(protected val clazz: Class<T>, protected val proxyClass: Class<P>, protected val factory: SerializerFactory, val withInheritance: Boolean = true) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
         override val type: Type get() = clazz
         override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.simpleName}"
