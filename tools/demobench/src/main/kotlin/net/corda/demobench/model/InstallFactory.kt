@@ -23,18 +23,12 @@ class InstallFactory : Controller() {
         val webPort = config.parsePort("webAddress")
         val h2Port = config.getInt("h2port")
         val x500name = X500Name(config.getString("myLegalName"))
-        val nearestCity = try {
-            config.getString("nearestCity")
-        } catch (e: ConfigException) {
-            x500name.location
-        }
         val extraServices = config.parseExtraServices("extraAdvertisedServiceIds")
         val tempDir = Files.createTempDirectory(baseDir, ".node")
 
         val nodeConfig = NodeConfig(
                 tempDir,
                 x500name,
-                nearestCity,
                 p2pPort,
                 rpcPort,
                 webPort,

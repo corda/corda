@@ -222,14 +222,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
     node {
         name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
     }
     node {
         name "CN=Bank A,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
         advertisedServices = []
         p2pPort 10012
         rpcPort 10013
@@ -238,7 +236,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     }
     node {
         name "CN=Bank B,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "New York"
         advertisedServices = []
         p2pPort 10007
         rpcPort 10008

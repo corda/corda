@@ -2,6 +2,7 @@ package net.corda.irs.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.location
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -56,7 +57,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                              advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                              entropyRoot: BigInteger)
         : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
-        override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
+        override fun findMyLocation(): PhysicalLocation? {
+            val location = configuration.myLegalName.location
+            return CityDatabase[location]
+        }
     }
 
     inner class BankFactory : MockNetwork.Factory {

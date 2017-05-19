@@ -58,7 +58,6 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                     nearestCity = location.description,
                     country = location.countryCode
                 ),
-                location.description,
                 nodeData.p2pPort.value,
                 nodeData.rpcPort.value,
                 nodeData.webPort.value,

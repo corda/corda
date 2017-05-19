@@ -154,7 +154,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
+    open fun findMyLocation(): PhysicalLocation? {
+        val location = try {
+            configuration.myLegalName.location
+        } catch (e: Throwable) {
+            log.error("No location information in node legal name")
+            throw IllegalArgumentException("No location information in node legal name")
+        }
+        return CityDatabase[location]
+    }
 
     lateinit var info: NodeInfo
     lateinit var storage: TxWritableStorageService
