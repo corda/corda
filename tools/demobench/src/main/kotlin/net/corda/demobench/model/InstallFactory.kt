@@ -2,10 +2,7 @@ package net.corda.demobench.model
 
 import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import net.corda.core.crypto.location
 import org.bouncycastle.asn1.x500.X500Name
-
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files

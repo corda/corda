@@ -264,7 +264,7 @@ class NodeTabView : Fragment() {
     }
 
     private fun launchNode(config: NodeConfig) {
-        val countryCode = CityDatabase.cityMap[config.legalName.location]?.countryCode
+        val countryCode = CityDatabase.cityMap[config.nearestCity]?.countryCode
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }

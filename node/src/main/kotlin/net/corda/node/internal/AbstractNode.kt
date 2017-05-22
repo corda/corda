@@ -155,13 +155,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open fun findMyLocation(): PhysicalLocation? {
-        val location = try {
-            configuration.myLegalName.location
-        } catch (e: Throwable) {
-            log.error("No location information in node legal name")
-            throw IllegalArgumentException("No location information in node legal name")
-        }
-        return CityDatabase[location]
+        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
     }
 
     lateinit var info: NodeInfo
