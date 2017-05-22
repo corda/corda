@@ -605,7 +605,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val identityAndKey = if (configuration.keyStoreFile.exists() && keystore.containsAlias(privateKeyAlias)) {
             // Get keys from keystore.
-            val (cert, keyPair) = keystore.getCertificateAndKey(privateKeyAlias, configuration.keyStorePassword)
+            val (cert, keyPair) = keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
             val loadedServiceName = X509CertificateHolder(cert.encoded).subject
             if (X509CertificateHolder(cert.encoded).subject != serviceName) {
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +

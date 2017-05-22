@@ -44,12 +44,12 @@ object X509Utilities {
 
     private val DEFAULT_VALIDITY_WINDOW = Pair(0, 365 * 10)
     /**
-     * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range
-     * @param daysBefore number of days to roll back returned start date relative to current date
-     * @param daysAfter number of days to roll forward returned end date relative to current date
-     * @param parentNotBefore if provided is used to lower bound the date interval returned
-     * @param parentNotAfter if provided is used to upper bound the date interval returned
-     * Note we use Date rather than LocalDate as the consuming java.security and BouncyCastle certificate apis all use Date
+     * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range.
+     * @param daysBefore number of days to roll back returned start date relative to current date.
+     * @param daysAfter number of days to roll forward returned end date relative to current date.
+     * @param parentNotBefore if provided is used to lower bound the date interval returned.
+     * @param parentNotAfter if provided is used to upper bound the date interval returned.
+     * Note we use Date rather than LocalDate as the consuming java.security and BouncyCastle certificate apis all use Date.
      * Thus we avoid too many round trip conversions.
      */
     private fun getCertificateValidityWindow(daysBefore: Int, daysAfter: Int, parentNotBefore: Date? = null, parentNotAfter: Date? = null): Pair<Date, Date> {
@@ -96,57 +96,56 @@ object X509Utilities {
 
     /*
      * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
-     * @param subject the cert Subject will be populated with the domain string
+     * @param subject the cert Subject will be populated with the domain string.
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
-     * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates
+     * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
+    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
         val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 2)
-        return CertificateAndKey(cert, keyPair)
+        return CertificateAndKeyPair(cert, keyPair)
     }
 
     @JvmStatic
     fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
-                               validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey
+                               validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair
             = createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
      * @param subject subject of the generated certificate.
-     * @param ca The Public certificate and KeyPair of the root CA certificate above this used to sign it
+     * @param ca The Public certificate and KeyPair of the root CA certificate above this used to sign it.
      * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
-     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates
+     * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createIntermediateCert(subject: X500Name, ca: CertificateAndKey, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKey {
+    fun createIntermediateCert(subject: X500Name, ca: CertificateAndKeyPair, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
         val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 1)
-        return CertificateAndKey(cert, keyPair)
+        return CertificateAndKeyPair(cert, keyPair)
     }
 
     /**
      * Create an X509v3 certificate suitable for use in TLS roles.
-     * @param subject The contents to put in the subject field of the certificate
-     * @param publicKey The PublicKey to be wrapped in the certificate
-     * @param ca The Public certificate and KeyPair of the parent CA that will sign this certificate
-     * @param subjectAlternativeNameDomains A set of alternate DNS names to be supported by the certificate during validation of the TLS handshakes
-     * @param subjectAlternativeNameIps A set of alternate IP addresses to be supported by the certificate during validation of the TLS handshakes
-     * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
+     * @param subject The contents to put in the subject field of the certificate.
+     * @param publicKey The PublicKey to be wrapped in the certificate.
+     * @param ca The Public certificate and KeyPair of the parent CA that will sign this certificate.
+     * @param subjectAlternativeNameDomains A set of alternate DNS names to be supported by the certificate during validation of the TLS handshakes.
+     * @param subjectAlternativeNameIps A set of alternate IP addresses to be supported by the certificate during validation of the TLS handshakes.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return The generated X509Certificate suitable for use as a Server/Client certificate in TLS.
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
     @JvmStatic
     fun createServerCert(subject: X500Name, publicKey: PublicKey,
-                         ca: CertificateAndKey,
+                         ca: CertificateAndKeyPair,
                          subjectAlternativeNameDomains: List<String>,
                          subjectAlternativeNameIps: List<String>,
                          validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
@@ -168,8 +167,8 @@ object X509Utilities {
      * @param targetCertAndKey certificate the path ends at.
      * @param revocationEnabled whether revocation of certificates in the path should be checked.
      */
-    fun createCertificatePath(rootCertAndKey: CertificateAndKey,
-                              targetCertAndKey: CertificateAndKey,
+    fun createCertificatePath(rootCertAndKey: CertificateAndKeyPair,
+                              targetCertAndKey: CertificateAndKeyPair,
                               revocationEnabled: Boolean): CertPathBuilderResult {
         val intermediateCertificates = setOf(targetCertAndKey.certificate)
         val certStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(intermediateCertificates))
@@ -189,9 +188,9 @@ object X509Utilities {
     }
 
     /**
-     * Helper method to store a .pem/.cer format file copy of a certificate if required for import into a PC/Mac, or for inspection
-     * @param x509Certificate certificate to save
-     * @param filename Target filename
+     * Helper method to store a .pem/.cer format file copy of a certificate if required for import into a PC/Mac, or for inspection.
+     * @param x509Certificate certificate to save.
+     * @param filename Target filename.
      */
     @JvmStatic
     fun saveCertificateAsPEMFile(x509Certificate: X509Certificate, filename: Path) {
@@ -203,9 +202,9 @@ object X509Utilities {
     }
 
     /**
-     * Helper method to load back a .pem/.cer format file copy of a certificate
-     * @param filename Source filename
-     * @return The X509Certificate that was encoded in the file
+     * Helper method to load back a .pem/.cer format file copy of a certificate.
+     * @param filename Source filename.
+     * @return The X509Certificate that was encoded in the file.
      */
     @JvmStatic
     fun loadCertificateFromPEMFile(filename: Path): X509Certificate {
@@ -217,14 +216,14 @@ object X509Utilities {
     }
 
     /**
-     * An all in wrapper to manufacture a server certificate and keys all stored in a KeyStore suitable for running TLS on the local machine
-     * @param keyStoreFilePath KeyStore path to save output to
-     * @param storePassword access password for KeyStore
+     * An all in wrapper to manufacture a server certificate and keys all stored in a KeyStore suitable for running TLS on the local machine.
+     * @param keyStoreFilePath KeyStore path to save output to.
+     * @param storePassword access password for KeyStore.
      * @param keyPassword PrivateKey access password for the generated keys.
      * It is recommended that this is the same as the storePassword as most TLS libraries assume they are the same.
-     * @param caKeyStore KeyStore containing CA keys generated by createCAKeyStoreAndTrustStore
-     * @param caKeyPassword password to unlock private keys in the CA KeyStore
-     * @return The KeyStore created containing a private key, certificate chain and root CA public cert for use in TLS applications
+     * @param caKeyStore KeyStore containing CA keys generated by createCAKeyStoreAndTrustStore.
+     * @param caKeyPassword password to unlock private keys in the CA KeyStore.
+     * @return The KeyStore created containing a private key, certificate chain and root CA public cert for use in TLS applications.
      */
     fun createKeystoreForSSL(keyStoreFilePath: Path,
                              storePassword: String,
@@ -234,8 +233,8 @@ object X509Utilities {
                              commonName: X500Name,
                              signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): KeyStore {
 
-        val rootCA = caKeyStore.getCertificateAndKey(CORDA_ROOT_CA_PRIVATE_KEY, caKeyPassword)
-        val intermediateCA = caKeyStore.getCertificateAndKey(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, caKeyPassword)
+        val rootCA = caKeyStore.getCertificateAndKeyPair(CORDA_ROOT_CA_PRIVATE_KEY, caKeyPassword)
+        val intermediateCA = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, caKeyPassword)
 
         val serverKey = generateKeyPair(signatureScheme)
         val host = InetAddress.getLocalHost()
@@ -259,7 +258,7 @@ object X509Utilities {
 
 /**
  * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present, this throws an
- * exception
+ * exception.
  */
 @Throws(IllegalArgumentException::class)
 fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName { attr -> attr.toString() + commonName }
@@ -269,7 +268,7 @@ fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName
  * adds one.
  */
 @Throws(IllegalArgumentException::class)
-fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { attr -> commonName }
+fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { _ -> commonName }
 
 /**
  * Rebuild the distinguished name, replacing the common name with a value generated from the provided function.
@@ -307,4 +306,4 @@ class CertificateStream(val input: InputStream) {
     fun nextCertificate(): X509Certificate = certificateFactory.generateCertificate(input) as X509Certificate
 }
 
-data class CertificateAndKey(val certificate: X509Certificate, val keyPair: KeyPair)
+data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
