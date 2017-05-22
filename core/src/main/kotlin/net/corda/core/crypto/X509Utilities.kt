@@ -22,6 +22,7 @@ import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
 import java.security.cert.*
+import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -42,23 +43,35 @@ object X509Utilities {
     private val CA_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage)
     private val CLIENT_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth)
 
-    private val DEFAULT_VALIDITY_WINDOW = Pair(0, 365 * 10)
+    private val DEFAULT_VALIDITY_WINDOW = Pair(Duration.ofMillis(0), Duration.ofDays(365 * 10))
+
+    /**
+     * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range.
+     * @param daysBefore number of days to roll back returned start date relative to current date.
+     * @param daysAfter number of days to roll forward returned end date relative to current date.
+     * @param parent certificate whose validity should bound the date interval returned.
+     */
+    private fun getCertificateValidityWindow(before: Duration, after: Duration, parent: X509Certificate): Pair<Instant, Instant> {
+        return getCertificateValidityWindow(before, after, parent.notBefore. toInstant(), parent.notAfter.toInstant())
+    }
+
     /**
      * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range.
      * @param daysBefore number of days to roll back returned start date relative to current date.
      * @param daysAfter number of days to roll forward returned end date relative to current date.
      * @param parentNotBefore if provided is used to lower bound the date interval returned.
      * @param parentNotAfter if provided is used to upper bound the date interval returned.
-     * Note we use Date rather than LocalDate as the consuming java.security and BouncyCastle certificate apis all use Date.
-     * Thus we avoid too many round trip conversions.
      */
-    private fun getCertificateValidityWindow(daysBefore: Int, daysAfter: Int, parentNotBefore: Date? = null, parentNotAfter: Date? = null): Pair<Date, Date> {
+    private fun getCertificateValidityWindow(before: Duration,
+                                             after: Duration,
+                                             parentNotBefore: Instant? = null,
+                                             parentNotAfter: Instant? = null): Pair<Instant, Instant> {
         val startOfDayUTC = Instant.now().truncatedTo(ChronoUnit.DAYS)
-        val notBefore = Date.from(startOfDayUTC.minus(daysBefore.toLong(), ChronoUnit.DAYS)).let { notBefore ->
-            if (parentNotBefore != null && parentNotBefore.after(notBefore)) parentNotBefore else notBefore
+        val notBefore = (startOfDayUTC - before).let { notBefore ->
+            if (parentNotBefore != null && parentNotBefore > notBefore) parentNotBefore else notBefore
         }
-        val notAfter = Date.from(startOfDayUTC.plus(daysAfter.toLong(), ChronoUnit.DAYS)).let { notAfter ->
-            if (parentNotAfter != null && parentNotAfter.after(notAfter)) parentNotAfter else notAfter
+        val notAfter = (startOfDayUTC + after).let { notAfter ->
+            if (parentNotAfter != null && parentNotAfter < notAfter) parentNotAfter else notAfter
         }
         return Pair(notBefore, notAfter)
     }
@@ -103,7 +116,9 @@ object X509Utilities {
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
+    fun createSelfSignedCACert(subject: X500Name,
+                               keyPair: KeyPair,
+                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
         val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 2)
         return CertificateAndKeyPair(cert, keyPair)
@@ -111,7 +126,7 @@ object X509Utilities {
 
     @JvmStatic
     fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
-                               validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair
+                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair
             = createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
 
     /**
@@ -124,10 +139,13 @@ object X509Utilities {
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createIntermediateCert(subject: X500Name, ca: CertificateAndKeyPair, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME, validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
+    fun createIntermediateCert(subject: X500Name,
+                               ca: CertificateAndKeyPair,
+                               signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
+                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
         val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 1)
         return CertificateAndKeyPair(cert, keyPair)
     }
@@ -144,14 +162,14 @@ object X509Utilities {
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
     @JvmStatic
-    fun createServerCert(subject: X500Name, publicKey: PublicKey,
-                         ca: CertificateAndKeyPair,
-                         subjectAlternativeNameDomains: List<String>,
-                         subjectAlternativeNameIps: List<String>,
-                         validityWindow: Pair<Int, Int> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
+    fun createTlsServerCert(subject: X500Name, publicKey: PublicKey,
+                            ca: CertificateAndKeyPair,
+                            subjectAlternativeNameDomains: List<String>,
+                            subjectAlternativeNameIps: List<String>,
+                            validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
 
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate.notBefore, ca.certificate.notAfter)
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
         val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
         val ipAddresses = subjectAlternativeNameIps.filter {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
@@ -238,7 +256,7 @@ object X509Utilities {
 
         val serverKey = generateKeyPair(signatureScheme)
         val host = InetAddress.getLocalHost()
-        val serverCert = createServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
+        val serverCert = createTlsServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)
