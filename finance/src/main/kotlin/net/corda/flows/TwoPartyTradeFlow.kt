@@ -3,7 +3,6 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AnonymousParty
@@ -13,9 +12,7 @@ import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 import java.util.*
@@ -36,8 +33,6 @@ import java.util.*
  * that represents an atomic asset swap.
  *
  * Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
- *
- * TODO: Refactor this using the [CollectSignaturesFlow]. Note. It requires a large docsite update!
  */
 object TwoPartyTradeFlow {
     // TODO: Common elements in multi-party transaction consensus and signing should be refactored into a superclass of this
@@ -57,10 +52,6 @@ object TwoPartyTradeFlow {
             val sellerOwnerKey: PublicKey
     )
 
-    @CordaSerializable
-    data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
-                                    val notarySig: DigitalSignature.WithKey)
-
     open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
@@ -70,57 +61,43 @@ object TwoPartyTradeFlow {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
-            object VERIFYING : ProgressTracker.Step("Verifying transaction proposal")
-            object SIGNING : ProgressTracker.Step("Signing transaction")
-            // DOCSTART 3
-            object COMMITTING : ProgressTracker.Step("Committing transaction to the ledger") {
-                override fun childProgressTracker() = FinalityFlow.tracker()
+            object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal") {
+                override fun childProgressTracker() = SignTransactionFlow.tracker()
             }
-
+            // DOCSTART 3
             // DOCEND 3
-            object SENDING_FINAL_TX : ProgressTracker.Step("Sending final transaction to buyer")
+            object WAITING_FOR_TX : ProgressTracker.Step("Waiting for the transaction to finalise.")
 
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, COMMITTING, SENDING_FINAL_TX)
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING_AND_SIGNING, WAITING_FOR_TX)
         }
 
         // DOCSTART 4
         @Suspendable
         override fun call(): SignedTransaction {
-            val partialSTX: SignedTransaction = receiveAndCheckProposedTransaction()
-            val ourSignature = calculateOurSignature(partialSTX)
-            val unnotarisedSTX: SignedTransaction = partialSTX + ourSignature
-            val finishedSTX = subFlow(FinalityFlow(unnotarisedSTX)).single()
-            return finishedSTX
-        }
-        // DOCEND 4
-
-        // DOCSTART 5
-        @Suspendable
-        private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
-
             // Make the first message we'll send to kick off the flow.
             val hello = SellerTradeInfo(assetToSell, price, myKey)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            val untrustedSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
+            send(otherParty, hello)
 
-            progressTracker.currentStep = VERIFYING
-            return untrustedSTX.unwrap {
-                // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = it.verifySignatures(myKey, notaryNode.notaryIdentity.owningKey)
-                logger.trace { "Received partially signed transaction: ${it.id}" }
-
-                // Download and check all the things that this transaction depends on and verify it is contract-valid,
-                // even though it is missing signatures.
-                subFlow(ResolveTransactionsFlow(wtx, otherParty))
-
-                if (wtx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
-                    throw FlowException("Transaction is not sending us the right amount of cash")
-
-                it
+            // Verify and sign the transaction.
+            progressTracker.currentStep = VERIFYING_AND_SIGNING
+            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+                override fun checkTransaction(stx: SignedTransaction) {
+                    if (stx.tx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
+                        throw FlowException("Transaction is not sending us the right amount of cash")
+                }
             }
+            val stx = subFlow(signTransactionFlow)
+
+            // Wait for the finished, notarised transaction to arrive in our transaction store.
+            progressTracker.currentStep = WAITING_FOR_TX
+            return waitForLedgerCommit(stx.id)
         }
+        // DOCEND 4
+
+        // DOCSTART 5
         // DOCEND 5
 
         // Following comment moved here so that it doesn't appear in the docsite:
@@ -134,11 +111,6 @@ object TwoPartyTradeFlow {
         //
         // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
         // express flow state machines on top of the messaging layer.
-
-        open fun calculateOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
-            progressTracker.currentStep = SIGNING
-            return serviceHub.createSignature(partialTX, myKey)
-        }
     }
 
     open class Buyer(val otherParty: Party,
@@ -149,10 +121,14 @@ object TwoPartyTradeFlow {
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-        object SENDING_SIGNATURES : ProgressTracker.Step("Sending signatures to the seller")
-        object WAITING_FOR_TX : ProgressTracker.Step("Waiting for the transaction to finalise.")
+        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.") {
+            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+        }
+        object RECORDING : ProgressTracker.Step("Recording completed transaction.") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
 
-        override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SENDING_SIGNATURES, WAITING_FOR_TX)
+        override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING)
         // DOCEND 2
 
         // DOCSTART 1
@@ -165,16 +141,16 @@ object TwoPartyTradeFlow {
             // Put together a proposed transaction that performs the trade, and sign it.
             progressTracker.currentStep = SIGNING
             val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
-            val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+            val partSignedTx = signWithOurKeys(cashSigningPubKeys, ptx)
 
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
-            progressTracker.currentStep = SENDING_SIGNATURES
-            send(otherParty, stx)
+            progressTracker.currentStep = COLLECTING_SIGNATURES
+            val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx))
 
-            // Wait for the finished, notarised transaction to arrive in our transaction store.
-            progressTracker.currentStep = WAITING_FOR_TX
-            return waitForLedgerCommit(stx.id)
+            // Notarise and record the transaction.
+            progressTracker.currentStep = RECORDING
+            return subFlow(FinalityFlow(twiceSignedTx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
         }
 
         @Suspendable
@@ -186,7 +162,6 @@ object TwoPartyTradeFlow {
                 // What is the seller trying to sell us?
                 val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
-                logger.trace { "Got trade request for a $assetTypeName: ${it.assetForSale}" }
 
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
