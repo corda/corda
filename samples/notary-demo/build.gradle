@@ -41,7 +41,7 @@ publishing {
     publications {
         jarAndSources(MavenPublication) {
             from components.java
-            artifactId 'raftnotarydemo'
+            artifactId 'notarydemo'
 
             artifact sourceJar
             artifact javadocJar
