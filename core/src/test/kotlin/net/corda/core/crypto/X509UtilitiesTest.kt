@@ -56,7 +56,7 @@ class X509UtilitiesTest {
         val caCertAndKey = X509Utilities.createSelfSignedCACert(getTestX509Name("Test CA Cert"))
         val subjectDN = getTestX509Name("Server Cert")
         val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val serverCert = X509Utilities.createServerCert(subjectDN, keyPair.public, caCertAndKey, listOf("alias name"), listOf("10.0.0.54"))
+        val serverCert = X509Utilities.createTlsServerCert(subjectDN, keyPair.public, caCertAndKey, listOf("alias name"), listOf("10.0.0.54"))
         assertTrue { serverCert.subjectDN.name.contains("CN=Server Cert") } // using our subject common name
         assertEquals(caCertAndKey.certificate.issuerDN, serverCert.issuerDN) // Issued by our CA cert
         serverCert.checkValidity(Date()) // throws on verification problems
@@ -106,7 +106,7 @@ class X509UtilitiesTest {
         val tmpKeyStore = tempFile("keystore.jks")
         val ecDSACert = X509Utilities.createSelfSignedCACert(X500Name("CN=Test"))
         val edDSAKeypair = Crypto.generateKeyPair("EDDSA_ED25519_SHA512")
-        val edDSACert = X509Utilities.createServerCert(X500Name("CN=TestEdDSA"), edDSAKeypair.public, ecDSACert, listOf("alias name"), listOf("10.0.0.54"))
+        val edDSACert = X509Utilities.createTlsServerCert(X500Name("CN=TestEdDSA"), edDSAKeypair.public, ecDSACert, listOf("alias name"), listOf("10.0.0.54"))
 
         // Save the EdDSA private key with cert chains.
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
