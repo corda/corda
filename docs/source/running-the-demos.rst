@@ -113,8 +113,8 @@ Notary demo
 This demo shows a party getting transactions notarised by either a single notary node or a distributed notary service.
 All versions of the demo start two counterparty nodes.
 One of the counterparties will generate transactions that transfer a self-issued asset to the other party and submit them for notarisation.
-The `Raft <https://raft.github.io/>` version of the demo will start three distributed notary nodes.
-The `BFT SMaRt <https://bft-smart.github.io/library/>` version of the demo will start four distributed notary nodes.
+The `Raft <https://raft.github.io/>`_ version of the demo will start three distributed notary nodes.
+The `BFT SMaRt <https://bft-smart.github.io/library/>`_ version of the demo will start four distributed notary nodes.
 
 The output will display a list of notarised transaction IDs and corresponding signer public keys. In the Raft distributed notary,
 every node in the cluster can service client requests, and one signature is sufficient to satisfy the notary composite key requirement.
@@ -137,7 +137,7 @@ To run from the command line in Windows:
 3. Run ``gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
-To run the BFT SMaRt notary demo, use deployNodesBFT instead of deployNodesRaft. For a single notary node, use deployNodesSingle.
+To run the BFT SMaRt notary demo, use ``deployNodesBFT`` instead of ``deployNodesRaft``. For a single notary node, use ``deployNodesSingle``.
 
 Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
 You can ascertain that the commit log is synchronised across the cluster by accessing and comparing each of the nodes' backing stores
