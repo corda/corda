@@ -46,33 +46,35 @@ object X509Utilities {
     private val DEFAULT_VALIDITY_WINDOW = Pair(Duration.ofMillis(0), Duration.ofDays(365 * 10))
 
     /**
-     * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range.
-     * @param daysBefore number of days to roll back returned start date relative to current date.
-     * @param daysAfter number of days to roll forward returned end date relative to current date.
-     * @param parent certificate whose validity should bound the date interval returned.
+     * Helper function to return the latest out of an instant and an optional date.
      */
-    private fun getCertificateValidityWindow(before: Duration, after: Duration, parent: X509Certificate): Pair<Instant, Instant> {
-        return getCertificateValidityWindow(before, after, parent.notBefore. toInstant(), parent.notAfter.toInstant())
+    private fun max(first: Instant, second: Date?): Date {
+        return if (second != null && second.time > first.toEpochMilli())
+            second
+        else
+            Date(first.toEpochMilli())
+    }
+
+    /**
+     * Helper function to return the earliest out of an instant and an optional date.
+     */
+    private fun min(first: Instant, second: Date?): Date {
+        return if (second != null && second.time < first.toEpochMilli())
+            second
+        else
+            Date(first.toEpochMilli())
     }
 
     /**
      * Helper method to get a notBefore and notAfter pair from current day bounded by parent certificate validity range.
-     * @param daysBefore number of days to roll back returned start date relative to current date.
-     * @param daysAfter number of days to roll forward returned end date relative to current date.
-     * @param parentNotBefore if provided is used to lower bound the date interval returned.
-     * @param parentNotAfter if provided is used to upper bound the date interval returned.
+     * @param before duration to roll back returned start date relative to current date.
+     * @param after duration to roll forward returned end date relative to current date.
+     * @param parent if provided certificate whose validity should bound the date interval returned.
      */
-    private fun getCertificateValidityWindow(before: Duration,
-                                             after: Duration,
-                                             parentNotBefore: Instant? = null,
-                                             parentNotAfter: Instant? = null): Pair<Instant, Instant> {
+    private fun getCertificateValidityWindow(before: Duration, after: Duration, parent: X509Certificate? = null): Pair<Date, Date> {
         val startOfDayUTC = Instant.now().truncatedTo(ChronoUnit.DAYS)
-        val notBefore = (startOfDayUTC - before).let { notBefore ->
-            if (parentNotBefore != null && parentNotBefore > notBefore) parentNotBefore else notBefore
-        }
-        val notAfter = (startOfDayUTC + after).let { notAfter ->
-            if (parentNotAfter != null && parentNotAfter < notAfter) parentNotAfter else notAfter
-        }
+        val notBefore = max(startOfDayUTC - before, parent?.notBefore)
+        val notAfter = min(startOfDayUTC + after, parent?.notAfter)
         return Pair(notBefore, notAfter)
     }
 

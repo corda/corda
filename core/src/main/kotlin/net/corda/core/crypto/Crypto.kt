@@ -43,7 +43,6 @@ import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.time.Instant
 import java.util.*
 
 /**
@@ -562,17 +561,15 @@ object Crypto {
     fun createCertificate(issuer: X500Name, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
                           keyUsage: KeyUsage, purposes: List<KeyPurposeId>,
-                          validityWindow: Pair<Instant, Instant>,
+                          validityWindow: Pair<Date, Date>,
                           pathLength: Int? = null, subjectAlternativeName: List<GeneralName>? = null): X509Certificate {
 
         val signatureScheme = findSignatureScheme(issuerKeyPair.private)
         val provider = providerMap[signatureScheme.providerName]
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { purposes.forEach { add(it) } })
-        val notBefore = Date(validityWindow.first.toEpochMilli())
-        val notAfter = Date(validityWindow.second.toEpochMilli())
 
-        val builder = JcaX509v3CertificateBuilder(issuer, serial, notBefore, notAfter, subject, subjectPublicKey)
+        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(SubjectPublicKeyInfo.getInstance(subjectPublicKey.encoded)))
                 .addExtension(Extension.basicConstraints, pathLength != null, if (pathLength == null) BasicConstraints(false) else BasicConstraints(pathLength))
                 .addExtension(Extension.keyUsage, false, keyUsage)
