@@ -41,7 +41,7 @@ class NodeTabView : Fragment() {
         const val textWidth = 465.0
 
         val jvm by inject<JVMConfig>()
-        val cordappPathsFile = jvm.dataHome / "cordapp-paths.txt"
+        val cordappPathsFile: Path = jvm.dataHome / "cordapp-paths.txt"
 
         fun loadDefaultCordappPaths(): MutableList<Path> {
             if (cordappPathsFile.exists())
