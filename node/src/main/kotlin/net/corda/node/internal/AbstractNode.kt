@@ -391,7 +391,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: configuration.myLegalName.replaceCommonName(serviceId)
+            val serviceName = it.name ?: X500Name("${configuration.myLegalName},OU=$serviceId")
             val identity = obtainKeyPair(serviceId, serviceName).first
             ServiceEntry(it, identity)
         }
@@ -628,7 +628,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
             // TODO: Use a proper certificate chain.
             val host = InetAddress.getLocalHost()
-            val cert = X509Utilities.createIdentityCert(clientCA.certificate.subject, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
+            val cert = X509Utilities.createIdentityCert(serviceName, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
             keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
             keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(myIdentity, keyPair)
@@ -637,7 +637,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             val host = InetAddress.getLocalHost()
-            val cert = X509Utilities.createIdentityCert(clientCA.certificate.subject, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
+            val cert = X509Utilities.createIdentityCert(serviceName, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
             keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
             keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(Party(serviceName, keyPair.public), keyPair)
