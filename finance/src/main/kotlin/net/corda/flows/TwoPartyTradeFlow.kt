@@ -61,9 +61,7 @@ object TwoPartyTradeFlow {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
-            object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal") {
-                override fun childProgressTracker() = SignTransactionFlow.tracker()
-            }
+            object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal")
             // DOCSTART 3
             // DOCEND 3
             object WAITING_FOR_TX : ProgressTracker.Step("Waiting for the transaction to finalise.")
@@ -121,12 +119,8 @@ object TwoPartyTradeFlow {
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.") {
-            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
-        }
-        object RECORDING : ProgressTracker.Step("Recording completed transaction.") {
-            override fun childProgressTracker() = FinalityFlow.tracker()
-        }
+        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
+        object RECORDING : ProgressTracker.Step("Recording completed transaction.")
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING)
         // DOCEND 2
