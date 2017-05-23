@@ -61,6 +61,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
 import java.lang.reflect.Modifier.*
+import java.net.InetAddress
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -599,6 +600,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // TODO: Integrate with Key management service?
         val keystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+        val clientCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
@@ -625,18 +627,20 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
             // TODO: Use a proper certificate chain.
-            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
-            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            val host = InetAddress.getLocalHost()
+            val cert = X509Utilities.createIdentityCert(clientCA.certificate.subject, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
+            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
             keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(myIdentity, keyPair)
         } else {
             // Create new keys and store in keystore.
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
-            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
-            keystore.addOrReplaceKey(privateKeyAlias, selfSignCert.keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
+            val host = InetAddress.getLocalHost()
+            val cert = X509Utilities.createIdentityCert(clientCA.certificate.subject, keyPair.public, clientCA, listOf(host.hostName, serviceName.commonName), listOf(host.hostAddress))
+            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
             keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
-            Pair(Party(serviceName, selfSignCert.keyPair.public), selfSignCert.keyPair)
+            Pair(Party(serviceName, keyPair.public), keyPair)
         }
         partyKeys += identityAndKey.second
         return identityAndKey

@@ -35,7 +35,7 @@ object X509Utilities {
     val CORDA_CLIENT_CA = "cordaclientca"
 
     private val CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign)
-    private val TX_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
+    private val IDENTITY_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
     private val TLS_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement)
 
     private val CA_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage)
@@ -160,27 +160,33 @@ object X509Utilities {
         val ipAddresses = subjectAlternativeNameIps.filter {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
         }.map { GeneralName(GeneralName.iPAddress, it) }
-
-        return createClientCert(subject, publicKey, ca, dnsNames + ipAddresses, validityWindow, TLS_KEY_USAGE, CLIENT_KEY_PURPOSES)
-    }
-
-    private fun createClientCert(subject: X500Name, publicKey: PublicKey,
-                                 ca: CertificateAndKeyPair,
-                                 subjectAlternativeName: List<GeneralName>,
-                                 validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
-                                 keyUsage: KeyUsage, keyPurposes: List<KeyPurposeId>): X509Certificate {
-
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, keyUsage, keyPurposes, window, subjectAlternativeName = subjectAlternativeName, isCA = false)
+        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, TLS_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses, isCA = false)
+    }
+
+    @JvmStatic
+    fun createIdentityCert(subject: X500Name, publicKey: PublicKey,
+                      ca: CertificateAndKeyPair,
+                      subjectAlternativeNameDomains: List<String>,
+                      subjectAlternativeNameIps: List<String>,
+                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
+
+        val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
+        val ipAddresses = subjectAlternativeNameIps.filter {
+            IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
+        }.map { GeneralName(GeneralName.iPAddress, it) }
+        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
+        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, IDENTITY_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses, isCA = false)
     }
 
     /**
      * Build a certificate path from a trusted root certificate to a target certificate. This will always return a path
-     * directly from the root to the target, with no intermediate certificates (presuming that path is valid).
+     * directly from the target to the root.
      *
      * @param trustedRoot trusted root certificate that will be the start of the path.
-     * @param certificates certificate the path ends at.
+     * @param certificates certificates in the path.
      * @param revocationEnabled whether revocation of certificates in the path should be checked.
      */
     fun createCertificatePath(trustedRoot: X509Certificate, vararg certificates: X509Certificate, revocationEnabled: Boolean): CertPath {
