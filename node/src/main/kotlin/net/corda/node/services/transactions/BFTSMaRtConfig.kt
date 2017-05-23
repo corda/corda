@@ -2,10 +2,14 @@ package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
 import net.corda.core.div
+import net.corda.core.utilities.loggerFor
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.net.InetAddress
+import java.net.Socket
+import java.net.SocketException
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit.MILLISECONDS
 
 /**
  * BFT SMaRt can only be configured via files in a configHome directory.
@@ -14,6 +18,7 @@ import java.nio.file.Files
  */
 class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boolean = false) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
+        private val log = loggerFor<BFTSMaRtConfig>()
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 
@@ -47,10 +52,32 @@ class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boo
         }
     }
 
+    fun waitUntilReplicaWillNotPrintStackTrace(contextReplicaId: Int) {
+        replicaAddresses.subList(0, contextReplicaId).forEachIndexed { otherId, baseAddress ->
+            // The printStackTrace we want to avoid is in replica-replica communication code:
+            val address = BFTSMaRtPort.forReplicas.ofReplica(baseAddress)
+            log.debug("Waiting for replica $otherId to start listening on: $address")
+            while (!isOpen(address)) MILLISECONDS.sleep(200)
+            log.debug("Replica $otherId is ready for P2P.")
+        }
+    }
+
     private fun replicaPorts(replicaId: Int): List<HostAndPort> {
         val base = replicaAddresses[replicaId]
-        return (0..1).map { HostAndPort.fromParts(base.host, base.port + it) }
+        return BFTSMaRtPort.values().map { it.ofReplica(base) }
     }
+}
+
+private enum class BFTSMaRtPort(private val off: Int) {
+    forClients(0), forReplicas(1);
+
+    fun ofReplica(base: HostAndPort) = HostAndPort.fromParts(base.host, base.port + off)
+}
+
+private fun isOpen(address: HostAndPort) = try {
+    Socket(address.host, address.port).use { true } // Will cause one error to be logged in the replica on success.
+} catch (e: SocketException) {
+    false
 }
 
 fun maxFaultyReplicas(clusterSize: Int) = (clusterSize - 1) / 3
