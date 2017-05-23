@@ -669,8 +669,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
                 val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
                 BFTSMaRtConfig(notaryClusterAddresses).use { config ->
-                    val client = BFTSMaRt.Client(config, replicaId).also { tokenizableServices += it } // (Ab)use replicaId for clientId.
-                    BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database, client)
+                    BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database).also {
+                        tokenizableServices += it.client
+                        runOnStop += it::dispose
+                    }
                 }
             }
             else -> {

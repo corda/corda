@@ -65,7 +65,7 @@ system.communication.useSignatures = 0
 system.communication.useMACs = 1
 
 #Set to 1 if SMaRt should use the standard output to display debug messages, set to 0 if otherwise
-system.debug = 0
+system.debug = %s
 
 #Print information about the replica when it is shutdown
 system.shutdownhook = true
@@ -109,7 +109,7 @@ system.totalordermulticast.sync_ckp = false
 
 #Replicas ID for the initial view, separated by a comma.
 # The number of replicas in this parameter should be equal to that specified in 'system.servers.num'
-system.initial.view = 0,1,2,3
+system.initial.view = %s
 
 #The ID of the trust third party (TTP)
 system.ttp.id = 7002

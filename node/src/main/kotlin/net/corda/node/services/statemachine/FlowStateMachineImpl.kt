@@ -6,6 +6,7 @@ import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
 import net.corda.core.crypto.SecureHash
@@ -40,11 +41,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                               override val flowInitiator: FlowInitiator) : Fiber<Unit>(id.toString(), scheduler), FlowStateMachine<R> {
     companion object {
         // Used to work around a small limitation in Quasar.
-        private val QUASAR_UNBLOCKER = run {
-            val field = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER")
-            field.isAccessible = true
-            field.get(null)
-        }
+        private val QUASAR_UNBLOCKER = declaredField<Any>(Fiber::class, "SERIALIZER_BLOCKER").value
 
         /**
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
