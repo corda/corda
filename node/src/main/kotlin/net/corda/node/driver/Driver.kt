@@ -32,6 +32,8 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.cordform.CordformNode
 import net.corda.cordform.CordformContext
+import net.corda.core.internal.ShutdownHook
+import net.corda.core.internal.addShutdownHook
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
@@ -239,7 +241,7 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
     var shutdownHook: ShutdownHook? = null
     try {
         driverDsl.start()
-        shutdownHook = atexit {
+        shutdownHook = addShutdownHook {
             driverDsl.shutdown()
         }
         return dsl(coerce(driverDsl))

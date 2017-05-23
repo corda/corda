@@ -15,8 +15,6 @@ class NodeTest : NodeBasedTest() {
     fun `empty plugins directory`() {
         val baseDirectory = baseDirectory(ALICE.name)
         (baseDirectory / "plugins").createDirectories()
-        val node = startNode(ALICE.name).getOrThrow()
-        // Make sure we created the plugins dir in the correct place
-        assertThat(baseDirectory).isEqualTo(node.configuration.baseDirectory)
+        startNode(ALICE.name).getOrThrow()
     }
 }

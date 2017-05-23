@@ -14,10 +14,12 @@ internal object SerialFilter {
 
     init {
         // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports:
-        fun getFilterInterface(packageName: String) = try {
-            Class.forName("$packageName.ObjectInputFilter")
-        } catch (e: ClassNotFoundException) {
-            null
+        fun getFilterInterface(packageName: String): Class<*>? {
+            return try {
+                Class.forName("$packageName.ObjectInputFilter")
+            } catch (e: ClassNotFoundException) {
+                null
+            }
         }
         // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
         filterInterface = getFilterInterface("java.io")

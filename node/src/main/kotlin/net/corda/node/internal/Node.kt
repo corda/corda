@@ -6,6 +6,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
+import net.corda.core.internal.ShutdownHook
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
@@ -291,7 +293,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
             (startupComplete as SettableFuture<Unit>).set(Unit)
         }
-        shutdownHook = atexit {
+        shutdownHook = addShutdownHook {
             stop()
         }
         return this

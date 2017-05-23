@@ -1,8 +1,7 @@
 package net.corda.node.internal
 
-import net.corda.core.atexit
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.div
-import net.corda.core.utilities.loggerFor
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.nio.file.Path
@@ -27,7 +26,7 @@ fun enforceSingleNodeIsRunning(baseDirectory: Path) {
     }
     // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
     // when our process shuts down, but we try in stop() anyway just to be nice.
-    atexit {
+    addShutdownHook {
         pidFileLock.release()
     }
     val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]

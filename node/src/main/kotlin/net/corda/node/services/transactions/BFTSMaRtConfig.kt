@@ -16,20 +16,11 @@ class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager(Files.cr
     }
 
     init {
-        mutableSetOf<Int>().let { claimed ->
-            replicaAddresses.map { it.port }.forEach { base ->
-                // Each replica claims the configured port and the next one:
-                (0..1).map { base + it }.forEach { port ->
-                    claimed.add(port) || throw IllegalArgumentException(portIsClaimedFormat.format(port, claimed))
-                }
-            }
-        }
-        fun configWriter(name: String, block: PrintWriter.() -> Unit) {
-            // Default charset, consistent with loaders:
-            FileWriter((path / name).toFile()).use {
-                PrintWriter(it).use {
-                    it.run(block)
-                }
+        val claimedPorts = mutableSetOf<Int>()
+        replicaAddresses.map { it.port }.forEach { base ->
+            // Each replica claims the configured port and the next one:
+            (0..1).map { base + it }.forEach { port ->
+                claimedPorts.add(port) || throw IllegalArgumentException(portIsClaimedFormat.format(port, claimedPorts))
             }
         }
         configWriter("hosts.config") {
@@ -44,13 +35,22 @@ class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager(Files.cr
             print(systemConfig)
         }
     }
+
+    private fun configWriter(name: String, block: PrintWriter.() -> Unit) {
+        // Default charset, consistent with loaders:
+        FileWriter((path / name).toFile()).use {
+            PrintWriter(it).use {
+                it.run(block)
+            }
+        }
+    }
 }
 
 fun maxFaultyReplicas(clusterSize: Int) = (clusterSize - 1) / 3
 fun minCorrectReplicas(clusterSize: Int) = (2 * clusterSize + 3) / 3
 fun minClusterSize(maxFaultyReplicas: Int) = maxFaultyReplicas * 3 + 1
 
-fun bftSMaRtSerialFilter(clazz: Class<*>) = clazz.name.let {
+fun bftSMaRtSerialFilter(clazz: Class<*>): Boolean = clazz.name.let {
     it.startsWith("bftsmart.")
             || it.startsWith("java.security.")
             || it.startsWith("java.util.")
