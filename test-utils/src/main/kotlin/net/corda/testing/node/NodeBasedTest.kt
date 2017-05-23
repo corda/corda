@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors.listeningDecorator
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
@@ -57,8 +58,8 @@ abstract class NodeBasedTest {
      */
     @After
     fun stopAllNodes() {
-        val shutdownExecutor = Executors.newScheduledThreadPool(1)
-        nodes.forEach(Node::stop)
+        val shutdownExecutor = listeningDecorator(Executors.newScheduledThreadPool(nodes.size))
+        Futures.allAsList(nodes.map { shutdownExecutor.submit(it::stop) }).getOrThrow()
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
