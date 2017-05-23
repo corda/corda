@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
@@ -108,7 +109,7 @@ abstract class NodeBasedTest {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { tempFolder.root.toPath() / "${notaryName.commonName}-$it" },
+                (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
                 serviceType.id,
                 notaryName)
 
