@@ -32,4 +32,10 @@ open class PathHandle internal constructor(private val deleteOnExitPath: DeleteO
     }
 }
 
+/**
+ * An instance of this class is a handle on a temporary [path].
+ * If necessary, additional handles on the same path can be created using the [handle] method.
+ * The path is (recursively) deleted when [close] is called on the last handle, typically at the end of a [use] expression.
+ * The value of eager cleanup of temporary files is that there are cases when shutdown hooks don't run e.g. SIGKILL.
+ */
 open class PathManager(path: Path) : PathHandle(DeleteOnExitPath(path), AtomicInteger())

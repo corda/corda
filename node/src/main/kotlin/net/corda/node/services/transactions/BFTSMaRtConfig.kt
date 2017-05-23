@@ -8,7 +8,9 @@ import java.net.InetAddress
 import java.nio.file.Files
 
 /**
- * The config directory will be deleted when this and all additional handles are closed.
+ * BFT SMaRt can only be configured via files in a configHome directory.
+ * Each instance of this class creates such a configHome, accessible via [path].
+ * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
 class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager(Files.createTempDirectory("bft-smart-config")) {
     companion object {
