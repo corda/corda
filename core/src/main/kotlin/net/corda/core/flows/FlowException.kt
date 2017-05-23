@@ -13,10 +13,7 @@ import net.corda.core.utilities.CordaRuntimeException
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
  */
 open class FlowException(message: String?,
-                         cause: Throwable?,
-                         stackTrace: Array<StackTraceElement>?,
-                         suppressed: Array<Throwable>) : CordaException(message, cause, stackTrace, suppressed) {
-    constructor(message: String?, cause: Throwable?) : this(message, cause, null, emptyArray())
+                         cause: Throwable?) : CordaException(message, cause) {
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
@@ -28,9 +25,6 @@ open class FlowException(message: String?,
  * were waiting for a response.
  */
 class FlowSessionException(message: String?,
-                           cause: Throwable?,
-                           stackTrace: Array<StackTraceElement>?,
-                           suppressed: Array<Throwable>) : CordaRuntimeException(message, cause, stackTrace, suppressed) {
-    constructor(message: String?, cause: Throwable?) : this(message, cause, null, emptyArray())
+                           cause: Throwable?) : CordaRuntimeException(message, cause) {
     constructor(msg: String) : this(msg, null)
 }

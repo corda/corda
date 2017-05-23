@@ -4,30 +4,45 @@ import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 @CordaSerializable
-open class CordaException internal constructor(val originalExceptionClassName: String?,
-                                               message: String?,
-                                               cause: Throwable?,
-                                               stackTrace: Array<StackTraceElement>?,
-                                               suppressed: Array<Throwable>) : Exception(message, cause, true, true) {
-    constructor(message: String?,
-                cause: Throwable?,
-                stackTrace: Array<StackTraceElement>?,
-                suppressed: Array<Throwable>) : this(null, message, cause, stackTrace, suppressed)
+interface CordaThrowable {
+    var originalExceptionClassName: String?
+    val originalMessage: String?
+    fun setMessage(message: String?)
+    fun setCause(cause: Throwable?)
+    fun addSuppressed(suppressed: Array<Throwable>)
+}
 
-    init {
-        if (stackTrace != null) setStackTrace(stackTrace)
+open class CordaException internal constructor(override var originalExceptionClassName: String? = null,
+                                               private var _message: String? = null,
+                                               private var _cause: Throwable? = null) : Exception(null, null, true, true), CordaThrowable {
+
+    constructor(message: String?,
+                cause: Throwable?) : this(null, message, cause)
+
+    override val message: String?
+        get() = if (originalExceptionClassName == null) originalMessage else {
+            if (originalMessage == null) "$originalExceptionClassName" else "$originalExceptionClassName: $originalMessage"
+        }
+
+    override val cause: Throwable?
+        get() = _cause ?: super.cause
+
+    override fun setMessage(message: String?) {
+        _message = message
+    }
+
+    override fun setCause(cause: Throwable?) {
+        _cause = cause
+    }
+
+    override fun addSuppressed(suppressed: Array<Throwable>) {
         for (suppress in suppressed) {
             addSuppressed(suppress)
         }
     }
 
-    override val message: String?
-        get() = if (originalExceptionClassName == null) originalMessage else {
-            if (originalMessage == null) "$originalExceptionClassName" else "$originalExceptionClassName: ${super.message}"
-        }
-
-    val originalMessage: String?
-        get() = super.message
+    override val originalMessage: String?
+        get() = _message
 
     override fun hashCode(): Int {
         return Arrays.deepHashCode(stackTrace) xor Objects.hash(originalExceptionClassName, originalMessage)
@@ -43,31 +58,36 @@ open class CordaException internal constructor(val originalExceptionClassName: S
     }
 }
 
-@CordaSerializable
-open class CordaRuntimeException internal constructor(val originalExceptionClassName: String?,
-                                                      message: String?,
-                                                      cause: Throwable?,
-                                                      stackTrace: Array<StackTraceElement>?,
-                                                      suppressed: Array<Throwable>) : RuntimeException(message, cause, true, true) {
+open class CordaRuntimeException internal constructor(override var originalExceptionClassName: String?,
+                                                      private var _message: String? = null,
+                                                      private var _cause: Throwable? = null) : RuntimeException(null, null, true, true), CordaThrowable {
     constructor(message: String?,
-                cause: Throwable?,
-                stackTrace: Array<StackTraceElement>?,
-                suppressed: Array<Throwable>) : this(null, message, cause, stackTrace, suppressed)
+                cause: Throwable?) : this(null, message, cause)
 
-    init {
-        if (stackTrace != null) setStackTrace(stackTrace)
+    override val message: String?
+        get() = if (originalExceptionClassName == null) originalMessage else {
+            if (originalMessage == null) "$originalExceptionClassName" else "$originalExceptionClassName: $originalMessage"
+        }
+
+    override val cause: Throwable?
+        get() = _cause ?: super.cause
+
+    override fun setMessage(message: String?) {
+        _message = message
+    }
+
+    override fun setCause(cause: Throwable?) {
+        _cause = cause
+    }
+
+    override fun addSuppressed(suppressed: Array<Throwable>) {
         for (suppress in suppressed) {
             addSuppressed(suppress)
         }
     }
 
-    override val message: String?
-        get() = if (originalExceptionClassName == null) originalMessage else {
-            if (originalMessage == null) "$originalExceptionClassName" else "$originalExceptionClassName: ${super.message}"
-        }
-
-    val originalMessage: String?
-        get() = super.message
+    override val originalMessage: String?
+        get() = _message
 
     override fun hashCode(): Int {
         return Arrays.deepHashCode(stackTrace) xor Objects.hash(originalExceptionClassName, originalMessage)

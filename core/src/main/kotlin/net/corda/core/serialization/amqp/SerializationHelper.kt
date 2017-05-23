@@ -1,14 +1,17 @@
 package net.corda.core.serialization.amqp
 
+import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
 import java.beans.Introspector
 import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
+import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaType
@@ -74,7 +77,7 @@ private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>
         val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz. If using Java, check that you have the -parameters option specified in the Java compiler.")
         // Check that the method has a getter in java.
         val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz. If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
-        if (getter.genericReturnType == param.type.javaType) {
+        if (constructorParamTakesReturnTypeOfGetter(getter, param)) {
             rc += PropertySerializer.make(name, getter)
         } else {
             throw NotSerializableException("Property type ${getter.genericReturnType} for $name of $clazz differs from constructor parameter type ${param.type.javaType}")
@@ -82,6 +85,8 @@ private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>
     }
     return rc
 }
+
+private fun constructorParamTakesReturnTypeOfGetter(getter: Method, param: KParameter): Boolean = TypeToken.of(param.type.javaType).isSupertypeOf(getter.genericReturnType)
 
 private fun propertiesForSerialization(clazz: Class<*>): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.

@@ -61,15 +61,14 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput) {
             val proxy = toProxy(obj)
             data.withList {
-                val selfContainedOuput = SerializationOutput(output.serializerFactory)
                 for (property in proxySerializer.propertySerializers) {
-                    property.writeProperty(proxy, this, selfContainedOuput)
+                    property.writeProperty(proxy, this, output)
                 }
             }
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
-            val proxy = proxySerializer.readObject(obj, schema, DeserializationInput(input.serializerFactory)) as P
+            val proxy = proxySerializer.readObject(obj, schema, input) as P
             return fromProxy(proxy)
         }
     }

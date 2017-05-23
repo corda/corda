@@ -2,30 +2,60 @@ package net.corda.core.serialization.amqp.custom
 
 import net.corda.core.serialization.amqp.CustomSerializer
 import net.corda.core.serialization.amqp.SerializerFactory
+import net.corda.core.serialization.amqp.constructorForDeserialization
+import net.corda.core.serialization.amqp.propertiesForSerialization
 import net.corda.core.utilities.CordaRuntimeException
-import java.lang.reflect.Constructor
+import net.corda.core.utilities.CordaThrowable
+import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> =
             listOf(StackTraceElementSerializer(factory), StackTraceElementArraySerializer(factory), ThrowableArraySerializer(factory))
 
     override fun toProxy(obj: Throwable): ThrowableProxy {
-        return ThrowableProxy(obj.javaClass.name, obj.message, obj.stackTrace, obj.cause, obj.suppressed)
+        val extraProperties: MutableMap<String, Any?> = LinkedHashMap()
+        val message = if (obj is CordaThrowable) {
+            // Try and find a constructor
+            try {
+                val `constructor` = constructorForDeserialization(obj.javaClass)
+                val props = propertiesForSerialization(`constructor`, obj.javaClass)
+                for (prop in props) {
+                    extraProperties[prop.name] = prop.readMethod.invoke(obj)
+                }
+            } catch(e: NotSerializableException) {
+            }
+            obj.originalMessage
+        } else {
+            obj.message
+        }
+        return ThrowableProxy(obj.javaClass.name, message, obj.stackTrace, obj.cause, obj.suppressed, extraProperties)
     }
 
     override fun fromProxy(proxy: ThrowableProxy): Throwable {
-        with(proxy) {
-            var exceptionConstructor: Constructor<out Throwable>? = null
-            try {
-                // TODO: This will need reworking when we have multiple class loaders
-                val clazz = Class.forName(exceptionClass, false, this.javaClass.classLoader)
-                if (factory.hasAnnotationInHierarchy(clazz)) {
-                    // Now see if we have the necessary constructor
-                    exceptionConstructor = clazz.getDeclaredConstructor(String::class.java, Throwable::class.java, Array<StackTraceElement>::class.java, Array<Throwable>::class.java) as Constructor<out Throwable>
+        try {
+            // TODO: This will need reworking when we have multiple class loaders
+            var clazz = Class.forName(proxy.exceptionClass, false, this.javaClass.classLoader)
+            // If it is CordaException or CordaRuntimeException, we can seek any constructor and then set the properties
+            // Otherwise we just make a CordaRuntimeException
+            if (CordaThrowable::class.java.isAssignableFrom(clazz) && Throwable::class.java.isAssignableFrom(clazz)) {
+                val `constructor` = constructorForDeserialization(clazz)!!
+                return ((`constructor`.callBy(`constructor`.parameters.map { it to proxy.additionalProperties[it.name] }.toMap()) as CordaThrowable).apply {
+                    if (this.javaClass.name != proxy.exceptionClass) this.originalExceptionClassName = proxy.exceptionClass
+                    this.setMessage(proxy.message)
+                    this.setCause(proxy.cause)
+                    this.addSuppressed(proxy.suppressed)
+                } as Throwable).apply {
+                    this.stackTrace = proxy.stackTrace
                 }
-            } catch (e: Exception) {
             }
-            return exceptionConstructor?.newInstance(message, cause, stackTrace, suppressed) ?: CordaRuntimeException(exceptionClass, message, cause, stackTrace, suppressed)
+        } catch (e: Exception) {
+        }
+        // If the criteria are not met or we experience an exception constructing the exception, we fall back to our own unchecked exception.
+        return CordaRuntimeException(proxy.exceptionClass).apply {
+            this.setMessage(proxy.message)
+            this.setCause(proxy.cause)
+            this.stackTrace = proxy.stackTrace
+            this.addSuppressed(proxy.suppressed)
         }
     }
 
@@ -34,7 +64,8 @@ class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<T
             val message: String?,
             val stackTrace: Array<StackTraceElement>,
             val cause: Throwable?,
-            val suppressed: Array<Throwable>)
+            val suppressed: Array<Throwable>,
+            val additionalProperties: Map<String, Any?>)
 }
 
 class StackTraceElementSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<StackTraceElement, StackTraceElementSerializer.StackTraceElementProxy>(StackTraceElement::class.java, StackTraceElementProxy::class.java, factory) {
