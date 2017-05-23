@@ -8,6 +8,7 @@ import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.DUMMY_MAP
+import net.corda.core.utilities.WHITESPACE
 import net.corda.node.driver.addressMustNotBeBound
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
@@ -133,7 +134,7 @@ abstract class NodeBasedTest {
         }
     }
 
-    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.commonName
+    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.commonName.replace(WHITESPACE, "")
 
     private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,

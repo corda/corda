@@ -50,7 +50,7 @@ fun maxFaultyReplicas(clusterSize: Int) = (clusterSize - 1) / 3
 fun minCorrectReplicas(clusterSize: Int) = (2 * clusterSize + 3) / 3
 fun minClusterSize(maxFaultyReplicas: Int) = maxFaultyReplicas * 3 + 1
 
-fun bftSMaRtSerialFilter(clazz: Class<*>?) = null == clazz || ByteArray::class.java == clazz || clazz.name.let {
+fun bftSMaRtSerialFilter(clazz: Class<*>) = clazz.name.let {
     it.startsWith("bftsmart.")
             || it.startsWith("java.security.")
             || it.startsWith("java.util.")
