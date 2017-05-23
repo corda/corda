@@ -7,7 +7,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
-import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.math.CubicSplineInterpolator
@@ -235,7 +234,7 @@ object NodeInterestRates {
     }
 
     // TODO: can we split into two?  Fix not available (retryable/transient) and unknown (permanent)
-    class UnknownFix(val fix: FixOf) : FlowException("Unknown fix: $fix")
+    class UnknownFix(val fix: FixOf) : RetryableException("Unknown fix: $fix")
 
     /** Fix container, for every fix name & date pair stores a tenor to interest rate map - [InterpolatingRateMap] */
     class FixContainer(val fixes: Set<Fix>, val factory: InterpolatorFactory = CubicSplineInterpolator) {
