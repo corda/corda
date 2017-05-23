@@ -87,10 +87,10 @@ class InMemoryIdentityServiceTests {
     fun `assert ownership`() {
         val aliceRootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name)
         val aliceTxCertAndKey = X509Utilities.createIntermediateCert(ALICE.name, aliceRootCertAndKey)
-        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCertAndKey, aliceTxCertAndKey, false).certPath
+        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCertAndKey, aliceTxCertAndKey.certificate, false).certPath
         val bobRootCertAndKey = X509Utilities.createSelfSignedCACert(BOB.name)
         val bobTxCertAndKey = X509Utilities.createIntermediateCert(BOB.name, bobRootCertAndKey)
-        val bobCertPath = X509Utilities.createCertificatePath(bobRootCertAndKey, bobTxCertAndKey, false).certPath
+        val bobCertPath = X509Utilities.createCertificatePath(bobRootCertAndKey, bobTxCertAndKey.certificate, false).certPath
         val service = InMemoryIdentityService()
         val alice = Party(aliceRootCertAndKey)
         val anonymousAlice = AnonymousParty(aliceTxCertAndKey.keyPair.public)

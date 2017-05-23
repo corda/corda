@@ -188,15 +188,15 @@ object X509Utilities {
      * @param revocationEnabled whether revocation of certificates in the path should be checked.
      */
     fun createCertificatePath(rootCertAndKey: CertificateAndKeyPair,
-                              targetCertAndKey: CertificateAndKeyPair,
+                              targetCertAndKey: X509Certificate,
                               revocationEnabled: Boolean): CertPathBuilderResult {
-        val intermediateCertificates = setOf(targetCertAndKey.certificate)
+        val intermediateCertificates = setOf(targetCertAndKey)
         val certStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(intermediateCertificates))
         val certPathFactory = CertPathBuilder.getInstance("PKIX")
         val trustAnchor = TrustAnchor(rootCertAndKey.certificate, null)
         val certPathParameters = try {
             PKIXBuilderParameters(setOf(trustAnchor), X509CertSelector().apply {
-                certificate = targetCertAndKey.certificate
+                certificate = targetCertAndKey
             })
         } catch (ex: InvalidAlgorithmParameterException) {
             throw RuntimeException(ex)
