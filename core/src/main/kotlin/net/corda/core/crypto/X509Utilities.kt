@@ -35,7 +35,6 @@ object X509Utilities {
     val CORDA_CLIENT_CA = "cordaclientca"
 
     private val CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign)
-    private val CLIENT_CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign)
     private val TX_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
     private val TLS_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement)
 
