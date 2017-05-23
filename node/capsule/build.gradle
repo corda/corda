@@ -19,15 +19,12 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-dependencies {
-    compile project(':node')
-}
-
-task buildCordaJAR(type: FatCapsule) {
+task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_release_version}.jar"
     applicationSource = files(
-            project.tasks.findByName('jar'),
+            project(':node').configurations.compile,
+            project(':node').jar,
             '../build/classes/main/CordaCaplet.class',
             '../build/classes/main/CordaCaplet$1.class',
             "$rootDir/config/dev/log4j2.xml"
