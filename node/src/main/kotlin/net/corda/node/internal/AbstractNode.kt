@@ -400,16 +400,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
     private fun hasSSLCertificates(): Boolean {
-        val keyStore = try {
+        val (sslKeystore, keystore) = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+            Pair(KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword), KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword))
         } catch (e: IOException) {
-            null
+            return false
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
-            null
+            return false
         }
-        return keyStore?.containsAlias(X509Utilities.CORDA_CLIENT_CA) ?: false
+        return sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && keystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
     }
 
     // Specific class so that MockNode can catch it.
@@ -598,12 +598,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
-        val keystore = KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+        val keystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
 
-        val identityAndKey = if (configuration.keyStoreFile.exists() && keystore.containsAlias(privateKeyAlias)) {
+        val identityAndKey = if (configuration.nodeKeystore.exists() && keystore.containsAlias(privateKeyAlias)) {
             // Get keys from keystore.
             val (cert, keyPair) = keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
             val loadedServiceName = X509CertificateHolder(cert.encoded).subject
@@ -627,7 +627,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // TODO: Use a proper certificate chain.
             val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
             keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
-            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
+            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(myIdentity, keyPair)
         } else {
             // Create new keys and store in keystore.
@@ -635,7 +635,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val keyPair: KeyPair = generateKeyPair()
             val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
             keystore.addOrReplaceKey(privateKeyAlias, selfSignCert.keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
-            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
+            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(Party(serviceName, selfSignCert.keyPair.public), selfSignCert.keyPair)
         }
         partyKeys += identityAndKey.second

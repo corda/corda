@@ -15,6 +15,7 @@ import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
@@ -39,7 +40,7 @@ import java.math.BigInteger
 import java.security.*
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -562,7 +563,9 @@ object Crypto {
                           subject: X500Name, subjectPublicKey: PublicKey,
                           keyUsage: KeyUsage, purposes: List<KeyPurposeId>,
                           validityWindow: Pair<Date, Date>,
-                          pathLength: Int? = null, subjectAlternativeName: List<GeneralName>? = null): X509Certificate {
+                          subjectAlternativeName: List<GeneralName>? = null,
+                          nameConstraints: NameConstraints? = null,
+                          isCA: Boolean = true): X509Certificate {
 
         val signatureScheme = findSignatureScheme(issuerKeyPair.private)
         val provider = providerMap[signatureScheme.providerName]
@@ -571,13 +574,18 @@ object Crypto {
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
                 .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(SubjectPublicKeyInfo.getInstance(subjectPublicKey.encoded)))
-                .addExtension(Extension.basicConstraints, pathLength != null, if (pathLength == null) BasicConstraints(false) else BasicConstraints(pathLength))
+                .addExtension(Extension.basicConstraints, isCA, BasicConstraints(isCA))
                 .addExtension(Extension.keyUsage, false, keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
 
         if (subjectAlternativeName != null && subjectAlternativeName.isNotEmpty()) {
             builder.addExtension(Extension.subjectAlternativeName, false, DERSequence(subjectAlternativeName.toTypedArray()))
         }
+
+        if (nameConstraints != null) {
+            builder.addExtension(Extension.nameConstraints, true, nameConstraints)
+        }
+
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
         return JcaX509CertificateConverter().setProvider(provider).getCertificate(builder.build(signer)).apply {
             checkValidity(Date())

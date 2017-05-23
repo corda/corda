@@ -5,9 +5,7 @@ import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
-import org.bouncycastle.asn1.x509.GeneralName
-import org.bouncycastle.asn1.x509.KeyPurposeId
-import org.bouncycastle.asn1.x509.KeyUsage
+import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.IPAddress
@@ -17,11 +15,11 @@ import java.io.FileWriter
 import java.io.InputStream
 import java.net.InetAddress
 import java.nio.file.Path
-import java.security.InvalidAlgorithmParameterException
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
 import java.security.cert.*
+import java.security.cert.Certificate
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -31,15 +29,16 @@ object X509Utilities {
     val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
     // Aliases for private keys and certificates.
-    val CORDA_ROOT_CA_PRIVATE_KEY = "cordarootcaprivatekey"
     val CORDA_ROOT_CA = "cordarootca"
-    val CORDA_INTERMEDIATE_CA_PRIVATE_KEY = "cordaintermediatecaprivatekey"
     val CORDA_INTERMEDIATE_CA = "cordaintermediateca"
-    val CORDA_CLIENT_CA_PRIVATE_KEY = "cordaclientcaprivatekey"
+    val CORDA_CLIENT_TLS = "cordaclienttls"
     val CORDA_CLIENT_CA = "cordaclientca"
 
-    private val CA_KEY_USAGE = KeyUsage(KeyUsage.keyCertSign or KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.dataEncipherment or KeyUsage.cRLSign)
-    private val CLIENT_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
+    private val CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign)
+    private val CLIENT_CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign)
+    private val TX_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
+    private val TLS_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement)
+
     private val CA_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage)
     private val CLIENT_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth)
 
@@ -118,38 +117,26 @@ object X509Utilities {
      * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name,
-                               keyPair: KeyPair,
-                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
+    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 2)
+        val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window)
         return CertificateAndKeyPair(cert, keyPair)
     }
-
-    @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
-                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair
-            = createSelfSignedCACert(subject, generateKeyPair(signatureScheme), validityWindow)
 
     /**
      * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
      * @param subject subject of the generated certificate.
+     * @param publicKey subject 's public key.
      * @param ca The Public certificate and KeyPair of the root CA certificate above this used to sign it.
-     * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createIntermediateCert(subject: X500Name,
-                               ca: CertificateAndKeyPair,
-                               signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
-                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
-        val keyPair = generateKeyPair(signatureScheme)
-        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
+    fun createIntermediateCACert(subject: X500Name, publicKey: PublicKey, ca: CertificateAndKeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW, nameConstraints: NameConstraints? = null): X509Certificate {
+        val issuer = ca.certificate.subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
-        val cert = Crypto.createCertificate(issuer, ca.keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window, pathLength = 1)
-        return CertificateAndKeyPair(cert, keyPair)
+        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CA_KEY_USAGE, CA_KEY_PURPOSES, window, nameConstraints = nameConstraints)
     }
 
     /**
@@ -164,47 +151,54 @@ object X509Utilities {
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
     @JvmStatic
-    fun createTlsServerCert(subject: X500Name, publicKey: PublicKey,
-                            ca: CertificateAndKeyPair,
-                            subjectAlternativeNameDomains: List<String>,
-                            subjectAlternativeNameIps: List<String>,
-                            validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
+    fun createTLSCert(subject: X500Name, publicKey: PublicKey,
+                      ca: CertificateAndKeyPair,
+                      subjectAlternativeNameDomains: List<String>,
+                      subjectAlternativeNameIps: List<String>,
+                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
 
-        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
         val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
         val ipAddresses = subjectAlternativeNameIps.filter {
             IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
         }.map { GeneralName(GeneralName.iPAddress, it) }
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CLIENT_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses)
+
+        return createClientCert(subject, publicKey, ca, dnsNames + ipAddresses, validityWindow, TLS_KEY_USAGE, CLIENT_KEY_PURPOSES)
+    }
+
+    private fun createClientCert(subject: X500Name, publicKey: PublicKey,
+                                 ca: CertificateAndKeyPair,
+                                 subjectAlternativeName: List<GeneralName>,
+                                 validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
+                                 keyUsage: KeyUsage, keyPurposes: List<KeyPurposeId>): X509Certificate {
+
+        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
+        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, keyUsage, keyPurposes, window, subjectAlternativeName = subjectAlternativeName, isCA = false)
     }
 
     /**
      * Build a certificate path from a trusted root certificate to a target certificate. This will always return a path
      * directly from the root to the target, with no intermediate certificates (presuming that path is valid).
      *
-     * @param rootCertAndKey trusted root certificate that will be the start of the path.
-     * @param targetCertAndKey certificate the path ends at.
+     * @param trustedRoot trusted root certificate that will be the start of the path.
+     * @param certificates certificate the path ends at.
      * @param revocationEnabled whether revocation of certificates in the path should be checked.
      */
-    fun createCertificatePath(rootCertAndKey: CertificateAndKeyPair,
-                              targetCertAndKey: X509Certificate,
-                              revocationEnabled: Boolean): CertPathBuilderResult {
-        val intermediateCertificates = setOf(targetCertAndKey)
-        val certStore = CertStore.getInstance("Collection", CollectionCertStoreParameters(intermediateCertificates))
-        val certPathFactory = CertPathBuilder.getInstance("PKIX")
-        val trustAnchor = TrustAnchor(rootCertAndKey.certificate, null)
-        val certPathParameters = try {
-            PKIXBuilderParameters(setOf(trustAnchor), X509CertSelector().apply {
-                certificate = targetCertAndKey
-            })
-        } catch (ex: InvalidAlgorithmParameterException) {
-            throw RuntimeException(ex)
-        }.apply {
-            addCertStore(certStore)
-            isRevocationEnabled = revocationEnabled
-        }
-        return certPathFactory.build(certPathParameters)
+    fun createCertificatePath(trustedRoot: X509Certificate, vararg certificates: X509Certificate, revocationEnabled: Boolean): CertPath {
+        val certFactory = CertificateFactory.getInstance("X509")
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
+        params.isRevocationEnabled = revocationEnabled
+        return certFactory.generateCertPath(certificates.toList())
+    }
+
+    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
+        require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
+        val certFactory = CertificateFactory.getInstance("X509")
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
+        params.isRevocationEnabled = false
+        val certPath = certFactory.generateCertPath(certificates.toList())
+        val pathValidator = CertPathValidator.getInstance("PKIX")
+        pathValidator.validate(certPath, params)
     }
 
     /**
@@ -237,7 +231,8 @@ object X509Utilities {
 
     /**
      * An all in wrapper to manufacture a server certificate and keys all stored in a KeyStore suitable for running TLS on the local machine.
-     * @param keyStoreFilePath KeyStore path to save output to.
+     * @param sslKeyStorePath KeyStore path to save ssl key and cert to.
+     * @param sslKeyStorePath KeyStore path to save client CA key and cert to.
      * @param storePassword access password for KeyStore.
      * @param keyPassword PrivateKey access password for the generated keys.
      * It is recommended that this is the same as the storePassword as most TLS libraries assume they are the same.
@@ -245,32 +240,44 @@ object X509Utilities {
      * @param caKeyPassword password to unlock private keys in the CA KeyStore.
      * @return The KeyStore created containing a private key, certificate chain and root CA public cert for use in TLS applications.
      */
-    fun createKeystoreForSSL(keyStoreFilePath: Path,
-                             storePassword: String,
-                             keyPassword: String,
-                             caKeyStore: KeyStore,
-                             caKeyPassword: String,
-                             commonName: X500Name,
-                             signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): KeyStore {
+    fun createKeystoreForCordaNode(sslKeyStorePath: Path,
+                                   clientCAKeystorePath: Path,
+                                   storePassword: String,
+                                   keyPassword: String,
+                                   caKeyStore: KeyStore,
+                                   caKeyPassword: String,
+                                   legalName: X500Name,
+                                   signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) {
 
-        val rootCA = caKeyStore.getCertificateAndKeyPair(CORDA_ROOT_CA_PRIVATE_KEY, caKeyPassword)
-        val intermediateCA = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, caKeyPassword)
+        val rootCACert = caKeyStore.getX509Certificate(CORDA_ROOT_CA)
+        val intermediateCA = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caKeyPassword)
 
-        val serverKey = generateKeyPair(signatureScheme)
+        val clientKey = generateKeyPair(signatureScheme)
+        val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
+        val clientCACert = createIntermediateCACert(legalName, clientKey.public, intermediateCA, nameConstraints = nameConstraints)
+        val clientCA = CertificateAndKeyPair(clientCACert, clientKey)
+
         val host = InetAddress.getLocalHost()
-        val serverCert = createTlsServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
+        val tlsKey = generateKeyPair(signatureScheme)
+        val clientTLSCert = createTLSCert(legalName, tlsKey.public, clientCA, listOf(host.hostName, legalName.commonName), listOf(host.hostAddress))
 
         val keyPass = keyPassword.toCharArray()
-        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(
-                CORDA_CLIENT_CA_PRIVATE_KEY,
-                serverKey.private,
+        val clientCAKeystore = KeyStoreUtilities.loadOrCreateKeyStore(clientCAKeystorePath, storePassword)
+        clientCAKeystore.addOrReplaceKey(
+                CORDA_CLIENT_CA,
+                clientKey.private,
                 keyPass,
-                arrayOf(serverCert, intermediateCA.certificate, rootCA.certificate))
-        keyStore.addOrReplaceCertificate(CORDA_CLIENT_CA, serverCert)
-        keyStore.save(keyStoreFilePath, storePassword)
-        return keyStore
+                arrayOf(clientCACert, intermediateCA.certificate, rootCACert))
+        clientCAKeystore.save(clientCAKeystorePath, storePassword)
+
+        val tlsKeystore = KeyStoreUtilities.loadOrCreateKeyStore(sslKeyStorePath, storePassword)
+        tlsKeystore.addOrReplaceKey(
+                CORDA_CLIENT_TLS,
+                tlsKey.private,
+                keyPass,
+                arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert))
+        tlsKeystore.save(sslKeyStorePath, storePassword)
     }
 
     fun createCertificateSigningRequest(subject: X500Name, keyPair: KeyPair, signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) = Crypto.createCertificateSigningRequest(subject, keyPair, signatureScheme)
@@ -280,14 +287,12 @@ object X509Utilities {
  * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present, this throws an
  * exception.
  */
-@Throws(IllegalArgumentException::class)
 fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName { attr -> attr.toString() + commonName }
 
 /**
  * Rebuild the distinguished name, replacing the common name with the given value. If no common name is present, this
  * adds one.
  */
-@Throws(IllegalArgumentException::class)
 fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { _ -> commonName }
 
 /**
@@ -295,7 +300,6 @@ fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName 
  *
  * @param mutator a function to generate the new value from the previous one.
  */
-@Throws(IllegalArgumentException::class)
 private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500Name {
     val builder = X500NameBuilder(BCStyle.INSTANCE)
     var matched = false
@@ -319,6 +323,7 @@ private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500N
 val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()
 val X500Name.orgName: String? get() = getRDNs(BCStyle.O).firstOrNull()?.first?.value?.toString()
 val X500Name.location: String get() = getRDNs(BCStyle.L).first().first.value.toString()
+val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
 
 class CertificateStream(val input: InputStream) {
     private val certificateFactory = CertificateFactory.getInstance("X.509")

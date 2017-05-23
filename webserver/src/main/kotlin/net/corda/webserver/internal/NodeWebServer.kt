@@ -79,7 +79,7 @@ class NodeWebServer(val config: WebServerConfig) {
             httpsConfiguration.outputBufferSize = 32768
             httpsConfiguration.addCustomizer(SecureRequestCustomizer())
             val sslContextFactory = SslContextFactory()
-            sslContextFactory.keyStorePath = config.keyStoreFile.toString()
+            sslContextFactory.keyStorePath = config.sslKeystore.toString()
             sslContextFactory.setKeyStorePassword(config.keyStorePassword)
             sslContextFactory.setKeyManagerPassword(config.keyStorePassword)
             sslContextFactory.setTrustStorePath(config.trustStoreFile.toString())
