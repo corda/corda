@@ -61,7 +61,10 @@ object TwoPartyTradeFlow {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
-            object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal")
+            object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal") {
+                override fun childProgressTracker() = SignTransactionFlow.tracker()
+            }
+
             // DOCSTART 3
             // DOCEND 3
             object WAITING_FOR_TX : ProgressTracker.Step("Waiting for the transaction to finalise.")
@@ -81,7 +84,7 @@ object TwoPartyTradeFlow {
 
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
-            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+            val signTransactionFlow = object : SignTransactionFlow(otherParty, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
                     if (stx.tx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
                         throw FlowException("Transaction is not sending us the right amount of cash")
@@ -117,10 +120,16 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
+
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
-        object RECORDING : ProgressTracker.Step("Recording completed transaction.")
+        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.") {
+            override fun childProgressTracker() = CollectSignaturesFlow.tracker()
+        }
+
+        object RECORDING : ProgressTracker.Step("Recording completed transaction.") {
+            override fun childProgressTracker() = FinalityFlow.tracker()
+        }
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING)
         // DOCEND 2
@@ -140,11 +149,12 @@ object TwoPartyTradeFlow {
             // Send the signed transaction to the seller, who must then sign it themselves and commit
             // it to the ledger by sending it to the notary.
             progressTracker.currentStep = COLLECTING_SIGNATURES
-            val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx))
+            val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx, COLLECTING_SIGNATURES.childProgressTracker()))
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
+            return subFlow(FinalityFlow(listOf(twiceSignedTx), setOf(otherParty, serviceHub.myInfo.legalIdentity), RECORDING.childProgressTracker()))
+                    .single()
         }
 
         @Suspendable
