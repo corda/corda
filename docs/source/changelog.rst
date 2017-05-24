@@ -73,6 +73,11 @@ UNRELEASED
   point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
   compatibility of CorDapp flows.
 
+* The certificate hierarchy has been changed in order to allow corda node to sign keys with proper certificate chain.
+     * The corda node will now be issued a restricted client CA for identity/transaction key signing.
+     * TLS certificate are now stored in `sslkeystore.jks` and identity keys are stored in `nodekeystore.jks`
+.. warning:: The old keystore will need to be removed when upgrading to this version.
+
 Milestone 11.1
 --------------
 
