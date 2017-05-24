@@ -14,6 +14,8 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
@@ -40,6 +42,7 @@ import org.crsh.shell.ShellFactory
 import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
+import org.crsh.text.ui.TableElement
 import org.crsh.util.InterruptHandler
 import org.crsh.util.Utils
 import org.crsh.vfs.FS
@@ -107,6 +110,7 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
+        ExternalResolver.INSTANCE.addCommand("stateMachines", "Provides information on state machines running currently on the node", StateMachinesCommand::class.java)
         val shell = ShellLifecycle(dir).start(config)
 
         if (runSSH) {
@@ -302,6 +306,35 @@ object InteractiveShell {
             }
         }
         throw NoApplicableConstructor(errors)
+    }
+
+    // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
+    @JvmStatic
+    fun runStateMachinesView(out: RenderPrintWriter, context: InvocationContext<TableElement>): Any? {
+        val proxy = node.rpcOps
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
+        val subscriber = SMMPrintingSubscriber(out)
+        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+
+        var result: Any? = subscriber.future
+        if (result is Future<*>) {
+            if (!result.isDone) {
+                out.cls()
+                out.println("Waiting for completion or Ctrl-C ... ")
+                out.flush()
+            }
+            try {
+                result = result.get()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (e: ExecutionException) {
+                throw e.rootCause
+            } catch (e: InvocationTargetException) {
+                throw e.rootCause
+            }
+        }
+        return result
     }
 
     @JvmStatic
