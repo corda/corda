@@ -234,14 +234,15 @@ object X509Utilities {
 }
 
 /**
- * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present, this throws an
- * exception.
+ * Rebuild the distinguished name, adding a postfix to the common name. If no common name is present.
+ * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
  */
 fun X500Name.appendToCommonName(commonName: String): X500Name = mutateCommonName { attr -> attr.toString() + commonName }
 
 /**
  * Rebuild the distinguished name, replacing the common name with the given value. If no common name is present, this
  * adds one.
+ * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
  */
 fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName { _ -> commonName }
 
@@ -249,6 +250,7 @@ fun X500Name.replaceCommonName(commonName: String): X500Name = mutateCommonName 
  * Rebuild the distinguished name, replacing the common name with a value generated from the provided function.
  *
  * @param mutator a function to generate the new value from the previous one.
+ * @throws IllegalArgumentException if the distinguished name does not contain a common name element.
  */
 private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500Name {
     val builder = X500NameBuilder(BCStyle.INSTANCE)
