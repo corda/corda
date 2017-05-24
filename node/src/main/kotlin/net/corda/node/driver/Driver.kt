@@ -32,8 +32,8 @@ import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.cordform.CordformNode
 import net.corda.cordform.CordformContext
-import net.corda.core.internal.ShutdownHook
-import net.corda.core.internal.addShutdownHook
+import net.corda.nodeapi.internal.ShutdownHook
+import net.corda.nodeapi.internal.addShutdownHook
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name

@@ -28,6 +28,8 @@ import java.util.HashMap
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
+import java.util.function.IntFunction
+import java.util.stream.IntStream
 import java.util.stream.Stream
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -110,14 +112,16 @@ infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): Listenable
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = mapToArray(transform, iterator(), size)
-inline fun <reified R> IntProgression.mapToArray(transform: (Int) -> R) = mapToArray(transform, iterator(), 1 + (last - first) / step)
-inline fun <T, reified R> mapToArray(transform: (T) -> R, iterator: Iterator<T>, size: Int) = run {
-    var expected = 0
-    Array(size) {
-        expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")
-        transform(iterator.next())
-    }
+fun IntProgression.stream(): IntStream = IntStream.rangeClosed(0, (last - first) / step).map { it * step + first }
+@Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
+inline fun <reified T> Stream<T>.toTypedArray() = toArray(IntFunction { n -> arrayOfNulls<T>(n) }) as Array<T>
+/** Note it can only be iterated once. */
+fun <T> Stream<T>.asIterable() = Iterable<T> { iterator() }
+fun <T> Stream<T>.single(emptyMessage: String = "Stream is empty.", moreThanOneMessage: String = "Stream has more than one element."): T = iterator().run {
+    hasNext() || throw NoSuchElementException(emptyMessage)
+    val element = next()
+    hasNext() && throw IllegalArgumentException(moreThanOneMessage)
+    element
 }
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */

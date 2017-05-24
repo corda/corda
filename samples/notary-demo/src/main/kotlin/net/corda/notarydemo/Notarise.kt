@@ -5,9 +5,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.notUsed
+import net.corda.core.*
 import net.corda.core.crypto.toStringShort
-import net.corda.core.getOrThrow
-import net.corda.core.map
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
@@ -28,7 +27,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        parties.filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().single()
+        parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().single(
+                moreThanOneMessage = "No unique notary identity, try cleaning the node directories.")
     }
 
     private val counterpartyNode by lazy {
@@ -53,9 +53,9 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * as it consumes the original asset and creates a copy with the new owner as its output.
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
-        return Futures.allAsList((1..count).map {
+        return Futures.allAsList((1..count).stream().mapToObj {
             rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue
-        }).getOrThrow()
+        }.asIterable()).getOrThrow()
     }
 
     /**
