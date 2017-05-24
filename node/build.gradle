@@ -126,7 +126,8 @@ dependencies {
     compile "org.hibernate:hibernate-java8:$hibernate_version"
 
     // Capsule is a library for building independently executable fat JARs.
-    compile 'co.paralleluniverse:capsule:1.0.3'
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.3'
