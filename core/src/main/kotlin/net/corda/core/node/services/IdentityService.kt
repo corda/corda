@@ -6,6 +6,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
@@ -30,7 +31,7 @@ interface IdentityService {
      */
     // TODO: Move this into internal identity service once available
     @Throws(IllegalArgumentException::class)
-    fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath)
+    fun registerPath(trustedRoot: X509CertificateHolder, anonymousParty: AnonymousParty, path: CertPath)
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with

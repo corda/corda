@@ -21,6 +21,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MINI_CORP
 import net.corda.testing.MOCK_VERSION_INFO
+import org.bouncycastle.cert.X509CertificateHolder
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream
@@ -32,7 +33,6 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
-import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.*
 import java.util.jar.JarInputStream
@@ -91,7 +91,7 @@ class MockKeyManagementService(val identityService: IdentityService,
         return k.public
     }
 
-    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509Certificate, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
+    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         val pk = publicKey.keys.first { keyStore.containsKey(it) }

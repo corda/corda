@@ -1,16 +1,17 @@
 package net.corda.core.crypto
 
 import net.corda.core.crypto.Crypto.generateKeyPair
-import net.corda.core.identity.Party
-import net.corda.core.node.ServiceHub
+import net.corda.core.mapToArray
 import org.bouncycastle.asn1.ASN1Encodable
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x500.X500NameBuilder
 import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemReader
+import java.io.ByteArrayInputStream
 import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
@@ -62,7 +63,7 @@ object X509Utilities {
      * @param after duration to roll forward returned end date relative to current date.
      * @param parent if provided certificate whose validity should bound the date interval returned.
      */
-    private fun getCertificateValidityWindow(before: Duration, after: Duration, parent: X509Certificate? = null): Pair<Date, Date> {
+    fun getCertificateValidityWindow(before: Duration, after: Duration, parent: X509CertificateHolder? = null): Pair<Date, Date> {
         val startOfDayUTC = Instant.now().truncatedTo(ChronoUnit.DAYS)
         val notBefore = max(startOfDayUTC - before, parent?.notBefore)
         val notAfter = min(startOfDayUTC + after, parent?.notAfter)
@@ -104,10 +105,9 @@ object X509Utilities {
      * Create a de novo root self-signed X509 v3 CA cert.
      */
     @JvmStatic
-    fun createSelfSignedCACertificate(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
+    fun createSelfSignedCACertificate(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        val cert = Crypto.createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
-        return cert
+        return Crypto.createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
     }
 
     /**
@@ -122,13 +122,12 @@ object X509Utilities {
      */
     @JvmStatic
     fun createCertificate(certificateType: CertificateType,
-                          issuerCertificate: X509Certificate, issuerKeyPair: KeyPair,
+                          issuerCertificate: X509CertificateHolder, issuerKeyPair: KeyPair,
                           subject: X500Name, subjectPublicKey: PublicKey,
                           validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
-                          nameConstraints: NameConstraints? = null): X509Certificate {
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
-        val cert = Crypto.createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
-        return cert
+        return Crypto.createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
     }
 
     /**
@@ -139,17 +138,19 @@ object X509Utilities {
      * @param certificates certificates in the path.
      * @param revocationEnabled whether revocation of certificates in the path should be checked.
      */
-    fun createCertificatePath(trustedRoot: X509Certificate, vararg certificates: X509Certificate, revocationEnabled: Boolean): CertPath {
+    fun createCertificatePath(trustedRoot: X509CertificateHolder, vararg certificates: X509CertificateHolder, revocationEnabled: Boolean): CertPath {
         val certFactory = CertificateFactory.getInstance("X509")
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
+        val trustedRootX509 = certFactory.generateCertificate(ByteArrayInputStream(trustedRoot.encoded)) as X509Certificate
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRootX509, null)))
         params.isRevocationEnabled = revocationEnabled
-        return certFactory.generateCertPath(certificates.toList())
+        return certFactory.generateCertPath(certificates.map { certFactory.generateCertificate(ByteArrayInputStream(it.encoded)) }.toList())
     }
 
-    fun validateCertificateChain(trustedRoot: X509Certificate, vararg certificates: Certificate) {
+    fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
+        val converter = JcaX509CertificateConverter()
         val certFactory = CertificateFactory.getInstance("X509")
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot, null)))
+        val params = PKIXParameters(setOf(TrustAnchor(converter.getCertificate(trustedRoot), null)))
         params.isRevocationEnabled = false
         val certPath = certFactory.generateCertPath(certificates.toList())
         val pathValidator = CertPathValidator.getInstance("PKIX")
@@ -162,7 +163,7 @@ object X509Utilities {
      * @param filename Target filename.
      */
     @JvmStatic
-    fun saveCertificateAsPEMFile(x509Certificate: X509Certificate, filename: Path) {
+    fun saveCertificateAsPEMFile(x509Certificate: X509CertificateHolder, filename: Path) {
         FileWriter(filename.toFile()).use {
             JcaPEMWriter(it).use {
                 it.writeObject(x509Certificate)
@@ -176,11 +177,12 @@ object X509Utilities {
      * @return The X509Certificate that was encoded in the file.
      */
     @JvmStatic
-    fun loadCertificateFromPEMFile(filename: Path): X509Certificate {
+    fun loadCertificateFromPEMFile(filename: Path): X509CertificateHolder {
         val reader = PemReader(FileReader(filename.toFile()))
         val pemObject = reader.readPemObject()
-        return CertificateStream(pemObject.content.inputStream()).nextCertificate().apply {
-            checkValidity()
+        val cert = X509CertificateHolder(pemObject.content)
+        return cert.apply {
+            isValidOn(Date())
         }
     }
 
@@ -221,7 +223,7 @@ object X509Utilities {
                 CORDA_CLIENT_CA,
                 clientKey.private,
                 keyPass,
-                arrayOf(clientCACert, intermediateCACert, rootCACert))
+                org.bouncycastle.cert.path.CertPath(arrayOf(clientCACert, intermediateCACert, rootCACert)))
         clientCAKeystore.save(clientCAKeystorePath, storePassword)
 
         val tlsKeystore = KeyStoreUtilities.loadOrCreateKeyStore(sslKeyStorePath, storePassword)
@@ -229,7 +231,7 @@ object X509Utilities {
                 CORDA_CLIENT_TLS,
                 tlsKey.private,
                 keyPass,
-                arrayOf(clientTLSCert, clientCACert, intermediateCACert, rootCACert))
+                org.bouncycastle.cert.path.CertPath(arrayOf(clientTLSCert, clientCACert, intermediateCACert, rootCACert)))
         tlsKeystore.save(sslKeyStorePath, storePassword)
     }
 
@@ -286,7 +288,7 @@ class CertificateStream(val input: InputStream) {
     fun nextCertificate(): X509Certificate = certificateFactory.generateCertificate(input) as X509Certificate
 }
 
-data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
+data class CertificateAndKeyPair(val certificate: X509CertificateHolder, val keyPair: KeyPair)
 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
     ROOT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),

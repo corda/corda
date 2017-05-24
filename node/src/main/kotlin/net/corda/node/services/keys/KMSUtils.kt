@@ -1,12 +1,17 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.CertificateType
+import net.corda.core.crypto.ContentSignerBuilder
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.operator.ContentSigner
+import java.security.KeyPair
+import java.security.Security
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
@@ -23,7 +28,7 @@ import java.security.cert.X509Certificate
 fun freshKeyAndCert(keyManagementService: KeyManagementService,
                     identityService: IdentityService,
                     identity: Party,
-                    revocationEnabled: Boolean = false): Pair<X509Certificate, CertPath> {
+                    revocationEnabled: Boolean = false): Pair<X509CertificateHolder, CertPath> {
     val ourPublicKey = keyManagementService.freshKey()
     // FIXME: Use the actual certificate for the identity the flow is presenting themselves as
     val issuerKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME)

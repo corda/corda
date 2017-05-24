@@ -6,6 +6,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 
@@ -15,7 +16,7 @@ import java.security.cert.X509Certificate
  */
 object TxKeyFlow {
     abstract class AbstractIdentityFlow(val otherSide: Party, val revocationEnabled: Boolean): FlowLogic<Map<Party, AnonymousIdentity>>() {
-        fun validateIdentity(untrustedIdentity: Pair<X509Certificate, CertPath>): AnonymousIdentity {
+        fun validateIdentity(untrustedIdentity: Pair<X509CertificateHolder, CertPath>): AnonymousIdentity {
             val (wellKnownCert, certPath) = untrustedIdentity
             val theirCert = certPath.certificates.last()
             // TODO: Don't trust self-signed certificates
@@ -24,7 +25,7 @@ object TxKeyFlow {
                 if (certName == otherSide.name) {
                     val anonymousParty = AnonymousParty(theirCert.publicKey)
                     serviceHub.identityService.registerPath(wellKnownCert, anonymousParty, certPath)
-                    AnonymousIdentity(certPath, theirCert, anonymousParty)
+                    AnonymousIdentity(certPath, X509CertificateHolder(theirCert.encoded), anonymousParty)
                 } else
                     throw IllegalStateException("Expected certificate subject to be ${otherSide.name} but found ${certName}")
             } else
@@ -50,7 +51,7 @@ object TxKeyFlow {
         override fun call(): Map<Party, AnonymousIdentity> {
             progressTracker.currentStep = AWAITING_KEY
             val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentity, revocationEnabled)
-            val theirIdentity = receive<Pair<X509Certificate, CertPath>>(otherSide).unwrap { validateIdentity(it) }
+            val theirIdentity = receive<Pair<X509CertificateHolder, CertPath>>(otherSide).unwrap { validateIdentity(it) }
             send(otherSide, myIdentityFragment)
             return mapOf(Pair(otherSide, AnonymousIdentity(myIdentityFragment)),
                     Pair(serviceHub.myInfo.legalIdentity, theirIdentity))
@@ -78,7 +79,7 @@ object TxKeyFlow {
             progressTracker.currentStep = SENDING_KEY
             val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentity, revocationEnabled)
             send(otherSide, myIdentityFragment)
-            val theirIdentity = receive<Pair<X509Certificate, CertPath>>(otherSide).unwrap { validateIdentity(it) }
+            val theirIdentity = receive<Pair<X509CertificateHolder, CertPath>>(otherSide).unwrap { validateIdentity(it) }
             return mapOf(Pair(otherSide, AnonymousIdentity(myIdentityFragment)),
                     Pair(serviceHub.myInfo.legalIdentity, theirIdentity))
         }
@@ -86,9 +87,9 @@ object TxKeyFlow {
 
     data class AnonymousIdentity(
             val certPath: CertPath,
-            val certificate: X509Certificate,
+            val certificate: X509CertificateHolder,
             val identity: AnonymousParty) {
-        constructor(myIdentity: Pair<X509Certificate, CertPath>) : this(myIdentity.second,
+        constructor(myIdentity: Pair<X509CertificateHolder, CertPath>) : this(myIdentity.second,
                 myIdentity.first,
                 AnonymousParty(myIdentity.second.certificates.last().publicKey))
     }

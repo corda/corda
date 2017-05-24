@@ -6,6 +6,8 @@ import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.node.services.config.NodeConfiguration
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.path.CertPath
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
@@ -40,7 +42,8 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
                 val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
                 val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
                 // Save to the key store.
-                caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignCert))
+                caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(),
+                        CertPath(arrayOf(selfSignCert)))
                 caKeyStore.save(config.nodeKeystore, keystorePassword)
             }
             val keyPair = caKeyStore.getKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)
@@ -69,11 +72,13 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
             println("Node private key and certificate stored in ${config.nodeKeystore}.")
 
             println("Generating SSL certificate for node messaging service.")
+            val converter = JcaX509CertificateConverter()
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
             val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA)
             val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, caCert.subject, sslKey.public)
             val sslKeyStore = KeyStoreUtilities.loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
-            sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(), arrayOf(sslCert, *certificates))
+            sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(),
+                    arrayOf(converter.getCertificate(sslCert), *certificates))
             sslKeyStore.save(config.sslKeystore, config.keyStorePassword)
             println("SSL private key and certificate stored in ${config.sslKeystore}.")
             // All done, clean up temp files.

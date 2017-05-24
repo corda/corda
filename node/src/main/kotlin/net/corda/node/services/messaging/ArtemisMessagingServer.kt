@@ -263,10 +263,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
         val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
-        val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourSubjectDN == config.myLegalName) {
-            "Legal name does not match with our subject CN: $ourSubjectDN"
+        require(ourCertificate.subject == config.myLegalName) {
+            "Legal name does not match with our subject CN: ${ourCertificate.subject}"
         }
         val defaultCertPolicies = mapOf(
                 PEER_ROLE to CertificateChainCheckPolicy.RootMustMatch,
@@ -510,7 +509,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                     "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
-                X509Utilities.validateCertificateChain(X509CertImpl(session.localCertificates.last().encoded), *session.peerCertificates)
+                X509Utilities.validateCertificateChain(X509CertificateHolder(session.localCertificates.last().encoded), *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()
