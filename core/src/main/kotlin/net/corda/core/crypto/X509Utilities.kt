@@ -141,10 +141,10 @@ object X509Utilities {
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createIntermediateCert(subject: X500Name,
-                               ca: CertificateAndKeyPair,
-                               signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
-                               validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
+    fun createIntermediateCACert(subject: X500Name,
+                                 ca: CertificateAndKeyPair,
+                                 signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME,
+                                 validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
         val keyPair = generateKeyPair(signatureScheme)
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
@@ -164,11 +164,11 @@ object X509Utilities {
      * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
      */
     @JvmStatic
-    fun createTlsServerCert(subject: X500Name, publicKey: PublicKey,
-                            ca: CertificateAndKeyPair,
-                            subjectAlternativeNameDomains: List<String>,
-                            subjectAlternativeNameIps: List<String>,
-                            validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
+    fun createTLSCert(subject: X500Name, publicKey: PublicKey,
+                      ca: CertificateAndKeyPair,
+                      subjectAlternativeNameDomains: List<String>,
+                      subjectAlternativeNameIps: List<String>,
+                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
 
         val issuer = X509CertificateHolder(ca.certificate.encoded).subject
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
@@ -245,20 +245,20 @@ object X509Utilities {
      * @param caKeyPassword password to unlock private keys in the CA KeyStore.
      * @return The KeyStore created containing a private key, certificate chain and root CA public cert for use in TLS applications.
      */
-    fun createKeystoreForSSL(keyStoreFilePath: Path,
-                             storePassword: String,
-                             keyPassword: String,
-                             caKeyStore: KeyStore,
-                             caKeyPassword: String,
-                             commonName: X500Name,
-                             signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): KeyStore {
+    fun createKeystoreForCordaNode(keyStoreFilePath: Path,
+                                   storePassword: String,
+                                   keyPassword: String,
+                                   caKeyStore: KeyStore,
+                                   caKeyPassword: String,
+                                   commonName: X500Name,
+                                   signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME): KeyStore {
 
         val rootCA = caKeyStore.getCertificateAndKeyPair(CORDA_ROOT_CA_PRIVATE_KEY, caKeyPassword)
         val intermediateCA = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA_PRIVATE_KEY, caKeyPassword)
 
         val serverKey = generateKeyPair(signatureScheme)
         val host = InetAddress.getLocalHost()
-        val serverCert = createTlsServerCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
+        val serverCert = createTLSCert(commonName, serverKey.public, intermediateCA, listOf(host.hostName), listOf(host.hostAddress))
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)
