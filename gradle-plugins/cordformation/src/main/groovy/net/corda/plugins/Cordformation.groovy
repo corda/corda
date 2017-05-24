@@ -21,7 +21,8 @@ class Cordformation implements Plugin<Project> {
      * Configures this project's JAR as a Cordapp JAR
      */
     private void configureCordappJar(Project project) {
-        def task = project.task('clintTest') {
+        // Note: project.afterEvaluate did not have full dependency resolution completed, hence a task is used instead
+        def task = project.task('configureCordappFatJar') {
             doLast {
                 project.tasks.jar.from getDirectNonCordaDependencies(project).collect { project.zipTree(it) }.flatten()
             }
