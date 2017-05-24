@@ -9,6 +9,7 @@ buildscript {
     ext.pkg_outDir = "$buildDir/javapackage"
     ext.dist_source = "$pkg_source/demobench-$version"
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : version
+    ext.pkg_macosxKeyUserName = 'R3CEV'
 
     repositories {
         mavenLocal()
@@ -160,8 +161,9 @@ task javapackage(dependsOn: distZip) {
                 include '**/*.wsf'
                 include '**/*.manifest'
             }
-            filter {
-                line -> line.replaceAll('@pkg_version@', pkg_version)
+            filter { line ->
+                line.replaceAll('@pkg_version@', pkg_version)
+                    .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
             }
             into "$pkg_source/package"
         }
@@ -192,6 +194,9 @@ task javapackage(dependsOn: distZip) {
                     include(name: 'explorer/*.jar')
                 }
             }
+
+            // This is specific to MacOSX packager.
+            bundleArgument(arg: 'mac.signing-key-user-name', value: pkg_macosxKeyUserName)
 
             platform {
                 property(name: 'java.util.logging.config.class', value: 'net.corda.demobench.config.LoggingConfig')
