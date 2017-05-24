@@ -17,7 +17,7 @@ open class PathHandle internal constructor(private val deleteOnExitPath: DeleteO
     val path
         get(): Path {
             val path = deleteOnExitPath.path
-            0 == handleCounter.get() && throw IllegalStateException("Defunct path: $path")
+            check(handleCounter.get() != 0) { "Defunct path: $path" }
             return path
         }
 
@@ -28,7 +28,7 @@ open class PathHandle internal constructor(private val deleteOnExitPath: DeleteO
     fun handle() = PathHandle(deleteOnExitPath, handleCounter)
 
     override fun close() {
-        if (0 == handleCounter.decrementAndGet()) {
+        if (handleCounter.decrementAndGet() == 0) {
             deleteOnExitPath.dispose()
         }
     }
