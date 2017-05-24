@@ -9,8 +9,7 @@ import net.corda.core.utilities.CordaThrowable
 import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
-    override val additionalSerializers: Iterable<CustomSerializer<out Any>> =
-            listOf(StackTraceElementSerializer(factory), StackTraceElementArraySerializer(factory), ThrowableArraySerializer(factory))
+    override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(StackTraceElementSerializer(factory))
 
     override fun toProxy(obj: Throwable): ThrowableProxy {
         val extraProperties: MutableMap<String, Any?> = LinkedHashMap()
@@ -77,7 +76,3 @@ class StackTraceElementSerializer(factory: SerializerFactory) : CustomSerializer
 
     data class StackTraceElementProxy(val declaringClass: String, val methodName: String, val fileName: String?, val lineNumber: Int)
 }
-
-class StackTraceElementArraySerializer(factory: SerializerFactory) : CustomSerializer.PredefinedArray<StackTraceElement>(StackTraceElement::class.java, factory)
-class ThrowableArraySerializer(factory: SerializerFactory) : CustomSerializer.PredefinedArray<Throwable>(Throwable::class.java, factory)
-

@@ -23,7 +23,6 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: object references
 // TODO: class references? (e.g. cheat with repeated descriptors using a long encoding, like object ref proposal)
 // TODO: Inner classes etc
-// TODO: exclude schemas for core types that need custom serializers that everyone already knows the schema for.
 // TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
 // TODO: maybe support for caching of serialized form of some core types for performance
 // TODO: profile for performance in general
@@ -32,6 +31,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: incorporate the class carpenter for classes not on the classpath.
 // TODO: apply class loader logic and an "app context" throughout this code.
 // TODO: schema evolution solution when the fingerprints do not line up.
+// TODO: allow definition of well known types that are left out of the schema.
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<out Any>>()
@@ -119,7 +119,14 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
 
     private fun restrictedTypeForName(name: String): Type {
         return if (name.endsWith("[]")) {
-            DeserializedGenericArrayType(restrictedTypeForName(name.substring(0, name.lastIndex - 1)))
+            val elementType = restrictedTypeForName(name.substring(0, name.lastIndex - 1))
+            if (elementType is ParameterizedType || elementType is GenericArrayType) {
+                DeserializedGenericArrayType(elementType)
+            } else if (elementType is Class<*>) {
+                java.lang.reflect.Array.newInstance(elementType, 0).javaClass
+            } else {
+                throw NotSerializableException("Not able to deserialize array type: $name")
+            }
         } else {
             DeserializedParameterizedType.make(name)
         }

@@ -12,8 +12,7 @@ import net.corda.core.utilities.CordaRuntimeException
  * [FlowException] (or a subclass) can be a valid expected response from a flow, particularly ones which act as a service.
  * It is recommended a [FlowLogic] document the [FlowException] types it can throw.
  */
-open class FlowException(message: String?,
-                         cause: Throwable?) : CordaException(message, cause) {
+open class FlowException(message: String?, cause: Throwable?) : CordaException(message, cause) {
     constructor(message: String?) : this(message, null)
     constructor(cause: Throwable?) : this(cause?.toString(), cause)
     constructor() : this(null, null)
@@ -24,7 +23,6 @@ open class FlowException(message: String?,
  * that we were not expecting), or the other side had an internal error, or the other side terminated when we
  * were waiting for a response.
  */
-class FlowSessionException(message: String?,
-                           cause: Throwable?) : CordaRuntimeException(message, cause) {
+class FlowSessionException(message: String?, cause: Throwable?) : CordaRuntimeException(message, cause) {
     constructor(msg: String) : this(msg, null)
 }
