@@ -1,8 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
@@ -67,11 +65,12 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
-        val rootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
         val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val service = InMemoryIdentityService()
         // TODO: Generate certificate with an EdDSA key rather than ECDSA
-        val identity = Party(rootCertAndKey)
+        val identity = Party(CertificateAndKeyPair(rootCert, rootKey))
         val txIdentity = AnonymousParty(txKey.public)
 
         assertFailsWith<IdentityService.UnknownAnonymousPartyException> {
@@ -85,24 +84,26 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `assert ownership`() {
-        val aliceRootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name, Crypto.generateKeyPair())
+        val aliceRootKey = Crypto.generateKeyPair()
+        val aliceRootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, aliceRootKey)
         val aliceTxKey = Crypto.generateKeyPair()
-        val aliceTxCert = X509Utilities.createIntermediateCACert(ALICE.name, aliceTxKey.public, aliceRootCertAndKey)
-        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCertAndKey.certificate, aliceTxCert, revocationEnabled = false)
+        val aliceTxCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, aliceRootCert, aliceRootKey, ALICE.name, aliceTxKey.public)
+        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCert, aliceTxCert, revocationEnabled = false)
 
-        val bobRootCertAndKey = X509Utilities.createSelfSignedCACert(BOB.name, Crypto.generateKeyPair())
+        val bobRootKey = Crypto.generateKeyPair()
+        val bobRootCert = X509Utilities.createSelfSignedCACertificate(BOB.name, bobRootKey)
         val bobTxKey = Crypto.generateKeyPair()
-        val bobTxCert = X509Utilities.createIntermediateCACert(BOB.name, bobTxKey.public, bobRootCertAndKey)
-        val bobCertPath = X509Utilities.createCertificatePath(bobRootCertAndKey.certificate, bobTxCert, revocationEnabled = false)
+        val bobTxCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
+        val bobCertPath = X509Utilities.createCertificatePath(bobRootCert, bobTxCert, revocationEnabled = false)
 
         val service = InMemoryIdentityService()
-        val alice = Party(aliceRootCertAndKey)
+        val alice = Party(CertificateAndKeyPair(aliceRootCert, aliceRootKey))
         val anonymousAlice = AnonymousParty(aliceTxKey.public)
-        val bob = Party(bobRootCertAndKey)
+        val bob = Party(CertificateAndKeyPair(bobRootCert, bobRootKey))
         val anonymousBob = AnonymousParty(bobTxKey.public)
 
-        service.registerPath(aliceRootCertAndKey.certificate, anonymousAlice, aliceCertPath)
-        service.registerPath(bobRootCertAndKey.certificate, anonymousBob, bobCertPath)
+        service.registerPath(aliceRootCert, anonymousAlice, aliceCertPath)
+        service.registerPath(bobRootCert, anonymousBob, bobCertPath)
 
         // Verify that paths are verified
         service.assertOwnership(alice, anonymousAlice)

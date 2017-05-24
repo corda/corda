@@ -32,7 +32,7 @@ class NetworkRegistrationHelperTest {
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
                 .map { getTestX509Name(it) }
-        val certs = identities.map { X509Utilities.createSelfSignedCACert(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)).certificate }
+        val certs = identities.map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
                 .toTypedArray()
 
         val certService: NetworkRegistrationService = mock {

@@ -20,7 +20,6 @@ import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.junit.Test
-import java.net.InetAddress
 import java.nio.file.Files
 
 /**
@@ -98,19 +97,14 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
 
                 val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
                 val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
-
                 val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
 
                 // Set name constrain to the legal name.
                 val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
-                val clientCACert = X509Utilities.createIntermediateCACert(legalName, clientKey.public, intermediateCA, nameConstraints = nameConstraints)
-                val clientCA = CertificateAndKeyPair(clientCACert, clientKey)
-
-                val host = InetAddress.getLocalHost()
+                val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCA.certificate, intermediateCA.keyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
                 val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-
                 // Using different x500 name in the TLS cert which is not allowed in the name constraints.
-                val clientTLSCert = X509Utilities.createTLSCert(MINI_CORP.name, tlsKey.public, clientCA, listOf(host.hostName, legalName.commonName), listOf(host.hostAddress))
+                val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKey, MINI_CORP.name, tlsKey.public)
                 val keyPass = keyStorePassword.toCharArray()
                 val clientCAKeystore = KeyStoreUtilities.loadOrCreateKeyStore(nodeKeystore, keyStorePassword)
                 clientCAKeystore.addOrReplaceKey(
@@ -131,9 +125,6 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
         }
 
         val attacker = clientTo(alice.configuration.p2pAddress, sslConfig)
-
-        attacker.start(PEER_USER, PEER_USER)
-
 
         assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER)

@@ -143,7 +143,7 @@ class KryoTests {
 
     @Test
     fun `serialize - deserialize X509Certififcate`() {
-        val (expected, _) = X509Utilities.createSelfSignedCACert(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val expected = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val serialized = expected.serialize(kryo).bytes
         val actual: X509Certificate = serialized.deserialize(kryo)
         assertEquals(expected, actual)
@@ -151,9 +151,10 @@ class KryoTests {
 
     @Test
     fun `serialize - deserialize X509CertPath`() {
-        val rootCA = X509Utilities.createSelfSignedCACert(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
-        val certificate = X509Utilities.createTLSCert(BOB.name, BOB_PUBKEY, rootCA, emptyList(), emptyList())
-        val expected = X509Utilities.createCertificatePath(rootCA.certificate, certificate, revocationEnabled = false)
+        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
+        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
+        val expected = X509Utilities.createCertificatePath(rootCACert, certificate, revocationEnabled = false)
         val serialized = expected.serialize(kryo).bytes
         val actual: CertPath = serialized.deserialize(kryo)
         assertEquals(expected, actual)

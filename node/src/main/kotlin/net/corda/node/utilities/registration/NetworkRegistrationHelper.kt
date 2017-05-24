@@ -9,7 +9,6 @@ import net.corda.node.services.config.NodeConfiguration
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemObject
 import java.io.StringWriter
-import java.net.InetAddress
 import java.security.KeyPair
 import java.security.cert.Certificate
 import kotlin.system.exitProcess
@@ -38,9 +37,10 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
             // Create or load self signed keypair from the key store.
             // We use the self sign certificate to store the key temporarily in the keystore while waiting for the request approval.
             if (!caKeyStore.containsAlias(SELF_SIGNED_PRIVATE_KEY)) {
-                val selfSignCert = X509Utilities.createSelfSignedCACert(config.myLegalName, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+                val keyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+                val selfSignCert = X509Utilities.createSelfSignedCACertificate(config.myLegalName, keyPair)
                 // Save to the key store.
-                caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, selfSignCert.keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignCert.certificate))
+                caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignCert))
                 caKeyStore.save(config.nodeKeystore, keystorePassword)
             }
             val keyPair = caKeyStore.getKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)
@@ -70,9 +70,8 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
 
             println("Generating SSL certificate for node messaging service.")
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val caCertAndKey = CertificateAndKeyPair(caKeyStore.getX509Certificate(CORDA_CLIENT_CA), keyPair)
-            val host = InetAddress.getLocalHost()
-            val sslCert = X509Utilities.createTLSCert(caCertAndKey.certificate.subject, sslKey.public, caCertAndKey, listOf(host.hostName, caCertAndKey.certificate.subject.commonName), listOf(host.hostAddress))
+            val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA)
+            val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, caCert.subject, sslKey.public)
             val sslKeyStore = KeyStoreUtilities.loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
             sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(), arrayOf(sslCert, *certificates))
             sslKeyStore.save(config.sslKeystore, config.keyStorePassword)

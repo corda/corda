@@ -19,28 +19,26 @@ import kotlin.test.assertTrue
 class X509NameConstraintsTest {
 
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<KeyStore, KeyStore> {
-        val rootCA = X509Utilities.createSelfSignedCACert(X509Utilities.getDevX509Name("Corda Root CA"), Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val rootKeys = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(X509Utilities.getDevX509Name("Corda Root CA"), rootKeys)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createIntermediateCACert(X509Utilities.getDevX509Name("Corda Intermediate CA"), intermediateCAKeyPair.public, rootCA)
-        val intermediateCA = CertificateAndKeyPair(intermediateCACert, intermediateCAKeyPair)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootKeys, X509Utilities.getDevX509Name("Corda Intermediate CA"), intermediateCAKeyPair.public)
 
         val clientCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCACert = X509Utilities.createIntermediateCACert(X509Utilities.getDevX509Name("Corda Client CA"), clientCAKeyPair.public, intermediateCA, nameConstraints = nameConstraints)
-        val clientCA = CertificateAndKeyPair(clientCACert, clientCAKeyPair)
+        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, X509Utilities.getDevX509Name("Corda Client CA"), clientCAKeyPair.public, nameConstraints = nameConstraints)
 
         val keyPass = "password"
         val trustStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
         trustStore.load(null, keyPass.toCharArray())
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCA.certificate)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert)
 
         val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val host = InetAddress.getLocalHost()
-        val tlsCert = X509Utilities.createTLSCert(subjectName, tlsKey.public, clientCA, listOf(host.hostName), listOf(host.hostAddress))
+        val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientCAKeyPair, subjectName, tlsKey.public)
 
         val keyStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
         keyStore.load(null, keyPass.toCharArray())
-        keyStore.addOrReplaceKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, keyPass.toCharArray(), arrayOf(tlsCert, clientCA.certificate, intermediateCA.certificate, rootCA.certificate))
+        keyStore.addOrReplaceKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, keyPass.toCharArray(), arrayOf(tlsCert, clientCACert, intermediateCACert, rootCACert))
         return Pair(keyStore, trustStore)
     }
 

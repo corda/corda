@@ -8,12 +8,10 @@ import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
-import org.bouncycastle.util.IPAddress
 import org.bouncycastle.util.io.pem.PemReader
 import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
-import java.net.InetAddress
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.KeyStore
@@ -34,15 +32,7 @@ object X509Utilities {
     val CORDA_CLIENT_TLS = "cordaclienttls"
     val CORDA_CLIENT_CA = "cordaclientca"
 
-    private val CA_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign)
-    private val IDENTITY_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature)
-    private val TLS_KEY_USAGE = KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement)
-
-    private val CA_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage)
-    private val CLIENT_KEY_PURPOSES = listOf(KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth)
-
     private val DEFAULT_VALIDITY_WINDOW = Pair(Duration.ofMillis(0), Duration.ofDays(365 * 10))
-
     /**
      * Helper function to return the latest out of an instant and an optional date.
      */
@@ -108,77 +98,34 @@ object X509Utilities {
     }
 
     /*
-     * Create a de novo root self-signed X509 v3 CA cert and [KeyPair].
-     * @param subject the cert Subject will be populated with the domain string.
-     * @param signatureScheme The signature scheme which will be used to generate keys and certificate. Default to [DEFAULT_TLS_SIGNATURE_SCHEME] if not provided.
-     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
-     * @return A data class is returned containing the new root CA Cert and its [KeyPair] for signing downstream certificates.
-     * Note the generated certificate tree is capped at max depth of 2 to be in line with commercially available certificates.
+     * Create a de novo root self-signed X509 v3 CA cert.
      */
     @JvmStatic
-    fun createSelfSignedCACert(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): CertificateAndKeyPair {
+    fun createSelfSignedCACertificate(subject: X500Name, keyPair: KeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second)
-        val cert = Crypto.createCertificate(subject, keyPair, subject, keyPair.public, CA_KEY_USAGE, CA_KEY_PURPOSES, window)
-        return CertificateAndKeyPair(cert, keyPair)
+        val cert = Crypto.createCertificate(CertificateType.ROOT_CA, subject, keyPair, subject, keyPair.public, window)
+        return cert
     }
 
     /**
-     * Create a de novo root intermediate X509 v3 CA cert and KeyPair.
+     * Create a X509 v3 cert.
+     * @param issuerCertificate The Public certificate of the root CA above this used to sign it.
+     * @param issuerKeyPair The KeyPair of the root CA above this used to sign it.
      * @param subject subject of the generated certificate.
-     * @param publicKey subject 's public key.
-     * @param ca The Public certificate and KeyPair of the root CA certificate above this used to sign it.
+     * @param subjectPublicKey subject 's public key.
      * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
      * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic
-    fun createIntermediateCACert(subject: X500Name, publicKey: PublicKey, ca: CertificateAndKeyPair, validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW, nameConstraints: NameConstraints? = null): X509Certificate {
-        val issuer = ca.certificate.subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, CA_KEY_USAGE, CA_KEY_PURPOSES, window, nameConstraints = nameConstraints)
-    }
-
-    /**
-     * Create an X509v3 certificate suitable for use in TLS roles.
-     * @param subject The contents to put in the subject field of the certificate.
-     * @param publicKey The PublicKey to be wrapped in the certificate.
-     * @param ca The Public certificate and KeyPair of the parent CA that will sign this certificate.
-     * @param subjectAlternativeNameDomains A set of alternate DNS names to be supported by the certificate during validation of the TLS handshakes.
-     * @param subjectAlternativeNameIps A set of alternate IP addresses to be supported by the certificate during validation of the TLS handshakes.
-     * @param validityWindow The certificate's validity window. Default to [DEFAULT_VALIDITY_WINDOW] if not provided.
-     * @return The generated X509Certificate suitable for use as a Server/Client certificate in TLS.
-     * This certificate is not marked as a CA cert to be similar in nature to commercial certificates.
-     */
-    @JvmStatic
-    fun createTLSCert(subject: X500Name, publicKey: PublicKey,
-                      ca: CertificateAndKeyPair,
-                      subjectAlternativeNameDomains: List<String>,
-                      subjectAlternativeNameIps: List<String>,
-                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
-
-        val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
-        val ipAddresses = subjectAlternativeNameIps.filter {
-            IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
-        }.map { GeneralName(GeneralName.iPAddress, it) }
-        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, TLS_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses, isCA = false)
-    }
-
-    @JvmStatic
-    fun createIdentityCert(subject: X500Name, publicKey: PublicKey,
-                      ca: CertificateAndKeyPair,
-                      subjectAlternativeNameDomains: List<String>,
-                      subjectAlternativeNameIps: List<String>,
-                      validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW): X509Certificate {
-
-        val dnsNames = subjectAlternativeNameDomains.map { GeneralName(GeneralName.dNSName, it) }
-        val ipAddresses = subjectAlternativeNameIps.filter {
-            IPAddress.isValidIPv6WithNetmask(it) || IPAddress.isValidIPv6(it) || IPAddress.isValidIPv4WithNetmask(it) || IPAddress.isValidIPv4(it)
-        }.map { GeneralName(GeneralName.iPAddress, it) }
-        val issuer = X509CertificateHolder(ca.certificate.encoded).subject
-        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, ca.certificate)
-        return Crypto.createCertificate(issuer, ca.keyPair, subject, publicKey, IDENTITY_KEY_USAGE, CLIENT_KEY_PURPOSES, window, subjectAlternativeName = dnsNames + ipAddresses, isCA = false)
+    fun createCertificate(certificateType: CertificateType,
+                          issuerCertificate: X509Certificate, issuerKeyPair: KeyPair,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Duration, Duration> = DEFAULT_VALIDITY_WINDOW,
+                          nameConstraints: NameConstraints? = null): X509Certificate {
+        val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
+        val cert = Crypto.createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
+        return cert
     }
 
     /**
@@ -255,16 +202,14 @@ object X509Utilities {
                                    signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) {
 
         val rootCACert = caKeyStore.getX509Certificate(CORDA_ROOT_CA)
-        val intermediateCA = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caKeyPassword)
+        val (intermediateCACert, intermediateCAKeyPair) = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caKeyPassword)
 
         val clientKey = generateKeyPair(signatureScheme)
         val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
-        val clientCACert = createIntermediateCACert(legalName, clientKey.public, intermediateCA, nameConstraints = nameConstraints)
-        val clientCA = CertificateAndKeyPair(clientCACert, clientKey)
+        val clientCACert = createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
 
-        val host = InetAddress.getLocalHost()
         val tlsKey = generateKeyPair(signatureScheme)
-        val clientTLSCert = createTLSCert(legalName, tlsKey.public, clientCA, listOf(host.hostName, legalName.commonName), listOf(host.hostAddress))
+        val clientTLSCert = createCertificate(CertificateType.TLS, clientCACert, clientKey, legalName, tlsKey.public)
 
         val keyPass = keyPassword.toCharArray()
 
@@ -273,7 +218,7 @@ object X509Utilities {
                 CORDA_CLIENT_CA,
                 clientKey.private,
                 keyPass,
-                arrayOf(clientCACert, intermediateCA.certificate, rootCACert))
+                arrayOf(clientCACert, intermediateCACert, rootCACert))
         clientCAKeystore.save(clientCAKeystorePath, storePassword)
 
         val tlsKeystore = KeyStoreUtilities.loadOrCreateKeyStore(sslKeyStorePath, storePassword)
@@ -281,7 +226,7 @@ object X509Utilities {
                 CORDA_CLIENT_TLS,
                 tlsKey.private,
                 keyPass,
-                arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert))
+                arrayOf(clientTLSCert, clientCACert, intermediateCACert, rootCACert))
         tlsKeystore.save(sslKeyStorePath, storePassword)
     }
 
@@ -337,3 +282,10 @@ class CertificateStream(val input: InputStream) {
 }
 
 data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: KeyPair)
+
+enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
+    ROOT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
+    INTERMEDIATE_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
+    TLS(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = false),
+    IDENTITY(KeyUsage(KeyUsage.digitalSignature), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = false)
+}
