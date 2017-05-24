@@ -116,7 +116,17 @@ class Node(override val configuration: FullNodeConfiguration,
 
     override fun makeMessagingService(): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
-        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+
+        val (serverAddress, advertisedAddress) = with(configuration) {
+            if (messagingServerAddress != null) {
+                // External broker
+                messagingServerAddress to messagingServerAddress
+            } else {
+                makeLocalMessageBroker() to getAdvertisedAddress()
+            }
+        }
+
+        printBasicNodeInfo("Incoming connection address:", advertisedAddress.toString())
 
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
         return NodeMessagingClient(
@@ -128,15 +138,25 @@ class Node(override val configuration: FullNodeConfiguration,
                 database,
                 networkMapRegistrationFuture,
                 services.monitoringService,
-                configuration.messagingServerAddress == null)
+                advertisedAddress)
     }
 
     private fun makeLocalMessageBroker(): HostAndPort {
         with(configuration) {
-            val useHost = tryDetectIfNotPublicHost(p2pAddress.host)
-            val useAddress = useHost?.let { HostAndPort.fromParts(it, p2pAddress.port) } ?: p2pAddress
-            messageBroker = ArtemisMessagingServer(this, useAddress, rpcAddress, services.networkMapCache, userService)
-            return useAddress
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
+            return HostAndPort.fromParts("localhost", p2pAddress.port)
+        }
+    }
+
+    private fun getAdvertisedAddress(): HostAndPort {
+        return with(configuration) {
+            if (relay != null) {
+                HostAndPort.fromParts(relay.relayHost, relay.remoteInboundPort)
+            } else {
+                val publicHost = tryDetectIfNotPublicHost(p2pAddress.host)
+                val useHost = publicHost ?: p2pAddress.host
+                HostAndPort.fromParts(useHost, p2pAddress.port)
+            }
         }
     }
 
