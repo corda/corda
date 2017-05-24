@@ -54,7 +54,7 @@ class Swaption {
 
     }
 
-    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractInitial)
+    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
 
     @Test
     fun issue() {

@@ -17,6 +17,8 @@
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
+      <module name="cordform-common_main" target="1.8" />
+      <module name="cordform-common_test" target="1.8" />
       <module name="core_main" target="1.8" />
       <module name="core_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
@@ -59,10 +61,13 @@
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_test" target="1.8" />
+      <module name="quasar-hook_main" target="1.8" />
+      <module name="quasar-hook_test" target="1.8" />
       <module name="raft-notary-demo_main" target="1.8" />
       <module name="raft-notary-demo_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
+      <module name="rpc_smokeTest" target="1.8" />
       <module name="rpc_test" target="1.8" />
       <module name="samples_main" target="1.8" />
       <module name="samples_test" target="1.8" />

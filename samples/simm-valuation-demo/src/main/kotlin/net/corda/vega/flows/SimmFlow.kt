@@ -10,10 +10,11 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
@@ -51,6 +52,7 @@ object SimmFlow {
      * margin using SIMM. If there is an existing state it will update and revalue the portfolio agreement.
      */
     @InitiatingFlow
+    @StartableByRPC
     class Requester(val otherParty: Party,
                     val valuationDate: LocalDate,
                     val existing: StateAndRef<PortfolioState>?)
@@ -83,7 +85,7 @@ object SimmFlow {
         @Suspendable
         private fun agreePortfolio(portfolio: Portfolio) {
             logger.info("Agreeing portfolio")
-            val parties = Pair(myIdentity.toAnonymous(), otherParty.toAnonymous())
+            val parties = Pair(myIdentity, otherParty)
             val portfolioState = PortfolioState(portfolio.refs, PortfolioSwap(), parties, valuationDate)
 
             send(otherParty, OfferMessage(notary, portfolioState, existing?.ref, valuationDate))
@@ -217,13 +219,6 @@ object SimmFlow {
             return receive<Boolean>(replyToParty).unwrap { it }
         }
 
-        @Suspendable
-        private fun agreeValuation(portfolio: Portfolio, asOf: LocalDate, valuer: AnonymousParty): PortfolioValuation {
-            val valuerParty = serviceHub.identityService.partyFromAnonymous(valuer)
-            require(valuerParty != null)
-            return agreeValuation(portfolio, asOf, valuerParty!!)
-        }
-
         /**
          * So this is the crux of the Simm Agreement flow
          * It needs to do several things - which are mainly defined by the analytics engine we are using - which in this
@@ -324,7 +319,7 @@ object SimmFlow {
         @Suspendable
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>) {
             val portfolio = stateRef.state.data.portfolio.toStateAndRef<IRSState>(serviceHub).toPortfolio()
-            val valuer = stateRef.state.data.valuer
+            val valuer = serviceHub.identityService.partyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
                 override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {

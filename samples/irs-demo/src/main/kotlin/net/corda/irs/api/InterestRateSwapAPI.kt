@@ -40,22 +40,22 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
 
     private val logger = loggerFor<InterestRateSwapAPI>()
 
-    private fun generateDealLink(deal: InterestRateSwap.State<*>) = "/api/irs/deals/" + deal.common.tradeID
+    private fun generateDealLink(deal: InterestRateSwap.State) = "/api/irs/deals/" + deal.common.tradeID
 
-    private fun getDealByRef(ref: String): InterestRateSwap.State<*>? {
+    private fun getDealByRef(ref: String): InterestRateSwap.State? {
         val (vault, vaultUpdates) = rpc.vaultAndUpdates()
         vaultUpdates.notUsed()
-        val states = vault.filterStatesOfType<InterestRateSwap.State<*>>().filter { it.state.data.ref == ref }
+        val states = vault.filterStatesOfType<InterestRateSwap.State>().filter { it.state.data.ref == ref }
         return if (states.isEmpty()) null else {
             val deals = states.map { it.state.data }
             return if (deals.isEmpty()) null else deals[0]
         }
     }
 
-    private fun getAllDeals(): Array<InterestRateSwap.State<*>> {
+    private fun getAllDeals(): Array<InterestRateSwap.State> {
         val (vault, vaultUpdates) = rpc.vaultAndUpdates()
         vaultUpdates.notUsed()
-        val states = vault.filterStatesOfType<InterestRateSwap.State<*>>()
+        val states = vault.filterStatesOfType<InterestRateSwap.State>()
         val swaps = states.map { it.state.data }.toTypedArray()
         return swaps
     }
@@ -63,14 +63,14 @@ class InterestRateSwapAPI(val rpc: CordaRPCOps) {
     @GET
     @Path("deals")
     @Produces(MediaType.APPLICATION_JSON)
-    fun fetchDeals(): Array<InterestRateSwap.State<*>> = getAllDeals()
+    fun fetchDeals(): Array<InterestRateSwap.State> = getAllDeals()
 
     @POST
     @Path("deals")
     @Consumes(MediaType.APPLICATION_JSON)
-    fun storeDeal(newDeal: InterestRateSwap.State<Party>): Response {
+    fun storeDeal(newDeal: InterestRateSwap.State): Response {
         return try {
-            rpc.startFlow(AutoOfferFlow::Requester, newDeal.toAnonymous()).returnValue.getOrThrow()
+            rpc.startFlow(AutoOfferFlow::Requester, newDeal).returnValue.getOrThrow()
             Response.created(URI.create(generateDealLink(newDeal))).build()
         } catch (ex: Throwable) {
             logger.info("Exception when creating deal: $ex")

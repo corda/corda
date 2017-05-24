@@ -30,14 +30,6 @@ class CorDappInfoServlet(val plugins: List<CordaPluginRegistry>, val rpc: CordaR
                 } else {
                     plugins.forEach { plugin ->
                         h3 { +plugin::class.java.name }
-                        if (plugin.requiredFlows.isNotEmpty()) {
-                            div {
-                                p { +"Whitelisted flows:" }
-                                ul {
-                                    plugin.requiredFlows.map { it.key }.forEach { li { +it } }
-                                }
-                            }
-                        }
                         if (plugin.webApis.isNotEmpty()) {
                             div {
                                 plugin.webApis.forEach { api ->
@@ -56,7 +48,7 @@ class CorDappInfoServlet(val plugins: List<CordaPluginRegistry>, val rpc: CordaR
                             div {
                                 p { +"Static web content:" }
                                 ul {
-                                    plugin.staticServeDirs.map { it.key }.forEach {
+                                    plugin.staticServeDirs.keys.forEach {
                                         li { a("web/$it") { +it } }
                                     }
                                 }

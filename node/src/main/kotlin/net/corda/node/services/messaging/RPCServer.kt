@@ -13,7 +13,6 @@ import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.ErrorOr
-import net.corda.core.crypto.commonName
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
@@ -42,10 +41,8 @@ import rx.Subscriber
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
 import java.time.Duration
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
+import java.util.*
+import java.util.concurrent.*
 
 data class RPCServerConfiguration(
         /** The number of threads to use for handling RPC requests */
@@ -101,22 +98,11 @@ class RPCServer(
     // A mapping from client addresses to IDs of associated Observables
     private val clientAddressToObservables = Multimaps.synchronizedSetMultimap(HashMultimap.create<SimpleString, RPCApi.ObservableId>())
     // The scheduled reaper handle.
-    private lateinit var reaperScheduledFuture: ScheduledFuture<*>
+    private var reaperScheduledFuture: ScheduledFuture<*>? = null
 
-    private val observationSendExecutor = Executors.newFixedThreadPool(
-            1,
-            ThreadFactoryBuilder().setNameFormat("rpc-observation-sender-%d").build()
-    )
-
-    private val rpcExecutor = Executors.newScheduledThreadPool(
-            rpcConfiguration.rpcThreadPoolSize,
-            ThreadFactoryBuilder().setNameFormat("rpc-server-handler-pool-%d").build()
-    )
-
-    private val reaperExecutor = Executors.newScheduledThreadPool(
-            1,
-            ThreadFactoryBuilder().setNameFormat("rpc-server-reaper-%d").build()
-    )
+    private var observationSendExecutor: ExecutorService? = null
+    private var rpcExecutor: ScheduledExecutorService? = null
+    private var reaperExecutor: ScheduledExecutorService? = null
 
     private val sessionAndConsumers = ArrayList<ArtemisConsumer>(rpcConfiguration.consumerPoolSize)
     private val sessionAndProducerPool = LazyStickyPool(rpcConfiguration.producerPoolBound) {
@@ -125,8 +111,8 @@ class RPCServer(
         session.start()
         ArtemisProducer(sessionFactory, session, session.createProducer())
     }
-    private lateinit var clientBindingRemovalConsumer: ClientConsumer
-    private lateinit var serverControl: ActiveMQServerControl
+    private var clientBindingRemovalConsumer: ClientConsumer? = null
+    private var serverControl: ActiveMQServerControl? = null
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
         val onObservableRemove = RemovalListener<RPCApi.ObservableId, ObservableSubscription> {
@@ -137,52 +123,64 @@ class RPCServer(
     }
 
     fun start(activeMqServerControl: ActiveMQServerControl) {
-        log.info("Starting RPC server with configuration $rpcConfiguration")
-        reaperScheduledFuture = reaperExecutor.scheduleAtFixedRate(
-                this::reapSubscriptions,
-                rpcConfiguration.reapInterval.toMillis(),
-                rpcConfiguration.reapInterval.toMillis(),
-                TimeUnit.MILLISECONDS
-        )
-        val sessions = ArrayList<ClientSession>()
-        for (i in 1 .. rpcConfiguration.consumerPoolSize) {
-            val sessionFactory = serverLocator.createSessionFactory()
-            val session = sessionFactory.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
-            val consumer = session.createConsumer(RPCApi.RPC_SERVER_QUEUE_NAME)
-            consumer.setMessageHandler(this@RPCServer::clientArtemisMessageHandler)
-            sessionAndConsumers.add(ArtemisConsumer(sessionFactory, session, consumer))
-            sessions.add(session)
-        }
-        clientBindingRemovalConsumer = sessionAndConsumers[0].session.createConsumer(RPCApi.RPC_CLIENT_BINDING_REMOVALS)
-        clientBindingRemovalConsumer.setMessageHandler(this::bindingRemovalArtemisMessageHandler)
-        serverControl = activeMqServerControl
-        lifeCycle.transition(State.UNSTARTED, State.STARTED)
-        // We delay the consumer session start because Artemis starts delivering messages immediately, so we need to be
-        // fully initialised.
-        sessions.forEach {
-            it.start()
+        try {
+            lifeCycle.requireState(State.UNSTARTED)
+            log.info("Starting RPC server with configuration $rpcConfiguration")
+            observationSendExecutor = Executors.newFixedThreadPool(
+                    1,
+                    ThreadFactoryBuilder().setNameFormat("rpc-observation-sender-%d").build()
+            )
+            rpcExecutor = Executors.newScheduledThreadPool(
+                    rpcConfiguration.rpcThreadPoolSize,
+                    ThreadFactoryBuilder().setNameFormat("rpc-server-handler-pool-%d").build()
+            )
+            reaperExecutor = Executors.newScheduledThreadPool(
+                    1,
+                    ThreadFactoryBuilder().setNameFormat("rpc-server-reaper-%d").build()
+            )
+            reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
+                    this::reapSubscriptions,
+                    rpcConfiguration.reapInterval.toMillis(),
+                    rpcConfiguration.reapInterval.toMillis(),
+                    TimeUnit.MILLISECONDS
+            )
+            val sessions = ArrayList<ClientSession>()
+            for (i in 1 .. rpcConfiguration.consumerPoolSize) {
+                val sessionFactory = serverLocator.createSessionFactory()
+                val session = sessionFactory.createSession(rpcServerUsername, rpcServerPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+                val consumer = session.createConsumer(RPCApi.RPC_SERVER_QUEUE_NAME)
+                consumer.setMessageHandler(this@RPCServer::clientArtemisMessageHandler)
+                sessionAndConsumers.add(ArtemisConsumer(sessionFactory, session, consumer))
+                sessions.add(session)
+            }
+            clientBindingRemovalConsumer = sessionAndConsumers[0].session.createConsumer(RPCApi.RPC_CLIENT_BINDING_REMOVALS)
+            clientBindingRemovalConsumer!!.setMessageHandler(this::bindingRemovalArtemisMessageHandler)
+            serverControl = activeMqServerControl
+            lifeCycle.transition(State.UNSTARTED, State.STARTED)
+            // We delay the consumer session start because Artemis starts delivering messages immediately, so we need to be
+            // fully initialised.
+            sessions.forEach {
+                it.start()
+            }
+        } catch (exception: Throwable) {
+            close()
+            throw exception
         }
     }
 
     fun close() {
-        reaperScheduledFuture.cancel(false)
-        rpcExecutor.shutdownNow()
-        reaperExecutor.shutdownNow()
-        rpcExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)
-        reaperExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)
+        reaperScheduledFuture?.cancel(false)
+        rpcExecutor?.shutdownNow()
+        reaperExecutor?.shutdownNow()
         sessionAndConsumers.forEach {
-            it.consumer.close()
-            it.session.close()
             it.sessionFactory.close()
         }
         observableMap.invalidateAll()
         reapSubscriptions()
         sessionAndProducerPool.close().forEach {
-            it.producer.close()
-            it.session.close()
             it.sessionFactory.close()
         }
-        lifeCycle.transition(State.STARTED, State.FINISHED)
+        lifeCycle.justTransition(State.FINISHED)
     }
 
     private fun bindingRemovalArtemisMessageHandler(artemisMessage: ClientMessage) {
@@ -211,7 +209,7 @@ class RPCServer(
                 val rpcContext = RpcContext(
                         currentUser = getUser(artemisMessage)
                 )
-                rpcExecutor.submit {
+                rpcExecutor!!.submit {
                     val result = ErrorOr.catch {
                         try {
                             CURRENT_RPC_CONTEXT.set(rpcContext)
@@ -239,9 +237,9 @@ class RPCServer(
                             observableMap,
                             clientAddressToObservables,
                             clientToServer.clientAddress,
-                            serverControl,
+                            serverControl!!,
                             sessionAndProducerPool,
-                            observationSendExecutor,
+                            observationSendExecutor!!,
                             kryoPool
                     )
                     observableContext.sendMessage(reply)
@@ -255,7 +253,6 @@ class RPCServer(
     }
 
     private fun reapSubscriptions() {
-        lifeCycle.requireState(State.STARTED)
         observableMap.cleanUp()
     }
 

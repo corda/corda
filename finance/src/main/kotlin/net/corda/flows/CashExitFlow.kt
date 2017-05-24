@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
@@ -20,6 +21,7 @@ import java.util.*
  * @param issuerRef the reference on the issued currency. Added to the node's legal identity to determine the
  * issuer.
  */
+@StartableByRPC
 class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
 
@@ -42,9 +44,6 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         } catch (e: InsufficientBalanceException) {
             throw CashException("Exiting more cash than exists", e)
         }
-        progressTracker.currentStep = SIGNING_TX
-        val myKey = serviceHub.legalIdentityKey
-        builder.signWith(myKey)
 
         // Work out who the owners of the burnt states were
         val inputStatesNullable = serviceHub.vaultService.statesForRefs(builder.inputStates())
@@ -58,12 +57,14 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         //       count as a reason to fail?
         val participants: Set<Party> = inputStates
                 .filterIsInstance<Cash.State>()
-                .map { serviceHub.identityService.partyFromKey(it.owner) }
+                .map { serviceHub.identityService.partyFromAnonymous(it.owner) }
                 .filterNotNull()
                 .toSet()
+        // Sign transaction
+        progressTracker.currentStep = SIGNING_TX
+        val tx = serviceHub.signInitialTransaction(builder)
 
         // Commit the transaction
-        val tx = builder.toSignedTransaction(checkSufficientSignatures = false)
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(participants, tx, "Unable to notarise exit")
         return tx

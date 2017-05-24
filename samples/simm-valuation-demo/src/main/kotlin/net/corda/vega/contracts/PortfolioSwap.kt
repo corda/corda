@@ -71,7 +71,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                     "there are no inputs" using (inputs.size == 0)
                     "there is one output" using (outputs.size == 1)
                     "valuer must be a party" using (outputs[0].parties.contains(outputs[0].valuer))
-                    "all participants must be parties" using (outputs[0].parties.map { it.owningKey }.containsAll(outputs[0].participants))
+                    "all participants must be parties" using (outputs[0].parties.containsAll(outputs[0].participants))
                 }
 
                 return setOf(command.value)

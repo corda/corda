@@ -18,6 +18,11 @@ data class User(
         val password: String,
         val permissions: Set<String>) {
     override fun toString(): String = "${javaClass.simpleName}($username, permissions=$permissions)"
+    fun toMap() = mapOf(
+            "username" to username,
+            "password" to password,
+            "permissions" to permissions
+    )
 }
 
 /** Records the protocol version in which this RPC was added. */

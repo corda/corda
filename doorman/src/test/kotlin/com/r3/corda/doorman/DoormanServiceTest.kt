@@ -5,7 +5,10 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.*
+import net.corda.core.crypto.CertificateStream
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -87,7 +90,7 @@ class DoormanServiceTest {
 
         storage.approveRequest(id) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createServerCert(subject, publicKey, intermediateCA,
+                X509Utilities.createTlsServerCert(subject, publicKey, intermediateCA,
                         if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
             }
         }

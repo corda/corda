@@ -8,6 +8,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionResolutionException
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServicesForResolution
@@ -24,6 +25,8 @@ import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 
 // This file implements the functionality of the SGX transaction verification enclave.
 
@@ -49,12 +52,16 @@ private class ServicesForVerification(dependenciesList: List<WireTransaction>, a
     }
 
     // Identities: this stuff will all change in future so we don't bother implementing it now.
+    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = TODO("not implemented")
+
     override fun registerIdentity(party: net.corda.core.identity.Party) = TODO("not implemented")
+    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) = TODO("not implemented")
 
     override fun partyFromKey(key: PublicKey): net.corda.core.identity.Party? = null
     override fun partyFromName(name: String): net.corda.core.identity.Party? = null
     override fun partyFromX500Name(principal: X500Name): net.corda.core.identity.Party? = null
-    override fun partyFromAnonymous(party: AnonymousParty): net.corda.core.identity.Party? = null
+    override fun partyFromAnonymous(party: AbstractParty): Party? = null
+    override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = null
 
     // TODO: Implement attachments.
     override val attachments: AttachmentStorage = this

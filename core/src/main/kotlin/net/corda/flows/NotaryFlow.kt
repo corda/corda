@@ -3,7 +3,10 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.Timestamp
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -144,8 +147,7 @@ object NotaryFlow {
         }
 
         private fun sign(bits: ByteArray): DigitalSignature.WithKey {
-            val mySigningKey = serviceHub.notaryIdentityKey
-            return mySigningKey.sign(bits)
+            return serviceHub.keyManagementService.sign(bits, serviceHub.notaryIdentityKey)
         }
 
         private fun notaryException(txId: SecureHash, e: UniquenessException): NotaryException {

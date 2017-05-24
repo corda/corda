@@ -3,9 +3,10 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
@@ -16,7 +17,6 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 
@@ -32,10 +32,12 @@ import java.util.*
  * 3. S signs it and commits it to the ledger, notarising it and distributing the final signed transaction back
  *    to B.
  *
- * Assuming no malicious termination, they both end the flow being in posession of a valid, signed transaction
+ * Assuming no malicious termination, they both end the flow being in possession of a valid, signed transaction
  * that represents an atomic asset swap.
  *
  * Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
+ *
+ * TODO: Refactor this using the [CollectSignaturesFlow]. Note. It requires a large docsite update!
  */
 object TwoPartyTradeFlow {
     // TODO: Common elements in multi-party transaction consensus and signing should be refactored into a superclass of this
@@ -63,7 +65,7 @@ object TwoPartyTradeFlow {
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
-                      val myKeyPair: KeyPair,
+                      val myKey: PublicKey,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -97,9 +99,8 @@ object TwoPartyTradeFlow {
         private fun receiveAndCheckProposedTransaction(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
 
-            val myPublicKey = myKeyPair.public
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(assetToSell, price, myPublicKey)
+            val hello = SellerTradeInfo(assetToSell, price, myKey)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
             val untrustedSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
@@ -107,14 +108,14 @@ object TwoPartyTradeFlow {
             progressTracker.currentStep = VERIFYING
             return untrustedSTX.unwrap {
                 // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = it.verifySignatures(myPublicKey, notaryNode.notaryIdentity.owningKey)
+                val wtx: WireTransaction = it.verifySignatures(myKey, notaryNode.notaryIdentity.owningKey)
                 logger.trace { "Received partially signed transaction: ${it.id}" }
 
                 // Download and check all the things that this transaction depends on and verify it is contract-valid,
                 // even though it is missing signatures.
                 subFlow(ResolveTransactionsFlow(wtx, otherParty))
 
-                if (wtx.outputs.map { it.data }.sumCashBy(myPublicKey).withoutIssuer() != price)
+                if (wtx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
                     throw FlowException("Transaction is not sending us the right amount of cash")
 
                 it
@@ -136,7 +137,7 @@ object TwoPartyTradeFlow {
 
         open fun calculateOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
             progressTracker.currentStep = SIGNING
-            return myKeyPair.sign(partialTX.id)
+            return serviceHub.createSignature(partialTX, myKey)
         }
     }
 
@@ -202,12 +203,7 @@ object TwoPartyTradeFlow {
 
         private fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in cashSigningPubKeys.expandedCompositeKeys) {
-                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
-                ptx.signWith(KeyPair(publicKey, privateKey))
-            }
-
-            return ptx.toSignedTransaction(checkSufficientSignatures = false)
+            return serviceHub.signInitialTransaction(ptx, cashSigningPubKeys)
         }
 
         @Suspendable
@@ -215,7 +211,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey)
+            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, AnonymousParty(tradeRequest.sellerOwnerKey))
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(tradeRequest.assetForSale)
@@ -225,9 +221,9 @@ object TwoPartyTradeFlow {
             // reveal who the owner actually is. The key management service is expected to derive a unique key from some
             // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
-            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(freshKey.public)
+            val (command, state) = tradeRequest.assetForSale.state.data.withNewOwner(AnonymousParty(freshKey))
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
-            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner)
+            tx.addCommand(command, tradeRequest.assetForSale.state.data.owner.owningKey)
 
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.

@@ -175,7 +175,7 @@ class TransactionViewer : CordaView("Transactions") {
         }.filterNotNull().toSet().joinToString(separator)
     }
 
-    private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }
+    private fun ObservableList<StateAndRef<ContractState>>.getParties() = map { it.state.data.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }
     private fun ObservableList<StateAndRef<ContractState>>.toText() = map { it.contract().javaClass.simpleName }.groupBy { it }.map { "${it.key} (${it.value.size})" }.joinToString()
 
     private class TransactionWidget : BorderPane() {
@@ -243,7 +243,7 @@ class TransactionViewer : CordaView("Transactions") {
                             }
                             row {
                                 label("Issuer :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                                val anonymousIssuer: AnonymousParty = data.amount.token.issuer.party
+                                val anonymousIssuer: AbstractParty = data.amount.token.issuer.party
                                 val issuer: AbstractParty = anonymousIssuer.resolveIssuer().value ?: anonymousIssuer
                                 // TODO: Anonymous should probably be italicised or similar
                                 label(issuer.nameOrNull()?.let { PartyNameFormatter.short.format(it) } ?: "Anonymous") {
@@ -253,9 +253,9 @@ class TransactionViewer : CordaView("Transactions") {
                             row {
                                 label("Owner :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
                                 val owner = data.owner
-                                val nodeInfo = getModel<NetworkIdentityModel>().lookup(owner)
+                                val nodeInfo = getModel<NetworkIdentityModel>().lookup(owner.owningKey)
                                 label(nodeInfo.map { it?.legalIdentity?.let { PartyNameFormatter.short.format(it.name) } ?: "???" }) {
-                                    tooltip(data.owner.toBase58String())
+                                    tooltip(data.owner.owningKey.toBase58String())
                                 }
                             }
                         }
@@ -278,17 +278,17 @@ private fun calculateTotalEquiv(identity: NodeInfo?,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
-    val publicKey = identity?.legalIdentity?.owningKey
+    val legalIdentity = identity?.legalIdentity
     fun List<ContractState>.sum() = this.map { it as? Cash.State }
             .filterNotNull()
-            .filter { publicKey == it.owner }
+            .filter { legalIdentity == it.owner }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum()
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.
     val issuedAmount = if (inputs.isEmpty()) outputs.map { it as? Cash.State }
             .filterNotNull()
-            .filter { publicKey == it.amount.token.issuer.party.owningKey && publicKey != it.owner }
+            .filter { legalIdentity == it.amount.token.issuer.party && legalIdentity != it.owner }
             .map { exchange(it.amount.withoutIssuer()).quantity }
             .sum() else 0
 

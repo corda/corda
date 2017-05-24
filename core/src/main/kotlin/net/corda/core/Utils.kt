@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
@@ -32,13 +33,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.Iterable
 import kotlin.collections.LinkedHashMap
-import kotlin.collections.List
-import kotlin.collections.filter
-import kotlin.collections.firstOrNull
-import kotlin.collections.fold
-import kotlin.collections.forEach
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -113,8 +108,17 @@ infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
-
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
+
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = run {
+    val iterator = iterator()
+    var expected = 0
+    Array(size) {
+        expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")
+        transform(iterator.next())
+    }
+}
+
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {
     try {
@@ -136,7 +140,8 @@ fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
 }
 
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
-operator fun Path.div(other: String): Path = resolve(other)
+operator fun Path.div(other: String) = resolve(other)
+operator fun String.div(other: String) = Paths.get(this) / other
 
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
@@ -271,7 +276,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
 @CordaSerializable
-abstract class RetryableException(message: String) : Exception(message)
+abstract class RetryableException(message: String) : FlowException(message)
 
 /**
  * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property

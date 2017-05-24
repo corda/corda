@@ -11,11 +11,12 @@ import io.requery.kotlin.notNull
 import io.requery.query.RowExpression
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.OnLedgerAsset
-import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
+import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -242,7 +243,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {
-        val ourKeys = services.keyManagementService.keys.keys
+        val ourKeys = services.keyManagementService.keys
         val netDelta = txns.fold(Vault.NoUpdate) { netDelta, txn -> netDelta + makeUpdate(txn, ourKeys) }
         if (netDelta != Vault.NoUpdate) {
             recordUpdate(netDelta)
@@ -468,7 +469,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     @Suspendable
     override fun generateSpend(tx: TransactionBuilder,
                                amount: Amount<Currency>,
-                               to: PublicKey,
+                               to: AbstractParty,
                                onlyFromParties: Set<AbstractParty>?): Pair<TransactionBuilder, List<PublicKey>> {
         // Retrieve unspent and unlocked cash states that meet our spending criteria.
         val acceptableCoins = unconsumedStatesForSpending<Cash.State>(amount, onlyFromParties, tx.notary, tx.lockId)
@@ -477,7 +478,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 { Cash().generateMoveCommand() })
     }
 
-    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
+    private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     private fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
@@ -528,10 +529,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-        is OwnableState -> state.owner.containsAny(ourKeys)
-    // It's potentially of interest to the vault
+        is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
         is LinearState -> state.isRelevant(ourKeys)
-        else -> false
+        else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
     }
 
     /**

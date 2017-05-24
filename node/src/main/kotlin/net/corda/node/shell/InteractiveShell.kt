@@ -15,6 +15,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
@@ -70,6 +71,7 @@ import kotlin.concurrent.thread
 // TODO: Make it notice new shell commands added after the node started.
 
 object InteractiveShell {
+    private val log = loggerFor<InteractiveShell>()
     private lateinit var node: Node
 
     /**
@@ -129,6 +131,7 @@ object InteractiveShell {
         thread(name = "Command line shell terminator", isDaemon = true) {
             // Wait for the shell to finish.
             jlineProcessor.closed()
+            log.info("Command shell has exited")
             terminal.restore()
             node.stop()
         }
@@ -210,7 +213,7 @@ object InteractiveShell {
      */
     @JvmStatic
     fun runFlowByNameFragment(nameFragment: String, inputData: String, output: RenderPrintWriter) {
-        val matches = node.flowLogicFactory.flowWhitelist.keys.filter { nameFragment in it }
+        val matches = node.services.rpcFlows.filter { nameFragment in it.name }
         if (matches.isEmpty()) {
             output.println("No matching flow found, run 'flow list' to see your options.", Color.red)
             return
@@ -219,14 +222,12 @@ object InteractiveShell {
             matches.forEachIndexed { i, s -> output.println("${i + 1}. $s", Color.yellow) }
             return
         }
-        val match = matches.single()
-        val clazz = Class.forName(match)
-        if (!FlowLogic::class.java.isAssignableFrom(clazz))
-            throw IllegalStateException("Found a non-FlowLogic class in the whitelist? $clazz")
+
+        @Suppress("UNCHECKED_CAST")
+        val clazz = matches.single() as Class<FlowLogic<*>>
         try {
             // TODO Flow invocation should use startFlowDynamic.
-            @Suppress("UNCHECKED_CAST")
-            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz as Class<FlowLogic<*>>)
+            val fsm = runFlowFromString({ node.services.startFlow(it, FlowInitiator.Shell) }, inputData, clazz)
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
             val latch = CountDownLatch(1)
@@ -275,10 +276,7 @@ object InteractiveShell {
             var paramNamesFromConstructor: List<String>? = null
             fun getPrototype(ctor: Constructor<*>): List<String> {
                 val argTypes = ctor.parameterTypes.map { it.simpleName }
-                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { pair ->
-                    val (name, type) = pair
-                    "$name: $type"
-                }
+                val prototype = paramNamesFromConstructor!!.zip(argTypes).map { (name, type) -> "$name: $type" }
                 return prototype
             }
             try {

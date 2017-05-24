@@ -20,6 +20,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
@@ -166,7 +167,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        override fun makeIdentityService() = MockIdentityService(mockNet.identities)
+        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities)
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 

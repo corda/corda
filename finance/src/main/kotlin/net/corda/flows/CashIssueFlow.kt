@@ -6,6 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.identity.Party
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -20,6 +21,7 @@ import java.util.*
  * @param recipient the party who should own the currency after it is issued.
  * @param notary the notary to set on the output states.
  */
+@StartableByRPC
 class CashIssueFlow(val amount: Amount<Currency>,
                     val issueRef: OpaqueBytes,
                     val recipient: Party,
@@ -35,11 +37,10 @@ class CashIssueFlow(val amount: Amount<Currency>,
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        Cash().generateIssue(builder, amount.issuedBy(issuer), recipient.owningKey, notary)
+        // TODO: Get a transaction key, don't just re-use the owning key
+        Cash().generateIssue(builder, amount.issuedBy(issuer), recipient, notary)
         progressTracker.currentStep = SIGNING_TX
-        val myKey = serviceHub.legalIdentityKey
-        builder.signWith(myKey)
-        val tx = builder.toSignedTransaction()
+        val tx = serviceHub.signInitialTransaction(builder)
         progressTracker.currentStep = FINALISING_TX
         subFlow(FinalityFlow(tx))
         return tx

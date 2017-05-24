@@ -59,8 +59,10 @@ class LazyPool<A>(
      * the returned iterable will be inaccurate.
      */
     fun close(): Iterable<A> {
-        lifeCycle.transition(State.STARTED, State.FINISHED)
-        return poolQueue
+        lifeCycle.justTransition(State.FINISHED)
+        val elements = poolQueue.toList()
+        poolQueue.clear()
+        return elements
     }
 
     inline fun <R> run(withInstance: (A) -> R): R {

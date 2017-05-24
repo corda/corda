@@ -170,7 +170,7 @@ class Network : CordaView() {
         return Point2D(x, y)
     }
 
-    private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it) } }.flatten()
+    private fun List<ContractState>.getParties() = map { it.participants.map { getModel<NetworkIdentityModel>().lookup(it.owningKey) } }.flatten()
 
     private fun fireBulletBetweenNodes(senderNode: Party, destNode: Party, startType: String, endType: String) {
         allComponentMap[senderNode]?.let { senderNode ->

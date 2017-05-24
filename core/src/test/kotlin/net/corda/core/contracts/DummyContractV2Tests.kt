@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.ALICE_PUBKEY
 import org.junit.Test
@@ -14,7 +15,7 @@ class DummyContractV2Tests {
     @Test
     fun `upgrade from v1`() {
         val contractUpgrade = DummyContractV2()
-        val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE_PUBKEY), DUMMY_NOTARY)
+        val v1State = TransactionState(DummyContract.SingleOwnerState(0, ALICE), DUMMY_NOTARY)
         val v1Ref = StateRef(SecureHash.randomSHA256(), 0)
         val v1StateAndRef = StateAndRef(v1State, v1Ref)
         val (tx, _) = DummyContractV2().generateUpgradeFromV1(v1StateAndRef)

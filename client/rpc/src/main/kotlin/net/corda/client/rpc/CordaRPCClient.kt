@@ -9,10 +9,12 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
 import java.time.Duration
 
+/** @see RPCClient.RPCConnection */
 class CordaRPCConnection internal constructor(
         connection: RPCClient.RPCConnection<CordaRPCOps>
 ) : RPCClient.RPCConnection<CordaRPCOps> by connection
 
+/** @see RPCClientConfiguration */
 data class CordaRPCClientConfiguration(
         val connectionMaxRetryInterval: Duration
 ) {
@@ -29,6 +31,7 @@ data class CordaRPCClientConfiguration(
     }
 }
 
+/** @see RPCClient */
 class CordaRPCClient(
         hostAndPort: HostAndPort,
         sslConfiguration: SSLConfiguration? = null,

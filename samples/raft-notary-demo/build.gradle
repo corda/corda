@@ -1,3 +1,5 @@
+import net.corda.plugins.Cordform
+
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'idea'
@@ -5,13 +7,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'maven-publish'
-
-ext {
-    deployTo = "./build/nodes"
-    notaryType = "corda.notary.validating.raft"
-    notaryName = "CN=Raft,O=R3,OU=corda,L=Zurich,C=CH"
-    advertisedNotary = "$notaryType|$notaryName"
-}
 
 configurations {
     integrationTestCompile.extendsFrom testCompile
@@ -29,6 +24,7 @@ dependencies {
     compile project(':client:jfx')
     compile project(':client:rpc')
     compile project(':test-utils')
+    compile project(':cordform-common')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -53,71 +49,15 @@ publishing {
     }
 }
 
-task generateNotaryIdentity(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = "net.corda.node.utilities.ServiceIdentityGeneratorKt"
-    def nodeDirs = ["$deployTo/Notary1",
-                    "$deployTo/Notary2",
-                    "$deployTo/Notary3"].join("|")
-    args = [nodeDirs, notaryType, notaryName]
+task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
+    definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
 }
 
-task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', 'generateNotaryIdentity']) {
-    directory deployTo
-    networkMap "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
-    node {
-        name "CN=Party,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
-        advertisedServices = []
-        p2pPort 10002
-        rpcPort 10003
-        cordapps = []
-        rpcUsers = [['username': "demo", 'password': "demo", 'permissions': [
-                'StartFlow.net.corda.notarydemo.flows.DummyIssueAndMove',
-                'StartFlow.net.corda.flows.NotaryFlow$Client'
-        ]]]
-    }
-    node {
-        name "CN=Counterparty,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "New York"
-        advertisedServices = []
-        p2pPort 10005
-        rpcPort 10006
-        cordapps = []
-    }
-    node {
-        name "CN=Notary 1,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
-        advertisedServices = [advertisedNotary]
-        p2pPort 10008
-        rpcPort 10009
-        cordapps = []
-        notaryNodePort 11002
-    }
-    node {
-        name "CN=Notary 2,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
-        advertisedServices = [advertisedNotary]
-        p2pPort 10011
-        rpcPort 10012
-        cordapps = []
-        notaryNodePort 11004
-        notaryClusterAddresses = ["localhost:11002"]
-    }
-    node {
-        name "CN=Notary 3,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
-        advertisedServices = [advertisedNotary]
-        p2pPort 10014
-        rpcPort 10015
-        cordapps = []
-        notaryNodePort 11006
-        notaryClusterAddresses = ["localhost:11002"]
-    }
+task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
+    definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
 }
 
 task notarise(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.notarydemo.NotaryDemoKt'
+    main = 'net.corda.notarydemo.NotariseKt'
 }
-

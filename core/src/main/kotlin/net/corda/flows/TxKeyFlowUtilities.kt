@@ -29,7 +29,7 @@ object TxKeyFlowUtilities {
      */
     @Suspendable
     fun provideKey(flow: FlowLogic<*>, otherSide: Party): PublicKey {
-        val key = flow.serviceHub.keyManagementService.freshKey().public
+        val key = flow.serviceHub.keyManagementService.freshKey()
         // TODO: Generate and sign certificate for the key, once we have signing support for composite keys
         //       (in this case the legal identity key)
         flow.send(otherSide, ProvidedTransactionKey(key, null))

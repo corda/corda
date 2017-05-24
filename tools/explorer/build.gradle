@@ -33,6 +33,10 @@ dependencies {
     compile project(':node')
     compile project(':finance')
 
+    // Capsule is a library for building independently executable fat JARs.
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
+
     // FontAwesomeFX: The "FontAwesome" icon library.
     compile 'de.jensd:fontawesomefx-fontawesome:4.7.0'
 

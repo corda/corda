@@ -1,7 +1,7 @@
 package net.corda.contracts.asset
 
-import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.contracts.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -51,9 +51,9 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         @JvmStatic
         fun <S : FungibleAsset<T>, T: Any> generateSpend(tx: TransactionBuilder,
                                                          amount: Amount<T>,
-                                                         to: PublicKey,
+                                                         to: AbstractParty,
                                                          acceptableStates: List<StateAndRef<S>>,
-                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
+                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                          generateMoveCommand: () -> CommandData): Pair<TransactionBuilder, List<PublicKey>> {
             // Discussion
             //
@@ -90,7 +90,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
             } else {
                 null
             }
-            val keysUsed = gathered.map { it.state.data.owner }
+            val keysUsed = gathered.map { it.state.data.owner.owningKey }
 
             val states = gathered.groupBy { it.state.data.amount.token.issuer }.map {
                 val coins = it.value
@@ -165,7 +165,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         @JvmStatic
         fun <S : FungibleAsset<T>, T: Any> generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
                                                         assetStates: List<StateAndRef<S>>,
-                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, PublicKey) -> TransactionState<S>,
+                                                        deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                         generateMoveCommand: () -> CommandData,
                                                         generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKey {
             val owner = assetStates.map { it.state.data.owner }.toSet().singleOrNull() ?: throw InsufficientBalanceException(amountIssued)
@@ -193,7 +193,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
 
             for (state in gathered) tx.addInputState(state)
             for (state in outputs) tx.addOutputState(state)
-            tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner })
+            tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner.owningKey })
             tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
             return amountIssued.token.issuer.party.owningKey
         }
@@ -250,5 +250,5 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * implementations to have fields in their state which we don't know about here, and we simply leave them untouched
      * when sending out "change" from spending/exiting.
      */
-    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: PublicKey): TransactionState<S>
+    abstract fun deriveState(txState: TransactionState<S>, amount: Amount<Issued<T>>, owner: AbstractParty): TransactionState<S>
 }

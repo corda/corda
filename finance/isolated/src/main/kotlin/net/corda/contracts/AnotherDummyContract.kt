@@ -3,6 +3,7 @@ package net.corda.contracts.isolated
 import net.corda.core.contracts.*
 import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 
@@ -13,7 +14,7 @@ val ANOTHER_DUMMY_PROGRAM_ID = AnotherDummyContract()
 class AnotherDummyContract : Contract, net.corda.core.node.DummyContractBackdoor {
     data class State(val magicNumber: Int = 0) : ContractState {
         override val contract = ANOTHER_DUMMY_PROGRAM_ID
-        override val participants: List<PublicKey>
+        override val participants: List<AbstractParty>
             get() = emptyList()
     }
 

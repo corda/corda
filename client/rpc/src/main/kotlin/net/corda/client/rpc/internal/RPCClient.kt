@@ -53,10 +53,12 @@ data class RPCClientConfiguration(
         val connectionRetryIntervalMultiplier: Double,
         /** Maximum retry interval */
         val connectionMaxRetryInterval: Duration,
+        val maxReconnectAttempts: Int,
         /** Maximum file size */
         val maxFileSize: Int
 ) {
     companion object {
+        val unlimitedReconnectAttempts = -1
         @JvmStatic
         val default = RPCClientConfiguration(
                 minimumServerProtocolVersion = 0,
@@ -68,6 +70,7 @@ data class RPCClientConfiguration(
                 connectionRetryInterval = 5.seconds,
                 connectionRetryIntervalMultiplier = 1.5,
                 connectionMaxRetryInterval = 3.minutes,
+                maxReconnectAttempts = unlimitedReconnectAttempts,
                 /** 10 MiB maximum allowed file size for attachments, including message headers. TODO: acquire this value from Network Map when supported. */
                 maxFileSize = 10485760
         )
@@ -114,9 +117,9 @@ class RPCClient<I : RPCOps>(
      *
      * The [RPCOps] defines what client RPCs are available. If an RPC returns an [Observable] anywhere in the object
      * graph returned then the server-side observable is transparently forwarded to the client side here.
-     * *You are expected to use it*. The server will begin buffering messages immediately that it will expect you to
-     * drain by subscribing to the returned observer. You can opt-out of this by simply calling the
-     * [net.corda.client.rpc.notUsed] method on it. You don't have to explicitly close the observable if you actually
+     * *You are expected to use it*. The server will begin sending messages immediately that will be buffered on the
+     * client, you are expected to drain by subscribing to the returned observer. You can opt-out of this by simply
+     * calling the [net.corda.client.rpc.notUsed] method on it. You don't have to explicitly close the observable if you actually
      * subscribe to it: it will close itself and free up the server-side resources either when the client or JVM itself
      * is shutdown, or when there are no more subscribers to it. Once all the subscribers to a returned observable are
      * unsubscribed or the observable completes successfully or with an error, the observable is closed and you can't
@@ -139,30 +142,37 @@ class RPCClient<I : RPCOps>(
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
+                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
             }
 
             val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass)
-            proxyHandler.start()
+            try {
+                proxyHandler.start()
 
-            @Suppress("UNCHECKED_CAST")
-            val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
+                @Suppress("UNCHECKED_CAST")
+                val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
 
-            val serverProtocolVersion = ops.protocolVersion
-            if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
-                throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
-                        " than the server's supported protocol version ($serverProtocolVersion)")
-            }
-            proxyHandler.setServerProtocolVersion(serverProtocolVersion)
-
-            log.debug("RPC connected, returning proxy")
-            object : RPCConnection<I> {
-                override val proxy = ops
-                override val serverProtocolVersion = serverProtocolVersion
-                override fun close() {
-                    proxyHandler.close()
-                    serverLocator.close()
+                val serverProtocolVersion = ops.protocolVersion
+                if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
+                    throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
+                            " than the server's supported protocol version ($serverProtocolVersion)")
                 }
+                proxyHandler.setServerProtocolVersion(serverProtocolVersion)
+
+                log.debug("RPC connected, returning proxy")
+                object : RPCConnection<I> {
+                    override val proxy = ops
+                    override val serverProtocolVersion = serverProtocolVersion
+                    override fun close() {
+                        proxyHandler.close()
+                        serverLocator.close()
+                    }
+                }
+            } catch (exception: Throwable) {
+                proxyHandler.close()
+                serverLocator.close()
+                throw exception
             }
         }
     }

@@ -1,9 +1,11 @@
 package net.corda.node
 
+import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
+import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
@@ -35,7 +37,9 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class CordaRPCOpsImplTest {
 
@@ -87,7 +91,7 @@ class CordaRPCOpsImplTest {
 
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
-                recipient.owningKey)
+                recipient)
 
         var issueSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {
@@ -118,7 +122,6 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
-
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
@@ -224,5 +227,20 @@ class CordaRPCOpsImplTest {
         IOUtils.copy(rpc.openAttachment(secureHash), bufferRpc)
 
         assertArrayEquals(bufferFile.toByteArray(), bufferRpc.toByteArray())
+    }
+
+    @Test
+    fun `attempt to start non-RPC flow`() {
+        CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
+                startFlowPermission<NonRPCFlow>()
+        ))))
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            rpc.startFlow(::NonRPCFlow)
+        }
+    }
+
+    class NonRPCFlow : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = Unit
     }
 }

@@ -2,6 +2,7 @@ package net.corda.flows
 
 import net.corda.core.contracts.*
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -24,11 +25,11 @@ class NotaryChangeFlow<out T : ContractState>(
         progressTracker: ProgressTracker = tracker())
     : AbstractStateReplacementFlow.Instigator<T, T, Party>(originalState, newNotary, progressTracker) {
 
-    override fun assembleTx(): Pair<SignedTransaction, Iterable<PublicKey>> {
+    override fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>> {
         val state = originalState.state
         val tx = TransactionType.NotaryChange.Builder(originalState.state.notary)
 
-        val participants: Iterable<PublicKey>
+        val participants: Iterable<AbstractParty>
 
         if (state.encumbrance == null) {
             val modifiedState = TransactionState(state.data, modification)
@@ -39,10 +40,7 @@ class NotaryChangeFlow<out T : ContractState>(
             participants = resolveEncumbrances(tx)
         }
 
-        val myKey = serviceHub.legalIdentityKey
-        tx.signWith(myKey)
-
-        val stx = tx.toSignedTransaction(false)
+        val stx = serviceHub.signInitialTransaction(tx)
 
         return Pair(stx, participants)
     }
@@ -53,14 +51,14 @@ class NotaryChangeFlow<out T : ContractState>(
      *
      * @return union of all added states' participants
      */
-    private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<PublicKey> {
+    private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<AbstractParty> {
         val stateRef = originalState.ref
         val txId = stateRef.txhash
         val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId)
                 ?: throw StateReplacementException("Transaction $txId not found")
         val outputs = issuingTx.tx.outputs
 
-        val participants = mutableSetOf<PublicKey>()
+        val participants = mutableSetOf<AbstractParty>()
 
         var nextStateIndex = stateRef.index
         var newOutputPosition = tx.outputStates().size

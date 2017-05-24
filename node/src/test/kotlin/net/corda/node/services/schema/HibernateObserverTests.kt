@@ -6,6 +6,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
@@ -54,7 +55,7 @@ class HibernateObserverTests {
     @Table(name = "Parents")
     class Parent : PersistentState() {
         @OneToMany(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id"), JoinColumn(name = "output_index"))
+        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
         @OrderColumn
         @Cascade(CascadeType.PERSIST)
         var children: MutableSet<Child> = mutableSetOf()
@@ -70,7 +71,7 @@ class HibernateObserverTests {
         var childId: Int? = null
 
         @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumns(JoinColumn(name = "transaction_id"), JoinColumn(name = "output_index"))
+        @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
         var parent: Parent? = null
     }
 
@@ -86,7 +87,7 @@ class HibernateObserverTests {
         override val contract: Contract
             get() = throw UnsupportedOperationException()
 
-        override val participants: List<CompositeKey>
+        override val participants: List<AbstractParty>
             get() = throw UnsupportedOperationException()
     }
 

@@ -7,12 +7,12 @@ import net.corda.contracts.asset.`owned by`
 import net.corda.core.bd
 import net.corda.core.contracts.*
 import net.corda.core.crypto.MerkleTreeException
-import net.corda.core.identity.Party
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
@@ -24,6 +24,7 @@ import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
@@ -33,7 +34,6 @@ import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.math.BigDecimal
-import java.time.Clock
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -51,7 +51,8 @@ class NodeInterestRatesTest {
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_CASH_ISSUER_KEY.public)
 
-    val clock = Clock.systemUTC()
+    val dummyServices = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+    val clock get() = dummyServices.clock
     lateinit var oracle: NodeInterestRates.Oracle
     lateinit var dataSource: Closeable
     lateinit var database: Database
@@ -71,7 +72,7 @@ class NodeInterestRatesTest {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         database.transaction {
-            oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY, clock).apply { knownFixes = TEST_DATA }
+            oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY.public, dummyServices).apply { knownFixes = TEST_DATA }
         }
     }
 
@@ -241,5 +242,5 @@ class NodeInterestRatesTest {
         }
     }
 
-    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE_PUBKEY `with notary` DUMMY_NOTARY)
+    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
 }

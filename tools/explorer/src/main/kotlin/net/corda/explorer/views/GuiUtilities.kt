@@ -15,7 +15,7 @@ import net.corda.client.jfx.model.NetworkIdentityModel
 import net.corda.client.jfx.utils.map
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import tornadofx.*
 
@@ -91,4 +91,4 @@ fun <A, B> Collection<A>.cross(other: Collection<B>) = this.flatMap { a -> other
 // TODO: This is a temporary fix for the UI to show the correct issuer identity, this will break when we start randomizing keys. More work is needed here when the identity work is done.
 fun StateAndRef<Cash.State>.resolveIssuer(): ObservableValue<Party?> = state.data.amount.token.issuer.party.resolveIssuer()
 
-fun AnonymousParty.resolveIssuer(): ObservableValue<Party?> = Models.get(NetworkIdentityModel::class, javaClass.kotlin).lookup(owningKey).map { it?.legalIdentity }
+fun AbstractParty.resolveIssuer(): ObservableValue<Party?> = Models.get(NetworkIdentityModel::class, javaClass.kotlin).lookup(owningKey).map { it?.legalIdentity }

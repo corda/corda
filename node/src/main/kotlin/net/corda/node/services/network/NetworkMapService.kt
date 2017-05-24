@@ -8,6 +8,7 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceType
 import net.corda.core.random63BitValue
@@ -31,7 +32,7 @@ import net.corda.node.services.network.NetworkMapService.Companion.SUBSCRIPTION_
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AddOrRemove.REMOVE
-import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.SignatureException
 import java.time.Instant
 import java.time.Period
@@ -322,9 +323,9 @@ data class NodeRegistration(val node: NodeInfo, val serial: Long, val type: AddO
     /**
      * Build a node registration in wire format.
      */
-    fun toWire(privateKey: PrivateKey): WireNodeRegistration {
+    fun toWire(keyManager: KeyManagementService, publicKey: PublicKey): WireNodeRegistration {
         val regSerialized = this.serialize()
-        val regSig = privateKey.sign(regSerialized.bytes, node.legalIdentity.owningKey)
+        val regSig = keyManager.sign(regSerialized.bytes, publicKey)
 
         return WireNodeRegistration(regSerialized, regSig)
     }

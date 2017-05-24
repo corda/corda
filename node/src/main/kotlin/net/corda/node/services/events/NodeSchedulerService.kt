@@ -12,9 +12,9 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.services.api.FlowLogicRefFactoryInternal
 import net.corda.node.services.api.SchedulerService
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
@@ -38,14 +38,12 @@ import javax.annotation.concurrent.ThreadSafe
  * but that starts to sound a lot like off-ledger state.
  *
  * @param services Core node services.
- * @param flowLogicRefFactory Factory for restoring [FlowLogic] instances from references.
  * @param schedulerTimerExecutor The executor the scheduler blocks on waiting for the clock to advance to the next
  * activity.  Only replace this for unit testing purposes.  This is not the executor the [FlowLogic] is launched on.
  */
 @ThreadSafe
 class NodeSchedulerService(private val services: ServiceHubInternal,
                            private val database: Database,
-                           private val flowLogicRefFactory: FlowLogicRefFactoryInternal,
                            private val schedulerTimerExecutor: Executor = Executors.newSingleThreadExecutor(),
                            private val unfinishedSchedules: ReusableLatch = ReusableLatch())
     : SchedulerService, SingletonSerializeAsToken() {
@@ -192,7 +190,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
                         ScheduledStateRef(scheduledState.ref, scheduledActivity.scheduledAt)
                     } else {
                         // TODO: FlowLogicRefFactory needs to sort out the class loader etc
-                        val flowLogic = flowLogicRefFactory.toFlowLogic(scheduledActivity.logicRef)
+                        val flowLogic = FlowLogicRefFactoryImpl.toFlowLogic(scheduledActivity.logicRef)
                         log.trace { "Scheduler starting FlowLogic $flowLogic" }
                         scheduledFlow = flowLogic
                         null
@@ -213,7 +211,7 @@ class NodeSchedulerService(private val services: ServiceHubInternal,
         val state = txState.data as SchedulableState
         return try {
             // This can throw as running contract code.
-            state.nextScheduledActivity(scheduledState.ref, flowLogicRefFactory)
+            state.nextScheduledActivity(scheduledState.ref, FlowLogicRefFactoryImpl)
         } catch (e: Exception) {
             log.error("Attempt to run scheduled state $scheduledState resulted in error.", e)
             null

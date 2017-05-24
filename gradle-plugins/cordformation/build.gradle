@@ -4,8 +4,6 @@ buildscript {
     file("$projectDir/../../constants.properties").withInputStream { constants.load(it) }
 
     ext.kotlin_version = constants.getProperty("kotlinVersion")
-    ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
-    ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
 
     repositories {
         mavenCentral()
@@ -46,11 +44,7 @@ dependencies {
 
     noderunner "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
 
-    // TypeSafe Config: for simple and human friendly config files.
-    compile "com.typesafe:config:$typesafe_config_version"
-
-    // Bouncy Castle: for X.500 distinguished name manipulation
-    compile "org.bouncycastle:bcprov-jdk15on:${bouncycastle_version}"
+    compile project(':cordform-common')
 }
 
 task createNodeRunner(type: Jar, dependsOn: [classes]) {

@@ -108,9 +108,11 @@ task npmInstall(type: Exec) {
     outputs.upToDateWhen { file('src/main/web/node_modules').exists() }
 }
 
-task cleanWeb() << {
-    delete 'src/main/resources/simmvaluationweb'
-    delete 'src/main/web/dist'
+task cleanWeb() {
+    doLast {
+        delete 'src/main/resources/simmvaluationweb'
+        delete 'src/main/web/dist'
+    }
 }
 
 task buildWeb(type: Exec, dependsOn: [cleanWeb, npmInstall]) {

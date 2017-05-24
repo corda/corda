@@ -21,7 +21,6 @@ import net.corda.core.utilities.Emoji
 import net.corda.schemas.CashSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
-import java.security.PublicKey
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,27 +87,27 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
             override val amount: Amount<Issued<Currency>>,
 
             /** There must be a MoveCommand signed by this key to claim the amount. */
-            override val owner: PublicKey
+            override val owner: AbstractParty
     ) : FungibleAsset<Currency>, QueryableState {
-        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: PublicKey)
+        constructor(deposit: PartyAndReference, amount: Amount<Currency>, owner: AbstractParty)
                 : this(Amount(amount.quantity, Issued(deposit, amount.token)), owner)
 
-        override val exitKeys = setOf(owner, amount.token.issuer.party.owningKey)
+        override val exitKeys = setOf(owner.owningKey, amount.token.issuer.party.owningKey)
         override val contract = CASH_PROGRAM_ID
         override val participants = listOf(owner)
 
-        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: PublicKey): FungibleAsset<Currency>
+        override fun move(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty): FungibleAsset<Currency>
                 = copy(amount = amount.copy(newAmount.quantity), owner = newOwner)
 
         override fun toString() = "${Emoji.bagOfCash}Cash($amount at ${amount.token.issuer} owned by $owner)"
 
-        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
             return when (schema) {
                 is CashSchemaV1 -> CashSchemaV1.PersistentCashState(
-                        owner = this.owner.toBase58String(),
+                        owner = this.owner.owningKey.toBase58String(),
                         pennies = this.amount.quantity,
                         currency = this.amount.token.product.currencyCode,
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
@@ -149,16 +148,16 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
     /**
      * Puts together an issuance transaction from the given template, that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: PublicKey, notary: Party)
+    fun generateIssue(tx: TransactionBuilder, tokenDef: Issued<Currency>, pennies: Long, owner: AbstractParty, notary: Party)
             = generateIssue(tx, Amount(pennies, tokenDef), owner, notary)
 
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: PublicKey, notary: Party)
+    fun generateIssue(tx: TransactionBuilder, amount: Amount<Issued<Currency>>, owner: AbstractParty, notary: Party)
         = generateIssue(tx, TransactionState(State(amount, owner), notary), generateIssueCommand())
 
-    override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: PublicKey)
+    override fun deriveState(txState: TransactionState<State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     override fun generateExitCommand(amount: Amount<Issued<Currency>>) = Commands.Exit(amount)
@@ -176,7 +175,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
  * if there are none, or if any of the cash states cannot be added together (i.e. are
  * different currencies or issuers).
  */
-fun Iterable<ContractState>.sumCashBy(owner: PublicKey): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCashBy(owner: AbstractParty): Amount<Issued<Currency>> = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
 
 /**
  * Sums the cash states in the list, throwing an exception if there are none, or if any of the cash
@@ -192,12 +191,12 @@ fun Iterable<ContractState>.sumCashOrZero(currency: Issued<Currency>): Amount<Is
     return filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
 }
 
-fun Cash.State.ownedBy(owner: PublicKey) = copy(owner = owner)
-fun Cash.State.issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party.toAnonymous()))))
+fun Cash.State.ownedBy(owner: AbstractParty) = copy(owner = owner)
+fun Cash.State.issuedBy(party: AbstractParty) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = amount.token.issuer.copy(party = party))))
 fun Cash.State.issuedBy(deposit: PartyAndReference) = copy(amount = Amount(amount.quantity, amount.token.copy(issuer = deposit)))
 fun Cash.State.withDeposit(deposit: PartyAndReference): Cash.State = copy(amount = amount.copy(token = amount.token.copy(issuer = deposit)))
 
-infix fun Cash.State.`owned by`(owner: PublicKey) = ownedBy(owner)
+infix fun Cash.State.`owned by`(owner: AbstractParty) = ownedBy(owner)
 infix fun Cash.State.`issued by`(party: AbstractParty) = issuedBy(party)
 infix fun Cash.State.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Cash.State.`with deposit`(deposit: PartyAndReference): Cash.State = withDeposit(deposit)
@@ -209,6 +208,6 @@ val DUMMY_CASH_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
 val DUMMY_CASH_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_CASH_ISSUER_KEY.public).ref(1) }
 /** An extension property that lets you write 100.DOLLARS.CASH */
-val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NullPublicKey)
-/** An extension property that lets you get a cash state from an issued token, under the [NullPublicKey] */
-val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NullPublicKey)
+val Amount<Currency>.CASH: Cash.State get() = Cash.State(Amount(quantity, Issued(DUMMY_CASH_ISSUER, token)), NULL_PARTY)
+/** An extension property that lets you get a cash state from an issued token, under the [NULL_PARTY] */
+val Amount<Issued<Currency>>.STATE: Cash.State get() = Cash.State(this, NULL_PARTY)

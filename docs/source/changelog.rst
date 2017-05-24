@@ -8,8 +8,11 @@ UNRELEASED
 ----------
 
 * API changes:
-    * Initiating flows (i.e. those which initiate flows in a counterparty) are now required to be annotated with
-      ``InitiatingFlow``.
+    * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
+      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
+
+    *  Flows which initiate flows in their counterparties (an example of which is the ``NotaryFlow.Client``) are now
+       required to be annotated with ``@InitiatingFlow``.
 
     * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
       marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an
@@ -29,24 +32,54 @@ UNRELEASED
     * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
       manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
 
-
     * There are major changes to the ``Party`` class as part of confidential identities:
 
          * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
            backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
            as possible.
-         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. A new class
-           ``AnonymousParty`` has been added, which is intended to be used in place of ``Party`` or ``PublicKey`` in contract
-           state objects. The exception to this is where the party in a contract state is intended to be well known, such as
-           issuer of a ``Cash`` state.
+         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. This now replaces
+           use of ``Party`` and ``PublicKey`` in state objects, and allows use of full or anonymised parties depending on
+           use-case.
          * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
            name. As a result all node legal names must now be structured as X.500 distinguished names.
 
+    * There are major changes to transaction signing in flows:
+
+         * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most
+           of the details of this for you. They may get more complex in future as signing becomes a more featureful
+           operation.
+         * ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair``, it instead returns just the ``PublicKey`` portion of this pair.
+           The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
+           encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
+           and other key management devices.
+         * The ``KeyManagementService`` now provides no mechanism to request the node's ``PrivateKey`` objects directly.
+           Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
+           which of the node's multiple keys to use. This lookup also works for ``CompositeKey`` scenarios
+           and the service will search for a leaf key hosted on the node.
+         * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
+           with the ``PrivateKey`` kept internally to the service.
+         * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
+           should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
+           generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
+           Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
+           provided with two signatures. One version that signs with the default node key, the other which allows key selection
+           by passing in the ``PublicKey`` partner of the desired signing key.
+         * The original ``KeyPair`` signing methods have been left on the ``TransactionBuilder`` and ``SignedTransaction``, but
+           should only be used as part of unit testing.
+           
 * The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
   number, defaulting to 1 if it's specified. The flow version is included in the flow session request and the counterparty
   will only respond and start their own flow if the version number matches to the one they've registered with. At some
   point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
   compatibility of CorDapp flows.
+
+Milestone 11.1
+--------------
+
+* Fix serialisation error when starting a flow.
+* Automatically whitelist subclasses of `InputStream` when serialising.
+* Fix exception in DemoBench on Windows when loading CorDapps into the Node Explorer.
+* Detect when localhost resolution is broken on MacOSX, and provide instructions on how to fix it.
 
 Milestone 11.0
 --------------

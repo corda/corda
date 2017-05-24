@@ -206,9 +206,9 @@ class VaultQueryTests {
     fun `unconsumed states by participants`() {
         database.transaction {
 
-            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"), participants = listOf(MEGA_CORP_PUBKEY, MINI_CORP_PUBKEY))
-            services.fillWithSomeTestDeals(listOf("456"), 3, participants = listOf(MEGA_CORP_PUBKEY, BIG_CORP_PUBKEY))
-            services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(BIG_CORP_PUBKEY, MINI_CORP_PUBKEY))
+            services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"), participants = listOf(MEGA_CORP, MINI_CORP))
+            services.fillWithSomeTestDeals(listOf("456"), 3, participants = listOf(MEGA_CORP, BIG_CORP))
+            services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(BIG_CORP, MINI_CORP))
 
             // DOCSTART VaultQueryExample5
             val criteria = VaultQueryCriteria(participantIdentities = listOf(MEGA_CORP.name, MINI_CORP.name))

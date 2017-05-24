@@ -137,7 +137,7 @@ class DBCertificateRequestStorageTest {
     private fun approveRequest(requestId: String) {
         storage.approveRequest(requestId) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createServerCert(
+                X509Utilities.createTlsServerCert(
                         subject,
                         publicKey,
                         intermediateCA,

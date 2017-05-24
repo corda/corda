@@ -26,9 +26,12 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
+import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -97,6 +100,12 @@ object DefaultKryoCustomizer {
             // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
+            register(CertPath::class.java, CertPathSerializer)
+            register(X509CertPath::class.java, CertPathSerializer)
+            // TODO: We shouldn't need to serialize raw certificates, and if we do then we need a cleaner solution
+            //       than this mess.
+            val x509CertObjectClazz = Class.forName("org.bouncycastle.jcajce.provider.asymmetric.x509.X509CertificateObject")
+            register(x509CertObjectClazz, X509CertificateSerializer)
             register(X500Name::class.java, X500NameSerializer)
 
             register(BCECPrivateKey::class.java, PrivateKeySerializer)

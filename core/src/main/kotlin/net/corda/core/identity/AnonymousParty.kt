@@ -18,5 +18,4 @@ class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
     override fun nameOrNull(): X500Name? = null
 
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
-    override fun toAnonymous() = this
 }

@@ -105,7 +105,7 @@ data class CrossCashState(
                             it.value.map {
                                 val notifier = it.key
                                 "        $notifier: [" + it.value.map {
-                                    Issued(PartyAndReference(it.first.toAnonymous(), OpaqueBytes.of(0)), it.second)
+                                    Issued(PartyAndReference(it.first, OpaqueBytes.of(0)), it.second)
                                 }.joinToString(",") + "]"
                             }.joinToString("\n")
                 }.joinToString("\n")

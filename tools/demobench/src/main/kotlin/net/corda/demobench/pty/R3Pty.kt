@@ -11,7 +11,7 @@ import java.awt.Dimension
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeUnit.SECONDS
 
 class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension, val onExit: (Int) -> Unit) : AutoCloseable {
     private companion object {
@@ -37,7 +37,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
             return PtyProcessTtyConnector(name.commonName, process, UTF_8)
         } catch (e: Exception) {
             process.destroyForcibly()
-            process.waitFor(30, TimeUnit.SECONDS)
+            process.waitFor(30, SECONDS)
             throw e
         }
     }
@@ -59,6 +59,8 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         executor.submit {
             val exitValue = connector.waitFor()
             log.info("Terminal has exited (value={})", exitValue)
+            // TODO: Remove this arbitrary sleep when https://github.com/corda/corda/issues/689 is fixed.
+            try { Thread.sleep(SECONDS.toMillis(2)) } catch (e: InterruptedException) {}
             onExit(exitValue)
         }
 
@@ -66,6 +68,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         session.start()
     }
 
+    @Suppress("unused")
     @Throws(InterruptedException::class)
     fun waitFor(): Int? = terminal.ttyConnector?.waitFor()
 

@@ -14,6 +14,7 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
+import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.exists
 import net.corda.core.node.CityDatabase
@@ -24,7 +25,6 @@ import net.corda.core.utilities.validateLegalName
 import net.corda.core.writeLines
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
-import org.bouncycastle.asn1.x500.style.RFC4519Style.name
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
@@ -41,7 +41,7 @@ class NodeTabView : Fragment() {
         const val textWidth = 465.0
 
         val jvm by inject<JVMConfig>()
-        val cordappPathsFile = jvm.dataHome / "cordapp-paths.txt"
+        val cordappPathsFile: Path = jvm.dataHome / "cordapp-paths.txt"
 
         fun loadDefaultCordappPaths(): MutableList<Path> {
             if (cordappPathsFile.exists())
@@ -267,11 +267,16 @@ class NodeTabView : Fragment() {
         if (countryCode != null) {
             nodeTab.graphic = ImageView(flags.get()[countryCode]).apply { fitWidth = 24.0; isPreserveRatio = true }
         }
-        nodeTab.text = config.legalName.toString()
+        nodeTab.text = config.legalName.commonName
         nodeTerminalView.open(config) { exitCode ->
             Platform.runLater {
-                if (exitCode == 0)
+                if (exitCode == 0) {
                     nodeTab.requestClose()
+                } else {
+                    // The node did not shut down cleanly. Keep the
+                    // terminal open but ensure that it is disabled.
+                    nodeTerminalView.shutdown()
+                }
                 nodeController.dispose(config)
                 main.forceAtLeastOneTab()
             }

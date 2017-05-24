@@ -1,9 +1,10 @@
 package net.corda.vega.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -24,6 +25,7 @@ object IRSTradeFlow {
     data class OfferMessage(val notary: Party, val dealBeingOffered: IRSState)
 
     @InitiatingFlow
+    @StartableByRPC
     class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
@@ -36,7 +38,7 @@ object IRSTradeFlow {
                     } else {
                         Pair(otherParty, myIdentity)
                     }
-            val offer = IRSState(swap, buyer.toAnonymous(), seller.toAnonymous(), OGTrade())
+            val offer = IRSState(swap, buyer, seller, OGTrade())
 
             logger.info("Handshake finished, sending IRS trade offer message")
             val otherPartyAgreeFlag = sendAndReceive<Boolean>(otherParty, OfferMessage(notary, offer)).unwrap { it }

@@ -168,11 +168,12 @@ Let's see what parameters we pass to the constructor of this oracle.
 
 .. sourcecode:: kotlin
 
-   class Oracle(val identity: Party, private val signingKey: KeyPair, val clock: Clock) = TODO()
+   class Oracle(val identity: Party, private val signingKey: PublicKey, val clock: Clock) = TODO()
 
 Here we see the oracle needs to have its own identity, so it can check which transaction commands it is expected to
-sign for, and also needs a pair of signing keys with which it signs transactions.  The clock is used for the deadline
-functionality which we will not discuss further here.
+sign for, and also needs the PublicKey portion of its signing key. Later this PublicKey will be passed to the KeyManagementService 
+to identify the internal PrivateKey used for transaction signing.
+The clock is used for the deadline functionality which we will not discuss further here.
 
 Assuming you have a data source and can query it, it should be very easy to implement your ``query`` method and the
 parameter and ``CommandData`` classes.

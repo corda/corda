@@ -2,13 +2,12 @@ package net.corda.core.contracts
 
 import net.corda.contracts.asset.Cash
 import net.corda.core.crypto.SecureHash
-import net.corda.core.utilities.DUMMY_PUBKEY_1
-import net.corda.core.utilities.DUMMY_PUBKEY_2
+import net.corda.core.identity.AbstractParty
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.MINI_CORP
 import net.corda.testing.ledger
 import net.corda.testing.transaction
 import org.junit.Test
-import java.security.PublicKey
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -19,9 +18,9 @@ class TransactionEncumbranceTests {
 
     val state = Cash.State(
             amount = 1000.DOLLARS `issued by` defaultIssuer,
-            owner = DUMMY_PUBKEY_1
+            owner = MEGA_CORP
     )
-    val stateWithNewOwner = state.copy(owner = DUMMY_PUBKEY_2)
+    val stateWithNewOwner = state.copy(owner = MINI_CORP)
 
     val FOUR_PM: Instant = Instant.parse("2015-04-17T16:00:00.00Z")
     val FIVE_PM: Instant = FOUR_PM.plus(1, ChronoUnit.HOURS)
@@ -40,7 +39,7 @@ class TransactionEncumbranceTests {
         data class State(
                 val validFrom: Instant
         ) : ContractState {
-            override val participants: List<PublicKey> = emptyList()
+            override val participants: List<AbstractParty> = emptyList()
             override val contract: Contract = TEST_TIMELOCK_ID
         }
     }
@@ -52,7 +51,7 @@ class TransactionEncumbranceTests {
                 input { state }
                 output(encumbrance = 1) { stateWithNewOwner }
                 output("5pm time-lock") { timeLock }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 verifies()
             }
         }
@@ -70,7 +69,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output { stateWithNewOwner }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timestamp(FIVE_PM)
                 verifies()
             }
@@ -89,7 +88,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by 5pm time-lock")
                 input("5pm time-lock")
                 output { state }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timestamp(FOUR_PM)
                 this `fails with` "the time specified in the time-lock has passed"
             }
@@ -106,7 +105,7 @@ class TransactionEncumbranceTests {
             transaction {
                 input("state encumbered by 5pm time-lock")
                 output { stateWithNewOwner }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timestamp(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
@@ -118,7 +117,7 @@ class TransactionEncumbranceTests {
         transaction {
             input { state }
             output(encumbrance = 0) { stateWithNewOwner }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
             this `fails with` "Missing required encumbrance 0 in OUTPUT"
         }
     }
@@ -129,7 +128,7 @@ class TransactionEncumbranceTests {
             input { state }
             output(encumbrance = 2) { stateWithNewOwner }
             output { timeLock }
-            command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
             this `fails with` "Missing required encumbrance 2 in OUTPUT"
         }
     }
@@ -146,7 +145,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by some other state")
                 input("5pm time-lock")
                 output { stateWithNewOwner }
-                command(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
                 timestamp(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }

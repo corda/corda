@@ -216,7 +216,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
-        val request = RegistrationRequest(nodeRegistration.toWire(services.legalIdentityKey.private), info.address)
+        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, services.legalIdentityKey), info.address)
         val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.info.address)
         network.runNetwork()
         return response

@@ -24,12 +24,14 @@ fun validateLegalName(normalizedLegalName: String) {
     rules.forEach { it.validate(normalizedLegalName) }
 }
 
+val WHITESPACE = "\\s++".toRegex()
+
 /**
  * The normalize function will trim the input string, replace any multiple spaces with a single space,
  * and normalize the string according to NFKC normalization form.
  */
 fun normaliseLegalName(legalName: String): String {
-    val trimmedLegalName = legalName.trim().replace(Regex("\\s+"), " ")
+    val trimmedLegalName = legalName.trim().replace(WHITESPACE, " ")
     return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
 }
 

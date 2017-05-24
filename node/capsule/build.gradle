@@ -19,24 +19,25 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-dependencies {
-    compile project(':node')
-}
-
-task buildCordaJAR(type: FatCapsule) {
+task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_release_version}.jar"
     applicationSource = files(
-            project.tasks.findByName('jar'),
+            project(':node').configurations.compile,
+            project(':node').jar,
             '../build/classes/main/CordaCaplet.class',
             '../build/classes/main/CordaCaplet$1.class',
             "$rootDir/config/dev/log4j2.xml"
     )
     from 'NOTICE' // Copy CDDL notice
 
+
     capsuleManifest {
         applicationVersion = corda_release_version
         appClassPath = ["jolokia-agent-war-${project.rootProject.ext.jolokia_version}.war"]
+        // TODO add this once we upgrade quasar to 0.7.8
+        // def quasarExcludeExpression = "x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
+        // javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
         systemProperties['jdk.serialFilter'] = 'maxbytes=0'

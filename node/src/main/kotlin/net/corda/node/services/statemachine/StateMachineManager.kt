@@ -97,7 +97,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         init {
             Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-                (fiber as FlowStateMachineImpl<*>).logger.error("Caught exception from flow", throwable)
+                (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
             }
         }
     }

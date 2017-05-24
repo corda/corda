@@ -56,6 +56,7 @@ infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantit
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 object Requirements {
+    /** Throws [IllegalArgumentException] if the given expression evaluates to false. */
     @Suppress("NOTHING_TO_INLINE")   // Inlining this takes it out of our committed ABI.
     infix inline fun String.using(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
@@ -93,13 +94,14 @@ inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>
                 filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
                 map { AuthenticatedObject(it.signers, it.signingParties, it.value as T) }
 
+/** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 inline fun <reified T : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
 
-// For Java
+/** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 fun <C : CommandData> Collection<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<C>) =
         mapNotNull { @Suppress("UNCHECKED_CAST") if (klass.isInstance(it.value)) it as AuthenticatedObject<C> else null }.single()
 
@@ -115,7 +117,7 @@ inline fun <reified T : MoveCommand> verifyMoveCommand(inputs: List<OwnableState
     // Now check the digital signatures on the move command. Every input has an owning public key, and we must
     // see a signature from each of those keys. The actual signatures have been verified against the transaction
     // data by the platform before execution.
-    val owningPubKeys = inputs.map { it.owner }.toSet()
+    val owningPubKeys = inputs.map { it.owner.owningKey }.toSet()
     val command = commands.requireSingleCommand<T>()
     val keysThatSigned = command.signers.toSet()
     requireThat {

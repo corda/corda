@@ -18,9 +18,11 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
+import net.corda.node.services.config.*
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.configOf
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -28,6 +30,8 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
+import net.corda.cordform.CordformNode
+import net.corda.cordform.CordformContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
@@ -59,7 +63,7 @@ private val log: Logger = loggerFor<DriverDSL>()
 /**
  * This is the interface that's exposed to DSL users.
  */
-interface DriverDSLExposedInterface {
+interface DriverDSLExposedInterface : CordformContext {
     /**
      * Starts a [net.corda.node.internal.Node] in a separate process.
      *
@@ -75,6 +79,8 @@ interface DriverDSLExposedInterface {
                   rpcUsers: List<User> = emptyList(),
                   verifierType: VerifierType = VerifierType.InMemory,
                   customOverrides: Map<String, Any?> = emptyMap()): ListenableFuture<NodeHandle>
+
+    fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>>
 
     /**
      * Starts a distributed notary cluster.
@@ -102,9 +108,9 @@ interface DriverDSLExposedInterface {
 
     /**
      * Starts a network map service node. Note that only a single one should ever be running, so you will probably want
-     * to set automaticallyStartNetworkMap to false in your [driver] call.
+     * to set networkMapStartStrategy to Dedicated(false) in your [driver] call.
      */
-    fun startNetworkMapService()
+    fun startDedicatedNetworkMapService(): ListenableFuture<Unit>
 
     fun waitForAllNodesToFinish()
 
@@ -201,7 +207,7 @@ fun <A> driver(
         debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
-        automaticallyStartNetworkMap: Boolean = true,
+        networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = true),
         dsl: DriverDSLExposedInterface.() -> A
 ) = genericDriver(
         driverDsl = DriverDSL(
@@ -210,7 +216,7 @@ fun <A> driver(
                 systemProperties = systemProperties,
                 driverDirectory = driverDirectory.toAbsolutePath(),
                 useTestClock = useTestClock,
-                automaticallyStartNetworkMap = automaticallyStartNetworkMap,
+                networkMapStartStrategy = networkMapStartStrategy,
                 isDebug = isDebug
         ),
         coerce = { it },
@@ -381,6 +387,28 @@ class ShutdownManager(private val executorService: ExecutorService) {
         }
         registerShutdown(processShutdown)
     }
+
+    interface Follower {
+        fun unfollow()
+        fun shutdown()
+    }
+
+    fun follower() = object : Follower {
+        private val start = state.locked { registeredShutdowns.size }
+        private val end = AtomicInteger(start - 1)
+        override fun unfollow() = end.set(state.locked { registeredShutdowns.size })
+        override fun shutdown() = end.get().let { end ->
+            start > end && throw IllegalStateException("You haven't called unfollow.")
+            state.locked {
+                registeredShutdowns.subList(start, end).listIterator(end - start).run {
+                    while (hasPrevious()) {
+                        previous().getOrThrow().invoke()
+                        set(Futures.immediateFuture {}) // Don't break other followers by doing a remove.
+                    }
+                }
+            }
+        }
+    }
 }
 
 class DriverDSL(
@@ -390,14 +418,13 @@ class DriverDSL(
         val driverDirectory: Path,
         val useTestClock: Boolean,
         val isDebug: Boolean,
-        val automaticallyStartNetworkMap: Boolean
+        val networkMapStartStrategy: NetworkMapStartStrategy
 ) : DriverDSLInternalInterface {
-    private val networkMapLegalName = DUMMY_MAP.name
-    private val networkMapAddress = portAllocation.nextHostAndPort()
-    val executorService: ListeningScheduledExecutorService = MoreExecutors.listeningDecorator(
-            Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
-    )
-    override val shutdownManager = ShutdownManager(executorService)
+    private val dedicatedNetworkMapAddress = portAllocation.nextHostAndPort()
+    var _executorService: ListeningScheduledExecutorService? = null
+    val executorService get() = _executorService!!
+    var _shutdownManager: ShutdownManager? = null
+    override val shutdownManager get() = _shutdownManager!!
 
     class State {
         val processes = ArrayList<ListenableFuture<Process>>()
@@ -428,8 +455,8 @@ class DriverDSL(
     }
 
     override fun shutdown() {
-        shutdownManager.shutdown()
-        executorService.shutdown()
+        _shutdownManager?.shutdown()
+        _executorService?.shutdownNow()
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
@@ -446,56 +473,81 @@ class DriverDSL(
         }
     }
 
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CordformNode>): (X500Name) -> Map<String, String>? {
+        return networkMapStartStrategy.run {
+            when (this) {
+                is NetworkMapStartStrategy.Dedicated -> {
+                    serviceConfig(dedicatedNetworkMapAddress).let {
+                        { _: X500Name -> it }
+                    }
+                }
+                is NetworkMapStartStrategy.Nominated -> {
+                    serviceConfig(HostAndPort.fromString(networkMapCandidates.filter {
+                        it.name == legalName.toString()
+                    }.single().config.getString("p2pAddress"))).let {
+                        { nodeName: X500Name -> if (nodeName == legalName) null else it }
+                    }
+                }
+            }
+        }
+    }
+
     override fun startNode(
             providedName: X500Name?,
             advertisedServices: Set<ServiceInfo>,
             rpcUsers: List<User>,
             verifierType: VerifierType,
-            customOverrides: Map<String, Any?>
-    ): ListenableFuture<NodeHandle> {
+            customOverrides: Map<String, Any?>): ListenableFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
-        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?:  X509Utilities.getDevX509Name("${pickA(name).commonName}-${p2pAddress.port}")
-        val baseDirectory = driverDirectory / name.commonName
-        val configOverrides = mapOf(
+        val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
+        return startNode(p2pAddress, webAddress, name, configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to mapOf(
-                        "address" to networkMapAddress.toString(),
-                        "legalName" to networkMapLegalName.toString()
-                ),
+                "networkMapService" to networkMapServiceConfigLookup(emptyList())(name),
                 "useTestClock" to useTestClock,
-                "rpcUsers" to rpcUsers.map {
-                    mapOf(
-                            "username" to it.username,
-                            "password" to it.password,
-                            "permissions" to it.permissions
-                    )
-                },
+                "rpcUsers" to rpcUsers.map { it.toMap() },
                 "verifierType" to verifierType.name
-        ) + customOverrides
+        ) + customOverrides)
+    }
 
+    private fun startNode(p2pAddress: HostAndPort, webAddress: HostAndPort, nodeName: X500Name, configOverrides: Config) = run {
+        val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory,
+                baseDirectory = baseDirectory(nodeName),
                 allowMissingConfig = true,
                 configOverrides = configOverrides)
         val configuration = config.parseAs<FullNodeConfiguration>()
-
         val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
-        return processFuture.flatMap { process ->
+        processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
             establishRpc(p2pAddress, configuration).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }
+        }
+    }
+
+    override fun startNodes(nodes: List<CordformNode>): List<ListenableFuture<NodeHandle>> {
+        val networkMapServiceConfigLookup = networkMapServiceConfigLookup(nodes)
+        return nodes.map {
+            val p2pAddress = HostAndPort.fromString(it.config.getString("p2pAddress")); portAllocation.nextHostAndPort()
+            portAllocation.nextHostAndPort() // rpcAddress
+            val webAddress = portAllocation.nextHostAndPort()
+            val name = X500Name(it.name)
+            startNode(p2pAddress, webAddress, name, it.config + mapOf(
+                    "extraAdvertisedServiceIds" to it.advertisedServices,
+                    "networkMapService" to networkMapServiceConfigLookup(name),
+                    "rpcUsers" to it.rpcUsers,
+                    "notaryClusterAddresses" to it.notaryClusterAddresses
+            ))
         }
     }
 
@@ -507,7 +559,7 @@ class DriverDSL(
             rpcUsers: List<User>
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
-        val paths = nodeNames.map { driverDirectory / it.commonName }
+        val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
 
         val serviceInfo = ServiceInfo(type, notaryName)
@@ -556,24 +608,30 @@ class DriverDSL(
     }
 
     override fun start() {
-        if (automaticallyStartNetworkMap) {
-            startNetworkMapService()
+        _executorService = MoreExecutors.listeningDecorator(
+                Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+        )
+        _shutdownManager = ShutdownManager(executorService)
+        if (networkMapStartStrategy.startDedicated) {
+            startDedicatedNetworkMapService()
         }
     }
 
-    override fun startNetworkMapService() {
+    override fun baseDirectory(nodeName: X500Name) = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
+
+    override fun startDedicatedNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
         val apiAddress = portAllocation.nextHostAndPort().toString()
-        val baseDirectory = driverDirectory / networkMapLegalName.commonName
+        val networkMapLegalName = networkMapStartStrategy.legalName
         val config = ConfigHelper.loadConfig(
-                baseDirectory = baseDirectory,
+                baseDirectory = baseDirectory(networkMapLegalName),
                 allowMissingConfig = true,
-                configOverrides = mapOf(
+                configOverrides = configOf(
                         "myLegalName" to networkMapLegalName.toString(),
                         // TODO: remove the webAddress as NMS doesn't need to run a web server. This will cause all
                         //       node port numbers to be shifted, so all demos and docs need to be updated accordingly.
                         "webAddress" to apiAddress,
-                        "p2pAddress" to networkMapAddress.toString(),
+                        "p2pAddress" to dedicatedNetworkMapAddress.toString(),
                         "useTestClock" to useTestClock
                 )
         )
@@ -581,6 +639,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
+        return startNode.flatMap { addressMustBeBound(executorService, dedicatedNetworkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
@@ -590,13 +649,13 @@ class DriverDSL(
     }
 
     companion object {
-        val name = arrayOf(
+        private val names = arrayOf(
                 ALICE.name,
                 BOB.name,
                 DUMMY_BANK_A.name
         )
 
-        fun <A> pickA(array: Array<A>): A = array[Math.abs(Random().nextInt()) % array.size]
+        private fun <A> oneOf(array: Array<A>) = array[Random().nextInt(array.size)]
 
         private fun startNode(
                 executorService: ListeningScheduledExecutorService,
@@ -615,6 +674,10 @@ class DriverDSL(
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
+                // TODO Add this once we upgrade to quasar 0.7.8, this causes startup time to halve.
+                // val excludePattern = x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
+                // val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
+                //        "-javaagent:$quasarJarPath=$excludePattern"
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
@@ -660,3 +723,4 @@ fun writeConfig(path: Path, filename: String, config: Config) {
     path.toFile().mkdirs()
     File("$path/$filename").writeText(config.root().render(ConfigRenderOptions.defaults()))
 }
+

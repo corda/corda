@@ -12,12 +12,10 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.net.URL
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.full.primaryConstructor
-import kotlin.test.assertEquals
 
 class ConfigParsingTest {
     @Test
@@ -70,7 +68,7 @@ class ConfigParsingTest {
 
     @Test
     fun `Path`() {
-        val path = Paths.get("tmp") / "test"
+        val path = "tmp" / "test"
         testPropertyType<PathData, PathListData, Path>(path, path / "file", valuesToString = true)
     }
 

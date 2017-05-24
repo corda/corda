@@ -10,6 +10,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.NullSignature
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.testing.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -25,7 +26,7 @@ class ContractStateGenerator : Generator<ContractState>(ContractState::class.jav
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): ContractState {
         return Cash.State(
                 amount = AmountGenerator(IssuedGenerator(CurrencyGenerator())).generate(random, status),
-                owner = PublicKeyGenerator().generate(random, status)
+                owner = AnonymousParty(PublicKeyGenerator().generate(random, status))
         )
     }
 }

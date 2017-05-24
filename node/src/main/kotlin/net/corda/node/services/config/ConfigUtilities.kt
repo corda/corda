@@ -18,21 +18,23 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Path
 
+fun configOf(vararg pairs: Pair<String, Any?>) = ConfigFactory.parseMap(mapOf(*pairs))
+operator fun Config.plus(overrides: Map<String, Any?>) = ConfigFactory.parseMap(overrides).withFallback(this)
+
 object ConfigHelper {
     private val log = loggerFor<ConfigHelper>()
 
     fun loadConfig(baseDirectory: Path,
                    configFile: Path = baseDirectory / "node.conf",
                    allowMissingConfig: Boolean = false,
-                   configOverrides: Map<String, Any?> = emptyMap()): Config {
+                   configOverrides: Config = ConfigFactory.empty()): Config {
         val parseOptions = ConfigParseOptions.defaults()
         val defaultConfig = ConfigFactory.parseResources("reference.conf", parseOptions.setAllowMissing(false))
         val appConfig = ConfigFactory.parseFile(configFile.toFile(), parseOptions.setAllowMissing(allowMissingConfig))
-        val overrideConfig = ConfigFactory.parseMap(configOverrides + mapOf(
+        val finalConfig = configOf(
                 // Add substitution values here
                 "basedir" to baseDirectory.toString())
-        )
-        val finalConfig = overrideConfig
+                .withFallback(configOverrides)
                 .withFallback(appConfig)
                 .withFallback(defaultConfig)
                 .resolve()

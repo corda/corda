@@ -2,3 +2,5 @@ rootProject.name = 'corda-gradle-plugins'
 include 'publish-utils'
 include 'quasar-utils'
 include 'cordformation'
+include 'cordform-common'
+project(':cordform-common').projectDir = new File("$settingsDir/../cordform-common")

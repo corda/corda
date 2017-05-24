@@ -87,14 +87,15 @@ private class TerminalWindowJavaCommand(jarName: String, dir: File, debugPort: I
     activate
     tell app "System Events" to tell process "Terminal" to keystroke "t" using command down
     delay 0.5
-    do script "bash -c 'cd $dir; /usr/libexec/java_home -v 1.8 --exec ${command.joinToString(" ")} && exit'" in selected tab of the front window
+    do script "bash -c 'cd $dir; ${command.joinToString(" ")} && exit'" in selected tab of the front window
 end tell""")
         }
         OS.WINDOWS -> {
             listOf("cmd", "/C", "start ${command.joinToString(" ")}")
         }
         OS.LINUX -> {
-            val command = "${unixCommand()} || sh"
+            // Start shell to keep window open unless java terminated normally or due to SIGTERM:
+            val command = "${unixCommand()}; [ $? -eq 0 -o $? -eq 143 ] || sh"
             if (isTmux()) {
                 listOf("tmux", "new-window", "-n", nodeName, command)
             } else {

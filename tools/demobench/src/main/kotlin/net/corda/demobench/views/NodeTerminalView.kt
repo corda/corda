@@ -17,6 +17,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
+import net.corda.core.crypto.commonName
 import net.corda.core.failure
 import net.corda.core.success
 import net.corda.core.then
@@ -64,7 +65,7 @@ class NodeTerminalView : Fragment() {
     private lateinit var swingTerminal: SwingNode
 
     fun open(config: NodeConfig, onExit: (Int) -> Unit) {
-        nodeName.text = config.legalName.toString()
+        nodeName.text = config.legalName.commonName
 
         swingTerminal = SwingNode()
         swingTerminal.setOnMouseClicked {
@@ -228,16 +229,21 @@ class NodeTerminalView : Fragment() {
         }
     }
 
+    fun shutdown() {
+        header.isDisable = true
+        subscriptions.forEach {
+            // Don't allow any exceptions here to halt tab destruction.
+            try { it.unsubscribe() } catch (e: Exception) {}
+        }
+        webServer.close()
+        explorer.close()
+        viewer.close()
+        rpc?.close()
+    }
+
     fun destroy() {
         if (!isDestroyed) {
-            subscriptions.forEach {
-                // Don't allow any exceptions here to halt tab destruction.
-                try { it.unsubscribe() } catch (e: Exception) {}
-            }
-            webServer.close()
-            explorer.close()
-            viewer.close()
-            rpc?.close()
+            shutdown()
             pty?.close()
             isDestroyed = true
         }

@@ -3,13 +3,13 @@ package net.corda.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NullPublicKey
+import net.corda.core.crypto.NULL_PARTY
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 
@@ -27,19 +27,19 @@ class CommercialPaperLegacy : Contract {
 
     data class State(
             val issuance: PartyAndReference,
-            override val owner: PublicKey,
+            override val owner: AbstractParty,
             val faceValue: Amount<Issued<Currency>>,
             val maturityDate: Instant
     ) : OwnableState, ICommercialPaperState {
         override val contract = CP_LEGACY_PROGRAM_ID
         override val participants = listOf(owner)
 
-        fun withoutOwner() = copy(owner = NullPublicKey)
-        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        fun withoutOwner() = copy(owner = NULL_PARTY)
+        override fun withNewOwner(newOwner: AbstractParty) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by $owner)"
 
         // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
-        override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
+        override fun withOwner(newOwner: AbstractParty): ICommercialPaperState = copy(owner = newOwner)
 
         override fun withFaceValue(newFaceValue: Amount<Issued<Currency>>): ICommercialPaperState = copy(faceValue = newFaceValue)
         override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
@@ -70,7 +70,7 @@ class CommercialPaperLegacy : Contract {
                 is Commands.Move -> {
                     val input = inputs.single()
                     requireThat {
-                        "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                        "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
                         "the state is propagated" using (outputs.size == 1)
                         // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                         // the input ignoring the owner field due to the grouping.
@@ -86,7 +86,7 @@ class CommercialPaperLegacy : Contract {
                         "the paper must have matured" using (time >= input.maturityDate)
                         "the received amount equals the face value" using (received == input.faceValue)
                         "the paper must be destroyed" using outputs.isEmpty()
-                        "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                        "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
                     }
                 }
 
@@ -114,14 +114,14 @@ class CommercialPaperLegacy : Contract {
 
     fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
                       notary: Party): TransactionBuilder {
-        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+        val state = State(issuance, issuance.party, faceValue, maturityDate)
         return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
-    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
+    fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
         tx.addInputState(paper)
         tx.addOutputState(paper.state.data.withOwner(newOwner))
-        tx.addCommand(Command(Commands.Move(), paper.state.data.owner))
+        tx.addCommand(Command(Commands.Move(), paper.state.data.owner.owningKey))
     }
 
     @Throws(InsufficientBalanceException::class)
@@ -130,6 +130,6 @@ class CommercialPaperLegacy : Contract {
         // Add the cash movement using the states in our vault.
         vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
         tx.addInputState(paper)
-        tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner))
+        tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
     }
 }

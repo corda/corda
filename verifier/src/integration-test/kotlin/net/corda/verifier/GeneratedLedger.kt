@@ -3,6 +3,8 @@ package net.corda.verifier
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
@@ -135,7 +137,7 @@ data class GeneratedLedger(
         val newNotaryGen = pickOneOrMaybeNew(identities - inputNotary, partyGenerator)
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
         return inputsGen.bind { inputs ->
-            val signers = inputs.flatMap { it.state.data.participants } + inputNotary.owningKey
+            val signers: List<PublicKey> = (inputs.flatMap { it.state.data.participants } + inputNotary).map { it.owningKey }
             val outputsGen = Generator.sequence(inputs.map { input -> newNotaryGen.map { TransactionState(input.state.data, it, null) } })
             outputsGen.combine(attachmentsGenerator) { outputs, txAttachments ->
                 val newNotaries = outputs.map { it.notary }
@@ -185,7 +187,7 @@ data class GeneratedLedger(
 
 data class GeneratedState(
         val nonce: Long,
-        override val participants: List<PublicKey>
+        override val participants: List<AbstractParty>
 ) : ContractState {
     override val contract = DummyContract()
 }
@@ -205,7 +207,7 @@ val keyPairGenerator = Generator.long().map { entropyToKeyPair(BigInteger.valueO
 val publicKeyGenerator = keyPairGenerator.map { it.public }
 val stateGenerator: Generator<ContractState> =
         Generator.replicatePoisson(2.0, publicKeyGenerator).combine(Generator.long()) { participants, nonce ->
-            GeneratedState(nonce, participants)
+            GeneratedState(nonce, participants.map { AnonymousParty(it) })
         }
 
 fun commandGenerator(partiesToPickFrom: Collection<Party>): Generator<Pair<Command, Party>> {

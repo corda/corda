@@ -8,7 +8,6 @@ import net.corda.core.toFuture
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction

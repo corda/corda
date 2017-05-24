@@ -4,6 +4,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.VaultService
@@ -405,7 +406,7 @@ class NodeVaultServiceTest {
 
             // Issue a txn to Send us some Money
             val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 
@@ -418,7 +419,7 @@ class NodeVaultServiceTest {
 
             // Issue more Money (GBP)
             val anotherTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 

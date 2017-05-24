@@ -8,6 +8,8 @@ buildscript {
 
     // If you bump this version you must re-bootstrap the codebase. See the README for more information.
     ext.gradle_plugins_version = constants.getProperty("gradlePluginsVersion")
+    ext.bouncycastle_version = constants.getProperty("bouncycastleVersion")
+    ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
 
     repositories {
         mavenLocal()
@@ -37,7 +39,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['cordformation', 'quasar-utils']
+    publications = ['cordformation', 'quasar-utils', 'cordform-common']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

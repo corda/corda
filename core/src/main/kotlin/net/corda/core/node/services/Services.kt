@@ -3,7 +3,8 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -18,8 +19,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import rx.Observable
 import java.io.InputStream
-import java.security.KeyPair
-import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -286,7 +285,7 @@ interface VaultService {
     @Suspendable
     fun generateSpend(tx: TransactionBuilder,
                       amount: Amount<Currency>,
-                      to: PublicKey,
+                      to: AbstractParty,
                       onlyFromParties: Set<AbstractParty>? = null): Pair<TransactionBuilder, List<PublicKey>>
 
     // DOCSTART VaultStatesQuery
@@ -371,32 +370,32 @@ class StatesNotAvailableException(override val message: String?, override val ca
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
  * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.
- *
- * The current interface is obviously not usable for those use cases: this is just where we'd put a real signing
- * interface if/when one is developed.
  */
 
 interface KeyManagementService {
-    /** Returns a snapshot of the current pubkey->privkey mapping. */
-    val keys: Map<PublicKey, PrivateKey>
+    /**
+     * Returns a snapshot of the current signing [PublicKey]s.
+     * For each of these keys a [PrivateKey] is available, that can be used later for signing.
+     */
+    val keys: Set<PublicKey>
 
-    @Throws(IllegalStateException::class)
-    fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key ${publicKey.toStringShort()}")
+    /**
+     * Generates a new random [KeyPair] and adds it to the internal key storage. Returns the public part of the pair.
+     */
+    @Suspendable
+    fun freshKey(): PublicKey
 
-    @Throws(IllegalArgumentException::class)
-    fun toKeyPair(publicKey: PublicKey): KeyPair {
-        when (publicKey) {
-            is CompositeKey -> throw IllegalArgumentException("Got CompositeKey when single PublicKey expected.")
-            else -> return KeyPair(publicKey, toPrivate(publicKey))
-        }
-    }
-
-    /** Returns the first [KeyPair] matching any of the [publicKeys] */
-    @Throws(IllegalArgumentException::class)
-    fun toKeyPair(publicKeys: Iterable<PublicKey>) = publicKeys.first { keys.contains(it) }.let { toKeyPair(it) }
-
-    /** Generates a new random key and adds it to the exposed map. */
-    fun freshKey(): KeyPair
+    /** Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
+     * @param bytes The data to sign over using the chosen key.
+     * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
+     * or previously generated via the [freshKey] method.
+     * If the [PublicKey] is actually a [CompositeKey] the first leaf signing key hosted by the node is used.
+     * @throws IllegalArgumentException if the input key is not a member of [keys].
+     * TODO A full [KeyManagementService] implementation needs to record activity to the [AuditService] and to limit signing to
+     * appropriately authorised contexts and initiating users.
+     */
+    @Suspendable
+    fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
 }
 
 // TODO: Move to a more appropriate location

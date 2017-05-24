@@ -1,6 +1,7 @@
 package net.corda.vega.flows
 
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
@@ -16,13 +17,12 @@ import java.security.PublicKey
 object StateRevisionFlow {
     class Requester<T>(curStateRef: StateAndRef<RevisionedState<T>>,
                        updatedData: T) : AbstractStateReplacementFlow.Instigator<RevisionedState<T>, RevisionedState<T>, T>(curStateRef, updatedData) {
-        override fun assembleTx(): Pair<SignedTransaction, List<PublicKey>> {
+        override fun assembleTx(): Pair<SignedTransaction, List<AbstractParty>> {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
             tx.setTime(serviceHub.clock.instant(), 30.seconds)
-            tx.signWith(serviceHub.legalIdentityKey)
 
-            val stx = tx.toSignedTransaction(false)
+            val stx = serviceHub.signInitialTransaction(tx)
             return Pair(stx, state.participants)
         }
     }

@@ -2,21 +2,21 @@ package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
-import net.corda.core.crypto.*
+import net.corda.core.contracts.requireThat
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.trace
 import net.corda.core.utilities.unwrap
-import java.security.KeyPair
 import java.security.PublicKey
 
 /**
@@ -26,7 +26,7 @@ import java.security.PublicKey
  *
  * TODO: Also, the term Deal is used here where we might prefer Agreement.
  *
- * TODO: Consider whether we can merge this with [TwoPartyTradeFlow]
+ * TODO: Make this flow more generic.
  *
  */
 object TwoPartyDealFlow {
@@ -34,151 +34,57 @@ object TwoPartyDealFlow {
     @CordaSerializable
     data class Handshake<out T>(val payload: T, val publicKey: PublicKey)
 
-    @CordaSerializable
-    class SignaturesFromPrimary(val sellerSig: DigitalSignature.WithKey, val notarySigs: List<DigitalSignature.WithKey>)
-
     /**
      * Abstracted bilateral deal flow participant that initiates communication/handshake.
-     *
-     * There's a good chance we can push at least some of this logic down into core flow logic
-     * and helper methods etc.
      */
     abstract class Primary(override val progressTracker: ProgressTracker = Primary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
-            object AWAITING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal")
-            object VERIFYING : ProgressTracker.Step("Verifying proposed transaction")
-            object SIGNING : ProgressTracker.Step("Signing transaction")
-            object NOTARY : ProgressTracker.Step("Getting notary signature")
-            object SENDING_SIGS : ProgressTracker.Step("Sending transaction signatures to other party")
-            object RECORDING : ProgressTracker.Step("Recording completed transaction")
-            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator")
-
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING, SIGNING, NOTARY, SENDING_SIGS, RECORDING, COPYING_TO_REGULATOR)
+            object SENDING_PROPOSAL : ProgressTracker.Step("Handshaking and awaiting transaction proposal.")
+            fun tracker() = ProgressTracker(SENDING_PROPOSAL)
         }
 
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
         abstract val otherParty: Party
-        abstract val myKeyPair: KeyPair
+        abstract val myKey: PublicKey
 
-        @Suspendable
-        fun getPartialTransaction(): UntrustworthyData<SignedTransaction> {
-            progressTracker.currentStep = AWAITING_PROPOSAL
-
+        @Suspendable override fun call(): SignedTransaction {
+            progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = Handshake(payload, myKeyPair.public)
-            val maybeSTX = sendAndReceive<SignedTransaction>(otherParty, hello)
+            val hello = Handshake(payload, serviceHub.myInfo.legalIdentity.owningKey)
+            // Wait for the FinalityFlow to finish on the other side and return the tx when it's available.
+            send(otherParty, hello)
 
-            return maybeSTX
-        }
-
-        @Suspendable
-        fun verifyPartialTransaction(untrustedPartialTX: UntrustworthyData<SignedTransaction>): SignedTransaction {
-            progressTracker.currentStep = VERIFYING
-
-            untrustedPartialTX.unwrap { stx ->
-                progressTracker.nextStep()
-
-                // Check that the tx proposed by the buyer is valid.
-                val wtx: WireTransaction = stx.verifySignatures(myKeyPair.public, notaryNode.notaryIdentity.owningKey)
-                logger.trace { "Received partially signed transaction: ${stx.id}" }
-
-                checkDependencies(stx)
-
-                // This verifies that the transaction is contract-valid, even though it is missing signatures.
-                wtx.toLedgerTransaction(serviceHub).verify()
-
-                // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-                //
-                // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-                //   we're reusing keys! So don't reuse keys!
-                // - This tx may include output states that impose odd conditions on the movement of the cash,
-                //   once we implement state pairing.
-                //
-                // but the goal of this code is not to be fully secure (yet), but rather, just to find good ways to
-                // express flow state machines on top of the messaging layer.
-
-                return stx
-            }
-        }
-
-        @Suspendable
-        private fun checkDependencies(stx: SignedTransaction) {
-            // Download and check all the transactions that this transaction depends on, but do not check this
-            // transaction itself.
-            val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-            subFlow(ResolveTransactionsFlow(dependencyTxIDs, otherParty))
-        }
-
-        @Suspendable
-        override fun call(): SignedTransaction {
-            val stx: SignedTransaction = verifyPartialTransaction(getPartialTransaction())
-
-            // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
-            val ourSignature = computeOurSignature(stx)
-            val allPartySignedTx = stx + ourSignature
-            val notarySignatures = getNotarySignatures(allPartySignedTx)
-
-            val fullySigned = sendSignatures(allPartySignedTx, ourSignature, notarySignatures)
-
-            progressTracker.currentStep = RECORDING
-
-            serviceHub.recordTransactions(fullySigned)
-
-            logger.trace { "Deal stored" }
-
-            progressTracker.currentStep = COPYING_TO_REGULATOR
-            val regulators = serviceHub.networkMapCache.regulatorNodes
-            if (regulators.isNotEmpty()) {
-                // If there are regulators in the network, then we could copy them in on the transaction via a sub-flow
-                // which would simply send them the transaction.
+            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+                override fun checkTransaction(stx: SignedTransaction) = checkProposal(stx)
             }
 
-            return fullySigned
+            subFlow(signTransactionFlow)
+
+            val txHash = receive<SecureHash>(otherParty).unwrap { it }
+
+            return waitForLedgerCommit(txHash)
         }
 
-        @Suspendable
-        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
-            progressTracker.currentStep = NOTARY
-            return subFlow(NotaryFlow.Client(stx))
-        }
-
-        open fun computeOurSignature(partialTX: SignedTransaction): DigitalSignature.WithKey {
-            progressTracker.currentStep = SIGNING
-            return myKeyPair.sign(partialTX.id)
-        }
-
-        @Suspendable
-        private fun sendSignatures(allPartySignedTx: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                                   notarySignatures: List<DigitalSignature.WithKey>): SignedTransaction {
-            progressTracker.currentStep = SENDING_SIGS
-            val fullySigned = allPartySignedTx + notarySignatures
-
-            logger.trace { "Built finished transaction, sending back to other party!" }
-
-            send(otherParty, SignaturesFromPrimary(ourSignature, notarySignatures))
-            return fullySigned
-        }
+        @Suspendable abstract fun checkProposal(stx: SignedTransaction)
     }
-
 
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
-     *
-     * There's a good chance we can push at least some of this logic down into core flow logic
-     * and helper methods etc.
      */
     abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
-            object RECEIVING : ProgressTracker.Step("Waiting for deal info")
-            object VERIFYING : ProgressTracker.Step("Verifying deal info")
-            object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-            object SWAPPING_SIGNATURES : ProgressTracker.Step("Swapping signatures with the other party")
-            object RECORDING : ProgressTracker.Step("Recording completed transaction")
+            object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
+            object VERIFYING : ProgressTracker.Step("Verifying deal info.")
+            object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal.")
+            object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.")
+            object RECORDING : ProgressTracker.Step("Recording completed transaction.")
+            object COPYING_TO_REGULATOR : ProgressTracker.Step("Copying regulator.")
+            object COPYING_TO_COUNTERPARTY : ProgressTracker.Step("Copying counterparty.")
 
-            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, SWAPPING_SIGNATURES, RECORDING)
+            fun tracker() = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING, COPYING_TO_REGULATOR, COPYING_TO_COUNTERPARTY)
         }
 
         abstract val otherParty: Party
@@ -188,23 +94,35 @@ object TwoPartyDealFlow {
             val handshake = receiveAndValidateHandshake()
 
             progressTracker.currentStep = SIGNING
-            val (ptx, additionalSigningPubKeys) = assembleSharedTX(handshake)
-            val stx = signWithOurKeys(additionalSigningPubKeys, ptx)
+            val (utx, additionalSigningPubKeys) = assembleSharedTX(handshake)
+            val ptx = signWithOurKeys(additionalSigningPubKeys, utx)
 
-            val signatures = swapSignaturesWithPrimary(stx)
+            logger.trace { "Signed proposed transaction." }
+
+            progressTracker.currentStep = COLLECTING_SIGNATURES
+            val stx = subFlow(CollectSignaturesFlow(ptx))
 
             logger.trace { "Got signatures from other party, verifying ... " }
 
-            val fullySigned = stx + signatures.sellerSig + signatures.notarySigs
-            fullySigned.verifySignatures()
-
-            logger.trace { "Signatures received are valid. Deal transaction complete! :-)" }
-
             progressTracker.currentStep = RECORDING
-            serviceHub.recordTransactions(fullySigned)
+            val ftx = subFlow(FinalityFlow(stx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
 
-            logger.trace { "Deal transaction stored" }
-            return fullySigned
+            logger.trace { "Recorded transaction." }
+
+            progressTracker.currentStep = COPYING_TO_REGULATOR
+            val regulators = serviceHub.networkMapCache.regulatorNodes
+            if (regulators.isNotEmpty()) {
+                // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
+                // just for demo purposes.
+                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
+            }
+
+            progressTracker.currentStep = COPYING_TO_COUNTERPARTY
+            // Send the final transaction hash back to the other party.
+            // We need this so we don't break the IRS demo and the SIMM Demo.
+            send(otherParty, ftx.id)
+
+            return ftx
         }
 
         @Suspendable
@@ -217,24 +135,9 @@ object TwoPartyDealFlow {
             return handshake.unwrap { validateHandshake(it) }
         }
 
-        @Suspendable
-        private fun swapSignaturesWithPrimary(stx: SignedTransaction): SignaturesFromPrimary {
-            progressTracker.currentStep = SWAPPING_SIGNATURES
-            logger.trace { "Sending partially signed transaction to other party" }
-
-            // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
-
-            return sendAndReceive<SignaturesFromPrimary>(otherParty, stx).unwrap { it }
-        }
-
         private fun signWithOurKeys(signingPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {
             // Now sign the transaction with whatever keys we need to move the cash.
-            for (publicKey in signingPubKeys.expandedCompositeKeys) {
-                val privateKey = serviceHub.keyManagementService.toPrivate(publicKey)
-                ptx.signWith(KeyPair(publicKey, privateKey))
-            }
-
-            return ptx.toSignedTransaction(checkSufficientSignatures = false)
+            return serviceHub.signInitialTransaction(ptx, signingPubKeys)
         }
 
         @Suspendable protected abstract fun validateHandshake(handshake: Handshake<U>): Handshake<U>
@@ -244,17 +147,20 @@ object TwoPartyDealFlow {
     @CordaSerializable
     data class AutoOffer(val notary: Party, val dealBeingOffered: DealState)
 
-
     /**
      * One side of the flow for inserting a pre-agreed deal.
      */
     open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
-                          override val myKeyPair: KeyPair,
+                          override val myKey: PublicKey,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
 
         override val notaryNode: NodeInfo get() =
         serviceHub.networkMapCache.notaryNodes.filter { it.notaryIdentity == payload.notary }.single()
+
+        @Suspendable override fun checkProposal(stx: SignedTransaction) = requireThat {
+            // Add some constraints here.
+        }
     }
 
     /**
@@ -281,5 +187,4 @@ object TwoPartyDealFlow {
             return Pair(ptx, arrayListOf(deal.parties.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
         }
     }
-
 }

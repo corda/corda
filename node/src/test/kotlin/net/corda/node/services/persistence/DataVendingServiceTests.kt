@@ -37,7 +37,7 @@ class DataVendingServiceTests {
     @Test
     fun `notify of transaction`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
+        val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = registerNode.info.legalIdentity.ref(1)
         network.runNetwork()
 
@@ -46,9 +46,7 @@ class DataVendingServiceTests {
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // Complete the cash transaction, and then manually relay it
-        val registerKey = registerNode.services.legalIdentityKey
-        ptx.signWith(registerKey)
-        val tx = ptx.toSignedTransaction()
+        val tx = registerNode.services.signInitialTransaction(ptx)
         vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 
@@ -67,7 +65,7 @@ class DataVendingServiceTests {
     @Test
     fun `notify failure`() {
         val (vaultServiceNode, registerNode) = network.createTwoNodes()
-        val beneficiary = vaultServiceNode.info.legalIdentity.owningKey
+        val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = MEGA_CORP.ref(1)
         network.runNetwork()
 
@@ -76,9 +74,7 @@ class DataVendingServiceTests {
         Cash().generateIssue(ptx, Amount(100, Issued(deposit, USD)), beneficiary, DUMMY_NOTARY)
 
         // The transaction tries issuing MEGA_CORP cash, but we aren't the issuer, so it's invalid
-        val registerKey = registerNode.services.legalIdentityKey
-        ptx.signWith(registerKey)
-        val tx = ptx.toSignedTransaction(false)
+        val tx = registerNode.services.signInitialTransaction(ptx)
         vaultServiceNode.database.transaction {
             assertThat(vaultServiceNode.services.vaultService.unconsumedStates<Cash.State>()).isEmpty()
 

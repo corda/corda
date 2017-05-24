@@ -24,7 +24,10 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
 import net.corda.node.utilities.*
-import net.corda.nodeapi.*
+import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.nodeapi.ArtemisTcpTransport
+import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
@@ -58,10 +61,11 @@ import javax.annotation.concurrent.ThreadSafe
  * invoke methods on the provided implementation. There is more documentation on this in the docsite and the
  * CordaRPCClient class.
  *
- * @param serverHostPort The address of the broker instance to connect to (might be running in the same process)
+ * @param serverHostPort The address of the broker instance to connect to (might be running in the same process).
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
- * that this is a NetworkMapService node which will be bound globally to the name "networkmap"
+ * that this is a NetworkMapService node which will be bound globally to the name "networkmap".
  * @param nodeExecutor An executor to run received message tasks upon.
+ * @param isServerLocal Specify `true` if the provided [serverHostPort] is a locally running broker instance.
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
@@ -71,7 +75,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,
-                          val monitoringService: MonitoringService
+                          val monitoringService: MonitoringService,
+                          val isServerLocal: Boolean = true
 ) : ArtemisMessagingComponent(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
@@ -153,10 +158,16 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             check(!started) { "start can't be called twice" }
             started = true
 
-            log.info("Connecting to server: $serverHostPort")
+            val serverAddress = getBrokerAddress()
+
+            log.info("Connecting to server: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
-            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverHostPort, config)
+            val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
+            // Never time out on our loopback Artemis connections. If we switch back to using the InVM transport this
+            // would be the default and the two lines below can be deleted.
+            locator.connectionTTL = -1
+            locator.clientFailureCheckPeriod = -1
             locator.minLargeMessageSize = ArtemisMessagingServer.MAX_FILE_SIZE
             sessionFactory = locator.createSessionFactory()
 
@@ -204,6 +215,13 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
         resumeMessageRedelivery()
     }
+
+    /**
+     * If the message broker is running locally and [serverHostPort] specifies a public IP, the messaging client will
+     * fail to connect on nodes under a NAT with no loopback support. As the local message broker is listening on
+     * all interfaces it is safer to always use `localhost` instead.
+     */
+    private fun getBrokerAddress() = if (isServerLocal) HostAndPort.fromParts("localhost", serverHostPort.port) else serverHostPort
 
     /**
      * We make the consumer twice, once to filter for just network map messages, and then once that is complete, we close

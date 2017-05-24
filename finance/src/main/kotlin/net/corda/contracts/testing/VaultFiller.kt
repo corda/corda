@@ -6,7 +6,8 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
@@ -21,17 +22,17 @@ import java.util.*
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
                                      revisions: Int? = 0,
-                                     participants: List<PublicKey> = emptyList()) : Vault<DealState> {
+                                     participants: List<AbstractParty> = emptyList()) : Vault<DealState> {
     val freshKey = keyManagementService.freshKey()
+    val recipient = AnonymousParty(freshKey)
 
     val transactions: List<SignedTransaction> = dealIds.map {
         // Issue a deal state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(freshKey.public)))
-            signWith(freshKey)
+            addOutputState(DummyDealContract.State(ref = it, participants = participants.plus(recipient)))
             signWith(DUMMY_NOTARY_KEY)
         }
-        return@map dummyIssue.toSignedTransaction()
+        return@map signInitialTransaction(dummyIssue)
     }
 
     recordTransactions(transactions)
@@ -47,18 +48,18 @@ fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
                                             uid: UniqueIdentifier = UniqueIdentifier(),
-                                            participants: List<PublicKey> = emptyList()) : Vault<LinearState> {
+                                            participants: List<AbstractParty> = emptyList()) : Vault<LinearState> {
     val freshKey = keyManagementService.freshKey()
+    val recipient = AnonymousParty(freshKey)
 
     val transactions: List<SignedTransaction> = (1..numberToCreate).map {
         // Issue a Linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = uid, participants = participants.plus(freshKey.public)))
-            signWith(freshKey)
+            addOutputState(DummyLinearContract.State(linearId = uid, participants = participants.plus(recipient)))
             signWith(DUMMY_NOTARY_KEY)
         }
 
-        return@map dummyIssue.toSignedTransaction(true)
+        return@map signInitialTransaction(dummyIssue)
     }
 
     recordTransactions(transactions)
@@ -87,18 +88,19 @@ fun ServiceHub.fillWithSomeTestCash(howMuch: Amount<Currency>,
                                     atMostThisManyStates: Int = 10,
                                     rng: Random = Random(),
                                     ref: OpaqueBytes = OpaqueBytes(ByteArray(1, { 1 })),
-                                    ownedBy: PublicKey? = null,
+                                    ownedBy: AbstractParty? = null,
                                     issuedBy: PartyAndReference = DUMMY_CASH_ISSUER,
                                     issuerKey: KeyPair = DUMMY_CASH_ISSUER_KEY): Vault<Cash.State> {
     val amounts = calculateRandomlySizedAmounts(howMuch, atLeastThisManyStates, atMostThisManyStates, rng)
 
-    val myKey: PublicKey = ownedBy ?: myInfo.legalIdentity.owningKey
+    val myKey: PublicKey = ownedBy?.owningKey ?: myInfo.legalIdentity.owningKey
+    val me = AnonymousParty(myKey)
 
     // We will allocate one state to one transaction, for simplicities sake.
     val cash = Cash()
     val transactions: List<SignedTransaction> = amounts.map { pennies ->
         val issuance = TransactionType.General.Builder(null)
-        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), myKey, outputNotary)
+        cash.generateIssue(issuance, Amount(pennies, Issued(issuedBy.copy(reference = ref), howMuch.token)), me, outputNotary)
         issuance.signWith(issuerKey)
 
         return@map issuance.toSignedTransaction(true)

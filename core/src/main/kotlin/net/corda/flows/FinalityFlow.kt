@@ -13,7 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 
 /**
- * Verifies the given transactions, then sends them to the named notaries. If the notary agrees that the transactions
+ * Verifies the given transactions, then sends them to the named notary. If the notary agrees that the transactions
  * are acceptable then they are from that point onwards committed to the ledger, and will be written through to the
  * vault. Additionally they will be distributed to the parties reflected in the participants list of the states.
  *
@@ -37,6 +37,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
                    override val progressTracker: ProgressTracker) : FlowLogic<List<SignedTransaction>>() {
     constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(listOf(transaction), extraParticipants, tracker())
     constructor(transaction: SignedTransaction) : this(listOf(transaction), emptySet(), tracker())
+    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(listOf(transaction), emptySet(), progressTracker)
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
@@ -105,7 +106,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
             // Calculate who is meant to see the results based on the participants involved.
             val keys = ltx.outputs.flatMap { it.data.participants } + ltx.inputs.flatMap { it.state.data.participants }
             // TODO: Is it safe to drop participants we don't know how to contact? Does not knowing how to contact them count as a reason to fail?
-            val parties = keys.mapNotNull { serviceHub.identityService.partyFromKey(it) }.toSet()
+            val parties = keys.mapNotNull { serviceHub.identityService.partyFromAnonymous(it) }.toSet()
             Pair(stx, parties)
         }
     }

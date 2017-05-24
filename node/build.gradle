@@ -54,6 +54,7 @@ dependencies {
     compile project(':node-schemas')
     compile project(':node-api')
     compile project(':client:rpc')
+    compile project(':cordform-common')
 
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
@@ -125,7 +126,8 @@ dependencies {
     compile "org.hibernate:hibernate-java8:$hibernate_version"
 
     // Capsule is a library for building independently executable fat JARs.
-    compile 'co.paralleluniverse:capsule:1.0.3'
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.3'
@@ -149,6 +151,9 @@ dependencies {
 
     // Requery: object mapper for Kotlin
     compile "io.requery:requery-kotlin:$requery_version"
+
+    // FastClasspathScanner: classpath scanning
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

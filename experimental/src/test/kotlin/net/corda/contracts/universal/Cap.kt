@@ -130,15 +130,15 @@ class Cap {
     val paymentFinal = arrange { highStreetBank.owes(acmeCorp, 250.K, EUR) }
 
 
-    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractInitial)
+    val stateInitial = UniversalContract.State(listOf(DUMMY_NOTARY), contractInitial)
 
-    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFirst)
+    val stateAfterFixingFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterFixingFirst)
 
-    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterExecutionFirst)
-    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFirst)
+    val stateAfterExecutionFirst = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterExecutionFirst)
+    val statePaymentFirst = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFirst)
 
-    val stateAfterFixingFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), contractAfterFixingFinal)
-    val statePaymentFinal = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), paymentFinal)
+    val stateAfterFixingFinal = UniversalContract.State(listOf(DUMMY_NOTARY), contractAfterFixingFinal)
+    val statePaymentFinal = UniversalContract.State(listOf(DUMMY_NOTARY), paymentFinal)
 
     val contractLimitedCap = arrange {
         rollOut("2016-04-01".ld, "2017-04-01".ld, Frequency.SemiAnnual, object {

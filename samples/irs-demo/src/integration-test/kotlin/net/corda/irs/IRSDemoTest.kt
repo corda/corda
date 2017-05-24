@@ -70,7 +70,7 @@ class IRSDemoTest : IntegrationTestCategory {
         val vaultUpdates = proxy.vaultAndUpdates().second
 
         val fixingDates = vaultUpdates.map { update ->
-            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State<*>>()
+            val irsStates = update.produced.map { it.state.data }.filterIsInstance<InterestRateSwap.State>()
             irsStates.mapNotNull { it.calculation.nextFixingDate() }.max()
         }.cache().toBlocking()
 
@@ -83,14 +83,14 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun runTrade(nodeAddr: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example-irs-trade.json"), Charsets.UTF_8.name())
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example-irs-trade.json"), Charsets.UTF_8.name())
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
         assertThat(postJson(url, tradeFile)).isTrue()
     }
 
     private fun runUploadRates(host: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("example.rates.txt"), Charsets.UTF_8.name())
+        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$host/upload/interest-rates")
         assertThat(uploadFile(url, fileContents)).isTrue()
     }

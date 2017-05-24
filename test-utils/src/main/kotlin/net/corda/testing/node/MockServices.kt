@@ -4,6 +4,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
@@ -13,6 +14,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
@@ -32,8 +34,11 @@ import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 
@@ -44,7 +49,11 @@ import javax.annotation.concurrent.ThreadSafe
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
+open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+    constructor() : this(generateKeyPair())
+
+    val key: KeyPair get() = keys.first()
+
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
             storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
@@ -55,8 +64,8 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     }
 
     override val storageService: TxWritableStorageService = MockStorageService()
-    override val identityService: MockIdentityService = MockIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
-    override val keyManagementService: MockKeyManagementService = MockKeyManagementService(key)
+    override val identityService: IdentityService = InMemoryIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY))
+    override val keyManagementService: KeyManagementService = MockKeyManagementService(*keys)
 
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
@@ -72,35 +81,28 @@ open class MockServices(val key: KeyPair = generateKeyPair()) : ServiceHub {
     }
 }
 
-@ThreadSafe
-class MockIdentityService(val identities: List<Party>) : IdentityService, SingletonSerializeAsToken() {
-    private val keyToParties: Map<PublicKey, Party>
-        get() = synchronized(identities) { identities.associateBy { it.owningKey } }
-    private val nameToParties: Map<X500Name, Party>
-        get() = synchronized(identities) { identities.associateBy { it.name } }
-
-    override fun registerIdentity(party: Party) {
-        throw UnsupportedOperationException()
-    }
-
-    override fun getAllIdentities(): Iterable<Party> = ArrayList(keyToParties.values)
-    override fun partyFromAnonymous(party: AnonymousParty): Party? = keyToParties[party.owningKey]
-    override fun partyFromAnonymous(partyRef: PartyAndReference): Party? = partyFromAnonymous(partyRef.party)
-    override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
-    override fun partyFromName(name: String): Party? = nameToParties[X500Name(name)]
-    override fun partyFromX500Name(principal: X500Name): Party? = nameToParties[principal]
-}
-
-
 class MockKeyManagementService(vararg initialKeys: KeyPair) : SingletonSerializeAsToken(), KeyManagementService {
-    override val keys: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
+    private val keyStore: MutableMap<PublicKey, PrivateKey> = initialKeys.associateByTo(HashMap(), { it.public }, { it.private })
+
+    override val keys: Set<PublicKey> get() = keyStore.keys
 
     val nextKeys = LinkedList<KeyPair>()
 
-    override fun freshKey(): KeyPair {
+    override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
-        keys[k.public] = k.private
-        return k
+        keyStore[k.public] = k.private
+        return k.public
+    }
+
+    private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
+        val pk = publicKey.keys.first { keyStore.containsKey(it) }
+        return KeyPair(pk, keyStore[pk]!!)
+    }
+
+    override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+        val keyPair = getSigningKeyPair(publicKey)
+        val signature = keyPair.sign(bytes)
+        return signature
     }
 }
 

@@ -1,5 +1,6 @@
 package net.corda.attachmentdemo
 
+import co.paralleluniverse.fibers.Suspendable
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
@@ -9,14 +10,15 @@ import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.sizedInputStreamAndHash
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.Emoji
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.*
 import net.corda.flows.FinalityFlow
 import net.corda.node.driver.poll
 import java.io.InputStream
@@ -83,24 +85,38 @@ fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) 
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
+        require(rpc.attachmentExists(hash))
     }
 
-    // Create a trivial transaction with an output that describes the attachment, and the attachment itself
-    val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
-    require(rpc.attachmentExists(hash))
-    ptx.addOutputState(AttachmentContract.State(hash))
-    ptx.addAttachment(hash)
-
-    // Sign with the notary key
-    ptx.signWith(DUMMY_NOTARY_KEY)
-
-    // Send the transaction to the other recipient
-    val stx = ptx.toSignedTransaction()
-    println("Sending ${stx.id}")
-    val flowHandle = rpc.startTrackedFlow(::FinalityFlow, stx, setOf(otherSide))
+    val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSide, hash)
     flowHandle.progress.subscribe(::println)
-    flowHandle.returnValue.getOrThrow()
+    val stx = flowHandle.returnValue.getOrThrow()
     println("Sent ${stx.id}")
+}
+
+@StartableByRPC
+class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
+
+    object SIGNING : ProgressTracker.Step("Signing transaction")
+
+    override val progressTracker: ProgressTracker = ProgressTracker(SIGNING)
+
+    @Suspendable
+    override fun call(): SignedTransaction {
+        // Create a trivial transaction with an output that describes the attachment, and the attachment itself
+        val ptx = TransactionType.General.Builder(notary = DUMMY_NOTARY)
+        ptx.addOutputState(AttachmentContract.State(hash))
+        ptx.addAttachment(hash)
+
+        progressTracker.currentStep = SIGNING
+        // Sign with the notary key
+        ptx.signWith(DUMMY_NOTARY_KEY)
+
+        // Send the transaction to the other recipient
+        val stx = ptx.toSignedTransaction()
+
+        return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
+    }
 }
 
 fun recipient(rpc: CordaRPCOps) {
@@ -164,6 +180,6 @@ class AttachmentContract : Contract {
 
     data class State(val hash: SecureHash.SHA256) : ContractState {
         override val contract: Contract = AttachmentContract()
-        override val participants: List<PublicKey> = emptyList()
+        override val participants: List<AbstractParty> = emptyList()
     }
 }

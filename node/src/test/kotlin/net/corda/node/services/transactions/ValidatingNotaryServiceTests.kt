@@ -3,7 +3,6 @@ package net.corda.node.services.transactions
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.keys
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.SignedTransaction
@@ -42,9 +41,7 @@ class ValidatingNotaryServiceTests {
         val stx = run {
             val inputState = issueInvalidState(clientNode, notaryNode.info.notaryIdentity)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            val keyPair = clientNode.services.keyManagementService.toKeyPair(clientNode.info.legalIdentity.owningKey.keys.single())
-            tx.signWith(keyPair)
-            tx.toSignedTransaction(false)
+            clientNode.services.signInitialTransaction(tx)
         }
 
         val future = runClient(stx)
@@ -60,9 +57,7 @@ class ValidatingNotaryServiceTests {
 
             val command = Command(DummyContract.Commands.Move(), expectedMissingKey)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState, command)
-            val keyPair = clientNode.services.keyManagementService.toKeyPair(clientNode.info.legalIdentity.owningKey.keys.single())
-            tx.signWith(keyPair)
-            tx.toSignedTransaction(false)
+            clientNode.services.signInitialTransaction(tx)
         }
 
         val ex = assertFailsWith(NotaryException::class) {
@@ -85,11 +80,8 @@ class ValidatingNotaryServiceTests {
 
     fun issueState(node: AbstractNode): StateAndRef<*> {
         val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
-        val nodeKey = node.services.legalIdentityKey
-        tx.signWith(nodeKey)
-        val notaryKeyPair = notaryNode.services.notaryIdentityKey
-        tx.signWith(notaryKeyPair)
-        val stx = tx.toSignedTransaction()
+        val signedByNode = node.services.signInitialTransaction(tx)
+        val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
         node.services.recordTransactions(listOf(stx))
         return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
     }

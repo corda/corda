@@ -4,17 +4,17 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.testing.*
 import net.corda.core.contracts.*
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.BOB_KEY
+import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.BOB_PUBKEY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
@@ -79,7 +79,7 @@ class VaultWithCashTest {
 
             val state = w[0].state.data
             assertEquals(30.45.DOLLARS `issued by` DUMMY_CASH_ISSUER, state.amount)
-            assertEquals(services.key.public, state.owner)
+            assertEquals(services.key.public, state.owner.owningKey)
 
             assertEquals(34.70.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[2].state.data).amount)
             assertEquals(34.85.DOLLARS `issued by` DUMMY_CASH_ISSUER, (w[1].state.data).amount)
@@ -92,7 +92,7 @@ class VaultWithCashTest {
             // A tx that sends us money.
             val freshKey = services.keyManagementService.freshKey()
             val usefulTX = TransactionType.General.Builder(null).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), freshKey.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
             }.toSignedTransaction()
 
@@ -100,17 +100,17 @@ class VaultWithCashTest {
             services.recordTransactions(usefulTX)
 
             // A tx that spends our money.
-            val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
-                signWith(freshKey)
+            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+                vault.generateSpend(this, 80.DOLLARS, BOB)
                 signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+            val spendTX = services.signInitialTransaction(spendTXBuilder, freshKey)
 
             assertEquals(100.DOLLARS, vault.cashBalances[USD])
 
             // A tx that doesn't send us anything.
             val irrelevantTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB_KEY.public, DUMMY_NOTARY)
+                Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), BOB, DUMMY_NOTARY)
                 signWith(MEGA_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -134,7 +134,7 @@ class VaultWithCashTest {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L),
                     issuedBy = MEGA_CORP.ref(1),
                     issuerKey = MEGA_CORP_KEY,
-                    ownedBy = freshKey.public)
+                    ownedBy = AnonymousParty(freshKey))
             println("Cash balance: ${vault.cashBalances[USD]}")
 
             assertThat(vault.unconsumedStates<Cash.State>()).hasSize(10)
@@ -147,12 +147,12 @@ class VaultWithCashTest {
         backgroundExecutor.submit {
             database.transaction {
                 try {
-                    val txn1 =
+                    val txn1Builder =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 60.DOLLARS, BOB_PUBKEY)
-                                signWith(freshKey)
+                                vault.generateSpend(this, 60.DOLLARS, BOB)
                                 signWith(DUMMY_NOTARY_KEY)
-                            }.toSignedTransaction()
+                            }
+                    val txn1 = services.signInitialTransaction(txn1Builder, freshKey)
                     println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
                     println("""txn1 states:
                                 UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
@@ -179,12 +179,12 @@ class VaultWithCashTest {
         backgroundExecutor.submit {
             database.transaction {
                 try {
-                    val txn2 =
+                    val txn2Builder =
                             TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
-                                signWith(freshKey)
+                                vault.generateSpend(this, 80.DOLLARS, BOB)
                                 signWith(DUMMY_NOTARY_KEY)
-                            }.toSignedTransaction()
+                            }
+                    val txn2 = services.signInitialTransaction(txn2Builder, freshKey)
                     println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
                     println("""txn2 states:
                                 UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
@@ -219,15 +219,16 @@ class VaultWithCashTest {
     fun `branching LinearStates fails to verify`() {
         database.transaction {
             val freshKey = services.keyManagementService.freshKey()
+            val freshIdentity = AnonymousParty(freshKey)
             val linearId = UniqueIdentifier()
 
             // Issue a linear state
-            val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-                signWith(freshKey)
+            val dummyIssueBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder)
 
             assertThatThrownBy {
                 dummyIssue.toLedgerTransaction(services).verify()
@@ -239,15 +240,16 @@ class VaultWithCashTest {
     fun `sequencing LinearStates works`() {
         database.transaction {
             val freshKey = services.keyManagementService.freshKey()
+            val freshIdentity = AnonymousParty(freshKey)
 
             val linearId = UniqueIdentifier()
 
             // Issue a linear state
-            val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
-                signWith(freshKey)
+            val dummyIssueBuilder = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder, services.legalIdentityKey)
 
             dummyIssue.toLedgerTransaction(services).verify()
 
@@ -256,7 +258,7 @@ class VaultWithCashTest {
 
             // Move the same state
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 addInputState(dummyIssue.tx.outRef<LinearState>(0))
                 signWith(DUMMY_NOTARY_KEY)
             }.toSignedTransaction()
@@ -273,7 +275,7 @@ class VaultWithCashTest {
 
         val freshKey = services.keyManagementService.freshKey()
         database.transaction {
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = freshKey.public)
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = AnonymousParty(freshKey))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 2, 2, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
             val cash = vault.unconsumedStates<Cash.State>()
@@ -286,11 +288,11 @@ class VaultWithCashTest {
 
         database.transaction {
             // A tx that spends our money.
-            val spendTX = TransactionType.General.Builder(DUMMY_NOTARY).apply {
-                vault.generateSpend(this, 80.DOLLARS, BOB_PUBKEY)
-                signWith(freshKey)
+            val spendTXBuilder = TransactionType.General.Builder(DUMMY_NOTARY).apply {
+                vault.generateSpend(this, 80.DOLLARS, BOB)
                 signWith(DUMMY_NOTARY_KEY)
-            }.toSignedTransaction()
+            }
+            val spendTX = services.signInitialTransaction(spendTXBuilder, freshKey)
             services.recordTransactions(spendTX)
 
             val consumedStates = vault.consumedStates<ContractState>()
@@ -305,6 +307,7 @@ class VaultWithCashTest {
     fun `consuming multiple contract state types in same transaction`() {
 
         val freshKey = services.keyManagementService.freshKey()
+        val freshIdentity = AnonymousParty(freshKey)
         database.transaction {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
@@ -317,8 +320,8 @@ class VaultWithCashTest {
 
             // Create a txn consuming different contract types
             val dummyMove = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-                addOutputState(DummyLinearContract.State(participants = listOf(freshKey.public)))
-                addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshKey.public)))
+                addOutputState(DummyLinearContract.State(participants = listOf(freshIdentity)))
+                addOutputState(DummyDealContract.State(ref = "999", participants = listOf(freshIdentity)))
                 addInputState(linearStates.first())
                 addInputState(deals.first())
                 signWith(DUMMY_NOTARY_KEY)

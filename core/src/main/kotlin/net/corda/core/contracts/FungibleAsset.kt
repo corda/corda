@@ -1,12 +1,8 @@
 package net.corda.core.contracts
 
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowException
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.trace
+import net.corda.core.identity.AbstractParty
 import java.security.PublicKey
-import java.util.*
 
 class InsufficientBalanceException(val amountMissing: Amount<*>) : FlowException("Insufficient balance, missing $amountMissing")
 
@@ -32,9 +28,9 @@ interface FungibleAsset<T : Any> : OwnableState {
      */
     val exitKeys: Collection<PublicKey>
     /** There must be a MoveCommand signed by this key to claim the amount */
-    override val owner: PublicKey
+    override val owner: AbstractParty
 
-    fun move(newAmount: Amount<Issued<T>>, newOwner: PublicKey): FungibleAsset<T>
+    fun move(newAmount: Amount<Issued<T>>, newOwner: AbstractParty): FungibleAsset<T>
 
     // Just for grouping
     interface Commands : CommandData {

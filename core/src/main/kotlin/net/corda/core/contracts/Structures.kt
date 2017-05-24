@@ -4,6 +4,7 @@ import net.corda.core.contracts.clauses.Clause
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
@@ -114,7 +115,7 @@ interface ContractState {
      * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
      * list should just contain the owner.
      */
-    val participants: List<PublicKey>
+    val participants: List<AbstractParty>
 }
 
 /**
@@ -174,10 +175,10 @@ fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, to
  */
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount */
-    val owner: PublicKey
+    val owner: AbstractParty
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
+    fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
 }
 
 /** Something which is scheduled to happen at a point in time */
@@ -280,7 +281,7 @@ interface DealState : LinearState {
      * separate process exchange certificates to ascertain identities. Thus decoupling identities from
      * [ContractState]s.
      * */
-    val parties: List<AnonymousParty>
+    val parties: List<AbstractParty>
 
     /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
@@ -343,9 +344,7 @@ inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filt
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
 @CordaSerializable
-data class PartyAndReference(val party: AnonymousParty, val reference: OpaqueBytes) {
-    constructor(party: Party, reference: OpaqueBytes) : this(party.toAnonymous(), reference)
-
+data class PartyAndReference(val party: AbstractParty, val reference: OpaqueBytes) {
     override fun toString() = "$party$reference"
 }
 
@@ -411,7 +410,12 @@ data class AuthenticatedObject<out T : Any>(
  * between (after, before).
  */
 @CordaSerializable
-data class Timestamp(val after: Instant?, val before: Instant?) {
+data class Timestamp(
+        /** The time at which this transaction is said to have occurred is after this moment */
+        val after: Instant?,
+        /** The time at which this transaction is said to have occurred is before this moment */
+        val before: Instant?
+) {
     init {
         if (after == null && before == null)
             throw IllegalArgumentException("At least one of before/after must be specified")

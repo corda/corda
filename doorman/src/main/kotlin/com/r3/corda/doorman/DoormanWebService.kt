@@ -3,7 +3,7 @@ package com.r3.corda.doorman
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.CertificateAndKey
+import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.core.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
@@ -26,7 +26,7 @@ import javax.ws.rs.core.Response.Status.UNAUTHORIZED
  * Provides functionality for asynchronous submission of certificate signing requests and retrieval of the results.
  */
 @Path("")
-class DoormanWebService(val intermediateCACertAndKey: CertificateAndKey, val rootCert: Certificate, val storage: CertificationRequestStorage, val serverStatus: DoormanServerStatus) {
+class DoormanWebService(val intermediateCACertAndKey: CertificateAndKeyPair, val rootCert: Certificate, val storage: CertificationRequestStorage, val serverStatus: DoormanServerStatus) {
     @Context lateinit var request: HttpServletRequest
     /**
      * Accept stream of [PKCS10CertificationRequest] from user and persists in [CertificationRequestStorage] for approval.

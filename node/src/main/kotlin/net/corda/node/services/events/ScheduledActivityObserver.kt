@@ -4,8 +4,8 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.SchedulableState
 import net.corda.core.contracts.ScheduledStateRef
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 
 /**
  * This observes the vault and schedules and unschedules activities appropriately based on state production and
@@ -13,16 +13,16 @@ import net.corda.node.services.api.ServiceHubInternal
  */
 class ScheduledActivityObserver(val services: ServiceHubInternal) {
     init {
-        services.vaultService.rawUpdates.subscribe { update ->
-            update.consumed.forEach { services.schedulerService.unscheduleStateActivity(it.ref) }
-            update.produced.forEach { scheduleStateActivity(it, services.flowLogicRefFactory) }
+        services.vaultService.rawUpdates.subscribe { (consumed, produced) ->
+            consumed.forEach { services.schedulerService.unscheduleStateActivity(it.ref) }
+            produced.forEach { scheduleStateActivity(it) }
         }
     }
 
-    private fun scheduleStateActivity(produced: StateAndRef<ContractState>, flowLogicRefFactory: FlowLogicRefFactory) {
+    private fun scheduleStateActivity(produced: StateAndRef<ContractState>) {
         val producedState = produced.state.data
         if (producedState is SchedulableState) {
-            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, flowLogicRefFactory)?.scheduledAt } ?: return
+            val scheduledAt = sandbox { producedState.nextScheduledActivity(produced.ref, FlowLogicRefFactoryImpl)?.scheduledAt } ?: return
             services.schedulerService.scheduleStateActivity(ScheduledStateRef(produced.ref, scheduledAt))
         }
     }

@@ -12,9 +12,7 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_PUBKEY
-import net.corda.testing.ledger
+import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import kotlin.test.*
@@ -30,20 +28,20 @@ class PartialMerkleTreeTest {
             output("MEGA_CORP cash") {
                 Cash.State(
                         amount = 1000.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                        owner = MEGA_CORP_PUBKEY
+                        owner = MEGA_CORP
                 )
             }
             output("dummy cash 1") {
                 Cash.State(
                         amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
-                        owner = DUMMY_PUBKEY_1
+                        owner = MINI_CORP
                 )
             }
         }
 
         transaction {
             input("MEGA_CORP cash")
-            output("MEGA_CORP cash".output<Cash.State>().copy(owner = DUMMY_PUBKEY_1))
+            output("MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
             timestamp(TEST_TX_TIME)
             this.verifies()
@@ -61,7 +59,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `building Merkle tree - no hashes`() {
-        assertFailsWith<MerkleTreeException> { MerkleTree.Companion.getMerkleTree(emptyList()) }
+        assertFailsWith<MerkleTreeException> { MerkleTree.getMerkleTree(emptyList()) }
     }
 
     @Test
@@ -98,7 +96,7 @@ class PartialMerkleTreeTest {
         fun filtering(elem: Any): Boolean {
             return when (elem) {
                 is StateRef -> true
-                is TransactionState<*> -> elem.data.participants[0].keys == DUMMY_PUBKEY_1.keys
+                is TransactionState<*> -> elem.data.participants[0].owningKey.keys == MINI_CORP_PUBKEY.keys
                 is Command -> MEGA_CORP_PUBKEY in elem.signers
                 is Timestamp -> true
                 is PublicKey -> elem == MEGA_CORP_PUBKEY

@@ -2,10 +2,11 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
-import net.i2p.crypto.eddsa.EdDSAPublicKey
 import java.math.BigInteger
 import net.corda.core.utilities.SgxSupport
 import java.security.*
@@ -18,6 +19,8 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
     override fun toString() = "NULL_KEY"
 }
+
+val NULL_PARTY = AnonymousParty(NullPublicKey)
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable
@@ -69,11 +72,9 @@ fun KeyPair.sign(bytesToSign: OpaqueBytes, party: Party) = sign(bytesToSign.byte
 //  implementation of CompositeSignature.
 @Throws(InvalidKeyException::class)
 fun KeyPair.sign(bytesToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
+    // Quick workaround when we have CompositeKey as Party owningKey.
+    if (party.owningKey is CompositeKey) throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
     val sig = sign(bytesToSign)
-    val sigKey = when (party.owningKey) { // Quick workaround when we have CompositeKey as Party owningKey.
-        is CompositeKey -> throw InvalidKeyException("Signing for parties with CompositeKey not supported.")
-        else -> party.owningKey
-    }
     return DigitalSignature.LegallyIdentifiable(party, sig.bytes)
 }
 

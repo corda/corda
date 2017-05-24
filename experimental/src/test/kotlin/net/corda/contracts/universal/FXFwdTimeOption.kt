@@ -43,9 +43,9 @@ class FXFwdTimeOption
     val TEST_TX_TIME_BEFORE_MATURITY: Instant get() = Instant.parse("2018-05-01T12:00:00.00Z")
     val TEST_TX_TIME_AFTER_MATURITY: Instant get() = Instant.parse("2018-06-02T12:00:00.00Z")
 
-    val inState = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), initialContract)
-    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), outContract1)
-    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY.owningKey), outContract2)
+    val inState = UniversalContract.State(listOf(DUMMY_NOTARY), initialContract)
+    val outState1 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract1)
+    val outState2 = UniversalContract.State(listOf(DUMMY_NOTARY), outContract2)
 
     @Test
     fun `issue - signature`() {

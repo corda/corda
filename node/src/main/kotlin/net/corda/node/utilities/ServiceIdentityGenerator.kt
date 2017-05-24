@@ -4,12 +4,12 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.serialization.serialize
+import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 object ServiceIdentityGenerator {
     private val log = loggerFor<ServiceIdentityGenerator>()
@@ -36,17 +36,8 @@ object ServiceIdentityGenerator {
             val privateKeyFile = "$serviceId-private-key"
             val publicKeyFile = "$serviceId-public"
             notaryParty.writeToFile(dir.resolve(publicKeyFile))
-            keyPair.serialize().writeToFile(dir.resolve(privateKeyFile))
+            // Use storageKryo as our whitelist is not available in the gradle build environment:
+            keyPair.serialize(storageKryo()).writeToFile(dir.resolve(privateKeyFile))
         }
     }
-}
-
-fun main(args: Array<String>) {
-    val dirs = args[0].split("|").map { Paths.get(it) }
-    val serviceId = args[1]
-    val serviceName = X500Name(args[2])
-    val quorumSize = args.getOrNull(3)?.toInt() ?: 1
-
-    println("Generating service identity for \"$serviceName\"")
-    ServiceIdentityGenerator.generateToDisk(dirs, serviceId, serviceName, quorumSize)
 }

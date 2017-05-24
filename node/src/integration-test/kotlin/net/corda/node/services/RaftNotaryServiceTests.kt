@@ -17,7 +17,6 @@ import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
-import java.security.KeyPair
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -33,24 +32,21 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         ).getOrThrow()
 
         val notaryParty = alice.netMapCache.getNotary(notaryName)!!
-        val notaryNodeKeyPair = with(masterNode) { database.transaction { services.notaryIdentityKey } }
-        val aliceKey = with(alice) { database.transaction { services.legalIdentityKey } }
 
-        val inputState = issueState(alice, notaryParty, notaryNodeKeyPair)
+        val inputState = issueState(alice, notaryParty)
 
-        val firstSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            signWith(aliceKey)
-            toSignedTransaction(false)
-        }
+        val firstTxBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState)
+        val firstSpendTx = alice.services.signInitialTransaction(firstTxBuilder)
+
         val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
-        val secondSpendTx = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity.owningKey)
+        val secondSpendBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
+            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity)
             addOutputState(dummyState)
-            signWith(aliceKey)
-            toSignedTransaction(false)
+            this
         }
+        val secondSpendTx = alice.services.signInitialTransaction(secondSpendBuilder)
         val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
@@ -58,14 +54,12 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         assertEquals(error.txId, secondSpendTx.id)
     }
 
-    private fun issueState(node: AbstractNode, notary: Party, notaryKey: KeyPair): StateAndRef<*> {
+    private fun issueState(node: AbstractNode, notary: Party): StateAndRef<*> {
         return node.database.transaction {
-            val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
-            tx.signWith(node.services.legalIdentityKey)
-            tx.signWith(notaryKey)
-            val stx = tx.toSignedTransaction()
+            val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
+            val stx = node.services.signInitialTransaction(builder)
             node.services.recordTransactions(listOf(stx))
-            StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
+            StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))
         }
     }
 }

@@ -30,6 +30,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val INTERNAL_PREFIX = "internal."
         const val PEERS_PREFIX = "${INTERNAL_PREFIX}peers."
         const val SERVICES_PREFIX = "${INTERNAL_PREFIX}services."
+        const val IP_REQUEST_PREFIX = "ip."
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
         const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"

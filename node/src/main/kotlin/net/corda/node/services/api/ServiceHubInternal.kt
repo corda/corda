@@ -2,7 +2,9 @@ package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowInitiator
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -13,6 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 
 interface NetworkMapCacheInternal : NetworkMapCache {
@@ -47,11 +50,6 @@ interface NetworkMapCacheInternal : NetworkMapCache {
 
 }
 
-interface FlowLogicRefFactoryInternal : FlowLogicRefFactory {
-    val flowWhitelist: Map<String, Set<String>>
-    fun toFlowLogic(ref: FlowLogicRef): FlowLogic<*>
-}
-
 @CordaSerializable
 sealed class NetworkCacheError : Exception() {
     /** Indicates a failure to deregister, because of a rejected request from the remote node */
@@ -64,12 +62,11 @@ abstract class ServiceHubInternal : PluginServiceHub {
     }
 
     abstract val monitoringService: MonitoringService
-    abstract val flowLogicRefFactory: FlowLogicRefFactoryInternal
     abstract val schemaService: SchemaService
     abstract override val networkMapCache: NetworkMapCacheInternal
     abstract val schedulerService: SchedulerService
     abstract val auditService: AuditService
-
+    abstract val rpcFlows: List<Class<out FlowLogic<*>>>
     abstract val networkService: MessagingService
 
     /**
@@ -119,9 +116,9 @@ abstract class ServiceHubInternal : PluginServiceHub {
             logicType: Class<out FlowLogic<T>>,
             flowInitiator: FlowInitiator,
             vararg args: Any?): FlowStateMachineImpl<T> {
-        val logicRef = flowLogicRefFactory.create(logicType, *args)
+        val logicRef = FlowLogicRefFactoryImpl.createForRPC(logicType, *args)
         @Suppress("UNCHECKED_CAST")
-        val logic = flowLogicRefFactory.toFlowLogic(logicRef) as FlowLogic<T>
+        val logic = FlowLogicRefFactoryImpl.toFlowLogic(logicRef) as FlowLogic<T>
         return startFlow(logic, flowInitiator)
     }
 

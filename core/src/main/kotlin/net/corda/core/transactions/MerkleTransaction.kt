@@ -1,13 +1,16 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.MerkleTree
+import net.corda.core.crypto.MerkleTreeException
+import net.corda.core.crypto.PartialMerkleTree
+import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
-import java.security.PublicKey
 import net.corda.core.serialization.withoutReferences
+import java.security.PublicKey
 
 fun <T : Any> serializedHash(x: T): SecureHash {
     return p2PKryo().run { kryo -> kryo.withoutReferences { x.serialize(kryo).hash } }
@@ -91,7 +94,7 @@ class FilteredLeaves(
      */
     fun checkWithFun(checkingFun: (Any) -> Boolean): Boolean {
         val checkList = availableComponents.map { checkingFun(it) }
-        return (!checkList.isEmpty()) && checkList.all { true }
+        return (!checkList.isEmpty()) && checkList.all { it }
     }
 }
 
