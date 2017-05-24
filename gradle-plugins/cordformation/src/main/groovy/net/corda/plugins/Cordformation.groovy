@@ -44,7 +44,7 @@ class Cordformation implements Plugin<Project> {
     }
 
     static def getDirectNonCordaDependencies(Project project) {
-        def coreCordaNames = ['jfx', 'mock', 'rpc', 'core', 'corda', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver', 'capsule', 'webcapsule']
+        def coreCordaNames = ['jfx', 'mock', 'rpc', 'core', 'corda', 'cordform-common', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver', 'capsule', 'webcapsule']
         def excludes = [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jre8'],
@@ -55,6 +55,12 @@ class Cordformation implements Plugin<Project> {
         // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
         def filteredDeps = directDeps.findAll { !(it.group.contains("net.corda") && coreCordaNames.contains(it.name)) }
                 .findAll { excludes.collect { exclude -> exclude.group == it.group && exclude.name == it.name }.findAll { it }.isEmpty() }
+        // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
+        filteredDeps.each {
+            if(it.group.contains('net.corda')) {
+                project.logger.warn("Including a dependency with a net.corda group")
+            }
+        }
         return filteredDeps.collect { project.configurations.runtime.files it }.flatten().toSet()
     }
 }
