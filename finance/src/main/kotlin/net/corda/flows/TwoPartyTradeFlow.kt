@@ -128,7 +128,8 @@ object TwoPartyTradeFlow {
         }
 
         object RECORDING : ProgressTracker.Step("Recording completed transaction.") {
-            override fun childProgressTracker() = FinalityFlow.tracker()
+            // TODO: Currently triggers a race condition on Team City. See https://github.com/corda/corda/issues/733.
+            // override fun childProgressTracker() = FinalityFlow.tracker()
         }
 
         override val progressTracker = ProgressTracker(RECEIVING, VERIFYING, SIGNING, COLLECTING_SIGNATURES, RECORDING)
@@ -153,8 +154,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(listOf(twiceSignedTx), setOf(otherParty, serviceHub.myInfo.legalIdentity), RECORDING.childProgressTracker()))
-                    .single()
+            return subFlow(FinalityFlow(twiceSignedTx, setOf(otherParty, serviceHub.myInfo.legalIdentity))).single()
         }
 
         @Suspendable
