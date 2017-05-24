@@ -47,6 +47,7 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
+import sun.security.x509.X509CertImpl
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
@@ -509,6 +510,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                     "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
+                X509Utilities.validateCertificateChain(X509CertImpl(session.localCertificates.last().encoded), *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()

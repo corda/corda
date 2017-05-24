@@ -4,9 +4,6 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.*
-import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
-import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
-import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.exists
 import net.corda.core.utilities.ALICE
 import net.corda.testing.TestNodeConfiguration

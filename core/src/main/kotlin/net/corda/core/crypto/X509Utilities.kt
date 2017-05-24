@@ -184,7 +184,7 @@ object X509Utilities {
     /**
      * An all in wrapper to manufacture a server certificate and keys all stored in a KeyStore suitable for running TLS on the local machine.
      * @param sslKeyStorePath KeyStore path to save ssl key and cert to.
-     * @param sslKeyStorePath KeyStore path to save client CA key and cert to.
+     * @param clientCAKeystorePath KeyStore path to save client CA key and cert to.
      * @param storePassword access password for KeyStore.
      * @param keyPassword PrivateKey access password for the generated keys.
      * It is recommended that this is the same as the storePassword as most TLS libraries assume they are the same.
@@ -286,6 +286,7 @@ data class CertificateAndKeyPair(val certificate: X509Certificate, val keyPair: 
 enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurposeId, val isCA: Boolean) {
     ROOT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
     INTERMEDIATE_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
+    CLIENT_CA(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyCertSign or KeyUsage.cRLSign), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = true),
     TLS(KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment or KeyUsage.keyAgreement), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = false),
     IDENTITY(KeyUsage(KeyUsage.digitalSignature), KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth, KeyPurposeId.anyExtendedKeyUsage, isCA = false)
 }
