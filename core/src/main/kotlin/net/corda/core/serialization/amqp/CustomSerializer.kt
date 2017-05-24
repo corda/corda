@@ -25,7 +25,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     abstract class Is<T>(protected val clazz: Class<T>) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.simpleName}"
+        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.name}"
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
     }
@@ -33,7 +33,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     abstract class Implements<T>(protected val clazz: Class<T>) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = this.clazz.isAssignableFrom(clazz)
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.simpleName}"
+        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.name}"
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
     }
@@ -41,7 +41,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     abstract class Proxy<T, P>(protected val clazz: Class<T>, protected val proxyClass: Class<P>, protected val factory: SerializerFactory, val withInheritance: Boolean = true) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.simpleName}"
+        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.name}"
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
@@ -81,7 +81,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == arrayClazz
 
         override val type: Type get() = arraySerializer.type
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${arrayClazz.simpleName}"
+        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${arrayClazz.name}"
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
 
