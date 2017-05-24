@@ -15,8 +15,10 @@ internal class DeleteOnExitPath(internal val path: Path) {
 
 open class PathHandle internal constructor(private val deleteOnExitPath: DeleteOnExitPath, private val handleCounter: AtomicInteger) : Closeable {
     val path
-        get() = deleteOnExitPath.path.also {
-            0 == handleCounter.get() && throw IllegalStateException("Defunct path: $it")
+        get(): Path {
+            val path = deleteOnExitPath.path
+            0 == handleCounter.get() && throw IllegalStateException("Defunct path: $path")
+            return path
         }
 
     init {

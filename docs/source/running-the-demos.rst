@@ -110,7 +110,7 @@ To run from the command line in Windows:
 Notary demo
 -----------
 
-This demo shows a party getting transactions notarised by either a single notary node or a distributed notary service.
+This demo shows a party getting transactions notarised by either a single-node or a distributed notary service.
 All versions of the demo start two counterparty nodes.
 One of the counterparties will generate transactions that transfer a self-issued asset to the other party and submit them for notarisation.
 The `Raft <https://raft.github.io/>`_ version of the demo will start three distributed notary nodes.

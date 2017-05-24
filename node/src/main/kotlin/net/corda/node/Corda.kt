@@ -104,7 +104,7 @@ fun main(args: Array<String>) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
-    SerialFilter.install(if (null != conf.bftReplicaId) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+    SerialFilter.install(if (conf.bftReplicaId != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     if (cmdlineOptions.isRegistration) {
         println()
         println("******************************************************************")
