@@ -82,6 +82,8 @@ class SerializationOutputTests {
 
     data class InheritAnnotation(val foo: String) : AnnotatedInterface
 
+    data class PolymorphicProperty(val foo: FooInterface?)
+
     private fun serdes(obj: Any, factory: SerializerFactory = SerializerFactory(), freshDeserializationFactory: SerializerFactory = SerializerFactory(), expectedEqual: Boolean = true): Any {
         val ser = SerializationOutput(factory)
         val bytes = ser.serialize(obj)
@@ -318,6 +320,18 @@ class SerializationOutputTests {
 
         val obj = FlowException("message").fillInStackTrace()
         serdes(obj, factory, factory2)
+    }
+
+    @Test
+    fun `test polymorphic property`() {
+        val obj = PolymorphicProperty(FooImplements("Ginger", 12))
+        serdes(obj)
+    }
+
+    @Test
+    fun `test null polymorphic property`() {
+        val obj = PolymorphicProperty(null)
+        serdes(obj)
     }
 
 }

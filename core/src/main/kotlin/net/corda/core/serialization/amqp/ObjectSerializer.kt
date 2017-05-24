@@ -18,7 +18,7 @@ class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSe
     init {
         val kotlinConstructor = constructorForDeserialization(clazz)
         javaConstructor = kotlinConstructor?.javaConstructor
-        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz)
+        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
     private val typeName = clazz.name
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
@@ -27,9 +27,13 @@ class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSe
     internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 
     override fun writeClassInfo(output: SerializationOutput) {
-        output.writeTypeNotations(typeNotation)
-        for (iface in interfaces) {
-            output.requireSerializer(iface)
+        if (output.writeTypeNotations(typeNotation)) {
+            for (iface in interfaces) {
+                output.requireSerializer(iface)
+            }
+            for (property in propertySerializers) {
+                property.writeClassInfo(output)
+            }
         }
     }
 

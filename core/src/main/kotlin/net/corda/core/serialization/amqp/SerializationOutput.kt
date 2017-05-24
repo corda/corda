@@ -75,7 +75,7 @@ open class SerializationOutput(internal val serializerFactory: SerializerFactory
     }
 
     open internal fun requireSerializer(type: Type) {
-        if (type != SerializerFactory.AnyType) {
+        if (type != SerializerFactory.AnyType && type != Object::class.java) {
             val serializer = serializerFactory.get(null, type)
             if (serializer !in serializerHistory) {
                 serializerHistory.add(serializer)

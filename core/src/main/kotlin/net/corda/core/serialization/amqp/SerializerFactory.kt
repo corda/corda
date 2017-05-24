@@ -10,6 +10,7 @@ import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -229,8 +230,12 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 Symbol::class.java to "symbol")
     }
 
-    object AnyType : Type {
-        override fun toString(): String = "*"
+    object AnyType : WildcardType {
+        override fun getUpperBounds(): Array<Type> = arrayOf(Object::class.java)
+
+        override fun getLowerBounds(): Array<Type> = emptyArray()
+
+        override fun toString(): String = "?"
     }
 }
 

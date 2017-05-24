@@ -341,7 +341,7 @@ private fun fingerprintForType(type: Type, alreadySeen: MutableSet<Type>, hasher
                 val customSerializer = factory.findCustomSerializer(type)
                 if (customSerializer == null) {
                     // Hash the class + properties + interfaces
-                    propertiesForSerialization(constructorForDeserialization(type), type).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
+                    propertiesForSerialization(constructorForDeserialization(type), type, factory).fold(hasher.putUnencodedChars(type.name)) { orig, param ->
                         fingerprintForType(param.readMethod.genericReturnType, alreadySeen, orig, factory).putUnencodedChars(param.name).putUnencodedChars(if (param.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
                     }
                     interfacesForSerialization(type).map { fingerprintForType(it, alreadySeen, hasher, factory) }

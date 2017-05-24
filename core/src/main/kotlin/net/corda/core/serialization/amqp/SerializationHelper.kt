@@ -61,13 +61,13 @@ internal fun <T : Any> constructorForDeserialization(clazz: Class<T>): KFunction
  * Note, you will need any Java classes to be compiled with the `-parameters` option to ensure constructor parameters have
  * names accessible via reflection.
  */
-internal fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>?, clazz: Class<*>): Collection<PropertySerializer> {
-    return if (kotlinConstructor != null) propertiesForSerialization(kotlinConstructor) else propertiesForSerialization(clazz)
+internal fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>?, clazz: Class<*>, factory: SerializerFactory): Collection<PropertySerializer> {
+    return if (kotlinConstructor != null) propertiesForSerialization(kotlinConstructor, factory) else propertiesForSerialization(clazz, factory)
 }
 
 private fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifier.isAbstract(clazz.modifiers))
 
-private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>): Collection<PropertySerializer> {
+private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>, factory: SerializerFactory): Collection<PropertySerializer> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
     val properties: Map<String, PropertyDescriptor> = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
@@ -78,7 +78,7 @@ private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>
         // Check that the method has a getter in java.
         val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz. If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
         if (constructorParamTakesReturnTypeOfGetter(getter, param)) {
-            rc += PropertySerializer.make(name, getter)
+            rc += PropertySerializer.make(name, getter, factory)
         } else {
             throw NotSerializableException("Property type ${getter.genericReturnType} for $name of $clazz differs from constructor parameter type ${param.type.javaType}")
         }
@@ -88,14 +88,14 @@ private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>
 
 private fun constructorParamTakesReturnTypeOfGetter(getter: Method, param: KParameter): Boolean = TypeToken.of(param.type.javaType).isSupertypeOf(getter.genericReturnType)
 
-private fun propertiesForSerialization(clazz: Class<*>): Collection<PropertySerializer> {
+private fun propertiesForSerialization(clazz: Class<*>, factory: SerializerFactory): Collection<PropertySerializer> {
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
     val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.sortedBy { it.name }
     val rc: MutableList<PropertySerializer> = ArrayList(properties.size)
     for (property in properties) {
         // Check that the method has a getter in java.
         val getter = property.readMethod ?: throw NotSerializableException("Property has no getter method for ${property.name} of $clazz.")
-        rc += PropertySerializer.make(property.name, getter)
+        rc += PropertySerializer.make(property.name, getter, factory)
     }
     return rc
 }
@@ -109,6 +109,7 @@ internal fun interfacesForSerialization(clazz: Class<*>): List<Type> {
 private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
     val clazz = (type as? Class<*>) ?: (type as? ParameterizedType)?.rawType as? Class<*>
     if (clazz != null) {
+        if (clazz.isInterface) interfaces += clazz
         for (newInterface in clazz.genericInterfaces) {
             if (newInterface !in interfaces) {
                 interfaces += newInterface

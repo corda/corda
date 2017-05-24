@@ -30,7 +30,7 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
     private val concreteBuilder: (Collection<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
 
     private fun findConcreteType(clazz: Class<*>): (Collection<*>) -> Collection<*> {
-        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
+        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported collection type $clazz.")
     }
 
     private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
