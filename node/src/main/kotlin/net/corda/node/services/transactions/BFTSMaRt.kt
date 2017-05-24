@@ -32,6 +32,7 @@ import net.corda.node.services.transactions.BFTSMaRt.Server
 import net.corda.node.utilities.JDBCHashMap
 import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
+import java.nio.file.Path
 import java.util.*
 
 /**
@@ -66,13 +67,17 @@ object BFTSMaRt {
         data class Signatures(val txSignatures: List<DigitalSignature>) : ClusterResponse()
     }
 
-    class Client(val id: Int) : SingletonSerializeAsToken() {
+    class Client(config: BFTSMaRtConfig, private val clientId: Int) : SingletonSerializeAsToken() {
+        private val configHandle = config.handle()
+
         companion object {
             private val log = loggerFor<Client>()
         }
 
         /** A proxy for communicating with the BFT cluster */
-        private val proxy: ServiceProxy by lazy { buildProxy() }
+        private val proxy: ServiceProxy by lazy {
+            configHandle.use { buildProxy(it.path) }
+        }
 
         /**
          * Sends a transaction commit request to the BFT cluster. The [proxy] will deliver the request to every
@@ -86,10 +91,10 @@ object BFTSMaRt {
             return response
         }
 
-        private fun buildProxy(): ServiceProxy {
+        private fun buildProxy(configHome: Path): ServiceProxy {
             val comparator = buildResponseComparator()
             val extractor = buildExtractor()
-            return ServiceProxy(id, "bft-smart-config", comparator, extractor)
+            return ServiceProxy(clientId, configHome.toString(), comparator, extractor)
         }
 
         /** A comparator to check if replies from two replicas are the same. */
@@ -111,7 +116,7 @@ object BFTSMaRt {
                 val accepted = responses.filterIsInstance<ReplicaResponse.Signature>()
                 val rejected = responses.filterIsInstance<ReplicaResponse.Error>()
 
-                log.debug { "BFT Client $id: number of replicas accepted the commit: ${accepted.size}, rejected: ${rejected.size}" }
+                log.debug { "BFT Client $clientId: number of replicas accepted the commit: ${accepted.size}, rejected: ${rejected.size}" }
 
                 // TODO: only return an aggregate if the majority of signatures are replies
                 // TODO: return an error reported by the majority and not just the first one
@@ -137,7 +142,8 @@ object BFTSMaRt {
      * The validation logic can be specified by implementing the [executeCommand] method.
      */
     @Suppress("LeakingThis")
-    abstract class Server(val id: Int,
+    abstract class Server(configHome: Path,
+                          val replicaId: Int,
                           val db: Database,
                           tableName: String,
                           val services: ServiceHubInternal,
@@ -152,7 +158,7 @@ object BFTSMaRt {
 
         init {
             // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
-            ServiceReplica(id, "bft-smart-config", this, this, null, DefaultReplier())
+            ServiceReplica(replicaId, configHome.toString(), this, this, null, DefaultReplier())
         }
 
         override fun appExecuteUnordered(command: ByteArray, msgCtx: MessageContext): ByteArray? {

@@ -5,16 +5,15 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.flatMap
+import net.corda.core.*
+import net.corda.core.internal.ShutdownHook
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.messaging.RPCOps
-import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
-import net.corda.core.seconds
-import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.printBasicNodeInfo
@@ -47,7 +46,6 @@ import java.io.IOException
 import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
-import kotlin.concurrent.thread
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -112,7 +110,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     var messageBroker: ArtemisMessagingServer? = null
 
-    private var shutdownThread: Thread? = null
+    private var shutdownHook: ShutdownHook? = null
 
     private lateinit var userService: RPCUserService
 
@@ -295,12 +293,9 @@ class Node(override val configuration: FullNodeConfiguration,
 
             (startupComplete as SettableFuture<Unit>).set(Unit)
         }
-
-        shutdownThread = thread(start = false) {
+        shutdownHook = addShutdownHook {
             stop()
         }
-        Runtime.getRuntime().addShutdownHook(shutdownThread)
-
         return this
     }
 
@@ -322,12 +317,9 @@ class Node(override val configuration: FullNodeConfiguration,
         synchronized(this) {
             if (shutdown) return
             shutdown = true
-
             // Unregister shutdown hook to prevent any unnecessary second calls to stop
-            if ((shutdownThread != null) && (Thread.currentThread() != shutdownThread)) {
-                Runtime.getRuntime().removeShutdownHook(shutdownThread)
-                shutdownThread = null
-            }
+            shutdownHook?.cancel()
+            shutdownHook = null
         }
         printBasicNodeInfo("Shutting down ...")
 

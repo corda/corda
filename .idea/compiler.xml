@@ -61,10 +61,10 @@
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
       <module name="node_test" target="1.8" />
+      <module name="notary-demo_main" target="1.8" />
+      <module name="notary-demo_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
       <module name="quasar-hook_test" target="1.8" />
-      <module name="raft-notary-demo_main" target="1.8" />
-      <module name="raft-notary-demo_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />

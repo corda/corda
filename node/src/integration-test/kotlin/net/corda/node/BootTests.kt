@@ -53,7 +53,6 @@ class BootTests {
 class ObjectInputStreamFlow : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        System.clearProperty("jdk.serialFilter") // This checks that the node has already consumed the property.
         val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
         ObjectInputStream(data.inputStream()).use { it.readObject() }
     }

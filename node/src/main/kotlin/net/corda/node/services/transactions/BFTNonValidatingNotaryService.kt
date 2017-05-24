@@ -14,6 +14,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
 import org.jetbrains.exposed.sql.Database
+import java.nio.file.Path
 import kotlin.concurrent.thread
 
 /**
@@ -21,14 +22,18 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and timestamp validity.
  */
-class BFTNonValidatingNotaryService(services: ServiceHubInternal,
+class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
+                                    services: ServiceHubInternal,
                                     timestampChecker: TimestampChecker,
                                     serverId: Int,
                                     db: Database,
-                                    val client: BFTSMaRt.Client) : NotaryService {
+                                    private val client: BFTSMaRt.Client) : NotaryService {
     init {
+        val configHandle = config.handle()
         thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
-            Server(serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
+            configHandle.use {
+                Server(configHandle.path, serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
+            }
         }
     }
 
@@ -62,11 +67,12 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         }
     }
 
-    private class Server(id: Int,
+    private class Server(configHome: Path,
+                         id: Int,
                          db: Database,
                          tableName: String,
                          services: ServiceHubInternal,
-                         timestampChecker: TimestampChecker) : BFTSMaRt.Server(id, db, tableName, services, timestampChecker) {
+                         timestampChecker: TimestampChecker) : BFTSMaRt.Server(configHome, id, db, tableName, services, timestampChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
