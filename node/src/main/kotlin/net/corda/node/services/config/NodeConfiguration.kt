@@ -1,7 +1,6 @@
 package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
-import net.corda.core.div
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
@@ -11,16 +10,14 @@ import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.User
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
-import net.corda.nodeapi.config.SSLConfiguration
 import org.bouncycastle.asn1.x500.X500Name
 import java.net.URL
 import java.nio.file.Path
 import java.util.*
 
-interface NodeConfiguration : SSLConfiguration {
-    val baseDirectory: Path
-    override val certificatesDirectory: Path get() = baseDirectory / "certificates"
+interface NodeConfiguration : NodeSSLConfiguration {
     val myLegalName: X500Name
     val networkMapService: NetworkMapInfo?
     val minimumPlatformVersion: Int

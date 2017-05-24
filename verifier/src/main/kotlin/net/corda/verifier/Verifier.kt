@@ -13,20 +13,19 @@ import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
 
 data class VerifierConfiguration(
-        val baseDirectory: Path,
+        override val baseDirectory: Path,
         val config: Config
-) : SSLConfiguration {
+) : NodeSSLConfiguration {
     val nodeHostAndPort: HostAndPort by config
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
-    override val certificatesDirectory = baseDirectory / "certificates"
 }
 
 class Verifier {
