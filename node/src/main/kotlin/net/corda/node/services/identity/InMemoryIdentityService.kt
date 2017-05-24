@@ -11,6 +11,8 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -82,8 +84,9 @@ class InMemoryIdentityService(identities: Iterable<Party> = emptySet(),
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) {
-        val expectedTrustAnchor = TrustAnchor(trustedRoot, null)
+    override fun registerPath(trustedRoot: X509CertificateHolder, anonymousParty: AnonymousParty, path: CertPath) {
+        val converter = JcaX509CertificateConverter()
+        val expectedTrustAnchor = TrustAnchor(converter.getCertificate(trustedRoot), null)
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         val target = path.certificates.last() as X509Certificate
         require(target.publicKey == anonymousParty.owningKey) { "Certificate path must end with anonymous party's public key" }

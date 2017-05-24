@@ -22,6 +22,7 @@ val NULL_PARTY = AnonymousParty(NullPublicKey)
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable
+@Deprecated("Has encoding format problems, consider entropyToKeyPair() instead")
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()

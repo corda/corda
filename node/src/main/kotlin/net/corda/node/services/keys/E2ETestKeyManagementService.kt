@@ -9,11 +9,12 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
-import java.security.cert.X509Certificate
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
@@ -56,7 +57,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509Certificate, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
+    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         return mutex.locked {
