@@ -67,7 +67,7 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
         val rootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name)
-        val txCertAndKey = X509Utilities.createIntermediateCert(ALICE.name, rootCertAndKey)
+        val txCertAndKey = X509Utilities.createIntermediateCACert(ALICE.name, rootCertAndKey)
         val service = InMemoryIdentityService()
         val rootKey = rootCertAndKey.keyPair
         // TODO: Generate certificate with an EdDSA key rather than ECDSA
@@ -86,10 +86,10 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert ownership`() {
         val aliceRootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name)
-        val aliceTxCertAndKey = X509Utilities.createIntermediateCert(ALICE.name, aliceRootCertAndKey)
+        val aliceTxCertAndKey = X509Utilities.createIntermediateCACert(ALICE.name, aliceRootCertAndKey)
         val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCertAndKey, aliceTxCertAndKey.certificate, false).certPath
         val bobRootCertAndKey = X509Utilities.createSelfSignedCACert(BOB.name)
-        val bobTxCertAndKey = X509Utilities.createIntermediateCert(BOB.name, bobRootCertAndKey)
+        val bobTxCertAndKey = X509Utilities.createIntermediateCACert(BOB.name, bobRootCertAndKey)
         val bobCertPath = X509Utilities.createCertificatePath(bobRootCertAndKey, bobTxCertAndKey.certificate, false).certPath
         val service = InMemoryIdentityService()
         val alice = Party(aliceRootCertAndKey)
