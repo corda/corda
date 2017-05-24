@@ -32,6 +32,7 @@ import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.VerifierApi.VERIFICATION_RESPONSES_QUEUE_NAME_PREFIX
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.*
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -513,7 +514,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             val queueQuery = session!!.queueQuery(SimpleString(queueName))
             if (!queueQuery.isExists) {
                 log.info("Create fresh queue $queueName bound on same address")
-                session!!.createQueue(queueName, queueName, true)
+                session!!.createQueue(queueName, RoutingType.MULTICAST, queueName, true)
             }
         }
     }
