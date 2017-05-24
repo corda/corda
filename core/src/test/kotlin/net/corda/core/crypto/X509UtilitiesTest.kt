@@ -173,14 +173,14 @@ class X509UtilitiesTest {
 
         // Load signing intermediate CA cert
         val caKeyStore = KeyStoreUtilities.loadKeyStore(tmpCAKeyStore, "cakeystorepass")
-        val caCertAndKey = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cakeypass")
+        val caCertAndKey = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cakeypass")!!
 
         // Generate server cert and private key and populate another keystore suitable for SSL
         X509Utilities.createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass", MEGA_CORP.name)
 
         // Load back server certificate
         val serverKeyStore = KeyStoreUtilities.loadKeyStore(tmpServerKeyStore, "serverstorepass")
-        val serverCertAndKey = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, "serverkeypass")
+        val serverCertAndKey = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, "serverkeypass")!!
 
         serverCertAndKey.certificate.checkValidity(Date())
         serverCertAndKey.certificate.verify(caCertAndKey.certificate.publicKey)
@@ -189,7 +189,7 @@ class X509UtilitiesTest {
 
         // Load back server certificate
         val sslKeyStore = KeyStoreUtilities.loadKeyStore(tmpSSLKeyStore, "serverstorepass")
-        val sslCertAndKey = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, "serverkeypass")
+        val sslCertAndKey = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, "serverkeypass")!!
 
         sslCertAndKey.certificate.checkValidity(Date())
         sslCertAndKey.certificate.verify(serverCertAndKey.certificate.publicKey)
@@ -291,7 +291,7 @@ class X509UtilitiesTest {
         val peerX500Principal = (peerChain[0] as X509Certificate).subjectX500Principal
         val x500name = X500Name(peerX500Principal.name)
         assertEquals(MEGA_CORP.name, x500name)
-        X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA), *peerChain)
+        X509Utilities.validateCertificateChain(trustStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)!!, *peerChain)
         val output = DataOutputStream(clientSocket.outputStream)
         output.writeUTF("Hello World")
         var timeout = 0

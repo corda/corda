@@ -112,7 +112,7 @@ fun KeyStore.store(out: OutputStream, password: String) = store(out, password.to
  * @param keyPassword Password to unlock the private key entries.
  * @return The KeyPair found in the KeyStore under the specified alias.
  */
-fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertificateAndKeyPair(alias, keyPassword).keyPair
+fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair? = getCertificateAndKeyPair(alias, keyPassword)?.keyPair
 
 /**
  * Helper method to load a Certificate and KeyPair from their KeyStore.
@@ -121,17 +121,22 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
  * CERT_PRIVATE_KEY_ALIAS, ROOT_CA_CERT_PRIVATE_KEY_ALIAS, INTERMEDIATE_CA_PRIVATE_KEY_ALIAS defined above.
  * @param keyPassword The password for the PrivateKey (not the store access password).
  */
-fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
-    val cert = getCertificate(alias) as X509Certificate
-    return CertificateAndKeyPair(cert, KeyPair(Crypto.toSupportedPublicKey(cert.publicKey), getSupportedKey(alias, keyPassword)))
+fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair? {
+    val cert = getCertificate(alias) as X509Certificate?
+    val privKey = getSupportedKey(alias, keyPassword)
+    return if (cert != null && privKey != null)
+        CertificateAndKeyPair(cert, KeyPair(Crypto.toSupportedPublicKey(cert.publicKey), privKey))
+    else
+        null
 }
 
 /**
  * Extract public X509 certificate from a KeyStore file assuming storage alias is known.
  * @param alias The name to lookup the Key and Certificate chain from.
- * @return The X509Certificate found in the KeyStore under the specified alias.
+ * @return The X509Certificate found in the KeyStore under the specified alias, or null if the given alias does not exist or
+ * does not contain a certificate.
  */
-fun KeyStore.getX509Certificate(alias: String): X509Certificate = getCertificate(alias) as X509Certificate
+fun KeyStore.getX509Certificate(alias: String): X509Certificate? = getCertificate(alias) as X509Certificate?
 
 /**
  * Extract a private key from a KeyStore file assuming storage alias is known.
@@ -147,8 +152,8 @@ fun KeyStore.getX509Certificate(alias: String): X509Certificate = getCertificate
  * @throws IllegalArgumentException on not supported scheme or if the given key specification
  * is inappropriate for a supported key factory to produce a private key.
  */
-fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey {
+fun KeyStore.getSupportedKey(alias: String, keyPassword: String): PrivateKey? {
     val keyPass = keyPassword.toCharArray()
-    val key = getKey(alias, keyPass) as PrivateKey
-    return Crypto.toSupportedPrivateKey(key)
+    val key = getKey(alias, keyPass) as PrivateKey?
+    return key?.let { Crypto.toSupportedPrivateKey(it) }
 }

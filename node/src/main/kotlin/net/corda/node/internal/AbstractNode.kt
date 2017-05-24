@@ -601,14 +601,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // TODO: Integrate with Key management service?
         val keystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
-        val clientCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, configuration.keyStorePassword)
+        val clientCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, configuration.keyStorePassword)!!
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
 
-        val identityAndKey = if (configuration.nodeKeystore.exists() && keystore.containsAlias(privateKeyAlias)) {
-            // Get keys from keystore.
-            val (cert, keyPair) = keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
+        // Get keys from keystore if available
+        val certKeyPair = if (configuration.nodeKeystore.exists())
+            keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
+        else
+            null
+        val identityAndKey = if (certKeyPair != null) {
+            val (cert, keyPair) = certKeyPair
             val loadedServiceName = X509CertificateHolder(cert.encoded).subject
             if (X509CertificateHolder(cert.encoded).subject != serviceName) {
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +

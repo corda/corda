@@ -201,8 +201,8 @@ object X509Utilities {
                                    legalName: X500Name,
                                    signatureScheme: SignatureScheme = DEFAULT_TLS_SIGNATURE_SCHEME) {
 
-        val rootCACert = caKeyStore.getX509Certificate(CORDA_ROOT_CA)
-        val (intermediateCACert, intermediateCAKeyPair) = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caKeyPassword)
+        val rootCACert = caKeyStore.getX509Certificate(CORDA_ROOT_CA) ?: throw IllegalStateException("Corda root CA private key is not in key store")
+        val (intermediateCACert, intermediateCAKeyPair) = caKeyStore.getCertificateAndKeyPair(CORDA_INTERMEDIATE_CA, caKeyPassword) ?: throw IllegalStateException("Corda intermediate CA private key is not in key store")
 
         val clientKey = generateKeyPair(signatureScheme)
         val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())

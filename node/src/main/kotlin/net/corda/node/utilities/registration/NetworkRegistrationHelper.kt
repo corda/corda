@@ -43,7 +43,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
                 caKeyStore.addOrReplaceKey(SELF_SIGNED_PRIVATE_KEY, keyPair.private, privateKeyPassword.toCharArray(), arrayOf(selfSignCert))
                 caKeyStore.save(config.nodeKeystore, keystorePassword)
             }
-            val keyPair = caKeyStore.getKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)
+            val keyPair = caKeyStore.getKeyPair(SELF_SIGNED_PRIVATE_KEY, privateKeyPassword)!!
             val requestId = submitOrResumeCertificateSigningRequest(keyPair)
 
             val certificates = try {
@@ -70,7 +70,7 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
 
             println("Generating SSL certificate for node messaging service.")
             val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-            val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA)
+            val caCert = caKeyStore.getX509Certificate(CORDA_CLIENT_CA) ?: throw IllegalStateException("Cannot load client certificate from key store.")
             val sslCert = X509Utilities.createCertificate(CertificateType.TLS, caCert, keyPair, caCert.subject, sslKey.public)
             val sslKeyStore = KeyStoreUtilities.loadOrCreateKeyStore(config.sslKeystore, keystorePassword)
             sslKeyStore.addOrReplaceKey(CORDA_CLIENT_TLS, sslKey.private, privateKeyPassword.toCharArray(), arrayOf(sslCert, *certificates))

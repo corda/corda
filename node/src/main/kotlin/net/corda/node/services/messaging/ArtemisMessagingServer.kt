@@ -261,7 +261,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
         val keyStore = KeyStoreUtilities.loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
-        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
+        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS) ?: throw IllegalStateException("Cannot load client certificate from key store.")
 
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
