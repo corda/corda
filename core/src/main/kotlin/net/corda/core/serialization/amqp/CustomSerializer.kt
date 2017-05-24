@@ -98,7 +98,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): kotlin.Array<T> {
-            return arraySerializer.readObject(obj, schema, DeserializationInput(input.serializerFactory)) as kotlin.Array<T>
+            return arraySerializer.readObject(obj, schema, input) as kotlin.Array<T>
         }
     }
 }
