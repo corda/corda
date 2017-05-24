@@ -61,15 +61,13 @@ object TwoPartyTradeFlow {
 
         companion object {
             object AWAITING_PROPOSAL : ProgressTracker.Step("Awaiting transaction proposal")
+            // DOCSTART 3
             object VERIFYING_AND_SIGNING : ProgressTracker.Step("Verifying and signing transaction proposal") {
                 override fun childProgressTracker() = SignTransactionFlow.tracker()
             }
-
-            // DOCSTART 3
             // DOCEND 3
-            object WAITING_FOR_TX : ProgressTracker.Step("Waiting for the transaction to finalise.")
 
-            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING_AND_SIGNING, WAITING_FOR_TX)
+            fun tracker() = ProgressTracker(AWAITING_PROPOSAL, VERIFYING_AND_SIGNING)
         }
 
         // DOCSTART 4
@@ -84,26 +82,21 @@ object TwoPartyTradeFlow {
 
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
+            // DOCSTART 5
             val signTransactionFlow = object : SignTransactionFlow(otherParty, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
                     if (stx.tx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
-            val stx = subFlow(signTransactionFlow)
-
-            // Wait for the finished, notarised transaction to arrive in our transaction store.
-            progressTracker.currentStep = WAITING_FOR_TX
-            return waitForLedgerCommit(stx.id)
+            return subFlow(signTransactionFlow)
+            // DOCEND 5
         }
         // DOCEND 4
 
-        // DOCSTART 5
-        // DOCEND 5
-
         // Following comment moved here so that it doesn't appear in the docsite:
-        // There are all sorts of funny games a malicious secondary might play with it sends maybeSTX (in
-        // receiveAndCheckProposedTransaction), we should fix them:
+        // There are all sorts of funny games a malicious secondary might play with it sends maybeSTX,
+        // we should fix them:
         //
         // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
         //   we're reusing keys! So don't reuse keys!
@@ -120,14 +113,12 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
-
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
-        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties.") {
+        object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties") {
             override fun childProgressTracker() = CollectSignaturesFlow.tracker()
         }
-
-        object RECORDING : ProgressTracker.Step("Recording completed transaction.") {
+        object RECORDING : ProgressTracker.Step("Recording completed transaction") {
             // TODO: Currently triggers a race condition on Team City. See https://github.com/corda/corda/issues/733.
             // override fun childProgressTracker() = FinalityFlow.tracker()
         }
