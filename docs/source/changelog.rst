@@ -8,6 +8,12 @@ UNRELEASED
 ----------
 
 * API changes:
+    * ``Timestamp`` used for validation/notarization time-range has been renamed to ``TimeWindow``.
+      There are now 3 static constructors ``TimeWindow.fromOnly(fromTime: Instant)``,
+      ``TimeWindow.untilOnly(untilTime: Instant)`` and ``TimeWindow.between(fromTime: Instant, untilTime: Instant)``.
+      Previously default constructor ``TimeWindow(fromTime: Instant, untilTime: Instant)`` has been removed,
+      but ``constructor(time: Instant, tolerance: Duration)`` remained.
+
     * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
       ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
 
