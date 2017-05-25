@@ -47,10 +47,9 @@ class NodeConfig(
             .withValue("myLegalName", valueFor(legalName.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
-            .withFallback(optional("networkMapService", networkMap, {
-                c, n ->
+            .withFallback(optional("networkMapService", networkMap, { c, n ->
                 c.withValue("address", addressValueFor(n.p2pPort))
-                        .withValue("legalName", valueFor(n.legalName.toString()))
+                    .withValue("legalName", valueFor(n.legalName.toString()))
             }))
             .withValue("webAddress", addressValueFor(webPort))
             .withValue("rpcAddress", addressValueFor(rpcPort))
