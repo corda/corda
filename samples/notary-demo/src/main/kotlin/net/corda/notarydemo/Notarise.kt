@@ -13,7 +13,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
-import kotlin.streams.toList
 
 fun main(args: Array<String>) {
     val address = HostAndPort.fromParts("localhost", 10003)
@@ -54,9 +53,9 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * as it consumes the original asset and creates a copy with the new owner as its output.
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
-        return Futures.allAsList((1..count).stream().mapToObj {
+        return Futures.allAsList((1..count).map {
             rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue
-        }.toList()).getOrThrow()
+        }).getOrThrow()
     }
 
     /**
