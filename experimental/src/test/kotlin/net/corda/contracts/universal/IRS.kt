@@ -134,7 +134,7 @@ class IRS {
     fun issue() {
         transaction {
             output { stateInitial }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -154,7 +154,7 @@ class IRS {
         transaction {
             input { stateInitial }
             output { stateAfterFixingFirst }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -201,7 +201,7 @@ class IRS {
             output { stateAfterExecutionFirst }
             output { statePaymentFirst }
 
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }

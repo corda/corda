@@ -21,6 +21,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -182,8 +183,8 @@ data class VerifierDriverDSL(
 
     private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: HostAndPort): VerificationRequestorHandle {
         val baseDir = driverDSL.driverDirectory / name.commonName
-        val sslConfig = object : SSLConfiguration {
-            override val certificatesDirectory = baseDir / "certificates"
+        val sslConfig = object : NodeSSLConfiguration {
+            override val baseDirectory = baseDir
             override val keyStorePassword: String get() = "cordacadevpass"
             override val trustStorePassword: String get() = "trustpass"
         }

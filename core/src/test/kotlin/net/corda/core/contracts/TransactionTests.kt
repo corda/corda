@@ -41,7 +41,7 @@ class TransactionTests {
                 notary = DUMMY_NOTARY,
                 signers = listOf(compKey, DUMMY_KEY_1.public, DUMMY_KEY_2.public),
                 type = TransactionType.General,
-                timestamp = null
+                timeWindow = null
         )
         assertEquals(
                 setOf(compKey, DUMMY_KEY_2.public),
@@ -69,7 +69,7 @@ class TransactionTests {
                 notary = DUMMY_NOTARY,
                 signers = listOf(DUMMY_KEY_1.public, DUMMY_KEY_2.public),
                 type = TransactionType.General,
-                timestamp = null
+                timeWindow = null
         )
         assertFailsWith<IllegalArgumentException> { makeSigned(wtx).verifySignatures() }
 
@@ -101,7 +101,7 @@ class TransactionTests {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timestamp: Timestamp? = null
+        val timeWindow: TimeWindow? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -110,7 +110,7 @@ class TransactionTests {
                 id,
                 null,
                 signers,
-                timestamp,
+                timeWindow,
                 TransactionType.General
         )
 
@@ -128,7 +128,7 @@ class TransactionTests {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timestamp: Timestamp? = null
+        val timeWindow: TimeWindow? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -137,7 +137,7 @@ class TransactionTests {
                 id,
                 DUMMY_NOTARY,
                 signers,
-                timestamp,
+                timeWindow,
                 TransactionType.General
         )
 
@@ -155,7 +155,7 @@ class TransactionTests {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timestamp: Timestamp? = null
+        val timeWindow: TimeWindow? = null
         val transaction: LedgerTransaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -164,7 +164,7 @@ class TransactionTests {
                 id,
                 notary,
                 signers,
-                timestamp,
+                timeWindow,
                 TransactionType.General
         )
 

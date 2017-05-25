@@ -47,8 +47,8 @@ class UniversalContract : Contract {
         is PerceivableOr -> eval(tx, expr.left) || eval(tx, expr.right)
         is Const<Boolean> -> expr.value
         is TimePerceivable -> when (expr.cmp) {
-            Comparison.LTE -> tx.timestamp!!.after!! <= eval(tx, expr.instant)
-            Comparison.GTE -> tx.timestamp!!.before!! >= eval(tx, expr.instant)
+            Comparison.LTE -> tx.timeWindow!!.fromTime!! <= eval(tx, expr.instant)
+            Comparison.GTE -> tx.timeWindow!!.untilTime!! >= eval(tx, expr.instant)
             else -> throw NotImplementedError("eval special")
         }
         is ActorPerceivable -> tx.commands.single().signers.contains(expr.actor.owningKey)
@@ -207,7 +207,7 @@ class UniversalContract : Contract {
                 assert(rest is Zero)
 
                 requireThat {
-                    "action must be timestamped" using (tx.timestamp != null)
+                    "action must have a time-window" using (tx.timeWindow != null)
                     // "action must be authorized" by (cmd.signers.any { action.actors.any { party -> party.owningKey == it } })
                     // todo perhaps merge these two requirements?
                     "condition must be met" using (eval(tx, action.condition))

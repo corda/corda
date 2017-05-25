@@ -701,7 +701,7 @@ class VaultQueryTests {
             val issuance = MEGA_CORP.ref(1)
             val commercialPaper =
                     CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        setTime(TEST_TX_TIME, 30.seconds)
+                        addTimeWindow(TEST_TX_TIME, 30.seconds)
                         signWith(MEGA_CORP_KEY)
                         signWith(DUMMY_NOTARY_KEY)
                     }.toSignedTransaction()

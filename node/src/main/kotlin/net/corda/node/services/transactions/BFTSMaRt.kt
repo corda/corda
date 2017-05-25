@@ -8,13 +8,13 @@ import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
 import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.Timestamp
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
 import net.corda.core.identity.Party
-import net.corda.core.node.services.TimestampChecker
+import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -147,7 +147,7 @@ object BFTSMaRt {
                           val db: Database,
                           tableName: String,
                           val services: ServiceHubInternal,
-                          val timestampChecker: TimestampChecker) : DefaultRecoverable() {
+                          val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
             private val log = loggerFor<Server>()
         }
@@ -174,7 +174,7 @@ object BFTSMaRt {
 
         /**
          * Implement logic to execute the command and commit the transaction to the log.
-         * Helper methods are provided for transaction processing: [commitInputStates], [validateTimestamp], and [sign].
+         * Helper methods are provided for transaction processing: [commitInputStates], [validateTimeWindow], and [sign].
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
@@ -201,9 +201,9 @@ object BFTSMaRt {
             }
         }
 
-        protected fun validateTimestamp(t: Timestamp?) {
-            if (t != null && !timestampChecker.isValid(t))
-                throw NotaryException(NotaryError.TimestampInvalid)
+        protected fun validateTimeWindow(t: TimeWindow?) {
+            if (t != null && !timeWindowChecker.isValid(t))
+                throw NotaryException(NotaryError.TimeWindowInvalid)
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {

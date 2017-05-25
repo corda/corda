@@ -54,7 +54,7 @@ class Caplet {
     fun issue() {
         transaction {
             output { stateStart }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -74,7 +74,7 @@ class Caplet {
         transaction {
             input { stateFixed }
             output { stateFinal }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -92,7 +92,7 @@ class Caplet {
         transaction {
             input { stateStart }
             output { stateFixed }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }

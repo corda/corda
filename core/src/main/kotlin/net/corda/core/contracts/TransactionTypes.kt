@@ -19,7 +19,7 @@ sealed class TransactionType {
      */
     @Throws(TransactionVerificationException::class)
     fun verify(tx: LedgerTransaction) {
-        require(tx.notary != null || tx.timestamp == null) { "Transactions with timestamps must be notarised." }
+        require(tx.notary != null || tx.timeWindow == null) { "Transactions with time-windows must be notarised" }
         val duplicates = detectDuplicateInputs(tx)
         if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates)
         val missing = verifySigners(tx)

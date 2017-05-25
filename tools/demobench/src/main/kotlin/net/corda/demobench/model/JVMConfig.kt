@@ -3,14 +3,15 @@ package net.corda.demobench.model
 import javafx.scene.control.Alert
 import javafx.scene.control.Alert.AlertType.ERROR
 import javafx.stage.Stage
-import tornadofx.*
 import java.nio.file.Path
 import java.nio.file.Paths
+import tornadofx.*
 
 class JVMConfig : Controller() {
 
     val userHome: Path = Paths.get(System.getProperty("user.home")).toAbsolutePath()
     val dataHome: Path = userHome.resolve("demobench")
+    val capsuleHome: Path = dataHome.resolve(".capsule")
     val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
     val applicationDir: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath()
 
@@ -23,9 +24,12 @@ class JVMConfig : Controller() {
     }
 
     fun processFor(jarPath: Path, vararg args: String): ProcessBuilder {
-        return ProcessBuilder(commandFor(jarPath, *args))
+        return ProcessBuilder(commandFor(jarPath, *args)).apply { setCapsuleCacheDir(environment()) }
     }
 
+    fun setCapsuleCacheDir(env: MutableMap<String, String>): MutableMap<String, String> = env.apply {
+        put("CAPSULE_CACHE_DIR", capsuleHome.toString())
+    }
 }
 
 typealias atRuntime = (Path, String) -> Unit

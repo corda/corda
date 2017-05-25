@@ -30,7 +30,7 @@ class TransactionEncumbranceTests {
         override val legalContractReference = SecureHash.sha256("DummyTimeLock")
         override fun verify(tx: TransactionForContract) {
             val timeLockInput = tx.inputs.filterIsInstance<State>().singleOrNull() ?: return
-            val time = tx.timestamp?.before ?: throw IllegalArgumentException("Transactions containing time-locks must be timestamped")
+            val time = tx.timeWindow?.untilTime ?: throw IllegalArgumentException("Transactions containing time-locks must have a time-window")
             requireThat {
                 "the time specified in the time-lock has passed" using (time >= timeLockInput.validFrom)
             }
@@ -70,7 +70,7 @@ class TransactionEncumbranceTests {
                 input("5pm time-lock")
                 output { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-                timestamp(FIVE_PM)
+                timeWindow(FIVE_PM)
                 verifies()
             }
         }
@@ -89,7 +89,7 @@ class TransactionEncumbranceTests {
                 input("5pm time-lock")
                 output { state }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-                timestamp(FOUR_PM)
+                timeWindow(FOUR_PM)
                 this `fails with` "the time specified in the time-lock has passed"
             }
         }
@@ -106,7 +106,7 @@ class TransactionEncumbranceTests {
                 input("state encumbered by 5pm time-lock")
                 output { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-                timestamp(FIVE_PM)
+                timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
         }
@@ -146,7 +146,7 @@ class TransactionEncumbranceTests {
                 input("5pm time-lock")
                 output { stateWithNewOwner }
                 command(MEGA_CORP.owningKey) { Cash.Commands.Move() }
-                timestamp(FIVE_PM)
+                timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
         }
