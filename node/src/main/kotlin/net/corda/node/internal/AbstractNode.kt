@@ -600,7 +600,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
-        val keyStore = LoadedKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+        val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
@@ -624,7 +624,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         "$serviceName vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-            if (myIdentity.owningKey == keyPair.public) { // TODO: Support case where owningKey is a composite key.
+            if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
             Pair(myIdentity, keyPair)
@@ -660,7 +660,7 @@ sealed class ServiceFlowInfo {
     data class CorDapp(val version: Int, val factory: (Party) -> FlowLogic<*>) : ServiceFlowInfo()
 }
 
-private class LoadedKeyStore(private val storePath: Path, private val storePassword: String) {
+private class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
     private val keyStore = KeyStoreUtilities.loadKeyStore(storePath, storePassword)
 
     fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
