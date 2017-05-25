@@ -116,7 +116,10 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
                 confFile.writeText(config.toText())
 
                 // Execute the Corda node
-                pty.run(command, System.getenv(), nodeDir.toString())
+                val cordaEnv = System.getenv().toMutableMap().apply {
+                    jvm.setCapsuleCacheDir(this)
+                }
+                pty.run(command, cordaEnv, nodeDir.toString())
                 log.info("Launched node: ${config.legalName}")
                 return true
             } catch (e: Exception) {
