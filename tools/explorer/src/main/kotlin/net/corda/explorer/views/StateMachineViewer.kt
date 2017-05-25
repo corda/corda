@@ -60,28 +60,29 @@ class StateMachineViewer : CordaView("Flow Triage") {
             hgap = 5.0
             styleClass += "chart-plot-background"
             row {
-                label { makeIconLabel(this, FontAwesomeIcon.CHECK, "", "-fx-fill: lightslategrey", 30.0) }
+                add(makeIconLabel(FontAwesomeIcon.CHECK, "", "-fx-fill: lightslategrey", 30.0))
                 label { textProperty().bind(success.map(Number::toString)) }
             }
             row {
-                label { makeIconLabel(this, FontAwesomeIcon.BOLT, "", "-fx-fill: lightslategrey", 30.0) }
+                add(makeIconLabel(FontAwesomeIcon.BOLT, "", "-fx-fill: lightslategrey", 30.0))
                 label { textProperty().bind(error.map(Number::toString)) }
             }
             row {
-                label { makeIconLabel(this, FontAwesomeIcon.ROCKET, "", "-fx-fill: lightslategrey", 30.0) }
+                add(makeIconLabel(FontAwesomeIcon.ROCKET, "", "-fx-fill: lightslategrey", 30.0))
                 label { textProperty().bind(progress.map(Number::toString)) }
             }
         }
     }
 
-    fun makeIconLabel(labelNode: Label, icon: FontAwesomeIcon, initText: String, customStyle: String? = null, iconSize: Double = 15.0) {
-        labelNode.apply {
+    fun makeIconLabel(icon: FontAwesomeIcon, initText: String, customStyle: String? = null, iconSize: Double = 15.0): Label {
+        return label {
             graphic = FontAwesomeIconView(icon).apply {
                 glyphSize = iconSize
                 textAlignment = TextAlignment.LEFT
                 style = customStyle
             }
             text = initText
+            gridpaneConstraints { hAlignment = HPos.CENTER }
         }
     }
 
@@ -113,19 +114,19 @@ class StateMachineViewer : CordaView("Flow Triage") {
             column("Flow name", StateMachineData::stateMachineName).cellFormat { text = FlowNameFormatter.camelCase.format(it) }
             column("Initiator", StateMachineData::flowInitiator).setCustomCellFactory {
                 val (initIcon, initText) = FlowInitiatorFormatter.withIcon(it)
-                label { makeIconLabel(this, initIcon, initText, "-fx-fill: lightgray") }
+                makeIconLabel(initIcon, initText, "-fx-fill: lightgray")
             }
             column("Flow Status", StateMachineData::smmStatus).setCustomCellFactory {
                 val addRm = it.first.value
                 val progress = it.second.value.status ?: "No progress data"
                 if (addRm is StateMachineStatus.Removed) {
                     if (addRm.result.error == null) {
-                        label { makeIconLabel(this, FontAwesomeIcon.CHECK, "Success", "-fx-fill: green") }
+                        makeIconLabel(FontAwesomeIcon.CHECK, "Success", "-fx-fill: green")
                     } else {
-                        label { makeIconLabel(this, FontAwesomeIcon.BOLT, progress, "-fx-fill: -color-4") }
+                        makeIconLabel(FontAwesomeIcon.BOLT, progress, "-fx-fill: -color-4")
                     }
                 } else {
-                    label { makeIconLabel(this, FontAwesomeIcon.ROCKET, progress, "-fx-fill: lightslategrey") }
+                    makeIconLabel(FontAwesomeIcon.ROCKET, progress, "-fx-fill: lightslategrey")
                 }
             }
         }
