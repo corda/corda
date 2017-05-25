@@ -455,15 +455,9 @@ class TimeWindow private constructor(
         return true
     }
 
-    override fun hashCode(): Int {
-        var result = fromTime?.hashCode() ?: 0
-        result = 31 * result + (untilTime?.hashCode() ?: 0)
-        return result
-    }
+    override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
 
-    override fun toString(): String {
-        return "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
-    }
+    override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
 }
 
 /**
