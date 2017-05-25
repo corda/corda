@@ -431,7 +431,7 @@ class TimeWindow private constructor(
         /** Use when both sides of a [TimeWindow] must be set (fromTime, untilTime). */
         @JvmStatic
         fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
-            require(fromTime >= untilTime) { "fromTime should be earlier than untilTime" }
+            require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
             return TimeWindow(fromTime, untilTime)
         }
     }
