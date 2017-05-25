@@ -121,7 +121,7 @@ class DurationGenerator : Generator<Duration>(Duration::class.java) {
 
 class TimeWindowGenerator : Generator<TimeWindow>(TimeWindow::class.java) {
     override fun generate(random: SourceOfRandomness, status: GenerationStatus): TimeWindow {
-        return TimeWindow(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
+        return TimeWindow.withTolerance(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
     }
 }
 

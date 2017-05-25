@@ -68,7 +68,7 @@ open class TransactionBuilder(
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow(time, timeTolerance))
+    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
 
     fun addTimeWindow(timeWindow: TimeWindow) {
         check(notary != null) { "Only notarised transactions can have a time-window" }

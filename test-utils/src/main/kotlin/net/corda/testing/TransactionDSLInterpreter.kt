@@ -121,5 +121,5 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
      */
     @JvmOverloads
     fun timeWindow(time: Instant, tolerance: Duration = 30.seconds) =
-            timeWindow(TimeWindow(time, tolerance))
+            timeWindow(TimeWindow.withTolerance(time, tolerance))
 }

@@ -420,26 +420,30 @@ class TimeWindow private constructor(
         val untilTime: Instant?
 ) {
     companion object {
-        /** Use when the left-side (fromTime) of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
+        /** Use when the left-side [fromTime] of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
         @JvmStatic
         fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
 
-        /** Use when the right-side (untilTime) of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
+        /** Use when the right-side [untilTime] of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
         @JvmStatic
         fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
 
-        /** Use when both sides of a [TimeWindow] must be set (fromTime, untilTime). */
+        /** Use when both sides of a [TimeWindow] must be set ([fromTime], [untilTime]). */
         @JvmStatic
         fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
             require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
             return TimeWindow(fromTime, untilTime)
         }
+
+        /**
+         * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
+         * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
+         */
+        @JvmStatic
+        fun withTolerance(time: Instant, tolerance: Duration) = TimeWindow(time - tolerance, time + tolerance)
     }
 
-    /**
-     * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
-     * The result will be the following time-window: (time - tolerance, time + tolerance).
-     */
+    @Deprecated("This is scheduled to be removed in a future release", ReplaceWith("TimeWindow.withTolerance(time, tolerance)"))
     constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
 
     /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
@@ -448,10 +452,7 @@ class TimeWindow private constructor(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TimeWindow) return false
-
-        if (fromTime != other.fromTime) return false
-        if (untilTime != other.untilTime) return false
-
+        if (fromTime != other.fromTime || untilTime != other.untilTime) return false
         return true
     }
 
