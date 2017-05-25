@@ -341,7 +341,7 @@ class ObligationTests {
                 input("Bob's $1,000,000 obligation to Alice")
                 // Note we can sign with either key here
                 command(ALICE_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -357,7 +357,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output("change") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, BOB) }
                 command(BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -371,7 +371,7 @@ class ObligationTests {
                 input("Bob's $1,000,000 obligation to Alice")
                 output("change") { (oneMillionDollars.splitEvenly(2).first()).OBLIGATION between Pair(ALICE, BOB) }
                 command(BOB_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "amounts owed on input and output must match"
             }
         }
@@ -383,7 +383,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.CLOSE_OUT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "any involved party has signed"
             }
         }
@@ -398,7 +398,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(ALICE_PUBKEY, BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -412,7 +412,7 @@ class ObligationTests {
                 input("Alice's $1,000,000 obligation to Bob")
                 input("Bob's $1,000,000 obligation to Alice")
                 command(BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
         }
@@ -425,7 +425,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output("MegaCorp's $1,000,000 obligation to Alice") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE) }
                 command(ALICE_PUBKEY, BOB_PUBKEY, MEGA_CORP_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()
@@ -439,7 +439,7 @@ class ObligationTests {
                 input("MegaCorp's $1,000,000 obligation to Bob")
                 output("MegaCorp's $1,000,000 obligation to Alice") { oneMillionDollars.OBLIGATION between Pair(MEGA_CORP, ALICE) }
                 command(ALICE_PUBKEY, BOB_PUBKEY) { Obligation.Commands.Net(NetType.PAYMENT) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this `fails with` "all involved parties have signed"
             }
         }
@@ -527,14 +527,14 @@ class ObligationTests {
 
     @Test
     fun `payment default`() {
-        // Try defaulting an obligation without a timestamp
+        // Try defaulting an obligation without a time-window.
         ledger {
             cashObligationTestRoots(this)
             transaction("Settlement") {
                 input("Alice's $1,000,000 obligation to Bob")
                 output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB)).copy(lifecycle = Lifecycle.DEFAULTED) }
                 command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
-                this `fails with` "there is a timestamp from the authority"
+                this `fails with` "there is a time-window from the authority"
             }
         }
 
@@ -545,7 +545,7 @@ class ObligationTests {
             input(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime)
             output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` futureTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
             command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "the due date has passed"
         }
 
@@ -555,7 +555,7 @@ class ObligationTests {
                 input(oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime)
                 output("Alice's defaulted $1,000,000 obligation to Bob") { (oneMillionDollars.OBLIGATION between Pair(ALICE, BOB) `at` pastTestTime).copy(lifecycle = Lifecycle.DEFAULTED) }
                 command(BOB_PUBKEY) { Obligation.Commands.SetLifecycle(Lifecycle.DEFAULTED) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
             this.verifies()

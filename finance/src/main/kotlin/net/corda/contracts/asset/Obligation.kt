@@ -24,36 +24,9 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import kotlin.collections.Collection
-import kotlin.collections.Iterable
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.Set
-import kotlin.collections.all
-import kotlin.collections.asIterable
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.contains
-import kotlin.collections.distinct
-import kotlin.collections.emptySet
-import kotlin.collections.filter
-import kotlin.collections.filterIsInstance
-import kotlin.collections.first
-import kotlin.collections.firstOrNull
-import kotlin.collections.forEach
-import kotlin.collections.groupBy
-import kotlin.collections.isNotEmpty
-import kotlin.collections.iterator
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.none
-import kotlin.collections.reduce
 import kotlin.collections.set
-import kotlin.collections.setOf
-import kotlin.collections.single
-import kotlin.collections.toSet
-import kotlin.collections.union
-import kotlin.collections.withIndex
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
@@ -432,12 +405,12 @@ class Obligation<P : Any> : Contract {
             if (input is State<P>) {
                 val actualOutput = outputs[stateIdx]
                 val deadline = input.dueBefore
-                val timestamp = tx.timestamp
+                val timeWindow = tx.timeWindow
                 val expectedOutput = input.copy(lifecycle = expectedOutputLifecycle)
 
                 requireThat {
-                    "there is a timestamp from the authority" using (timestamp != null)
-                    "the due date has passed" using (timestamp!!.after?.isAfter(deadline) ?: false)
+                    "there is a time-window from the authority" using (timeWindow != null)
+                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) ?: false)
                     "input state lifecycle is correct" using (input.lifecycle == expectedInputLifecycle)
                     "output state corresponds exactly to input state, with lifecycle changed" using (expectedOutput == actualOutput)
                 }
@@ -567,7 +540,7 @@ class Obligation<P : Any> : Contract {
             }
             tx.addCommand(Commands.SetLifecycle(lifecycle), partiesUsed.map { it.owningKey }.distinct())
         }
-        tx.setTime(issuanceDef.dueBefore, issuanceDef.timeTolerance)
+        tx.addTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
     }
 
     /**

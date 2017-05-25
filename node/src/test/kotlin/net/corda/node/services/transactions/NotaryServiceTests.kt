@@ -39,11 +39,11 @@ class NotaryServiceTests {
         net.runNetwork() // Clear network map registration messages
     }
 
-    @Test fun `should sign a unique transaction with a valid timestamp`() {
+    @Test fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.setTime(Instant.now(), 30.seconds)
+            tx.addTimeWindow(Instant.now(), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -52,7 +52,7 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should sign a unique transaction without a timestamp`() {
+    @Test fun `should sign a unique transaction without a time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -64,18 +64,18 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should report error for transaction with an invalid timestamp`() {
+    @Test fun `should report error for transaction with an invalid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.setTime(Instant.now().plusSeconds(3600), 30.seconds)
+            tx.addTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 
         val future = runNotaryClient(stx)
 
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.TimestampInvalid::class.java)
+        assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
     @Test fun `should sign identical transaction multiple times (signing is idempotent)`() {

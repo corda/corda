@@ -24,7 +24,6 @@ import net.corda.node.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.security.PublicKey
 import java.util.concurrent.Executors
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServletResponse.SC_OK

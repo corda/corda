@@ -32,9 +32,9 @@ class LedgerTransaction(
         override val id: SecureHash,
         notary: Party?,
         signers: List<PublicKey>,
-        timestamp: Timestamp?,
+        timeWindow: TimeWindow?,
         type: TransactionType
-) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp) {
+) : BaseTransaction(inputs, outputs, notary, signers, type, timeWindow) {
     init {
         checkInvariants()
     }
@@ -47,7 +47,7 @@ class LedgerTransaction(
     /** Strips the transaction down to a form that is usable by the contract verify functions */
     fun toTransactionForContract(): TransactionForContract {
         return TransactionForContract(inputs.map { it.state.data }, outputs.map { it.data }, attachments, commands, id,
-                inputs.map { it.state.notary }.singleOrNull(), timestamp)
+                inputs.map { it.state.notary }.singleOrNull(), timeWindow)
     }
 
     /**

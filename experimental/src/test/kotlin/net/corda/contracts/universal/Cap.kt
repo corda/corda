@@ -167,7 +167,7 @@ class Cap {
     fun issue() {
         transaction {
             output { stateInitial }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -187,7 +187,7 @@ class Cap {
         transaction {
             input { stateInitial }
             output { stateAfterFixingFirst }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -234,7 +234,7 @@ class Cap {
             output { stateAfterExecutionFirst }
             output { statePaymentFirst }
 
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -253,7 +253,7 @@ class Cap {
             input { stateAfterFixingFinal }
             output { statePaymentFinal }
 
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -271,7 +271,7 @@ class Cap {
         transaction {
             input { stateAfterExecutionFirst }
             output { stateAfterFixingFinal }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }

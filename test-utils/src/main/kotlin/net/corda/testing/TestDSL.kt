@@ -145,8 +145,8 @@ data class TestTransactionDSLInterpreter private constructor(
         return EnforceVerifyOrFail.Token
     }
 
-    override fun timestamp(data: Timestamp) {
-        transactionBuilder.setTime(data)
+    override fun timeWindow(data: TimeWindow) {
+        transactionBuilder.addTimeWindow(data)
     }
 
     override fun tweak(

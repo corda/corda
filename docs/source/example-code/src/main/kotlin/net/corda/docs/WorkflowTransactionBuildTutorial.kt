@@ -80,7 +80,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
      */
     override fun verify(tx: TransactionForContract) {
         val command = tx.commands.requireSingleCommand<TradeApprovalContract.Commands>()
-        require(tx.timestamp?.midpoint != null) { "must be timestamped" }
+        require(tx.timeWindow?.midpoint != null) { "must have a time-window" }
         when (command.value) {
             is Commands.Issue -> {
                 requireThat {
@@ -132,7 +132,7 @@ class SubmitTradeApprovalFlow(val tradeId: String,
         // Create the TransactionBuilder and populate with the new state.
         val tx = TransactionType.General.Builder(notary)
                 .withItems(tradeProposal, Command(TradeApprovalContract.Commands.Issue(), listOf(tradeProposal.source.owningKey)))
-        tx.setTime(serviceHub.clock.instant(), Duration.ofSeconds(60))
+        tx.addTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(60))
         // We can automatically sign as there is no untrusted data.
         val signedTx = serviceHub.signInitialTransaction(tx)
         // Notarise and distribute.
@@ -193,7 +193,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
                         newState,
                         Command(TradeApprovalContract.Commands.Completed(),
                                 listOf(serviceHub.myInfo.legalIdentity.owningKey, latestRecord.state.data.source.owningKey)))
-        tx.setTime(serviceHub.clock.instant(), Duration.ofSeconds(60))
+        tx.addTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(60))
         // We can sign this transaction immediately as we have already checked all the fields and the decision
         // is ultimately a manual one from the caller.
         // As a SignedTransaction we can pass the data around certain that it cannot be modified,

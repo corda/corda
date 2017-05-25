@@ -61,7 +61,7 @@ class CommercialPaperLegacy : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaperLegacy.Commands>()
-        val timestamp: Timestamp? = tx.timestamp
+        val timeWindow: TimeWindow? = tx.timeWindow
 
         // Suppress compiler warning as 'key' is an unused variable when destructuring 'groups'.
         @Suppress("UNUSED_VARIABLE")
@@ -81,7 +81,7 @@ class CommercialPaperLegacy : Contract {
                     // Redemption of the paper requires movement of on-ledger cash.
                     val input = inputs.single()
                     val received = tx.outputs.sumCashBy(input.owner)
-                    val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
+                    val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
                     requireThat {
                         "the paper must have matured" using (time >= input.maturityDate)
                         "the received amount equals the face value" using (received == input.faceValue)
@@ -92,7 +92,7 @@ class CommercialPaperLegacy : Contract {
 
                 is Commands.Issue -> {
                     val output = outputs.single()
-                    val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
+                    val time = timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances have a time-window")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "output states are issued by a command signer" using

@@ -51,7 +51,7 @@ class FXFwdTimeOption
     fun `issue - signature`() {
         transaction {
             output { inState }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -77,7 +77,7 @@ class FXFwdTimeOption
             output { outState1 }
             output { outState2 }
 
-            timestamp(TEST_TX_TIME_AFTER_MATURITY)
+            timeWindow(TEST_TX_TIME_AFTER_MATURITY)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -109,7 +109,7 @@ class FXFwdTimeOption
             output { outState1 }
             output { outState2 }
 
-            timestamp(TEST_TX_TIME_BEFORE_MATURITY)
+            timeWindow(TEST_TX_TIME_BEFORE_MATURITY)
 
             tweak {
                 command(acmeCorp.owningKey) { UniversalContract.Commands.Action("some undefined name") }

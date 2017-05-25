@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.*
@@ -406,33 +405,63 @@ data class AuthenticatedObject<out T : Any>(
 )
 
 /**
+ * A time-window is required for validation/notarization purposes.
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
- * between (after, before).
+ * between (fromTime, untilTime).
+ * Usually, a time-window is required to have both sides set (fromTime, untilTime).
+ * However, some apps may require that a time-window has a start [Instant] (fromTime), but no end [Instant] (untilTime) and vice versa.
+ * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.Until, TimeWindow.Between.
  */
 @CordaSerializable
-data class Timestamp(
-        /** The time at which this transaction is said to have occurred is after this moment */
-        val after: Instant?,
-        /** The time at which this transaction is said to have occurred is before this moment */
-        val before: Instant?
+class TimeWindow private constructor(
+        /** The time at which this transaction is said to have occurred is after this moment. */
+        val fromTime: Instant?,
+        /** The time at which this transaction is said to have occurred is before this moment. */
+        val untilTime: Instant?
 ) {
-    init {
-        if (after == null && before == null)
-            throw IllegalArgumentException("At least one of before/after must be specified")
-        if (after != null && before != null)
-            check(after <= before)
+    companion object {
+        /** Use when the left-side [fromTime] of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
+        @JvmStatic
+        fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
+
+        /** Use when the right-side [untilTime] of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
+        @JvmStatic
+        fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
+
+        /** Use when both sides of a [TimeWindow] must be set ([fromTime], [untilTime]). */
+        @JvmStatic
+        fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
+            require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
+            return TimeWindow(fromTime, untilTime)
+        }
+
+        /**
+         * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
+         * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
+         */
+        @JvmStatic
+        fun withTolerance(time: Instant, tolerance: Duration) = TimeWindow(time - tolerance, time + tolerance)
     }
 
-    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
+    /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
+    val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
 
-    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TimeWindow) return false
+        return (fromTime == other.fromTime && untilTime == other.untilTime)
+    }
+
+    override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
+
+    override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
 }
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
- * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
+ * time-window attached to the transaction itself i.e. it is NOT necessarily the current time.
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */

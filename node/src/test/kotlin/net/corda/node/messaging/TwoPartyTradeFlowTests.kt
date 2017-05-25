@@ -474,7 +474,7 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `dependency with error on seller side`() {
         ledger {
-            runWithError(false, true, "must be timestamped")
+            runWithError(false, true, "Issuances must have a time-window")
         }
     }
 
@@ -602,7 +602,7 @@ class TwoPartyTradeFlowTests {
                 // Put a broken command on so at least a signature is created
                 command(issuer.owningKey) { Cash.Commands.Move() }
             }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             if (withError) {
                 this.fails()
             } else {
@@ -642,7 +642,7 @@ class TwoPartyTradeFlowTests {
             }
             command(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             if (!withError)
-                timestamp(time = TEST_TX_TIME)
+                timeWindow(time = TEST_TX_TIME)
             if (attachmentID != null)
                 attachment(attachmentID)
             if (withError) {

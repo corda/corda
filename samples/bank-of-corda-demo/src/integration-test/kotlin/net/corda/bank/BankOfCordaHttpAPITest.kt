@@ -8,8 +8,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.node.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
-import net.corda.testing.http.HttpUtils
-import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import kotlin.test.assertTrue
 

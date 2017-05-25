@@ -43,7 +43,7 @@ class FXSwap {
 
         transaction {
             output { inState }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -68,7 +68,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
             output { outState2 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -87,7 +87,7 @@ class FXSwap {
             input { inState }
             output { outState2 }
             output { outState1 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -106,7 +106,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
             output { outState2 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "condition must be met"
@@ -119,7 +119,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
             output { outState2 }
-            timestamp(TEST_TX_TIME_TOO_EARLY)
+            timeWindow(TEST_TX_TIME_TOO_EARLY)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "condition must be met"
@@ -131,7 +131,7 @@ class FXSwap {
         transaction {
             input { inState }
             output { outState1 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"
@@ -144,7 +144,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
             output { outStateBad2 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
@@ -157,7 +157,7 @@ class FXSwap {
             input { inState }
             output { outStateBad1 }
             output { outState2 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
@@ -170,7 +170,7 @@ class FXSwap {
             input { inState }
             output { outState1 }
             output { outStateBad3 }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output states must match action result state"
