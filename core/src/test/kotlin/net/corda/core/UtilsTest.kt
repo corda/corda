@@ -1,12 +1,10 @@
 package net.corda.core
 
 import org.assertj.core.api.Assertions.*
-import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import rx.subjects.PublishSubject
+import java.util.*
 import java.util.concurrent.CancellationException
-import kotlin.NoSuchElementException
-import kotlin.test.assertEquals
 
 class UtilsTest {
     @Test
