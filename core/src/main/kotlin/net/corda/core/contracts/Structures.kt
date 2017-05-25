@@ -405,33 +405,67 @@ data class AuthenticatedObject<out T : Any>(
 )
 
 /**
+ * A time-window is required for validation/notarization purposes.
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
  * between (fromTime, untilTime).
- * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.After, TimeWindow.Between.
+ * Usually, a time-window is required to have both sides set (fromTime, untilTime).
+ * However, some apps may require that a time-window has a start [Instant] (fromTime), but no end [Instant] (untilTime) and vice versa.
+ * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.Until, TimeWindow.Between.
  */
 @CordaSerializable
 class TimeWindow private constructor(
-        /** The time at which this transaction is said to have occurred is after this moment */
+        /** The time at which this transaction is said to have occurred is after this moment. */
         val fromTime: Instant?,
-        /** The time at which this transaction is said to have occurred is before this moment */
+        /** The time at which this transaction is said to have occurred is before this moment. */
         val untilTime: Instant?
 ) {
     companion object {
+        /** Use when the left-side (fromTime) of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
         @JvmStatic
         fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
+
+        /** Use when the right-side (untilTime) of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
         @JvmStatic
         fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
+
+        /** Use when both sides of a [TimeWindow] must be set (fromTime, untilTime). */
         @JvmStatic
         fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
-            if (fromTime >= untilTime)
-                throw IllegalArgumentException("fromTime should be earlier than untilTime")
+            require(fromTime >= untilTime) { "fromTime should be earlier than untilTime" }
             return TimeWindow(fromTime, untilTime)
         }
     }
 
+    /**
+     * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
+     * The result will be the following time-window: (time - tolerance, time + tolerance).
+     */
     constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
 
+    /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
     val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other?.javaClass != javaClass) return false
+
+        other as TimeWindow
+
+        if (fromTime != other.fromTime) return false
+        if (untilTime != other.untilTime) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = fromTime?.hashCode() ?: 0
+        result = 31 * result + (untilTime?.hashCode() ?: 0)
+        return result
+    }
+
+    override fun toString(): String {
+        return "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
+    }
 }
 
 /**
