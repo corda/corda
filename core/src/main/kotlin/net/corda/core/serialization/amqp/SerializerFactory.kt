@@ -32,6 +32,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: apply class loader logic and an "app context" throughout this code.
 // TODO: schema evolution solution when the fingerprints do not line up.
 // TODO: allow definition of well known types that are left out of the schema.
+// TODO: automatically support byte[] without having to wrap in [Binary].
 @ThreadSafe
 class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<out Any>>()
