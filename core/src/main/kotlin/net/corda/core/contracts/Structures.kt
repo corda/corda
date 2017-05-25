@@ -443,17 +443,13 @@ class TimeWindow private constructor(
         fun withTolerance(time: Instant, tolerance: Duration) = TimeWindow(time - tolerance, time + tolerance)
     }
 
-    @Deprecated("This is scheduled to be removed in a future release", ReplaceWith("TimeWindow.withTolerance(time, tolerance)"))
-    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
-
     /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
     val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TimeWindow) return false
-        if (fromTime != other.fromTime || untilTime != other.untilTime) return false
-        return true
+        return (fromTime == other.fromTime && untilTime == other.untilTime)
     }
 
     override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
