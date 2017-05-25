@@ -15,8 +15,8 @@ class ServiceController(resourceName: String = "/services.conf") : Controller() 
     /*
      * Load our list of known extra Corda services.
      */
-    private fun loadConf(url: URL?): List<String> =
-        if (url == null) {
+    private fun loadConf(url: URL?): List<String> {
+        return if (url == null) {
             emptyList()
         } else {
             try {
@@ -35,5 +35,5 @@ class ServiceController(resourceName: String = "/services.conf") : Controller() 
                 emptyList<String>()
             }
         }
-
+    }
 }
