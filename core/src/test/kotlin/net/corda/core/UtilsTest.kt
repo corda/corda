@@ -5,10 +5,8 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import rx.subjects.PublishSubject
 import java.util.concurrent.CancellationException
-import java.util.stream.Stream
 import kotlin.NoSuchElementException
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class UtilsTest {
     @Test
@@ -63,28 +61,12 @@ class UtilsTest {
     }
 
     @Test
-    fun `IntProgression stream works`() {
-        assertArrayEquals(intArrayOf(1, 2, 3, 4), (1..4).stream().toArray())
-        assertArrayEquals(intArrayOf(1, 2, 3, 4), (1 until 5).stream().toArray())
-        assertArrayEquals(intArrayOf(1, 3), (1..4 step 2).stream().toArray())
-        assertArrayEquals(intArrayOf(1, 3), (1..3 step 2).stream().toArray())
-        assertArrayEquals(intArrayOf(), (1..0).stream().toArray())
-    }
-
-    @Test
-    fun `Stream toTypedArray works`() {
-        val a: Array<String> = Stream.of("one", "two").toTypedArray()
+    fun `Sequence toTypedArray works`() {
+        val a: Array<String> = sequenceOf("one", "two").toTypedArray()
         assertEquals(Array<String>::class.java, a.javaClass)
         assertArrayEquals(arrayOf("one", "two"), a)
-        val b: Array<String?> = Stream.of("one", "two", null).toTypedArray()
+        val b: Array<String?> = sequenceOf("one", "two", null).toTypedArray()
         assertEquals(Array<String?>::class.java, b.javaClass)
         assertArrayEquals(arrayOf("one", "two", null), b)
-    }
-
-    @Test
-    fun `Stream single works`() {
-        assertEquals("item", Stream.of("item").single())
-        assertFailsWith(NoSuchElementException::class, "E") { Stream.empty<Any>().single(emptyMessage = "E") }
-        assertFailsWith(IllegalArgumentException::class, "+") { Stream.of(1, 2).single(moreThanOneMessage = "+") }
     }
 }

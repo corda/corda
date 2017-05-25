@@ -29,7 +29,6 @@ import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
 import java.util.function.IntFunction
-import java.util.stream.IntStream
 import java.util.stream.Stream
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -38,6 +37,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
+import kotlin.streams.asStream
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 @Suppress("unused") // It's here for completeness
@@ -112,17 +112,8 @@ infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): Listenable
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 
-fun IntProgression.stream(): IntStream = IntStream.rangeClosed(0, (last - first) / step).map { it * step + first }
 @Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
-inline fun <reified T> Stream<T>.toTypedArray() = toArray(IntFunction { n -> arrayOfNulls<T>(n) }) as Array<T>
-/** Note it can only be iterated once. */
-fun <T> Stream<T>.asIterable() = Iterable<T> { iterator() }
-fun <T> Stream<T>.single(emptyMessage: String = "Stream is empty.", moreThanOneMessage: String = "Stream has more than one element."): T = iterator().run {
-    hasNext() || throw NoSuchElementException(emptyMessage)
-    val element = next()
-    hasNext() && throw IllegalArgumentException(moreThanOneMessage)
-    element
-}
+inline fun <reified T> Sequence<T>.toTypedArray() = asStream().toArray(IntFunction { size -> arrayOfNulls<T>(size) }) as Array<T>
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {

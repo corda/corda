@@ -27,8 +27,8 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().single(
-                moreThanOneMessage = "No unique notary identity, try cleaning the node directories.")
+        val id = parties.asSequence().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().singleOrNull()
+        checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
     private val counterpartyNode by lazy {
@@ -53,7 +53,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      * as it consumes the original asset and creates a copy with the new owner as its output.
      */
     private fun buildTransactions(count: Int): List<SignedTransaction> {
-        return Futures.allAsList((1..count).stream().mapToObj {
+        return Futures.allAsList((1..count).asSequence().map {
             rpc.startFlow(::DummyIssueAndMove, notary, counterpartyNode.legalIdentity).returnValue
         }.asIterable()).getOrThrow()
     }
