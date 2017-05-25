@@ -59,14 +59,4 @@ class UtilsTest {
             future.get()
         }
     }
-
-    @Test
-    fun `Sequence toTypedArray works`() {
-        val a: Array<String> = sequenceOf("one", "two").toTypedArray()
-        assertEquals(Array<String>::class.java, a.javaClass)
-        assertArrayEquals(arrayOf("one", "two"), a)
-        val b: Array<String?> = sequenceOf("one", "two", null).toTypedArray()
-        assertEquals(Array<String?>::class.java, b.javaClass)
-        assertArrayEquals(arrayOf("one", "two", null), b)
-    }
 }

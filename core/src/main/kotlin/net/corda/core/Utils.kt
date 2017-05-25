@@ -24,7 +24,7 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.HashMap
+import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
@@ -111,9 +111,6 @@ infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): Listenable
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
-
-@Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
-inline fun <reified T> Sequence<T>.toTypedArray() = asStream().toArray(IntFunction { size -> arrayOfNulls<T>(size) }) as Array<T>
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {
