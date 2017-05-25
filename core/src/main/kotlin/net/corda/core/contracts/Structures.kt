@@ -447,9 +447,7 @@ class TimeWindow private constructor(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other?.javaClass != javaClass) return false
-
-        other as TimeWindow
+        if (other !is TimeWindow) return false
 
         if (fromTime != other.fromTime) return false
         if (untilTime != other.untilTime) return false
