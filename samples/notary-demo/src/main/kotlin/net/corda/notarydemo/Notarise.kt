@@ -27,7 +27,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        val id = parties.asSequence().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().singleOrNull()
+        val id = parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
