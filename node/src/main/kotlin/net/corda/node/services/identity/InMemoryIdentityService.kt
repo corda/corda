@@ -54,8 +54,17 @@ class InMemoryIdentityService(identities: Iterable<Party> = emptySet(),
     @Deprecated("Use partyFromX500Name")
     override fun partyFromName(name: String): Party? = principalToParties[X500Name(name)]
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]
-    override fun partyFromAnonymous(party: AbstractParty): Party? = partyFromKey(party.owningKey)
+    override fun partyFromAnonymous(party: AbstractParty): Party? {
+        return if (party is Party) {
+            party
+        } else {
+            partyFromKey(party.owningKey)
+        }
+    }
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
+    override fun requirePartyFromAnonymous(party: AbstractParty): Party {
+        return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    }
 
     @Throws(IdentityService.UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {

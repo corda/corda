@@ -465,3 +465,6 @@ fun <T> Class<T>.checkNotUnorderedHashMap() {
         throw NotSerializableException("Map type $this is unstable under iteration. Suggested fix: use LinkedHashMap instead.")
     }
 }
+
+fun Class<*>.requireExternal(msg: String = "Internal class")
+        = require(!name.startsWith("net.corda.node.") && !name.contains(".internal.")) { "$msg: $name" }

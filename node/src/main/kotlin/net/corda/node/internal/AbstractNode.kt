@@ -61,7 +61,6 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
 import java.lang.reflect.Modifier.*
-import java.net.InetAddress
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -307,7 +306,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        keyManagement = makeKeyManagementService()
+        keyManagement = makeKeyManagementService(identity)
         scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
@@ -502,7 +501,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 "has any other map node been configured.")
     }
 
-    protected open fun makeKeyManagementService(): KeyManagementService = PersistentKeyManagementService(partyKeys)
+    protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
+        return PersistentKeyManagementService(identityService, partyKeys)
+    }
 
     open protected fun makeNetworkMapService() {
         inNodeNetworkMapService = PersistentNetworkMapService(services, configuration.minimumPlatformVersion)
@@ -589,10 +590,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                                                stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
             StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
 
-    protected fun obtainLegalIdentity(): Party = obtainKeyPair().first
-    protected fun obtainLegalIdentityKey(): KeyPair = obtainKeyPair().second
+    protected fun obtainLegalIdentity(): Party = identityKeyPair.first
+    protected fun obtainLegalIdentityKey(): KeyPair = identityKeyPair.second
+    private val identityKeyPair by lazy { obtainKeyPair("identity", configuration.myLegalName) }
 
-    private fun obtainKeyPair(serviceId: String = "identity", serviceName: X500Name = configuration.myLegalName): Pair<Party, KeyPair> {
+    private fun obtainKeyPair(serviceId: String, serviceName: X500Name): Pair<Party, KeyPair> {
         // Load the private identity key, creating it if necessary. The identity key is a long term well known key that
         // is distributed to other peers and we use it (or a key signed by it) when we need to do something
         // "permissioned". The identity file is what gets distributed and contains the node's legal name along with
@@ -600,22 +602,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
-        val keystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
-        val clientCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, configuration.keyStorePassword)
+        val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
-
-        val identityAndKey = if (configuration.nodeKeystore.exists() && keystore.containsAlias(privateKeyAlias)) {
+        val identityAndKey = keyStore.certificateAndKeyPair(privateKeyAlias)?.let { (cert, keyPair) ->
             // Get keys from keystore.
-            val (cert, keyPair) = keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
             val loadedServiceName = X509CertificateHolder(cert.encoded).subject
-            if (X509CertificateHolder(cert.encoded).subject != serviceName) {
+            if (loadedServiceName != serviceName) {
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +
                         "$serviceName vs $loadedServiceName")
             }
             Pair(Party(loadedServiceName, keyPair.public), keyPair)
-        } else if (privKeyFile.exists()) {
+        } ?: if (privKeyFile.exists()) {
             // Get keys from key file.
             // TODO: this is here to smooth out the key storage transition, remove this in future release.
             // Check that the identity in the config file matches the identity file we have stored to disk.
@@ -627,17 +626,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         "$serviceName vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
-            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
-            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
+            if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
+                keyStore.save(serviceName, privateKeyAlias, keyPair)
+            }
             Pair(myIdentity, keyPair)
         } else {
             // Create new keys and store in keystore.
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
-            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
-            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
-            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
+            keyStore.save(serviceName, privateKeyAlias, keyPair)
             Pair(Party(serviceName, keyPair.public), keyPair)
         }
         partyKeys += identityAndKey.second
@@ -663,4 +660,19 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 sealed class ServiceFlowInfo {
     data class Core(val factory: (Party, Int) -> FlowLogic<*>) : ServiceFlowInfo()
     data class CorDapp(val version: Int, val factory: (Party) -> FlowLogic<*>) : ServiceFlowInfo()
+}
+
+private class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
+    private val keyStore = KeyStoreUtilities.loadKeyStore(storePath, storePassword)
+
+    fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
+        return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null
+    }
+
+    fun save(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
+        val clientCA = keyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, storePassword)
+        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
+        keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), arrayOf(cert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
+        keyStore.save(storePath, storePassword)
+    }
 }

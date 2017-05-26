@@ -5,6 +5,8 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
+import net.corda.core.identity.Party
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.utilities.*
@@ -13,6 +15,8 @@ import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -21,7 +25,8 @@ import java.security.PublicKey
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
-class PersistentKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
+class PersistentKeyManagementService(val identityService: IdentityService,
+                                     initialKeys: Set<KeyPair>) : SingletonSerializeAsToken(), KeyManagementService {
 
     private object Table : JDBCHashedTable("${NODE_DATABASE_PREFIX}our_key_pairs") {
         val publicKey = publicKey("public_key")
@@ -61,6 +66,8 @@ class PersistentKeyManagementService(initialKeys: Set<KeyPair>) : SingletonSeria
         }
         return keyPair.public
     }
+
+    override fun freshKeyAndCert(identity: Party, revocationEnabled: Boolean): Pair<X509Certificate, CertPath> = freshKeyAndCert(this, identityService, identity, revocationEnabled)
 
     private fun getSigningKeyPair(publicKey: PublicKey): KeyPair {
         return mutex.locked {

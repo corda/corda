@@ -20,7 +20,6 @@ import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAPublicKey
-import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigDecimal
 import java.security.PublicKey
@@ -39,28 +38,28 @@ object JacksonSupport {
     interface PartyObjectMapper {
         @Deprecated("Use partyFromX500Name instead")
         fun partyFromName(partyName: String): Party?
-        fun partyFromPrincipal(principal: X500Name): Party?
+        fun partyFromX500Name(name: X500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
     }
 
     class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
-        override fun partyFromPrincipal(principal: X500Name): Party? = rpc.partyFromX500Name(principal)
+        override fun partyFromX500Name(name: X500Name): Party? = rpc.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
     }
 
     class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
-        override fun partyFromPrincipal(principal: X500Name): Party? = identityService.partyFromX500Name(principal)
+        override fun partyFromX500Name(name: X500Name): Party? = identityService.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
         @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
-        override fun partyFromPrincipal(principal: X500Name): Party? = throw UnsupportedOperationException()
+        override fun partyFromX500Name(name: X500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
     }
 
@@ -170,7 +169,7 @@ object JacksonSupport {
             // how to parse the content
             return if (parser.text.contains("=")) {
                 val principal = X500Name(parser.text)
-                mapper.partyFromPrincipal(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
+                mapper.partyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
             } else {
                 val key = try {
                     parsePublicKeyBase58(parser.text)
