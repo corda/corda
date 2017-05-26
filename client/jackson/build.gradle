@@ -23,3 +23,11 @@ dependencies {
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
 }
+
+jar {
+    baseName 'corda-jackson'
+}
+
+publish {
+    name = jar.baseName
+}

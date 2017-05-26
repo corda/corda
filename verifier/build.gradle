@@ -68,3 +68,11 @@ task integrationTest(type: Test) {
 }
 
 build.dependsOn standaloneJar
+
+jar {
+    baseName 'corda-verifier'
+}
+
+publish {
+    name = jar.baseName
+}
