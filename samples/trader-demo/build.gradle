@@ -85,7 +85,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         rpcUsers = ext.rpcUsers
     }
     node {
-        name "CN=BankOfCorda,O=R3,OU=corda,L=New York,C=US"
+        name "CN=BankOfCorda,O=R3,L=New York,C=US"
         nearestCity "London"
         advertisedServices = []
         p2pPort 10011
