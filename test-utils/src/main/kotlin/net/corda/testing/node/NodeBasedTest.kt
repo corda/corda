@@ -10,7 +10,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
-import net.corda.node.driver.addressMustNotBeBound
+import net.corda.node.driver.addressMustNotBeBoundFuture
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -61,8 +61,8 @@ abstract class NodeBasedTest {
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
-                    it.configuration.p2pAddress.let { addressMustNotBeBound(shutdownExecutor, it) },
-                    it.configuration.rpcAddress?.let { addressMustNotBeBound(shutdownExecutor, it) }
+                    it.configuration.p2pAddress.let { addressMustNotBeBoundFuture(shutdownExecutor, it) },
+                    it.configuration.rpcAddress?.let { addressMustNotBeBoundFuture(shutdownExecutor, it) }
             )
         }.filterNotNull()
         nodes.clear()

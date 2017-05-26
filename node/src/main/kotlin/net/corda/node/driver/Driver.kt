@@ -263,7 +263,11 @@ class ListenProcessDeathException(message: String) : Exception(message)
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
  */
-fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
+fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process) {
+    addressMustBeBoundFuture(executorService, hostAndPort, listenProcess).getOrThrow()
+}
+
+fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (!listenProcess.isAlive) {
             throw ListenProcessDeathException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
@@ -277,7 +281,11 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
     }
 }
 
-fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort) {
+    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
+}
+
+fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -610,7 +618,7 @@ class DriverDSL(
         )
         _shutdownManager = ShutdownManager(executorService)
         if (networkMapStartStrategy.startDedicated) {
-            startDedicatedNetworkMapService()
+            startDedicatedNetworkMapService() // XXX: Wait until started?
         }
     }
 
@@ -636,7 +644,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
-        return startNode.flatMap { addressMustBeBound(executorService, dedicatedNetworkMapAddress, it) }
+        return startNode.flatMap { addressMustBeBoundFuture(executorService, dedicatedNetworkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
@@ -691,7 +699,7 @@ class DriverDSL(
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
                         workingDirectory = nodeConf.baseDirectory
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.p2pAddress, process).map { process } }
+            }.flatMap { process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process } }
         }
 
         private fun startWebserver(
@@ -711,7 +719,7 @@ class DriverDSL(
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
+            }.flatMap { process -> addressMustBeBoundFuture(executorService, handle.webAddress, process).map { process } }
         }
     }
 }
