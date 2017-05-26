@@ -61,7 +61,6 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
     }
 
     override fun getRegistration(type: Class<*>): Registration {
-        type.requireExternal("RPC not allowed to deserialise internal classes")
         if (Observable::class.java != type && Observable::class.java.isAssignableFrom(type)) {
             return super.getRegistration(Observable::class.java)
         }
@@ -71,6 +70,7 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
         if (ListenableFuture::class.java != type && ListenableFuture::class.java.isAssignableFrom(type)) {
             return super.getRegistration(ListenableFuture::class.java)
         }
+        type.requireExternal("RPC not allowed to deserialise internal classes")
         return super.getRegistration(type)
     }
 }
