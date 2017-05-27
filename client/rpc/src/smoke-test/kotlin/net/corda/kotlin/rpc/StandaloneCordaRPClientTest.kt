@@ -1,5 +1,7 @@
 package net.corda.kotlin.rpc
 
+import com.google.common.hash.Hashing
+import com.google.common.hash.HashingInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -11,6 +13,7 @@ import kotlin.test.*
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -23,6 +26,7 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
 import net.corda.nodeapi.User
+import org.apache.commons.io.output.NullOutputStream
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -71,11 +75,17 @@ class StandaloneCordaRPClientTest {
     }
 
     @Test
-    fun `test attachment upload`() {
+    fun `test attachments`() {
         val attachment = sizedInputStreamAndHash(attachmentSize)
         assertFalse(rpcProxy.attachmentExists(attachment.sha256))
         val id = WrapperStream(attachment.inputStream).use { rpcProxy.uploadAttachment(it) }
-        assertEquals(id, attachment.sha256, "Attachment has incorrect SHA256 hash")
+        assertEquals(attachment.sha256, id, "Attachment has incorrect SHA256 hash")
+
+        val hash = HashingInputStream(Hashing.sha256(), rpcProxy.openAttachment(id)).use { it ->
+            it.copyTo(NullOutputStream())
+            SecureHash.SHA256(it.hash().asBytes())
+        }
+        assertEquals(attachment.sha256, hash)
     }
 
     @Test
