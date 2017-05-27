@@ -11,6 +11,7 @@ import net.corda.demobench.readErrorLines
 import tornadofx.*
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption.*
 import java.util.concurrent.Executors
 
 class Explorer internal constructor(private val explorerController: ExplorerController) : AutoCloseable {
@@ -89,13 +90,13 @@ class Explorer internal constructor(private val explorerController: ExplorerCont
                     Files.createSymbolicLink(destPath, path)
                 } catch(e: UnsupportedOperationException) {
                     // OS doesn't support symbolic links?
-                    Files.copy(path, destPath)
-                } catch(e: FileAlreadyExistsException) {
+                    Files.copy(path, destPath, REPLACE_EXISTING)
+                } catch (e: java.nio.file.FileAlreadyExistsException) {
                     // OK, don't care ...
                 } catch (e: IOException) {
                     // Windows 10 might not allow this user to create a symlink
                     log.warn("Failed to create symlink '{}' for '{}': {}", destPath, path, e.message)
-                    Files.copy(path, destPath)
+                    Files.copy(path, destPath, REPLACE_EXISTING)
                 }
             }
         }
