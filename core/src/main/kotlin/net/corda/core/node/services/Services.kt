@@ -20,7 +20,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import java.io.InputStream
 import java.security.PublicKey
