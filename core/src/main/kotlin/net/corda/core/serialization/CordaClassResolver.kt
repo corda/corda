@@ -30,7 +30,7 @@ class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : D
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
     }
-
+    // both white and black lists are enabled.
     private var classListsEnabled = true
 
     fun disableWhiteAndBlackLists() {
@@ -82,11 +82,11 @@ class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : D
     // TODO: Later we can support annotations on attachment classes and spin up a proxy via bytecode that we know is harmless.
     private fun checkForAnnotation(type: Class<*>): Boolean {
         // First check for @CordaNotSerializable.
-        if (type.isAnnotationPresent(CordaNotSerializable::class.java) || hasNotSerializableAnnotationOnInterface(type))
+        if (type.isAnnotationPresent(CordaNotSerializable::class.java) || hasAnnotationOnInterface(type, CordaNotSerializable::class.java))
             throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
                     "This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
         // check for @CordaSerializable.
-        if (type.isAnnotationPresent(CordaSerializable::class.java) || hasSerializableAnnotationOnInterface(type)) {
+        if (type.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(type, CordaSerializable::class.java)) {
             if (type.classLoader is AttachmentsClassLoader)
                 throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
                         "CordaSerializable annotation for classes in attachments is not permitted")
@@ -101,18 +101,11 @@ class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : D
         return false
     }
 
-    // Recursively check interfaces for @CordaSerializable annotation.
-    private fun hasSerializableAnnotationOnInterface(type: Class<*>): Boolean {
+    // Recursively check interfaces.
+    private fun hasAnnotationOnInterface(type: Class<*>, annotationClass: Class<out Annotation> ): Boolean {
         return type.interfaces.any {
-            it.isAnnotationPresent(CordaSerializable::class.java) || hasSerializableAnnotationOnInterface(it)
-        } || (type.superclass != null && hasSerializableAnnotationOnInterface(type.superclass))
-    }
-
-    // Recursively check interfaces for @CordaNotSerializable annotation.
-    private fun hasNotSerializableAnnotationOnInterface(type: Class<*>): Boolean {
-        return type.interfaces.any {
-            it.isAnnotationPresent(CordaNotSerializable::class.java) || hasNotSerializableAnnotationOnInterface(it)
-        } || (type.superclass != null && hasNotSerializableAnnotationOnInterface(type.superclass))
+            it.isAnnotationPresent(annotationClass) || hasAnnotationOnInterface(it, annotationClass)
+        } || (type.superclass != null && hasAnnotationOnInterface(type.superclass, annotationClass))
     }
 
     // Need to clear out class names from attachments.
