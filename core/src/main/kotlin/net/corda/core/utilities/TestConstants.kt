@@ -4,6 +4,7 @@ package net.corda.core.utilities
 
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.KeyPair
@@ -54,3 +55,19 @@ val CHARLIE: Party get() = Party(X500Name("CN=Charlie Ltd,O=Charlie Ltd,L=London
 val DUMMY_REGULATOR_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(100)) }
 /** Dummy regulator for tests and simulations */
 val DUMMY_REGULATOR: Party get() = Party(X500Name("CN=Regulator A,OU=Corda,O=AMF,L=Paris,C=FR"), DUMMY_REGULATOR_KEY.public)
+
+val DUMMY_CA_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(110)) }
+val DUMMY_CA: CertificateAndKeyPair by lazy {
+    // TODO: Should be identity scheme
+    val cert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Dummy CA,OU=Corda,O=R3 Ltd,L=London,C=UK"), DUMMY_CA_KEY)
+    CertificateAndKeyPair(cert, DUMMY_CA_KEY)
+}
+
+/**
+ * Build a test party with a nonsense certificate authority for testing purposes.
+ */
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey): PartyAndCertificate {
+    val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, DUMMY_CA.certificate, DUMMY_CA.keyPair, name, publicKey)
+    val certPath = X509Utilities.createCertificatePath(DUMMY_CA.certificate, cert, revocationEnabled = false)
+    return PartyAndCertificate(name, publicKey, cert, certPath)
+}
