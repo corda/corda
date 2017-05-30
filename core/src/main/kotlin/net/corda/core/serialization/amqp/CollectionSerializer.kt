@@ -18,11 +18,11 @@ class CollectionSerializer(val declaredType: ParameterizedType, factory: Seriali
 
     companion object {
         private val supportedTypes: Map<Class<out Collection<*>>, (List<*>) -> Collection<*>> = mapOf(
-                Collection::class.java to { coll -> Collections.unmodifiableCollection(coll) },
-                List::class.java to { coll -> Collections.unmodifiableList(coll) },
-                Set::class.java to { coll -> Collections.unmodifiableSet(LinkedHashSet(coll)) },
-                SortedSet::class.java to { coll -> Collections.unmodifiableSortedSet(TreeSet(coll)) },
-                NavigableSet::class.java to { coll -> Collections.unmodifiableNavigableSet(TreeSet(coll)) }
+                Collection::class.java to { list -> Collections.unmodifiableCollection(list) },
+                List::class.java to { list -> Collections.unmodifiableList(list) },
+                Set::class.java to { list -> Collections.unmodifiableSet(LinkedHashSet(list)) },
+                SortedSet::class.java to { list -> Collections.unmodifiableSortedSet(TreeSet(list)) },
+                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) }
         )
 
         private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {
