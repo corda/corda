@@ -11,7 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_PUBKEY_1
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -33,8 +33,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val someCorpLegalName = MEGA_CORP.name
-    private val ids = InMemoryIdentityService().apply { registerIdentity(Party(someCorpLegalName, DUMMY_PUBKEY_1)) }
+    private val ids = InMemoryIdentityService(listOf(MEGA_CORP), trustRoot = DUMMY_CA.certificate)
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {
@@ -67,7 +66,7 @@ class InteractiveShellTest {
     fun flowTooManyParams() = check("b: 12, c: Yo, d: Bar", "")
 
     @Test
-    fun party() = check("party: \"$someCorpLegalName\"", someCorpLegalName.toString())
+    fun party() = check("party: \"${MEGA_CORP.name}\"", MEGA_CORP.name.toString())
 
     class DummyFSM(val logic: FlowA) : FlowStateMachine<Any?> {
         override fun <T : Any> sendAndReceive(receiveType: Class<T>, otherParty: Party, payload: Any, sessionFlow: FlowLogic<*>, retrySend: Boolean): UntrustworthyData<T> {

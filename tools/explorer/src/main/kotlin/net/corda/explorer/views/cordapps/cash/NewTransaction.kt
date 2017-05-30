@@ -183,7 +183,7 @@ class NewTransaction : Fragment() {
         // Issuer
         issuerLabel.visibleProperty().bind(transactionTypeCB.valueProperty().isNotNull)
         issuerChoiceBox.apply {
-            items = issuers.map { it.legalIdentity }.unique().sorted()
+            items = issuers.map { it.legalIdentity as Party }.unique().sorted()
             converter = stringConverter { PartyNameFormatter.short.format(it.name) }
             visibleProperty().bind(transactionTypeCB.valueProperty().map { it == CashTransaction.Pay })
         }

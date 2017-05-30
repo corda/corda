@@ -10,6 +10,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ALICE_KEY
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -76,7 +77,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        val identityService = InMemoryIdentityService()
+        val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {

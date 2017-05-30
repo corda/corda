@@ -2,7 +2,7 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.transactions.SignedTransaction
@@ -17,7 +17,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSide: Party,
+class ValidatingNotaryFlow(otherSide: PartyAndCertificate,
                            timeWindowChecker: TimeWindowChecker,
                            uniquenessProvider: UniquenessProvider) :
         NotaryFlow.Service(otherSide, timeWindowChecker, uniquenessProvider) {

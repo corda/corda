@@ -18,6 +18,7 @@ import net.corda.core.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -339,7 +340,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
                 waitingForResponse is WaitForLedgerCommit && message is ErrorSessionEnd
     }
 
-    private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: Party) {
+    private fun onSessionInit(sessionInit: SessionInit, receivedMessage: ReceivedMessage, sender: PartyAndCertificate) {
         logger.trace { "Received $sessionInit from $sender" }
         val otherPartySessionId = sessionInit.initiatorSessionId
 
