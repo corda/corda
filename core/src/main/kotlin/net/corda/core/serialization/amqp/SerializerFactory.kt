@@ -2,8 +2,8 @@ package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import net.corda.core.checkNotUnorderedHashMap
-import net.corda.core.serialization.AllWhitelist
-import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.AllClassList
+import net.corda.core.serialization.ClassList
 import net.corda.core.serialization.CordaSerializable
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
@@ -31,7 +31,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: apply class loader logic and an "app context" throughout this code.
 // TODO: schema evolution solution when the fingerprints do not line up.
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
+class SerializerFactory(val whitelist: ClassList = AllClassList) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer>()
 

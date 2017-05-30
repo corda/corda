@@ -14,18 +14,18 @@ import java.nio.file.StandardOpenOption
 import java.util.*
 
 fun Kryo.addToWhitelist(type: Class<*>) {
-    ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassWhitelist)?.add(type)
+    ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassList)?.add(type)
 }
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassWhiteList(BuiltInExceptionsWhitelist()))
+    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()))
 }
 
 fun makeNoWhitelistClassResolver(): ClassResolver {
-    return CordaClassResolver(AllWhitelist)
+    return CordaClassResolver(AllClassList)
 }
 
-class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
+class CordaClassResolver(val whitelist: ClassList) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
@@ -108,38 +108,38 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
     }
 }
 
-interface ClassWhitelist {
+interface ClassList {
     fun hasListed(type: Class<*>): Boolean
 }
 
-interface MutableClassWhitelist : ClassWhitelist {
+interface MutableClassList : ClassList {
     fun add(entry: Class<*>)
 }
 
-object EmptyWhitelist : ClassWhitelist {
+object EmptyClassList : ClassList {
     override fun hasListed(type: Class<*>): Boolean = false
 }
 
-class BuiltInExceptionsWhitelist : ClassWhitelist {
+class BuiltInExceptionsClassList : ClassList {
     override fun hasListed(type: Class<*>): Boolean = Throwable::class.java.isAssignableFrom(type) && type.`package`.name.startsWith("java.")
 }
 
-object AllWhitelist : ClassWhitelist {
+object AllClassList : ClassList {
     override fun hasListed(type: Class<*>): Boolean = true
 }
 
 // TODO: Need some concept of from which class loader
-class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClassWhitelist, ClassWhitelist by delegate {
+class GlobalTransientClassList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
     companion object {
-        val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+        val classlist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
     }
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
+        return (type.name in classlist) || delegate.hasListed(type)
     }
 
     override fun add(entry: Class<*>) {
-        whitelist += entry.name
+        classlist += entry.name
     }
 }
 
@@ -151,7 +151,7 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
  * @suppress
  */
 @Suppress("unused")
-class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {
+class LoggingWhitelist(val delegate: ClassList, val global: Boolean = true) : MutableClassList {
     companion object {
         val log = loggerFor<LoggingWhitelist>()
         val globallySeen: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
@@ -184,7 +184,7 @@ class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true)
     }
 
     override fun add(entry: Class<*>) {
-        if (delegate is MutableClassWhitelist) {
+        if (delegate is MutableClassList) {
             delegate.add(entry)
         } else {
             throw UnsupportedOperationException("Cannot add to whitelist since delegate whitelist is not mutable.")

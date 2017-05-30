@@ -1,7 +1,7 @@
 package net.corda.core.serialization.amqp
 
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.EmptyWhitelist
+import net.corda.core.serialization.EmptyClassList
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
@@ -170,13 +170,13 @@ class SerializationOutputTests {
     @Test(expected = NotSerializableException::class)
     fun `test whitelist`() {
         val obj = Woo2(4)
-        serdes(obj, SerializerFactory(EmptyWhitelist))
+        serdes(obj, SerializerFactory(EmptyClassList))
     }
 
     @Test
     fun `test annotation whitelisting`() {
         val obj = AnnotatedWoo(5)
-        serdes(obj, SerializerFactory(EmptyWhitelist))
+        serdes(obj, SerializerFactory(EmptyClassList))
     }
 
     @Test(expected = NotSerializableException::class)
