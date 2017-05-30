@@ -618,7 +618,7 @@ class DriverDSL(
         )
         _shutdownManager = ShutdownManager(executorService)
         if (networkMapStartStrategy.startDedicated) {
-            startDedicatedNetworkMapService() // XXX: Wait until started?
+            startDedicatedNetworkMapService() // Allow it to start concurrently with other nodes.
         }
     }
 
