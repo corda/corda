@@ -11,6 +11,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshKeyAndCert
 import net.corda.node.services.persistence.InMemoryStateMachineRecordedTransactionMappingStorage
@@ -66,7 +67,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, Party(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
+    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, getTestPartyAndCertificate(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     fun makeVaultService(dataSourceProps: Properties): VaultService {
