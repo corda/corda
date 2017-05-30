@@ -24,11 +24,9 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
-import java.util.function.IntFunction
 import java.util.stream.Stream
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -37,7 +35,6 @@ import java.util.zip.ZipOutputStream
 import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
-import kotlin.streams.asStream
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 @Suppress("unused") // It's here for completeness
