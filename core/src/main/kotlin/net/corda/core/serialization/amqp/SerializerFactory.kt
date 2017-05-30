@@ -2,9 +2,7 @@ package net.corda.core.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import net.corda.core.checkNotUnorderedHashMap
-import net.corda.core.serialization.AllClassList
-import net.corda.core.serialization.ClassList
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -31,7 +29,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: apply class loader logic and an "app context" throughout this code.
 // TODO: schema evolution solution when the fingerprints do not line up.
 @ThreadSafe
-class SerializerFactory(val whitelist: ClassList = AllClassList) {
+class SerializerFactory(val whitelist: ClassList = AllClassList, val blacklist: ClassList = EmptyClassList) {
     private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer>()
 
@@ -136,6 +134,7 @@ class SerializerFactory(val whitelist: ClassList = AllClassList) {
 
     private fun makeClassSerializer(clazz: Class<*>): AMQPSerializer {
         return serializersByType.computeIfAbsent(clazz) {
+            blacklisted(clazz)
             if (clazz.isArray) {
                 whitelisted(clazz.componentType)
                 ArraySerializer(clazz)
@@ -153,6 +152,14 @@ class SerializerFactory(val whitelist: ClassList = AllClassList) {
             return true
         } else {
             throw NotSerializableException("Class $clazz is not on the whitelist or annotated with @CordaSerializable.")
+        }
+    }
+
+    private fun blacklisted(clazz: Class<*>): Boolean {
+        if (blacklist.hasListed(clazz) || clazz.isAnnotationPresent(CordaNotSerializable::class.java)) {
+            return false
+        } else {
+            throw NotSerializableException("Class $clazz is on the blacklist or annotated with @CordaNotSerializable.")
         }
     }
 
