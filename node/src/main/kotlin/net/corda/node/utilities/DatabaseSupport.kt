@@ -3,11 +3,12 @@ package net.corda.node.utilities
 import co.paralleluniverse.strands.Strand
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
 import net.corda.node.utilities.StrandLocalTransactionManager.Boundary
+import org.bouncycastle.cert.X509CertificateHolder
+import org.h2.jdbc.JdbcBlob
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionInterface
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -16,8 +17,12 @@ import rx.Subscriber
 import rx.subjects.PublishSubject
 import rx.subjects.Subject
 import rx.subjects.UnicastSubject
+import java.io.ByteArrayInputStream
 import java.io.Closeable
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Instant
 import java.time.LocalDate
@@ -264,21 +269,60 @@ fun <T : Any> rx.Observable<T>.wrapWithDatabaseTransaction(db: Database? = null)
 
 // Composite columns for use with below Exposed helpers.
 data class PartyColumns(val name: Column<String>, val owningKey: Column<PublicKey>)
+data class PartyAndCertificateColumns(val name: Column<String>, val owningKey: Column<PublicKey>,
+                                      val certificate: Column<X509CertificateHolder>, val certPath: Column<CertPath>)
 data class StateRefColumns(val txId: Column<SecureHash>, val index: Column<Int>)
 data class TxnNoteColumns(val txId: Column<SecureHash>, val note: Column<String>)
 
 /**
  * [Table] column helpers for use with Exposed, as per [varchar] etc.
  */
+fun Table.certificate(name: String) = this.registerColumn<X509CertificateHolder>(name, X509CertificateColumnType)
+fun Table.certificatePath(name: String) = this.registerColumn<CertPath>(name, CertPathColumnType)
 fun Table.publicKey(name: String) = this.registerColumn<PublicKey>(name, PublicKeyColumnType)
 fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, SecureHashColumnType)
-fun Table.party(nameColumnName: String, keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
+fun Table.party(nameColumnName: String,
+                keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
+fun Table.partyAndCertificate(nameColumnName: String,
+                keyColumnName: String,
+                certificateColumnName: String,
+                pathColumnName: String) = PartyAndCertificateColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName),
+        this.certificate(certificateColumnName), this.certificatePath(pathColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
 fun Table.localDateTime(name: String) = this.registerColumn<LocalDateTime>(name, LocalDateTimeColumnType)
 fun Table.instant(name: String) = this.registerColumn<Instant>(name, InstantColumnType)
 fun Table.stateRef(txIdColumnName: String, indexColumnName: String) = StateRefColumns(this.secureHash(txIdColumnName), this.integer(indexColumnName))
 fun Table.txnNote(txIdColumnName: String, txnNoteColumnName: String) = TxnNoteColumns(this.secureHash(txIdColumnName), this.text(txnNoteColumnName))
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [X509CertificateHolder].
+ */
+object X509CertificateColumnType : ColumnType() {
+    override fun sqlType(): String = "BLOB"
+
+    override fun valueFromDB(value: Any): Any {
+        val blob = value as JdbcBlob
+        return X509CertificateHolder(blob.getBytes(0, blob.length().toInt()))
+    }
+
+    override fun notNullValueToDB(value: Any): Any = (value as X509CertificateHolder).encoded
+}
+
+/**
+ * [ColumnType] for marshalling to/from database on behalf of [CertPath].
+ */
+object CertPathColumnType : ColumnType() {
+    private val factory = CertificateFactory.getInstance("X.509")
+    override fun sqlType(): String = "BLOB"
+
+    override fun valueFromDB(value: Any): Any {
+        val blob = value as JdbcBlob
+        return factory.generateCertPath(ByteArrayInputStream(blob.getBytes(0, blob.length().toInt())))
+    }
+
+    override fun notNullValueToDB(value: Any): Any = (value as CertPath).encoded
+}
 
 /**
  * [ColumnType] for marshalling to/from database on behalf of [PublicKey].
