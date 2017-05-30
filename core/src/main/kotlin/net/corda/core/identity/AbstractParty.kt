@@ -18,6 +18,15 @@ abstract class AbstractParty(val owningKey: PublicKey) {
     override fun hashCode(): Int = owningKey.hashCode()
     abstract fun nameOrNull(): X500Name?
 
+    /**
+     * Build a reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
+     * ledger.
+     */
     abstract fun ref(bytes: OpaqueBytes): PartyAndReference
+
+    /**
+     * Build a reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
+     * ledger.
+     */
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 }

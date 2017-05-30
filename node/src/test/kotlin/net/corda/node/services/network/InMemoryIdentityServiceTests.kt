@@ -24,13 +24,13 @@ class InMemoryIdentityServiceTests {
         val service = InMemoryIdentityService()
         assertNull(service.getAllIdentities().firstOrNull())
         service.registerIdentity(ALICE)
-        var expected = setOf(ALICE)
+        var expected = setOf<Party>(ALICE)
         var actual = service.getAllIdentities().toHashSet()
         assertEquals(expected, actual)
 
         // Add a second party and check we get both back
         service.registerIdentity(BOB)
-        expected = setOf(ALICE, BOB)
+        expected = setOf<Party>(ALICE, BOB)
         actual = service.getAllIdentities().toHashSet()
         assertEquals(expected, actual)
     }
