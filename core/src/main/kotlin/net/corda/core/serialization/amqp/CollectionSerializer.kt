@@ -14,26 +14,25 @@ import kotlin.collections.Set
  */
 class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
-    private val typeName = declaredType.toString()
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
-        private val supportedTypes: Map<Class<out Collection<*>>, (Collection<*>) -> Collection<*>> = mapOf(
-                Collection::class.java to { coll -> coll },
-                List::class.java to { coll -> coll },
+        private val supportedTypes: Map<Class<out Collection<*>>, (List<*>) -> Collection<*>> = mapOf(
+                Collection::class.java to { coll -> Collections.unmodifiableCollection(coll) },
+                List::class.java to { coll -> Collections.unmodifiableList(coll) },
                 Set::class.java to { coll -> Collections.unmodifiableSet(LinkedHashSet(coll)) },
                 SortedSet::class.java to { coll -> Collections.unmodifiableSortedSet(TreeSet(coll)) },
                 NavigableSet::class.java to { coll -> Collections.unmodifiableNavigableSet(TreeSet(coll)) }
         )
+
+        private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {
+            return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported collection type $clazz.")
+        }
     }
 
-    private val concreteBuilder: (Collection<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
+    private val concreteBuilder: (List<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private fun findConcreteType(clazz: Class<*>): (Collection<*>) -> Collection<*> {
-        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported collection type $clazz.")
-    }
-
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(declaredType.toString(), null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {

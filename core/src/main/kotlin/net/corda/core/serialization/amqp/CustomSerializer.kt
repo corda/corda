@@ -24,6 +24,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
     override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput) {
         data.withDescribed(descriptor) {
+            @Suppress("UNCHECKED_CAST")
             writeDescribedObject(obj as T, data, type, output)
         }
     }
@@ -59,7 +60,10 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      * The proxy class must use only types which are either native AMQP or other types for which there are pre-registered
      * custom serializers.
      */
-    abstract class Proxy<T, P>(protected val clazz: Class<T>, protected val proxyClass: Class<P>, protected val factory: SerializerFactory, val withInheritance: Boolean = true) : CustomSerializer<T>() {
+    abstract class Proxy<T, P>(protected val clazz: Class<T>,
+                               protected val proxyClass: Class<P>,
+                               protected val factory: SerializerFactory,
+                               val withInheritance: Boolean = true) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
         override val type: Type get() = clazz
         override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${clazz.name}"
@@ -93,6 +97,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         }
 
         override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T {
+            @Suppress("UNCHECKED_CAST")
             val proxy = proxySerializer.readObject(obj, schema, input) as P
             return fromProxy(proxy)
         }

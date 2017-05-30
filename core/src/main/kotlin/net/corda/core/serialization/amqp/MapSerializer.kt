@@ -15,7 +15,6 @@ import kotlin.collections.map
  */
 class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
-    private val typeName = declaredType.toString()
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
@@ -24,15 +23,15 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
                 SortedMap::class.java to { map -> Collections.unmodifiableSortedMap(TreeMap(map)) },
                 NavigableMap::class.java to { map -> Collections.unmodifiableNavigableMap(TreeMap(map)) }
         )
+
+        private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
+            return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
+        }
     }
 
     private val concreteBuilder: (Map<*, *>) -> Map<*, *> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private fun findConcreteType(clazz: Class<*>): (Map<*, *>) -> Map<*, *> {
-        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
-    }
-
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(declaredType.toString(), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -62,5 +61,7 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
         return concreteBuilder(entries.toMap())
     }
 
-    private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) = input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
+    private fun readEntry(schema: Schema, input: DeserializationInput, entry: Map.Entry<Any?, Any?>) =
+            input.readObjectOrNull(entry.key, schema, declaredType.actualTypeArguments[0]) to
+                    input.readObjectOrNull(entry.value, schema, declaredType.actualTypeArguments[1])
 }

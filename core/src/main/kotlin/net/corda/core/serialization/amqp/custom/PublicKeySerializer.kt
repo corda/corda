@@ -14,7 +14,7 @@ class PublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::cl
 
     override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput) {
         // TODO: Instead of encoding to the default X509 format, we could have a custom per key type (space-efficient) serialiser.
-        output.writeObject(Binary((obj as PublicKey).encoded), data, clazz)
+        output.writeObject(Binary(obj.encoded), data, clazz)
     }
 
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): PublicKey {

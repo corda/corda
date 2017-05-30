@@ -10,13 +10,11 @@ import java.lang.reflect.Type
  * Serialization / deserialization of arrays.
  */
 class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
-    private val typeName = type.typeName
-
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     internal val elementType: Type = makeElementType()
 
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(type.typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 
     private fun makeElementType(): Type {
         return (type as? Class<*>)?.componentType ?: (type as GenericArrayType).genericComponentType
@@ -40,7 +38,9 @@ class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQ
     }
 
     override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
-        return (obj as List<*>).map { input.readObjectOrNull(it, schema, elementType) }.toArrayOfType(elementType)
+        if (obj is List<*>) {
+            return obj.map { input.readObjectOrNull(it, schema, elementType) }.toArrayOfType(elementType)
+        } else throw NotSerializableException("Expected a List but found $obj")
     }
 
     private fun <T> List<T>.toArrayOfType(type: Type): Any {

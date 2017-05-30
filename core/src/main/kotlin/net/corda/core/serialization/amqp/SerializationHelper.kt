@@ -3,7 +3,6 @@ package net.corda.core.serialization.amqp
 import com.google.common.reflect.TypeToken
 import org.apache.qpid.proton.codec.Data
 import java.beans.Introspector
-import java.beans.PropertyDescriptor
 import java.io.NotSerializableException
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -70,13 +69,15 @@ private fun isConcrete(clazz: Class<*>): Boolean = !(clazz.isInterface || Modifi
 private fun <T : Any> propertiesForSerialization(kotlinConstructor: KFunction<T>, factory: SerializerFactory): Collection<PropertySerializer> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
     // Kotlin reflection doesn't work with Java getters the way you might expect, so we drop back to good ol' beans.
-    val properties: Map<String, PropertyDescriptor> = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
+    val properties = Introspector.getBeanInfo(clazz).propertyDescriptors.filter { it.name != "class" }.groupBy { it.name }.mapValues { it.value[0] }
     val rc: MutableList<PropertySerializer> = ArrayList(kotlinConstructor.parameters.size)
     for (param in kotlinConstructor.parameters) {
         val name = param.name ?: throw NotSerializableException("Constructor parameter of $clazz has no name.")
-        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz. If using Java, check that you have the -parameters option specified in the Java compiler.")
+        val matchingProperty = properties[name] ?: throw NotSerializableException("No property matching constructor parameter named $name of $clazz." +
+                " If using Java, check that you have the -parameters option specified in the Java compiler.")
         // Check that the method has a getter in java.
-        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz. If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
+        val getter = matchingProperty.readMethod ?: throw NotSerializableException("Property has no getter method for $name of $clazz." +
+                " If using Java and the parameter name looks anonymous, check that you have the -parameters option specified in the Java compiler.")
         if (constructorParamTakesReturnTypeOfGetter(getter, param)) {
             rc += PropertySerializer.make(name, getter, factory)
         } else {
