@@ -1,7 +1,7 @@
 package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import net.corda.core.crypto.DummyPublicKey
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -11,14 +11,15 @@ import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getTestX509Name
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.math.BigInteger
 
 /**
  * Network map cache with no backing map service.
  */
 class MockNetworkMapCache : InMemoryNetworkMapCache() {
     private companion object {
-        val BANK_C = Party(getTestX509Name("Bank C"), DummyPublicKey("Bank C"))
-        val BANK_D = Party(getTestX509Name("Bank D"), DummyPublicKey("Bank D"))
+        val BANK_C = Party(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
+        val BANK_D = Party(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
     }
 
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
