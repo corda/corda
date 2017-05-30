@@ -459,12 +459,12 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
 }
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeNoWhitelistClassResolver())) }.build()
+private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeNoClassListClassResolver())) }.build()
 private val kryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeStandardClassResolver())) }.build()
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 @VisibleForTesting
-fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoWhitelistClassResolver()))
+fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoClassListClassResolver()))
 
 /**
  * We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks
@@ -472,38 +472,38 @@ fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoWhi
  */
 open class CordaKryo(classResolver: ClassResolver) : Kryo(classResolver, MapReferenceResolver()) {
     override fun register(type: Class<*>?): Registration {
-        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        (classResolver as? CordaClassResolver)?.disableWhiteAndBlackLists()
         try {
             return super.register(type)
         } finally {
-            (classResolver as? CordaClassResolver)?.enableWhitelist()
+            (classResolver as? CordaClassResolver)?.enableWhiteAndBlackLists()
         }
     }
 
     override fun register(type: Class<*>?, id: Int): Registration {
-        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        (classResolver as? CordaClassResolver)?.disableWhiteAndBlackLists()
         try {
             return super.register(type, id)
         } finally {
-            (classResolver as? CordaClassResolver)?.enableWhitelist()
+            (classResolver as? CordaClassResolver)?.enableWhiteAndBlackLists()
         }
     }
 
     override fun register(type: Class<*>?, serializer: Serializer<*>?): Registration {
-        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        (classResolver as? CordaClassResolver)?.disableWhiteAndBlackLists()
         try {
             return super.register(type, serializer)
         } finally {
-            (classResolver as? CordaClassResolver)?.enableWhitelist()
+            (classResolver as? CordaClassResolver)?.enableWhiteAndBlackLists()
         }
     }
 
     override fun register(registration: Registration?): Registration {
-        (classResolver as? CordaClassResolver)?.disableWhitelist()
+        (classResolver as? CordaClassResolver)?.disableWhiteAndBlackLists()
         try {
             return super.register(registration)
         } finally {
-            (classResolver as? CordaClassResolver)?.enableWhitelist()
+            (classResolver as? CordaClassResolver)?.enableWhiteAndBlackLists()
         }
     }
 }

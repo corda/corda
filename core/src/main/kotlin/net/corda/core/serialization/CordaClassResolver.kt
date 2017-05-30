@@ -18,32 +18,32 @@ fun Kryo.addToWhitelist(type: Class<*>) {
 }
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()))
+    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), )
 }
 
-fun makeNoWhitelistClassResolver(): ClassResolver {
-    return CordaClassResolver(AllClassList)
+fun makeNoClassListClassResolver(): ClassResolver {
+    return CordaClassResolver(AllClassList, EmptyClassList)
 }
 
-class CordaClassResolver(val whitelist: ClassList) : DefaultClassResolver() {
+class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
     }
 
-    private var whitelistEnabled = true
+    private var classListsEnabled = true
 
-    fun disableWhitelist() {
-        whitelistEnabled = false
+    fun disableWhiteAndBlackLists() {
+        classListsEnabled = false
     }
 
-    fun enableWhitelist() {
-        whitelistEnabled = true
+    fun enableWhiteAndBlackLists() {
+        classListsEnabled = true
     }
 
     private fun checkClass(type: Class<*>): Registration? {
         /** If call path has disabled whitelisting (see [CordaKryo.register]), just return without checking. */
-        if (!whitelistEnabled) return null
+        if (!classListsEnabled) return null
         // Allow primitives, abstracts and interfaces
         if (type.isPrimitive || type == Any::class.java || Modifier.isAbstract(type.modifiers) || type == String::class.java) return null
         // If array, recurse on element type
@@ -55,8 +55,12 @@ class CordaClassResolver(val whitelist: ClassList) : DefaultClassResolver() {
             return checkClass(type.superclass)
         }
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
-        val hasAnnotation = checkForAnnotation(type)
-        if (!hasAnnotation && !whitelist.hasListed(type)) {
+        // First check for blacklisted classes.
+        if (blacklist.hasListed(type)) {
+            throw KryoException("Class ${Util.className(type)} is blacklisted and cannot be used in serialization")
+        }
+        // Check for @CordaSerizalizable annotation or whitelisted.
+        if (!checkForAnnotation(type) && !whitelist.hasListed(type)) {
             throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialization")
         }
         return null
@@ -77,16 +81,38 @@ class CordaClassResolver(val whitelist: ClassList) : DefaultClassResolver() {
     // We also do not allow extension of KryoSerializable for annotated classes, or combination with @DefaultSerializer for custom serialisation.
     // TODO: Later we can support annotations on attachment classes and spin up a proxy via bytecode that we know is harmless.
     private fun checkForAnnotation(type: Class<*>): Boolean {
-        return (type.classLoader !is AttachmentsClassLoader)
-                && !KryoSerializable::class.java.isAssignableFrom(type)
-                && !type.isAnnotationPresent(DefaultSerializer::class.java)
-                && (type.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(type))
+        // First check for @CordaNotSerializable.
+        if (type.isAnnotationPresent(CordaNotSerializable::class.java) || hasNotSerializableAnnotationOnInterface(type))
+            throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
+                    "This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        // check for @CordaSerializable.
+        if (type.isAnnotationPresent(CordaSerializable::class.java) || hasSerializableAnnotationOnInterface(type)) {
+            if (type.classLoader is AttachmentsClassLoader)
+                throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
+                        "CordaSerializable annotation for classes in attachments is not permitted")
+            if (KryoSerializable::class.java.isAssignableFrom(type))
+                throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
+                        "CordaSerializable annotation for KryoSerializable extensions is not permitted")
+            if (type.isAnnotationPresent(DefaultSerializer::class.java))
+                throw KryoException("Class ${Util.className(type)} cannot be used in serialization. " +
+                        "CordaSerializable and DefaultSerializer annotations cannot be combined")
+            return true
+        }
+        return false
     }
 
-    // Recursively check interfaces for our annotation.
-    private fun hasAnnotationOnInterface(type: Class<*>): Boolean {
-        return type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationOnInterface(it) }
-                || (type.superclass != null && hasAnnotationOnInterface(type.superclass))
+    // Recursively check interfaces for @CordaSerializable annotation.
+    private fun hasSerializableAnnotationOnInterface(type: Class<*>): Boolean {
+        return type.interfaces.any {
+            it.isAnnotationPresent(CordaSerializable::class.java) || hasSerializableAnnotationOnInterface(it)
+        } || (type.superclass != null && hasSerializableAnnotationOnInterface(type.superclass))
+    }
+
+    // Recursively check interfaces for @CordaNotSerializable annotation.
+    private fun hasNotSerializableAnnotationOnInterface(type: Class<*>): Boolean {
+        return type.interfaces.any {
+            it.isAnnotationPresent(CordaNotSerializable::class.java) || hasNotSerializableAnnotationOnInterface(it)
+        } || (type.superclass != null && hasNotSerializableAnnotationOnInterface(type.superclass))
     }
 
     // Need to clear out class names from attachments.
