@@ -157,9 +157,9 @@ class SerializerFactory(val whitelist: ClassList = AllClassList, val blacklist: 
 
     private fun blacklisted(clazz: Class<*>): Boolean {
         if (blacklist.hasListed(clazz) || clazz.isAnnotationPresent(CordaNotSerializable::class.java)) {
-            return false
-        } else {
             throw NotSerializableException("Class $clazz is on the blacklist or annotated with @CordaNotSerializable.")
+        } else {
+            return false
         }
     }
 
