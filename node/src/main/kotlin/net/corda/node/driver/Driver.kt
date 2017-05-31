@@ -14,6 +14,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -96,7 +97,7 @@ interface DriverDSLExposedInterface : CordformContext {
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
-            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
+            rpcUsers: List<User> = emptyList()): Future<Pair<PartyAndCertificate, List<NodeHandle>>>
 
     /**
      * Starts a web server for a node
@@ -553,10 +554,10 @@ class DriverDSL(
             type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>
-    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
+    ): ListenableFuture<Pair<PartyAndCertificate, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
+        ServiceIdentityGenerator.generateToDisk(paths, DUMMY_CA, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 

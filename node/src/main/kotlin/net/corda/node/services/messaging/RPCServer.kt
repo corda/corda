@@ -40,6 +40,7 @@ import rx.Observable
 import rx.Subscriber
 import rx.Subscription
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.*
@@ -92,7 +93,7 @@ class RPCServer(
     }
     private val lifeCycle = LifeCycle(State.UNSTARTED)
     // The methodname->Method map to use for dispatching.
-    private val methodTable = ops.javaClass.declaredMethods.groupBy { it.name }.mapValues { it.value.single() }
+    private val methodTable: Map<String, Method>
     // The observable subscription mapping.
     private val observableMap = createObservableSubscriptionMap()
     // A mapping from client addresses to IDs of associated Observables
@@ -113,6 +114,16 @@ class RPCServer(
     }
     private var clientBindingRemovalConsumer: ClientConsumer? = null
     private var serverControl: ActiveMQServerControl? = null
+
+    init {
+        val groupedMethods = ops.javaClass.declaredMethods.groupBy { it.name }
+        groupedMethods.forEach { name, methods ->
+            if (methods.size > 1) {
+                throw IllegalArgumentException("Encountered more than one method called ${name} on ${ops.javaClass.name}")
+            }
+        }
+        methodTable = groupedMethods.mapValues { it.value.single() }
+    }
 
     private fun createObservableSubscriptionMap(): ObservableSubscriptionMap {
         val onObservableRemove = RemovalListener<RPCApi.ObservableId, ObservableSubscription> {

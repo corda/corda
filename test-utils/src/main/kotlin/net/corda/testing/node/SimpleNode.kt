@@ -3,7 +3,6 @@ package net.corda.testing.node
 import com.codahale.metrics.MetricRegistry
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
@@ -22,6 +21,7 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
+import org.bouncycastle.cert.X509CertificateHolder
 import org.jetbrains.exposed.sql.Database
 import java.io.Closeable
 import java.security.KeyPair
@@ -33,17 +33,17 @@ import kotlin.concurrent.thread
  */
 class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeLocalHostAndPort(),
                  rpcAddress: HostAndPort = freeLocalHostAndPort(),
-                 networkRoot: CertificateAndKeyPair? = null) : AutoCloseable {
+                 trustRoot: X509CertificateHolder? = null) : AutoCloseable {
 
     private val databaseWithCloseable: Pair<Closeable, Database> = configureDatabase(config.dataSourceProperties)
     val database: Database get() = databaseWithCloseable.second
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
-    val identityService: IdentityService = InMemoryIdentityService()
+    val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
-    val broker = ArtemisMessagingServer(config, address, rpcAddress, InMemoryNetworkMapCache(), userService)
+    val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
     val net = database.transaction {
         NodeMessagingClient(
