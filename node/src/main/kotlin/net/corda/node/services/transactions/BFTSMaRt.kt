@@ -13,7 +13,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.serialization.CordaSerializable
@@ -51,7 +51,7 @@ import java.util.*
 object BFTSMaRt {
     /** Sent from [Client] to [Server]. */
     @CordaSerializable
-    data class CommitRequest(val tx: Any, val callerIdentity: Party)
+    data class CommitRequest(val tx: Any, val callerIdentity: PartyAndCertificate)
 
     /** Sent from [Server] to [Client]. */
     @CordaSerializable
@@ -83,7 +83,7 @@ object BFTSMaRt {
          * Sends a transaction commit request to the BFT cluster. The [proxy] will deliver the request to every
          * replica, and block until a sufficient number of replies are received.
          */
-        fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
+        fun commitTransaction(transaction: Any, otherSide: PartyAndCertificate): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
             val request = CommitRequest(transaction, otherSide)
             val responseBytes = proxy.invokeOrdered(request.serialize().bytes)
@@ -178,7 +178,7 @@ object BFTSMaRt {
          */
         abstract fun executeCommand(command: ByteArray): ByteArray?
 
-        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
+        protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: PartyAndCertificate) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
             db.transaction {

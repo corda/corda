@@ -5,6 +5,7 @@ import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.demorun.util.*
 import net.corda.demorun.runNodes
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -65,6 +66,6 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, DUMMY_CA, advertisedService.type.id, clusterName, minCorrectReplicas(clusterSize))
     }
 }

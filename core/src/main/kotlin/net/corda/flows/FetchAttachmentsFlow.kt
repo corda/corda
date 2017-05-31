@@ -5,7 +5,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SerializeAsTokenContext
@@ -16,7 +16,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
  */
 @InitiatingFlow
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
+                           otherSide: PartyAndCertificate) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
 
     override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
 

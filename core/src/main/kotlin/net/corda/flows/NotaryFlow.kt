@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessException
 import net.corda.core.node.services.UniquenessProvider
@@ -96,7 +97,7 @@ object NotaryFlow {
      * Additional transaction validation logic can be added when implementing [receiveAndVerifyTx].
      */
     // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-    abstract class Service(val otherSide: Party,
+    abstract class Service(val otherSide: PartyAndCertificate,
                            val timeWindowChecker: TimeWindowChecker,
                            val uniquenessProvider: UniquenessProvider) : FlowLogic<Void?>() {
         @Suspendable

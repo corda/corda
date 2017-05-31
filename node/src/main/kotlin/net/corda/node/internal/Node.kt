@@ -5,15 +5,18 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
+import net.corda.core.flatMap
 import net.corda.core.internal.ShutdownHook
 import net.corda.core.internal.addShutdownHook
 import net.corda.core.messaging.RPCOps
+import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.seconds
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.printBasicNodeInfo
@@ -116,7 +119,17 @@ class Node(override val configuration: FullNodeConfiguration,
 
     override fun makeMessagingService(): MessagingService {
         userService = RPCUserServiceImpl(configuration.rpcUsers)
-        val serverAddress = configuration.messagingServerAddress ?: makeLocalMessageBroker()
+
+        val (serverAddress, advertisedAddress) = with(configuration) {
+            if (messagingServerAddress != null) {
+                // External broker
+                messagingServerAddress to messagingServerAddress
+            } else {
+                makeLocalMessageBroker() to getAdvertisedAddress()
+            }
+        }
+
+        printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
         return NodeMessagingClient(
@@ -128,15 +141,21 @@ class Node(override val configuration: FullNodeConfiguration,
                 database,
                 networkMapRegistrationFuture,
                 services.monitoringService,
-                configuration.messagingServerAddress == null)
+                advertisedAddress)
     }
 
     private fun makeLocalMessageBroker(): HostAndPort {
         with(configuration) {
-            val useHost = tryDetectIfNotPublicHost(p2pAddress.host)
-            val useAddress = useHost?.let { HostAndPort.fromParts(it, p2pAddress.port) } ?: p2pAddress
-            messageBroker = ArtemisMessagingServer(this, useAddress, rpcAddress, services.networkMapCache, userService)
-            return useAddress
+            messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
+            return HostAndPort.fromParts("localhost", p2pAddress.port)
+        }
+    }
+
+    private fun getAdvertisedAddress(): HostAndPort {
+        return with(configuration) {
+            val publicHost = tryDetectIfNotPublicHost(p2pAddress.host)
+            val useHost = publicHost ?: p2pAddress.host
+            HostAndPort.fromParts(useHost, p2pAddress.port)
         }
     }
 

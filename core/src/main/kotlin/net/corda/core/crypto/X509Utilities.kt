@@ -279,6 +279,7 @@ private fun X500Name.mutateCommonName(mutator: (ASN1Encodable) -> String): X500N
 val X500Name.commonName: String get() = getRDNs(BCStyle.CN).first().first.value.toString()
 val X500Name.orgName: String? get() = getRDNs(BCStyle.O).firstOrNull()?.first?.value?.toString()
 val X500Name.location: String get() = getRDNs(BCStyle.L).first().first.value.toString()
+val X500Name.locationOrNull: String? get() = try { location } catch (e: Exception) { null }
 val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
 
 class CertificateStream(val input: InputStream) {

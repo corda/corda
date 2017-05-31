@@ -56,15 +56,6 @@ public class CordformNode {
     }
 
     /**
-     * Set the nearest city to the node.
-     *
-     * @param nearestCity The name of the nearest city to the node.
-     */
-    public void nearestCity(String nearestCity) {
-        config = config.withValue("nearestCity", ConfigValueFactory.fromAnyRef(nearestCity));
-    }
-
-    /**
      * Set the Artemis P2P port for this node.
      *
      * @param p2pPort The Artemis messaging queue port.

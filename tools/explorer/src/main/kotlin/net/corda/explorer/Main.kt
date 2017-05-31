@@ -166,20 +166,15 @@ fun main(args: Array<String>) {
                 startFlowPermission<IssuanceRequester>())
         )
         // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
-        val notary = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)),
-                customOverrides = mapOf("nearestCity" to "Zurich"))
+        val notary = startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         val alice = startNode(ALICE.name, rpcUsers = arrayListOf(user),
-                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
-                customOverrides = mapOf("nearestCity" to "Milan"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
         val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
-                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
-                customOverrides = mapOf("nearestCity" to "Madrid"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))))
         val issuerGBP = startNode(X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=UK"), rpcUsers = arrayListOf(manager),
-                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),
-                customOverrides = mapOf("nearestCity" to "London"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))))
         val issuerUSD = startNode(X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=US"), rpcUsers = arrayListOf(manager),
-                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))),
-                customOverrides = mapOf("nearestCity" to "New York"))
+                advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))
 
         val notaryNode = notary.get()
         val aliceNode = alice.get()
