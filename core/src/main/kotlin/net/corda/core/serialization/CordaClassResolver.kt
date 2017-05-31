@@ -13,16 +13,12 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.util.*
 
-fun Kryo.addToWhitelist(type: Class<*>) {
-    ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassList)?.add(type)
-}
+fun Kryo.addToWhitelist(type: Class<*>) = ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassList)?.add(type)
 
-fun Kryo.addToBlacklist(type: Class<*>) {
-    ((classResolver as? CordaClassResolver)?.blacklist as? MutableClassList)?.add(type)
-}
+fun Kryo.addToBlacklist(type: Class<*>) = ((classResolver as? CordaClassResolver)?.blacklist as? MutableClassList)?.add(type)
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), EmptyClassList) // TODO: blacklist -> GlobalTransient
+    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), GlobalTransientClassList(EmptyClassList))
 }
 
 fun makeAcceptAllClassResolver(): ClassResolver {
@@ -30,7 +26,7 @@ fun makeAcceptAllClassResolver(): ClassResolver {
 }
 
 fun makeBlackListOnlyClassResolver(): ClassResolver {
-    return CordaClassResolver(AllClassList, EmptyClassList) // TODO: blacklist -> GlobalTransient
+    return CordaClassResolver(AllClassList, GlobalTransientClassList(EmptyClassList))
 }
 
 class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : DefaultClassResolver() {
@@ -65,7 +61,6 @@ class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : D
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // First check for blacklisted classes.
         if (blacklist.hasListed(type)) {
-            print("BlackListed ${Util.className(type)}" + blacklist.javaClass.name)
             throw KryoException("Class ${Util.className(type)} is blacklisted and cannot be used in serialization")
         }
         // Check for @CordaSerizalizable annotation or whitelisted.
@@ -158,9 +153,7 @@ object AllClassList : ClassList {
 
 // TODO: Need some concept of from which class loader
 class GlobalTransientClassList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
-    companion object {
-        val classlist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
-    }
+    val classlist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     override fun hasListed(type: Class<*>): Boolean {
         return (type.name in classlist) || delegate.hasListed(type)
