@@ -15,14 +15,14 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
 import net.corda.core.*
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.serialization.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.internal.ServiceFlowInfo
+import net.corda.node.internal.SessionRejectException
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -61,7 +61,6 @@ import javax.annotation.concurrent.ThreadSafe
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHubInternal,
-                          tokenizableServices: List<Any>,
                           val checkpointStorage: CheckpointStorage,
                           val executor: AffinityExecutor,
                           val database: Database,
@@ -147,7 +146,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
     // Context for tokenized services in checkpoints
-    private val serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
+    private lateinit var serializationContext: SerializeAsTokenContext
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
@@ -171,7 +170,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      */
     val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
-    fun start() {
+    fun start(tokenizableServices: List<Any>) {
+        serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
         serviceHub.networkMapCache.mapServiceRegistered.then(executor) { resumeRestoredFibers() }
@@ -345,28 +345,15 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
         fun sendSessionReject(message: String) = sendSessionMessage(sender, SessionReject(otherPartySessionId, message))
 
-        val serviceFlowInfo = serviceHub.getServiceFlowFactory(sessionInit.clientFlowClass)
-        if (serviceFlowInfo == null) {
-            logger.warn("${sessionInit.clientFlowClass} has not been registered with a service flow: $sessionInit")
-            sendSessionReject("${sessionInit.clientFlowClass.name} has not been registered with a service flow")
+        val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.initiatingFlowClass)
+        if (initiatedFlowFactory == null) {
+            logger.warn("${sessionInit.initiatingFlowClass} has not been registered: $sessionInit")
+            sendSessionReject("${sessionInit.initiatingFlowClass.name} has not been registered with a service flow")
             return
         }
 
         val session = try {
-            val flow = when (serviceFlowInfo) {
-                is ServiceFlowInfo.CorDapp -> {
-                    // TODO Add support for multiple versions of the same flow when CorDapps are loaded in separate class loaders
-                    if (sessionInit.flowVerison != serviceFlowInfo.version) {
-                        logger.warn("Version mismatch - ${sessionInit.clientFlowClass} is only registered for version " +
-                                "${serviceFlowInfo.version}: $sessionInit")
-                        sendSessionReject("Version not supported")
-                        return
-                    }
-                    serviceFlowInfo.factory(sender)
-                }
-                is ServiceFlowInfo.Core -> serviceFlowInfo.factory(sender, receivedMessage.platformVersion)
-            }
-
+            val flow = initiatedFlowFactory.createFlow(receivedMessage.platformVersion, sender, sessionInit)
             val fiber = createFiber(flow, FlowInitiator.Peer(sender))
             val session = FlowSession(flow, random63BitValue(), sender, FlowSessionState.Initiated(sender, otherPartySessionId))
             if (sessionInit.firstPayload != null) {
@@ -376,6 +363,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             fiber.openSessions[Pair(flow, sender)] = session
             updateCheckpoint(fiber)
             session
+        } catch (e: SessionRejectException) {
+            logger.warn("${e.logMessage}: $sessionInit")
+            sendSessionReject(e.rejectMessage)
+            return
         } catch (e: Exception) {
             logger.warn("Couldn't start flow session from $sessionInit", e)
             sendSessionReject("Unable to establish session")
@@ -383,7 +374,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
 
         sendSessionMessage(sender, SessionConfirm(otherPartySessionId, session.ourSessionId), session.fiber)
-        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.clientFlowClass.name}" }
+        session.fiber.logger.debug { "Initiated by $sender using ${sessionInit.initiatingFlowClass.name}" }
         session.fiber.logger.trace { "Initiated from $sessionInit on $session" }
         resumeFiber(session.fiber)
     }

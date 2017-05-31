@@ -6,13 +6,15 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
-We've added the ability for flows to be versioned by their CorDapp developers. This enables a node to support a particular
-version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future
-release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
+Writing CorDapps has been made simpler by removing boiler-plate code that was previously required when registering flows.
+Instead we now make use of classpath scanning to automatically wire-up flows.
 
 There are major changes to the ``Party`` class as part of confidential identities, and how parties and keys are stored
 in transaction state objects. See :doc:`changelog` for full details.
 
+We've added the ability for flows to be versioned by their CorDapp developers. This enables a node to support a particular
+version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future
+release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
 
 Milestone 11
 ------------

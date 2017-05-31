@@ -8,9 +8,9 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
+import net.corda.core.identity.Party
 import net.corda.core.random63BitValue
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -27,7 +27,6 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.lang.reflect.Modifier
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.*
@@ -322,23 +321,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.trace { "Initiating a new session with $otherParty" }
         val session = FlowSession(sessionFlow, random63BitValue(), null, FlowSessionState.Initiating(otherParty), retryable)
         openSessions[Pair(sessionFlow, otherParty)] = session
-        // We get the top-most concrete class object to cater for the case where the client flow is customised via a sub-class
-        val clientFlowClass = sessionFlow.topConcreteFlowClass
-        val sessionInit = SessionInit(session.ourSessionId, clientFlowClass, clientFlowClass.flowVersion, firstPayload)
+        val (version, initiatingFlowClass) = sessionFlow.javaClass.flowVersionAndInitiatingClass
+        val sessionInit = SessionInit(session.ourSessionId, initiatingFlowClass, version, firstPayload)
         sendInternal(session, sessionInit)
         if (waitForConfirmation) {
             session.waitForConfirmation()
         }
         return session
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private val FlowLogic<*>.topConcreteFlowClass: Class<out FlowLogic<*>> get() {
-        var current: Class<out FlowLogic<*>> = javaClass
-        while (!Modifier.isAbstract(current.superclass.modifiers)) {
-            current = current.superclass as Class<out FlowLogic<*>>
-        }
-        return current
     }
 
     @Suspendable
@@ -460,10 +449,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 }
 
-val Class<out FlowLogic<*>>.flowVersion: Int get() {
-    val annotation = requireNotNull(getAnnotation(InitiatingFlow::class.java)) {
-        "$name as the initiating flow must be annotated with ${InitiatingFlow::class.java.name}"
+@Suppress("UNCHECKED_CAST")
+val Class<out FlowLogic<*>>.flowVersionAndInitiatingClass: Pair<Int, Class<out FlowLogic<*>>> get() {
+    var current: Class<*> = this
+    var found: Pair<Int, Class<out FlowLogic<*>>>? = null
+    while (true) {
+        val annotation = current.getDeclaredAnnotation(InitiatingFlow::class.java)
+        if (annotation != null) {
+            if (found != null) throw IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated once")
+            require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
+            found = annotation.version to (current as Class<out FlowLogic<*>>)
+        }
+        current = current.superclass
+            ?: return found
+            ?: throw IllegalArgumentException("$name as an initiating flow must be annotated with ${InitiatingFlow::class.java.name}")
     }
-    require(annotation.version > 0) { "Flow versions have to be greater or equal to 1" }
-    return annotation.version
 }

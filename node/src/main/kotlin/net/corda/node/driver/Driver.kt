@@ -7,6 +7,8 @@ import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.cordform.CordformContext
+import net.corda.cordform.CordformNode
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
@@ -19,10 +21,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.config.*
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.configOf
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -30,8 +28,6 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.cordform.CordformNode
-import net.corda.cordform.CordformContext
 import net.corda.core.internal.ShutdownHook
 import net.corda.core.internal.addShutdownHook
 import okhttp3.OkHttpClient
@@ -39,6 +35,7 @@ import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.io.File
+import java.io.File.pathSeparator
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -614,7 +611,7 @@ class DriverDSL(
         }
     }
 
-    override fun baseDirectory(nodeName: X500Name) = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
+    override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
 
     override fun startDedicatedNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -679,6 +676,8 @@ class DriverDSL(
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
+                val pluginsDirectory = nodeConf.baseDirectory / "plugins"
+
                 ProcessUtilities.startJavaProcess(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
@@ -686,6 +685,8 @@ class DriverDSL(
                                 "--logging-level=$loggingLevel",
                                 "--no-local-shell"
                         ),
+                        // Like the capsule, include the node's plugin directory
+                        classpath = "${ProcessUtilities.defaultClassPath}$pathSeparator$pluginsDirectory/*",
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",

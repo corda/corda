@@ -46,6 +46,14 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
+processIntegrationTestResources {
+    // Build one of the demos so that we can test CorDapp scanning in CordappScanningTest. It doesn't matter which demo
+    // we use, just make sure the test is updated accordingly.
+    from(project(':samples:trader-demo').tasks.jar) {
+        rename 'trader-demo-(.*)', 'trader-demo.jar'
+    }
+}
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
@@ -153,7 +161,7 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 
     // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

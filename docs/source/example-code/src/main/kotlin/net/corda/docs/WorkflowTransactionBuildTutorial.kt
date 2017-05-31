@@ -6,10 +6,10 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.serialization.CordaSerializable
@@ -19,22 +19,13 @@ import net.corda.flows.FinalityFlow
 import java.security.PublicKey
 import java.time.Duration
 
-object WorkflowTransactionBuildTutorial {
-    // Would normally be called by custom service init in a CorDapp
-    fun registerWorkflowProtocols(pluginHub: PluginServiceHub) {
-        pluginHub.registerServiceFlow(SubmitCompletionFlow::class.java, ::RecordCompletionFlow)
-    }
-}
-
 // DOCSTART 1
-
 // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
 inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
     val linearHeads = vaultService.linearHeadsOfType<T>()
     val original = toStateAndRef<T>(ref)
-    return linearHeads.get(original.state.data.linearId)!!
+    return linearHeads[original.state.data.linearId]!!
 }
-
 // DOCEND 1
 
 // Minimal state model of a manual approval process
@@ -87,7 +78,7 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
                     "Issue of new WorkflowContract must not include any inputs" using (tx.inputs.isEmpty())
                     "Issue of new WorkflowContract must be in a unique transaction" using (tx.outputs.size == 1)
                 }
-                val issued = tx.outputs.get(0) as TradeApprovalContract.State
+                val issued = tx.outputs[0] as TradeApprovalContract.State
                 requireThat {
                     "Issue requires the source Party as signer" using (command.signers.contains(issued.source.owningKey))
                     "Initial Issue state must be NEW" using (issued.state == WorkflowState.NEW)
@@ -96,9 +87,9 @@ data class TradeApprovalContract(override val legalContractReference: SecureHash
             is Commands.Completed -> {
                 val stateGroups = tx.groupStates(TradeApprovalContract.State::class.java) { it.linearId }
                 require(stateGroups.size == 1) { "Must be only a single proposal in transaction" }
-                for (group in stateGroups) {
-                    val before = group.inputs.single()
-                    val after = group.outputs.single()
+                for ((inputs, outputs) in stateGroups) {
+                    val before = inputs.single()
+                    val after = outputs.single()
                     requireThat {
                         "Only a non-final trade can be modified" using (before.state == WorkflowState.NEW)
                         "Output must be a final state" using (after.state in setOf(WorkflowState.APPROVED, WorkflowState.REJECTED))
@@ -227,6 +218,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
  * Then after checking to sign it and eventually store the fully notarised
  * transaction to the ledger.
  */
+@InitiatedBy(SubmitCompletionFlow::class)
 class RecordCompletionFlow(val source: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call(): Unit {

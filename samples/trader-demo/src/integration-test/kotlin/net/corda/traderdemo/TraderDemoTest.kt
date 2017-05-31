@@ -16,6 +16,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.BOC
 import net.corda.testing.node.NodeBasedTest
+import net.corda.traderdemo.flow.BuyerFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -35,6 +36,8 @@ class TraderDemoTest : NodeBasedTest() {
                 startNode(BOC.name, rpcUsers = listOf(user)),
                 startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
         ).getOrThrow()
+
+        nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 
         val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
             val client = CordaRPCClient(it.configuration.rpcAddress!!)
@@ -57,12 +60,8 @@ class TraderDemoTest : NodeBasedTest() {
         val executor = Executors.newScheduledThreadPool(1)
         poll(executor, "A to be notified of the commercial paper", pollInterval = 100.millis) {
             val actualPaper = listOf(clientA.commercialPaperCount, clientB.commercialPaperCount)
-            if (actualPaper == expectedPaper) {
-                Unit
-            } else {
-                null
-            }
-        }.get()
+            if (actualPaper == expectedPaper) Unit else null
+        }.getOrThrow()
         executor.shutdown()
         assertThat(clientA.dollarCashBalance).isEqualTo(95.DOLLARS)
         assertThat(clientB.dollarCashBalance).isEqualTo(5.DOLLARS)

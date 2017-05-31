@@ -5,11 +5,11 @@ import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
@@ -22,13 +22,6 @@ import java.math.BigDecimal
 import java.security.PublicKey
 
 object FixingFlow {
-
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerServiceFlow(FixingRoleDecider::class.java) { Fixer(it) }
-        }
-    }
-
     /**
      * One side of the fixing flow for an interest rate swap, but could easily be generalised further.
      *
@@ -36,8 +29,9 @@ object FixingFlow {
      * of the flow that is run by the party with the fixed leg of swap deal, which is the basis for deciding
      * who does what in the flow.
      */
-    class Fixer(override val otherParty: Party,
-                override val progressTracker: ProgressTracker = TwoPartyDealFlow.Secondary.tracker()) : TwoPartyDealFlow.Secondary<FixingSession>() {
+    @InitiatedBy(FixingRoleDecider::class)
+    class Fixer(override val otherParty: Party) : TwoPartyDealFlow.Secondary<FixingSession>() {
+        override val progressTracker: ProgressTracker = TwoPartyDealFlow.Secondary.tracker()
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState

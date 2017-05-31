@@ -49,15 +49,20 @@ publishing {
     }
 }
 
+task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT'])
+
 task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
+    directory "./build/nodes/nodesSingle"
     definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
+    directory "./build/nodes/nodesRaft"
     definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
 }
 
 task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
+    directory "./build/nodes/nodesBFT"
     definitionClass = 'net.corda.notarydemo.BFTNotaryCordform'
 }
 

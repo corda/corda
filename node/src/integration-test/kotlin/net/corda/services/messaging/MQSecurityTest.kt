@@ -6,6 +6,7 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
@@ -216,7 +217,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
 
     private fun startBobAndCommunicateWithAlice(): Party {
         val bob = startNode(BOB.name).getOrThrow()
-        bob.services.registerServiceFlow(SendFlow::class.java, ::ReceiveFlow)
+        bob.registerInitiatedFlow(ReceiveFlow::class.java)
         val bobParty = bob.info.legalIdentity
         // Perform a protocol exchange to force the peer queue to be created
         alice.services.startFlow(SendFlow(bobParty, 0)).resultFuture.getOrThrow()
@@ -229,6 +230,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         override fun call() = send(otherParty, payload)
     }
 
+    @InitiatedBy(SendFlow::class)
     private class ReceiveFlow(val otherParty: Party) : FlowLogic<Any>() {
         @Suspendable
         override fun call() = receive<Any>(otherParty).unwrap { it }
