@@ -2,6 +2,7 @@ package net.corda.node.services.persistence
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
@@ -24,6 +25,7 @@ import net.corda.node.services.persistence.schemas.AttachmentEntity
 import net.corda.node.services.persistence.schemas.Models
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -57,16 +59,14 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     }
 
     @CordaSerializable
-    class HashMismatchException(val expected: SecureHash, val actual: SecureHash) : Exception() {
-        override fun toString() = "File $expected hashed to $actual: corruption in attachment store?"
-    }
+    class HashMismatchException(val expected: SecureHash, val actual: SecureHash) : RuntimeException("File $expected hashed to $actual: corruption in attachment store?")
 
     /**
      * Wraps a stream and hashes data as it is read: if the entire stream is consumed, then at the end the hash of
-     * the read data is compared to the [expected] hash and [HashMismatchException] is thrown by [close] if they didn't
-     * match. The goal of this is to detect cases where attachments in the store have been tampered with or corrupted
-     * and no longer match their file name. It won't always work: if we read a zip for our own uses and skip around
-     * inside it, we haven't read the whole file, so we can't check the hash. But when copying it over the network
+     * the read data is compared to the [expected] hash and [HashMismatchException] is thrown by either [read] or [close]
+     * if they didn't match. The goal of this is to detect cases where attachments in the store have been tampered with
+     * or corrupted and no longer match their file name. It won't always work: if we read a zip for our own uses and skip
+     * around inside it, we haven't read the whole file, so we can't check the hash. But when copying it over the network
      * this will provide an additional safety check against user error.
      */
     @VisibleForTesting @CordaSerializable
@@ -75,14 +75,50 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
                              input: InputStream,
                              private val counter: CountingInputStream = CountingInputStream(input),
                              private val stream: HashingInputStream = HashingInputStream(Hashing.sha256(), counter)) : FilterInputStream(stream) {
+        @Throws(IOException::class)
         override fun close() {
             super.close()
+            validate()
+        }
 
+        // Possibly not used, but implemented anyway to fulfil the [FilterInputStream] contract.
+        @Throws(IOException::class)
+        override fun read(): Int {
+            return super.read().apply {
+                if (this == -1) {
+                    validate()
+                }
+            }
+        }
+
+        // This is invoked by [InputStreamSerializer], which does NOT close the stream afterwards.
+        @Throws(IOException::class)
+        override fun read(b: ByteArray?, off: Int, len: Int): Int {
+            return super.read(b, off, len).apply {
+                if (this == -1) {
+                    validate()
+                }
+            }
+        }
+
+        private fun validate() {
             if (counter.count != expectedSize.toLong()) return
 
-            val actual = SecureHash.SHA256(stream.hash().asBytes())
+            val actual = SecureHash.SHA256(hash.asBytes())
             if (actual != expected)
                 throw HashMismatchException(expected, actual)
+        }
+
+        private var _hash: HashCode? = null // Backing field for hash property
+        private val hash: HashCode get() {
+            var h = _hash
+            return if (h == null) {
+                h = stream.hash()
+                _hash = h
+                h
+            } else {
+                h
+            }
         }
     }
 

@@ -20,6 +20,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
@@ -632,16 +633,15 @@ object CertPathSerializer : Serializer<CertPath>() {
 }
 
 /**
- * For serialising an [CX509Certificate] in an X.500 standard format.
+ * For serialising an [CX509CertificateHolder] in an X.500 standard format.
  */
 @ThreadSafe
-object X509CertificateSerializer : Serializer<X509Certificate>() {
-    val factory = CertificateFactory.getInstance("X.509")
-    override fun read(kryo: Kryo, input: Input, type: Class<X509Certificate>): X509Certificate {
-        return factory.generateCertificate(input) as X509Certificate
+object X509CertificateSerializer : Serializer<X509CertificateHolder>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<X509CertificateHolder>): X509CertificateHolder {
+        return X509CertificateHolder(input.readBytes())
     }
 
-    override fun write(kryo: Kryo, output: Output, obj: X509Certificate) {
+    override fun write(kryo: Kryo, output: Output, obj: X509CertificateHolder) {
         output.writeBytes(obj.encoded)
     }
 }

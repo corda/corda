@@ -19,6 +19,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.path.CertPath
 import org.junit.Test
 import java.nio.file.Files
 
@@ -111,7 +112,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                         X509Utilities.CORDA_CLIENT_CA,
                         clientKey.private,
                         keyPass,
-                        arrayOf(clientCACert, intermediateCA.certificate, rootCACert))
+                        CertPath(arrayOf(clientCACert, intermediateCA.certificate, rootCACert)))
                 clientCAKeystore.save(nodeKeystore, keyStorePassword)
 
                 val tlsKeystore = KeyStoreUtilities.loadOrCreateKeyStore(sslKeystore, keyStorePassword)
@@ -119,7 +120,7 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
                         X509Utilities.CORDA_CLIENT_TLS,
                         tlsKey.private,
                         keyPass,
-                        arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert))
+                        CertPath(arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert)))
                 tlsKeystore.save(sslKeystore, keyStorePassword)
             }
         }

@@ -10,6 +10,7 @@ import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.BOB_PUBKEY
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
@@ -142,10 +143,10 @@ class KryoTests {
     }
 
     @Test
-    fun `serialize - deserialize X509Certififcate`() {
-        val expected = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+    fun `serialize - deserialize X509CertififcateHolder`() {
+        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
         val serialized = expected.serialize(kryo).bytes
-        val actual: X509Certificate = serialized.deserialize(kryo)
+        val actual: X509CertificateHolder = serialized.deserialize(kryo)
         assertEquals(expected, actual)
     }
 

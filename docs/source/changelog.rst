@@ -50,6 +50,10 @@ UNRELEASED
          * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
            name. As a result all node legal names must now be structured as X.500 distinguished names.
 
+    * The Bouncy Castle library ``X509CertificateHolder`` class is now used in place of ``X509Certificate`` in order to
+      have a consistent class used internally. Conversions to/from ``X509Certificate`` are done as required, but should
+      be avoided where possible.
+
     * There are major changes to transaction signing in flows:
 
          * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most

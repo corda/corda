@@ -3,6 +3,7 @@ package net.corda.testing.node
 import com.codahale.metrics.MetricRegistry
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
@@ -30,7 +31,9 @@ import kotlin.concurrent.thread
  * This is a bare-bones node which can only send and receive messages. It doesn't register with a network map service or
  * any other such task that would make it functional in a network and thus left to the user to do so manually.
  */
-class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeLocalHostAndPort(), rpcAddress: HostAndPort = freeLocalHostAndPort()) : AutoCloseable {
+class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeLocalHostAndPort(),
+                 rpcAddress: HostAndPort = freeLocalHostAndPort(),
+                 networkRoot: CertificateAndKeyPair? = null) : AutoCloseable {
 
     private val databaseWithCloseable: Pair<Closeable, Database> = configureDatabase(config.dataSourceProperties)
     val database: Database get() = databaseWithCloseable.second
