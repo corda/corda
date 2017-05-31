@@ -109,9 +109,9 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Fire the message bullets between nodes.
-        simulation.network.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.recipients as SingleMessageRecipient)
+        simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
+            val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
+            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients as SingleMessageRecipient)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()

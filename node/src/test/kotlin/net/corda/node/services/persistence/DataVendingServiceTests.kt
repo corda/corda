@@ -28,19 +28,19 @@ import kotlin.test.assertEquals
  * Tests for the data vending service.
  */
 class DataVendingServiceTests {
-    lateinit var network: MockNetwork
+    lateinit var mockNet: MockNetwork
 
     @Before
     fun setup() {
-        network = MockNetwork()
+        mockNet = MockNetwork()
     }
 
     @Test
     fun `notify of transaction`() {
-        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = registerNode.info.legalIdentity.ref(1)
-        network.runNetwork()
+        mockNet.runNetwork()
 
         // Generate an issuance transaction
         val ptx = TransactionType.General.Builder(null)
@@ -65,10 +65,10 @@ class DataVendingServiceTests {
      */
     @Test
     fun `notify failure`() {
-        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = MEGA_CORP.ref(1)
-        network.runNetwork()
+        mockNet.runNetwork()
 
         // Generate an issuance transaction
         val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
@@ -89,7 +89,7 @@ class DataVendingServiceTests {
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
         walletServiceNode.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
-        network.runNetwork()
+        mockNet.runNetwork()
     }
 
     @InitiatingFlow

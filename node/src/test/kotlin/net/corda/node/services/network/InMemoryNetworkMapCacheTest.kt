@@ -11,21 +11,21 @@ import java.math.BigInteger
 import kotlin.test.assertEquals
 
 class InMemoryNetworkMapCacheTest {
-    private val network = MockNetwork()
+    private val mockNet = MockNetwork()
 
     @Test
     fun registerWithNetwork() {
-        val (n0, n1) = network.createTwoNodes()
+        val (n0, n1) = mockNet.createTwoNodes()
         val future = n1.services.networkMapCache.addMapService(n1.network, n0.info.address, false, null)
-        network.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
     }
 
     @Test
     fun `key collision`() {
         val entropy = BigInteger.valueOf(24012017L)
-        val nodeA = network.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, entropy, ServiceInfo(NetworkMapService.type))
-        val nodeB = network.createNode(null, -1, MockNetwork.DefaultFactory, true, BOB.name, null, entropy, ServiceInfo(NetworkMapService.type))
+        val nodeA = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, ALICE.name, null, entropy, ServiceInfo(NetworkMapService.type))
+        val nodeB = mockNet.createNode(null, -1, MockNetwork.DefaultFactory, true, BOB.name, null, entropy, ServiceInfo(NetworkMapService.type))
         assertEquals(nodeA.info.legalIdentity, nodeB.info.legalIdentity)
 
         // Node A currently knows only about itself, so this returns node A

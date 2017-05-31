@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var oldNotaryNode: MockNetwork.MockNode
     lateinit var newNotaryNode: MockNetwork.MockNode
     lateinit var clientNodeA: MockNetwork.MockNode
@@ -33,15 +33,15 @@ class NotaryChangeTests {
 
     @Before
     fun setup() {
-        net = MockNetwork()
-        oldNotaryNode = net.createNode(
+        mockNet = MockNetwork()
+        oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+        clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
+        clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
+        newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
-        net.runNetwork() // Clear network map registration messages
+        mockNet.runNetwork() // Clear network map registration messages
     }
 
     @Test
@@ -51,7 +51,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
@@ -64,7 +64,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
@@ -80,7 +80,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newEvilNotary)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertThatExceptionOfType(StateReplacementException::class.java).isThrownBy {
             future.resultFuture.getOrThrow()
@@ -95,7 +95,7 @@ class NotaryChangeTests {
         val newNotary = newNotaryNode.info.notaryIdentity
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
-        net.runNetwork()
+        mockNet.runNetwork()
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
