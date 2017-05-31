@@ -84,7 +84,7 @@ crashlytics-build.properties
 docs/virtualenv/
 
 # bft-smart
-config/currentView
+**/config/currentView
 
 # vim
 *.swp

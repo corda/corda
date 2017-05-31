@@ -334,7 +334,7 @@ class FlowFrameworkTests {
             node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
             net.runNetwork()
         }
-        val endpoint = net.messagingNetwork.endpoint(notary1.net.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
+        val endpoint = net.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
         val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
         assertTrue(party1Info is PartyInfo.Service)
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
@@ -696,7 +696,7 @@ class FlowFrameworkTests {
     }
 
     private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.net.myAddress }
+        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
     }
@@ -724,7 +724,7 @@ class FlowFrameworkTests {
     }
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.net.myAddress)
+    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
     private val FlowLogic<*>.progressSteps: ListenableFuture<List<Notification<ProgressTracker.Step>>> get() {
         return progressTracker!!.changes

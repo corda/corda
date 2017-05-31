@@ -228,7 +228,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
 
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-            return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+            return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
         }
 
         fun disableDBCloseOnStop() {
@@ -379,7 +379,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.
-    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
+    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.network.myAddress == address }
 
     fun startNodes() {
         require(nodes.isNotEmpty())

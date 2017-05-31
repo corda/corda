@@ -67,7 +67,7 @@ class Node(override val configuration: FullNodeConfiguration,
     override val log: Logger get() = logger
     override val platformVersion: Int get() = versionInfo.platformVersion
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
-    override fun makeTransactionVerifierService() = (net as NodeMessagingClient).verifierService
+    override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
     // DISCUSSION
     //
@@ -212,7 +212,7 @@ class Node(override val configuration: FullNodeConfiguration,
         }
 
         // Start up the MQ client.
-        val net = net as NodeMessagingClient
+        val net = network as NodeMessagingClient
         net.start(rpcOps, userService)
     }
 
@@ -301,7 +301,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        (net as NodeMessagingClient).run(messageBroker!!.serverControl)
+        (network as NodeMessagingClient).run(messageBroker!!.serverControl)
     }
 
     // TODO: Do we really need setup?

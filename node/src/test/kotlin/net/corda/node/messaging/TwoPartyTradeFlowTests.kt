@@ -177,7 +177,7 @@ class TwoPartyTradeFlowTests {
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
-            val bobAddr = bobNode.net.myAddress as InMemoryMessagingNetwork.PeerHandle
+            val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
             val networkMapAddr = notaryNode.info.address
 
             net.runNetwork() // Clear network map registration messages
