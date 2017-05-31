@@ -21,6 +21,7 @@ import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.flows.*
@@ -605,6 +606,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // TODO: Integrate with Key management service?
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
+        val privKeyFile = configuration.baseDirectory / privateKeyAlias
+        val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
         val certificateAndKeyPair = keyStore.certificateAndKeyPair(privateKeyAlias)
         val identityCertPathAndKey: Pair<PartyAndCertificate, KeyPair> = if (certificateAndKeyPair != null) {
             val (cert, keyPair) = certificateAndKeyPair
@@ -616,6 +619,22 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
             val certPath = X509Utilities.createCertificatePath(cert, cert, revocationEnabled = false)
             Pair(PartyAndCertificate(loadedServiceName, keyPair.public, cert, certPath), keyPair)
+        } else if (privKeyFile.exists()) {
+            // Get keys from key file.
+            // TODO: this is here to smooth out the key storage transition, remove this in future release.
+            // Check that the identity in the config file matches the identity file we have stored to disk.
+            // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
+            // things up for us.
+            val myIdentity = pubIdentityFile.readAll().deserialize<PartyAndCertificate>()
+            if (myIdentity.name != serviceName)
+                throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
+                        "$serviceName vs ${myIdentity.name}")
+            // Load the private key.
+            val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
+            if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
+                keyStore.save(serviceName, privateKeyAlias, keyPair)
+            }
+            Pair(myIdentity, keyPair)
         } else {
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
             // Create new keys and store in keystore.

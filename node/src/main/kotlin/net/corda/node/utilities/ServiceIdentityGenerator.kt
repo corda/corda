@@ -1,8 +1,8 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.serialize
 import net.corda.core.serialization.storageKryo
 import net.corda.core.utilities.loggerFor
@@ -20,16 +20,27 @@ object ServiceIdentityGenerator {
      * This method should be called *before* any of the nodes are started.
      *
      * @param dirs List of node directories to place the generated identity and key pairs in.
+     * @param serviceCa Certificate authority to use when signing identity certificates.
      * @param serviceId The service id of the distributed service.
      * @param serviceName The legal name of the distributed service.
      * @param threshold The threshold for the generated group [CompositeKey].
      */
-    fun generateToDisk(dirs: List<Path>, serviceId: String, serviceName: X500Name, threshold: Int = 1) {
+    // TODO: This needs to write out to the key store, not just files on disk
+    fun generateToDisk(dirs: List<Path>,
+                       serviceCa: CertificateAndKeyPair,
+                       serviceId: String,
+                       serviceName: X500Name,
+                       threshold: Int = 1) {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
 
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
-        val notaryParty = Party(serviceName, notaryKey).serialize()
+        // TODO: This doesn't work until we have composite keys in X.509 certificates, so we make up a certificate that nothing checks
+        // val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
+        //        serviceCa.keyPair, serviceName, notaryKey)
+        val notaryCert = X509Utilities.createSelfSignedCACertificate(serviceName, generateKeyPair())
+        val notaryCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, notaryCert, revocationEnabled = false)
+        val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath).serialize()
 
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
