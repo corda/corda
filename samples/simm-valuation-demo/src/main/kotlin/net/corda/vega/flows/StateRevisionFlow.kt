@@ -3,6 +3,7 @@ package net.corda.vega.flows
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.AbstractStateReplacementFlow
@@ -26,7 +27,7 @@ object StateRevisionFlow {
         }
     }
 
-    open class Receiver<in T>(otherParty: Party) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
+    open class Receiver<in T>(otherParty: PartyAndCertificate) : AbstractStateReplacementFlow.Acceptor<T>(otherParty) {
         override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<T>) {
             val proposedTx = proposal.stx.tx
             val state = proposal.stateRef

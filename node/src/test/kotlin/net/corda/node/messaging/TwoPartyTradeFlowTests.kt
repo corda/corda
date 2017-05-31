@@ -13,6 +13,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
@@ -493,7 +495,7 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatingFlow
-    class SellerInitiator(val buyer: Party,
+    class SellerInitiator(val buyer: PartyAndCertificate,
                           val notary: NodeInfo,
                           val assetToSell: StateAndRef<OwnableState>,
                           val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
@@ -510,10 +512,10 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatedBy(SellerInitiator::class)
-    class BuyerAcceptor(val seller: Party) : FlowLogic<SignedTransaction>() {
+    class BuyerAcceptor(val seller: PartyAndCertificate) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val (notary, price) = receive<Pair<Party, Amount<Currency>>>(seller).unwrap {
+            val (notary, price) = receive<Pair<PartyAndCertificate, Amount<Currency>>>(seller).unwrap {
                 require(serviceHub.networkMapCache.isNotary(it.first)) { "${it.first} is not a notary" }
                 it
             }

@@ -71,6 +71,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
+import java.security.cert.X509Certificate
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -346,7 +347,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
-        val ctor = initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
+        val ctor = try {
+            initiatedFlow.getDeclaredConstructor(PartyAndCertificate::class.java).apply { isAccessible = true }
+        } catch(ex: NoSuchMethodException) {
+            // Fall back to a constructor that takes in a Party
+            // TODO: Consider removing for 1.0 release, as flows should generally take the more detailed class
+            initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
+        }
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
@@ -394,7 +401,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (PartyAndCertificate, Int) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -656,7 +663,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
 
     protected open fun makeIdentityService(): IdentityService {
-        val service = InMemoryIdentityService()
+        val keyStore = KeyStoreUtilities.loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)
+        val trustRoot = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as? X509Certificate
+        val service = InMemoryIdentityService(trustRoot = trustRoot)
         service.registerIdentity(info.legalIdentity)
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentity) }
         netMapCache.changed.subscribe { mapChange ->

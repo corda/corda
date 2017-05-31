@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.CollectSignaturesFlow
@@ -54,7 +55,7 @@ class CollectSignaturesFlowTests {
     // "collectSignaturesFlow" and "SignTransactionFlow" can be used in practise.
     object TestFlow {
         @InitiatingFlow
-        class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Initiator(val state: DummyContract.MultiOwnerState, val otherParty: PartyAndCertificate) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
                 send(otherParty, state)
@@ -114,7 +115,7 @@ class CollectSignaturesFlowTests {
         }
 
         @InitiatedBy(TestFlowTwo.Initiator::class)
-        class Responder(val otherParty: Party) : FlowLogic<SignedTransaction>() {
+        class Responder(val otherParty: PartyAndCertificate) : FlowLogic<SignedTransaction>() {
             @Suspendable override fun call(): SignedTransaction {
                 val flow = object : SignTransactionFlow(otherParty) {
                     @Suspendable override fun checkTransaction(stx: SignedTransaction) = requireThat {

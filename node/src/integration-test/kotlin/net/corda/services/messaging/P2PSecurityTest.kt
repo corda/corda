@@ -24,6 +24,7 @@ import net.corda.testing.node.SimpleNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.time.Instant
 import java.util.concurrent.TimeoutException
@@ -56,17 +57,19 @@ class P2PSecurityTest : NodeBasedTest() {
         }
     }
 
-    private fun startSimpleNode(legalName: X500Name): SimpleNode {
+    private fun startSimpleNode(legalName: X500Name,
+                                trustRoot: X509CertificateHolder? = null): SimpleNode {
         val config = TestNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName,
                 networkMapService = NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
-        return SimpleNode(config).apply { start() }
+        return SimpleNode(config, trustRoot = trustRoot).apply { start() }
     }
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): ListenableFuture<NetworkMapService.RegistrationResponse> {
-        val nodeInfo = NodeInfo(net.myAddress, getTestPartyAndCertificate(registrationName, identity.public), MOCK_VERSION_INFO.platformVersion)
+        val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
+        val nodeInfo = NodeInfo(net.myAddress, legalIdentity, MOCK_VERSION_INFO.platformVersion)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), net.myAddress)
         return net.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.net.myAddress)
