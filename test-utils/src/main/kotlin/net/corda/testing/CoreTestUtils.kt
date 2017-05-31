@@ -89,15 +89,20 @@ fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
 private val freePortCounter = AtomicInteger(30000)
 /**
+ * Returns a localhost address with a free port.
+ *
+ * Unsafe for getting multiple ports!
+ * Use [getFreeLocalPorts] for getting multiple ports.
+ */
+fun freeLocalHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", freePort())
+
+/**
  * Returns a free port.
  *
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort(): HostAndPort {
-    val freePort = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + 1) % 10000 }
-    return HostAndPort.fromParts("localhost", freePort)
-}
+fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + 1) % 10000 }
 
 /**
  * Creates a specified number of ports for use by the Node.

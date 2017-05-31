@@ -85,8 +85,8 @@ import javax.security.cert.X509Certificate
  */
 @ThreadSafe
 class ArtemisMessagingServer(override val config: NodeConfiguration,
-                             val p2pHostPort: HostAndPort,
-                             val rpcHostPort: HostAndPort?,
+                             val p2pPort: Int,
+                             val rpcPort: Int?,
                              val networkMapCache: NetworkMapCache,
                              val userService: RPCUserService) : ArtemisMessagingComponent() {
     companion object {
@@ -156,9 +156,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Listening on address", p2pHostPort.toString())
-        if (rpcHostPort != null) {
-            printBasicNodeInfo("RPC service listening on address", rpcHostPort.toString())
+        printBasicNodeInfo("Listening on port", p2pPort.toString())
+        if (rpcPort != null) {
+            printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
         }
     }
 
@@ -170,9 +170,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         val connectionDirection = ConnectionDirection.Inbound(
                 acceptorFactoryClassName = NettyAcceptorFactory::class.java.name
         )
-        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pHostPort.port))
-        if (rpcHostPort != null) {
-            acceptors.add(createTcpTransport(connectionDirection, "0.0.0.0", rpcHostPort.port, enableSSL = false))
+        val acceptors = mutableSetOf(createTcpTransport(connectionDirection, "0.0.0.0", p2pPort))
+        if (rpcPort != null) {
+            acceptors.add(createTcpTransport(connectionDirection, "0.0.0.0", rpcPort, enableSSL = false))
         }
         acceptorConfigurations = acceptors
         // Enable built in message deduplication. Note we still have to do our own as the delayed commits

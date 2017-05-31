@@ -43,7 +43,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
-    val broker = ArtemisMessagingServer(config, address, rpcAddress, InMemoryNetworkMapCache(), userService)
+    val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
     val net = database.transaction {
         NodeMessagingClient(
