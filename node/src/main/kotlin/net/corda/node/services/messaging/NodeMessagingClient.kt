@@ -61,22 +61,23 @@ import javax.annotation.concurrent.ThreadSafe
  * invoke methods on the provided implementation. There is more documentation on this in the docsite and the
  * CordaRPCClient class.
  *
- * @param serverHostPort The address of the broker instance to connect to (might be running in the same process).
+ * @param serverAddress The address of the broker instance to connect to (might be running in the same process).
  * @param myIdentity Either the public key to be used as the ArtemisMQ address and queue name for the node globally, or null to indicate
  * that this is a NetworkMapService node which will be bound globally to the name "networkmap".
  * @param nodeExecutor An executor to run received message tasks upon.
- * @param isServerLocal Specify `true` if the provided [serverHostPort] is a locally running broker instance.
+ * @param advertisedAddress The node address for inbound connections, advertised to the network map service and peers.
+ * If not provided, will default to [serverAddress].
  */
 @ThreadSafe
 class NodeMessagingClient(override val config: NodeConfiguration,
                           val versionInfo: VersionInfo,
-                          val serverHostPort: HostAndPort,
+                          val serverAddress: HostAndPort,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: Database,
                           val networkMapRegistrationFuture: ListenableFuture<Unit>,
                           val monitoringService: MonitoringService,
-                          val isServerLocal: Boolean = true
+                          advertisedAddress: HostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {
     companion object {
         private val log = loggerFor<NodeMessagingClient>()
@@ -132,9 +133,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
      * Apart from the NetworkMapService this is the only other address accessible to the node outside of lookups against the NetworkMapCache.
      */
     override val myAddress: SingleMessageRecipient = if (myIdentity != null) {
-        NodeAddress.asPeer(myIdentity, serverHostPort)
+        NodeAddress.asPeer(myIdentity, advertisedAddress)
     } else {
-        NetworkMapAddress(serverHostPort)
+        NetworkMapAddress(advertisedAddress)
     }
 
     private val state = ThreadBox(InnerState())
@@ -157,8 +158,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         state.locked {
             check(!started) { "start can't be called twice" }
             started = true
-
-            val serverAddress = getBrokerAddress()
 
             log.info("Connecting to server: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
@@ -215,13 +214,6 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
         resumeMessageRedelivery()
     }
-
-    /**
-     * If the message broker is running locally and [serverHostPort] specifies a public IP, the messaging client will
-     * fail to connect on nodes under a NAT with no loopback support. As the local message broker is listening on
-     * all interfaces it is safer to always use `localhost` instead.
-     */
-    private fun getBrokerAddress() = if (isServerLocal) HostAndPort.fromParts("localhost", serverHostPort.port) else serverHostPort
 
     /**
      * We make the consumer twice, once to filter for just network map messages, and then once that is complete, we close

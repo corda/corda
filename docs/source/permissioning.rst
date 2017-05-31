@@ -22,8 +22,6 @@ The following information from the node configuration file is needed to generate
     .. note:: In a future version the uniqueness requirement will be relaxed to a X.500 name. This will allow differentiation
         between entities with the same name.
 
-:nearestCity: e.g. "London"
-
 :emailAddress: e.g. "admin@company.com"
 
 :certificateSigningService: Doorman server URL. A doorman server will be hosted by R3 in the near

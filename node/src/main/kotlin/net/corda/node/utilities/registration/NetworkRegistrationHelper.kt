@@ -123,7 +123,6 @@ class NetworkRegistrationHelper(val config: NodeConfiguration, val certService: 
             println("Certificate signing request with the following information will be submitted to the Corda certificate signing server.")
             println()
             println("Legal Name: ${config.myLegalName}")
-            println("Nearest City: ${config.nearestCity}")
             println("Email: ${config.emailAddress}")
             println()
             println("Public Key: ${keyPair.public}")
