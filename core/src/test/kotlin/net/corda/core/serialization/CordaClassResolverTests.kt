@@ -8,7 +8,9 @@ import net.corda.core.node.AttachmentClassLoaderTests
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.testing.node.MockAttachmentStorage
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExpectedException
 
 @CordaSerializable
 enum class Foo {
@@ -59,6 +61,18 @@ class CustomSerializable : KryoSerializable {
 @CordaSerializable
 @DefaultSerializer(DefaultSerializableSerializer::class)
 class DefaultSerializable
+
+@CordaNotSerializable
+open class NotSerialisedElement
+
+open class SubNotSerialisedElement : NotSerialisedElement()
+
+class SubSubNotSerialisedElement : SubNotSerialisedElement()
+
+@CordaNotSerializable
+interface NotSerializableInterface
+
+interface SubNotSerializableInterface : NotSerializableInterface
 
 class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
@@ -159,5 +173,29 @@ class CordaClassResolverTests {
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubElement::class.java)
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubSubElement::class.java)
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerializableViaSuperSubInterface::class.java)
+    }
+
+    @get:Rule
+    val expectedEx = ExpectedException.none()
+
+    @Test
+    @Throws(Exception::class)
+    fun `Catch CordaNotSerialisable interface`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerialisedElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerialisedElement::class.java)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun `Catch CordaNotSerialisable subinterface`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SubNotSerialisedElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubNotSerialisedElement::class.java)
+    }
+
+    @Test
+    fun `Annotation is needed for blacklisting`() {
+
     }
 }
