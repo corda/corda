@@ -154,7 +154,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    open fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
+    open fun findMyLocation(): PhysicalLocation? {
+        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
+    }
 
     lateinit var info: NodeInfo
     lateinit var storage: TxWritableStorageService
