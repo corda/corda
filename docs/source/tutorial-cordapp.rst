@@ -777,7 +777,6 @@ like to deploy for testing. See further details below:
       networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node to be used as the network map.
       node {
           name "CN=Controller,O=R3,OU=corda,L=London,C=UK" // Distinguished name of node to be deployed.
-          nearestCity "London"                             // For use with the network visualiser.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           p2pPort 10002
           rpcPort 10003                                    // Usually 1 higher than the messaging port.
@@ -786,7 +785,6 @@ like to deploy for testing. See further details below:
       }
       node {                                               // Create an additional node.
           name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
-          nearestCity "London"
           advertisedServices = []
           p2pPort 10005
           rpcPort 10006

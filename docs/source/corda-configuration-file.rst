@@ -35,7 +35,6 @@ NetworkMapService plus Simple Notary configuration file.
 .. parsed-literal::
 
     myLegalName : "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
-    nearestCity : "London"
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
     p2pAddress : "localhost:12345"
@@ -55,9 +54,6 @@ path to the node's base directory.
 
 :myLegalName: The legal identity of the node acts as a human readable alias to the node's public key and several demos use
     this to lookup the NodeInfo.
-
-:nearestCity: The location of the node as used to locate coordinates on the world map when running the network simulator
-    demo. See :doc:`network-simulator`.
 
 :keyStorePassword: The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
     node certificate and private key.
