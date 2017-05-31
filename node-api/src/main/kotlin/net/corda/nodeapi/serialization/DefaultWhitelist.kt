@@ -40,7 +40,6 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(Unit::class.java)
             addToWhitelist(java.io.ByteArrayInputStream::class.java)
             addToWhitelist(java.lang.Class::class.java)
-            addToWhitelist(java.math.BigDecimal::class.java)
             addToWhitelist(java.security.KeyPair::class.java)
 
             // Matches the list in TimeSerializers.addDefaultSerializers:
