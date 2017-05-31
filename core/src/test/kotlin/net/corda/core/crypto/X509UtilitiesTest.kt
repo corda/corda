@@ -5,14 +5,13 @@ import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.core.crypto.X509Utilities.createSelfSignedCACertificate
 import net.corda.core.div
-import net.corda.core.mapToArray
+import net.corda.core.toTypedArray
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.junit.Rule
@@ -21,7 +20,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
-import java.math.BigInteger
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.file.Path
@@ -31,6 +29,7 @@ import java.security.SecureRandom
 import java.security.cert.Certificate
 import java.security.cert.X509Certificate
 import java.util.*
+import java.util.stream.Stream
 import javax.net.ssl.*
 import kotlin.concurrent.thread
 import kotlin.test.*
@@ -94,7 +93,7 @@ class X509UtilitiesTest {
         // Save the EdDSA private key with self sign cert in the keystore.
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", keyPair.private, "password".toCharArray(),
-                listOf(selfSignCert).mapToArray(converter::getCertificate))
+                Stream.of(selfSignCert).map(converter::getCertificate).toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
@@ -120,7 +119,7 @@ class X509UtilitiesTest {
         val converter = JcaX509CertificateConverter()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", edDSAKeypair.private, "password".toCharArray(),
-                listOf(ecDSACert, edDSACert).mapToArray(converter::getCertificate))
+                Stream.of(ecDSACert, edDSACert).map(converter::getCertificate).toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
@@ -360,7 +359,7 @@ class X509UtilitiesTest {
         keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA,
                 intermediateCAKeyPair.private,
                 keyPass,
-                listOf(intermediateCACert, rootCACert).mapToArray<X509CertificateHolder, Certificate>(converter::getCertificate))
+                Stream.of(intermediateCACert, rootCACert).map(converter::getCertificate).toTypedArray<Certificate>())
 
         keyStore.save(keyStoreFilePath, storePassword)
 

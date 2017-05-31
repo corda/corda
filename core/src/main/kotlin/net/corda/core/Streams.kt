@@ -27,6 +27,6 @@ private fun IntProgression.spliteratorOfInt(): Spliterator.OfInt {
 fun IntProgression.stream(): IntStream = StreamSupport.intStream(spliteratorOfInt(), false)
 
 @Suppress("UNCHECKED_CAST") // When toArray has filled in the array, the component type is no longer T? but T (that may itself be nullable).
-inline fun <reified T> Stream<T>.toTypedArray() = toArray { size -> arrayOfNulls<T>(size) } as Array<T>
+inline fun <reified T> Stream<out T>.toTypedArray() = toArray { size -> arrayOfNulls<T>(size) } as Array<T>
 
 fun <T> Stream<T>.singleOrNull() = asSequence().singleOrNull()
