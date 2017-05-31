@@ -459,12 +459,12 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
 }
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeNoClassListClassResolver())) }.build()
+private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeBlackListOnlyClassResolver())) }.build()
 private val kryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeStandardClassResolver())) }.build()
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 @VisibleForTesting
-fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeNoClassListClassResolver()))
+fun createTestKryo(): Kryo = DefaultKryoCustomizer.customize(CordaKryo(makeAcceptAllClassResolver()))
 
 /**
  * We need to disable whitelist checking during calls from our Kryo code to register a serializer, since it checks

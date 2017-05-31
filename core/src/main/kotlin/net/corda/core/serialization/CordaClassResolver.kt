@@ -18,11 +18,15 @@ fun Kryo.addToWhitelist(type: Class<*>) {
 }
 
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), )
+    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), EmptyClassList) // TODO: blacklist -> GlobalTransient
 }
 
-fun makeNoClassListClassResolver(): ClassResolver {
+fun makeAcceptAllClassResolver(): ClassResolver {
     return CordaClassResolver(AllClassList, EmptyClassList)
+}
+
+fun makeBlackListOnlyClassResolver(): ClassResolver {
+    return CordaClassResolver(AllClassList, EmptyClassList) // TODO: blacklist -> GlobalTransient
 }
 
 class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : DefaultClassResolver() {
@@ -57,6 +61,7 @@ class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : D
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         // First check for blacklisted classes.
         if (blacklist.hasListed(type)) {
+            print("BlackListed ${Util.className(type)}" + blacklist.javaClass.name)
             throw KryoException("Class ${Util.className(type)} is blacklisted and cannot be used in serialization")
         }
         // Check for @CordaSerizalizable annotation or whitelisted.
@@ -161,7 +166,6 @@ class GlobalTransientClassList(val delegate: ClassList) : MutableClassList, Clas
         classlist += entry.name
     }
 }
-
 
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist

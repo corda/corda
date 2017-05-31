@@ -74,67 +74,67 @@ class CordaClassResolverTests {
     fun `Annotation on enum works for specialised entries`() {
         // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
         @Suppress("UNSUPPORTED_FEATURE")
-        CordaClassResolver(EmptyClassList, ).getRegistration(Foo.Bar::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(Foo.Bar::class.java)
     }
 
     @Test
     fun `Annotation on array element works`() {
         val values = arrayOf(Element())
-        CordaClassResolver(EmptyClassList, ).getRegistration(values.javaClass)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(values.javaClass)
     }
 
     @Test
     fun `Annotation not needed on abstract class`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(AbstractClass::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(AbstractClass::class.java)
     }
 
     @Test
     fun `Annotation not needed on interface`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(Interface::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(Interface::class.java)
     }
 
     @Test
     fun `Calling register method on modified Kryo does not consult the whitelist`() {
-        val kryo = CordaKryo(CordaClassResolver(EmptyClassList, ))
+        val kryo = CordaKryo(CordaClassResolver(EmptyClassList, EmptyClassList))
         kryo.register(NotSerializable::class.java)
     }
 
     @Test(expected = KryoException::class)
     fun `Calling register method on unmodified Kryo does consult the whitelist`() {
-        val kryo = Kryo(CordaClassResolver(EmptyClassList, ), MapReferenceResolver())
+        val kryo = Kryo(CordaClassResolver(EmptyClassList, EmptyClassList), MapReferenceResolver())
         kryo.register(NotSerializable::class.java)
     }
 
     @Test(expected = KryoException::class)
     fun `Annotation is needed without whitelisting`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(NotSerializable::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerializable::class.java)
     }
 
     @Test
     fun `Annotation is not needed with whitelisting`() {
-        val resolver = CordaClassResolver(GlobalTransientClassList(EmptyClassList), )
+        val resolver = CordaClassResolver(GlobalTransientClassList(EmptyClassList), EmptyClassList)
         (resolver.whitelist as MutableClassList).add(NotSerializable::class.java)
         resolver.getRegistration(NotSerializable::class.java)
     }
 
     @Test
     fun `Annotation not needed on Object`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(Object::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(Object::class.java)
     }
 
     @Test
     fun `Annotation not needed on primitive`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(Integer.TYPE)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(Integer.TYPE)
     }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work for custom serializable`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(CustomSerializable::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(CustomSerializable::class.java)
     }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with Kryo annotation`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(DefaultSerializable::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(DefaultSerializable::class.java)
     }
 
     private fun importJar(storage: AttachmentStorage) = AttachmentClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it) }
@@ -145,19 +145,19 @@ class CordaClassResolverTests {
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
         val attachedClass = Class.forName("net.corda.contracts.isolated.AnotherDummyContract", true, classLoader)
-        CordaClassResolver(EmptyClassList, ).getRegistration(attachedClass)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(attachedClass)
     }
 
     @Test
     fun `Annotation is inherited from interfaces`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(SerializableViaInterface::class.java)
-        CordaClassResolver(EmptyClassList, ).getRegistration(SerializableViaSubInterface::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerializableViaInterface::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerializableViaSubInterface::class.java)
     }
 
     @Test
     fun `Annotation is inherited from superclass`() {
-        CordaClassResolver(EmptyClassList, ).getRegistration(SubElement::class.java)
-        CordaClassResolver(EmptyClassList, ).getRegistration(SubSubElement::class.java)
-        CordaClassResolver(EmptyClassList, ).getRegistration(SerializableViaSuperSubInterface::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubElement::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubSubElement::class.java)
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerializableViaSuperSubInterface::class.java)
     }
 }
