@@ -8,6 +8,7 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
 import net.corda.node.driver.addressMustNotBeBound
@@ -110,6 +111,7 @@ abstract class NodeBasedTest {
                            serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
+                DUMMY_CA,
                 serviceType.id,
                 notaryName)
 
