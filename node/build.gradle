@@ -83,7 +83,10 @@ dependencies {
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
+    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        // Gains our proton-j version from core module.
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
