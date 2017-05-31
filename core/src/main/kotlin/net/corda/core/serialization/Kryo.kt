@@ -70,6 +70,7 @@ import kotlin.reflect.jvm.javaType
  * in invalid states, thus violating system invariants. It isn't designed to handle malicious streams and therefore,
  * isn't usable beyond the prototyping stage. But that's fine: we can revisit serialisation technologies later after
  * a formal evaluation process.
+ * Update: one can use class blacklisting to meet some (if not all) of the aforementioned security requirements.
  *
  * We now distinguish between internal, storage related Kryo and external, network facing Kryo.  We presently use
  * some non-whitelisted classes as part of internal storage.

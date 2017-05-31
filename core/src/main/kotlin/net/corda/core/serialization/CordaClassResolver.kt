@@ -17,24 +17,33 @@ fun Kryo.addToWhitelist(type: Class<*>) = ((classResolver as? CordaClassResolver
 
 fun Kryo.addToBlacklist(type: Class<*>) = ((classResolver as? CordaClassResolver)?.blacklist as? MutableClassList)?.add(type)
 
+/** Support both a whitelist and a blacklist. */
 fun makeStandardClassResolver(): ClassResolver {
     return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), GlobalTransientClassList(EmptyClassList))
 }
 
+/** Allow everything for serialisation. */
 fun makeAcceptAllClassResolver(): ClassResolver {
     return CordaClassResolver(AllClassList, EmptyClassList)
 }
 
+/** Allow everything except those in the blacklist. */
 fun makeBlackListOnlyClassResolver(): ClassResolver {
     return CordaClassResolver(AllClassList, GlobalTransientClassList(EmptyClassList))
 }
 
+/**
+ * Handles class registration for serialisation.
+ * It requires a whitelist [ClassList] for those allowed to be serialised.
+ * and a blacklist [ClassList] for those not permitted to be serialised.
+ */
 class CordaClassResolver(val whitelist: ClassList, val blacklist: ClassList) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
         return super.getRegistration(type) ?: checkClass(type)
     }
     // both white and black lists are enabled.
+    // TODO: check if separate whitelist and blacklist enable is required.
     private var classListsEnabled = true
 
     fun disableWhiteAndBlackLists() {

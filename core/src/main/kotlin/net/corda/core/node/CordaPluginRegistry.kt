@@ -36,11 +36,13 @@ abstract class CordaPluginRegistry {
     open val servicePlugins: List<Function<PluginServiceHub, out Any>> get() = emptyList()
 
     /**
-     * Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.
+     * Optionally whitelist/blacklist types for use in object serialization, as we lock down the types that can be serialized.
      *
      * For example, if you add a new [net.corda.core.contracts.ContractState] it needs to be whitelisted.  You can do that
      * either by adding the [net.corda.core.serialization.CordaSerializable] annotation or via this method.
-     **
+     * The same applies for blacklisting as the input interface [SerializationCustomization] supports
+     * both addToWhitelist and addToBlacklist methods.
+     *
      * @return true if you register types, otherwise you will be filtered out of the list of plugins considered in future.
      */
     open fun customizeSerialization(custom: SerializationCustomization): Boolean = false
