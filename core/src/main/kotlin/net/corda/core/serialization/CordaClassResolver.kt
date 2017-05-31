@@ -17,6 +17,10 @@ fun Kryo.addToWhitelist(type: Class<*>) {
     ((classResolver as? CordaClassResolver)?.whitelist as? MutableClassList)?.add(type)
 }
 
+fun Kryo.addToBlacklist(type: Class<*>) {
+    ((classResolver as? CordaClassResolver)?.blacklist as? MutableClassList)?.add(type)
+}
+
 fun makeStandardClassResolver(): ClassResolver {
     return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), EmptyClassList) // TODO: blacklist -> GlobalTransient
 }
