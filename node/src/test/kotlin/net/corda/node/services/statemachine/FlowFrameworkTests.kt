@@ -14,6 +14,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSessionException
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -673,10 +674,10 @@ class FlowFrameworkTests {
 
     private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
         initiatingFlowClass: KClass<out FlowLogic<*>>,
-        noinline flowFactory: (Party) -> P): ListenableFuture<P>
+        noinline flowFactory: (PartyAndCertificate) -> P): ListenableFuture<P>
     {
         val observable = registerFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
-            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
+            override fun createFlow(platformVersion: Int, otherParty: PartyAndCertificate, sessionInit: SessionInit): P {
                 return flowFactory(otherParty)
             }
         }, P::class.java, track = true)

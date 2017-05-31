@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
@@ -66,6 +67,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         val replicaNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         ServiceIdentityGenerator.generateToDisk(
                 replicaNames.map { baseDirectory(it) },
+                DUMMY_CA,
                 serviceType.id,
                 clusterName,
                 minCorrectReplicas(clusterSize))

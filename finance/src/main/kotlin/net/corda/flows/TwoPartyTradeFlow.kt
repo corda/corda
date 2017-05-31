@@ -7,7 +7,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
@@ -61,7 +61,7 @@ object TwoPartyTradeFlow {
     data class SignaturesFromSeller(val sellerSig: DigitalSignature.WithKey,
                                     val notarySig: DigitalSignature.WithKey)
 
-    open class Seller(val otherParty: Party,
+    open class Seller(val otherParty: PartyAndCertificate,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
@@ -141,8 +141,8 @@ object TwoPartyTradeFlow {
         }
     }
 
-    open class Buyer(val otherParty: Party,
-                     val notary: Party,
+    open class Buyer(val otherParty: PartyAndCertificate,
+                     val notary: PartyAndCertificate,
                      val acceptablePrice: Amount<Currency>,
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2

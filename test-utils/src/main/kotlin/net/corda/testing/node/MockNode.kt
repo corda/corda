@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -14,6 +15,7 @@ import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
@@ -38,6 +40,7 @@ import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
 import java.security.KeyPair
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -68,7 +71,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
 
-    val identities = ArrayList<Party>()
+    val identities = ArrayList<PartyAndCertificate>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
@@ -162,7 +165,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities)
+        // TODO: Specify a CA to validate registration against
+        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities, trustRoot = null as X509Certificate?)
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
@@ -187,7 +191,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, Party(it.identity.name, override.public))
+                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
                     } else {
                         it
                     }

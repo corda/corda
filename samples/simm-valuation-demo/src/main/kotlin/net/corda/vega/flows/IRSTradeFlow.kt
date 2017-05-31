@@ -6,6 +6,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -20,7 +21,7 @@ object IRSTradeFlow {
 
     @InitiatingFlow
     @StartableByRPC
-    class Requester(val swap: SwapData, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+    class Requester(val swap: SwapData, val otherParty: PartyAndCertificate) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
             require(serviceHub.networkMapCache.notaryNodes.isNotEmpty()) { "No notary nodes registered" }

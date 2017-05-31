@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
@@ -139,7 +140,7 @@ class AttachmentSerializationTest {
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int) {
         server.registerFlowFactory(ClientLogic::class.java, object : InitiatedFlowFactory<ServerLogic> {
-            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): ServerLogic {
+            override fun createFlow(platformVersion: Int, otherParty: PartyAndCertificate, sessionInit: SessionInit): ServerLogic {
                 return ServerLogic(otherParty)
             }
         }, ServerLogic::class.java, track = false)
