@@ -1,6 +1,6 @@
 package net.corda.node.internal
 
-import net.corda.nodeapi.internal.addShutdownHook
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.div
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
