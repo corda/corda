@@ -123,21 +123,23 @@ You will notice that successive transactions get signed by different members of 
 
 To run the Raft version of the demo from the command line in Unix:
 
-1. Run ``./gradlew samples:notary-demo:deployNodesRaft``, which will create node directories with configs under ``samples/notary-demo/build/nodes``.
-2. Run ``./samples/notary-demo/build/nodes/runnodes``, which will start the nodes in separate terminal windows/tabs.
+1. Run ``./gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
+with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+2. Run ``./samples/notary-demo/build/nodes/nodesRaft/runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``./gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
 To run from the command line in Windows:
 
-1. Run ``gradlew samples:notary-demo:deployNodesRaft``, which will create node directories with configs under ``samples\notary-demo\build\nodes``.
-2. Run ``samples\notary-demo\build\nodes\runnodes``, which will start the nodes in separate terminal windows/tabs.
+1. Run ``gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
+with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+2. Run ``samples\notary-demo\build\nodes\nodesRaft\runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
    In a few seconds you will see a message "Notarised 10 transactions" with a list of transaction ids and the signer public keys
 
-To run the BFT SMaRt notary demo, use ``deployNodesBFT`` instead of ``deployNodesRaft``. For a single notary node, use ``deployNodesSingle``.
+To run the BFT SMaRt notary demo, use ``nodesBFT`` instead of ``nodesRaft`` in the path. For a single notary node, use ``nodesSingle``.
 
 Notary nodes store consumed states in a replicated commit log, which is backed by a H2 database on each node.
 You can ascertain that the commit log is synchronised across the cluster by accessing and comparing each of the nodes' backing stores
