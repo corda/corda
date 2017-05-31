@@ -6,9 +6,10 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -86,11 +87,10 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.registerServiceFlow(clientFlowClass = NotifyTxFlow::class, serviceFlowFactory = ::NotifyTransactionHandler)
+        walletServiceNode.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
         network.runNetwork()
     }
-
 
     @InitiatingFlow
     private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
@@ -98,4 +98,9 @@ class DataVendingServiceTests {
         override fun call() = send(otherParty, NotifyTxRequest(stx))
     }
 
+    @InitiatedBy(NotifyTxFlow::class)
+    private class InitiateNotifyTxFlow(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = subFlow(NotifyTransactionHandler(otherParty))
+    }
 }

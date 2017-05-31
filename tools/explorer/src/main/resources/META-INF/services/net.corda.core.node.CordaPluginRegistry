@@ -1,2 +1,0 @@
-# Register a ServiceLoader service extending from net.corda.node.CordaPluginRegistry
-net.corda.explorer.plugin.ExplorerPlugin

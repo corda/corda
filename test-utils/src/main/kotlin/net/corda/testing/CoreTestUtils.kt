@@ -4,24 +4,21 @@
 package net.corda.testing
 
 import com.google.common.net.HostAndPort
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
-import net.corda.core.flows.FlowLogic
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.commonName
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.toFuture
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
-import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.*
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
@@ -36,7 +33,6 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.reflect.KClass
 
 /**
  *  JAVA INTEROP
@@ -137,19 +133,6 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
-
-/**
- * The given flow factory will be used to initiate just one instance of a flow of type [P] when a counterparty
- * flow requests for it using [clientFlowClass].
- * @return Returns a [ListenableFuture] holding the single [FlowStateMachineImpl] created by the request.
- */
-inline fun <reified P : FlowLogic<*>> AbstractNode.initiateSingleShotFlow(
-        clientFlowClass: KClass<out FlowLogic<*>>,
-        noinline serviceFlowFactory: (Party) -> P): ListenableFuture<P> {
-    val future = smm.changes.filter { it is StateMachineManager.Change.Add && it.logic is P }.map { it.logic as P }.toFuture()
-    services.registerServiceFlow(clientFlowClass.java, serviceFlowFactory)
-    return future
-}
 
 // TODO Replace this with testConfiguration
 data class TestNodeConfiguration(

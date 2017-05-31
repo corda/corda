@@ -32,7 +32,7 @@ class SimmValuationTest : IntegrationTestCategory {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true) {
+        driver(isDebug = true, systemProperties = mapOf("net.corda.node.cordapp.scan.package" to "net.corda.vega")) {
             startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
             val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
@@ -50,8 +50,9 @@ class SimmValuationTest : IntegrationTestCategory {
         }
     }
 
-    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty =
-            getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
+    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty {
+        return getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
+    }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
         return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")

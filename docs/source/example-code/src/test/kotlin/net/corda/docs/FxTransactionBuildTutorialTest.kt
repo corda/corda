@@ -29,14 +29,11 @@ class FxTransactionBuildTutorialTest {
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
         notaryNode = net.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = net.createPartyNode(notaryNode.info.address)
         nodeB = net.createPartyNode(notaryNode.info.address)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
     @After

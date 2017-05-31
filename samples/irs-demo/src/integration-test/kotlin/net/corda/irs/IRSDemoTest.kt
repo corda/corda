@@ -33,7 +33,11 @@ class IRSDemoTest : IntegrationTestCategory {
 
     @Test
     fun `runs IRS demo`() {
-        driver(useTestClock = true, isDebug = true) {
+        driver(
+                useTestClock = true,
+                isDebug = true,
+                systemProperties = mapOf("net.corda.node.cordapp.scan.package" to "net.corda.irs"))
+        {
             val (controller, nodeA, nodeB) = Futures.allAsList(
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
@@ -83,16 +87,20 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun runTrade(nodeAddr: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example-irs-trade.json"), Charsets.UTF_8.name())
+        val fileContents = loadResourceFile("net/corda/irs/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
         assertThat(postJson(url, tradeFile)).isTrue()
     }
 
     private fun runUploadRates(host: HostAndPort) {
-        val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name())
+        val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
         val url = URL("http://$host/upload/interest-rates")
         assertThat(uploadFile(url, fileContents)).isTrue()
+    }
+
+    private fun loadResourceFile(filename: String): String {
+        return IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream(filename), Charsets.UTF_8.name())
     }
 
     private fun getTradeCount(nodeAddr: HostAndPort): Int {

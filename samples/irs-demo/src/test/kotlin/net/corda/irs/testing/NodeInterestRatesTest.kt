@@ -210,8 +210,10 @@ class NodeInterestRatesTest {
         val net = MockNetwork()
         val n1 = net.createNotaryNode()
         val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
+        n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+        n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {
-            n2.findService<NodeInterestRates.Service>().oracle.knownFixes = TEST_DATA
+            n2.installCordaService(NodeInterestRates.Oracle::class.java).knownFixes = TEST_DATA
         }
         val tx = TransactionType.General.Builder(null)
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
@@ -233,7 +235,8 @@ class NodeInterestRatesTest {
                             fixOf: FixOf,
                             expectedRate: BigDecimal,
                             rateTolerance: BigDecimal,
-                            progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name)) : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
+                            progressTracker: ProgressTracker = RatesFixFlow.tracker(fixOf.name))
+        : RatesFixFlow(tx, oracle, fixOf, expectedRate, rateTolerance, progressTracker) {
         override fun filtering(elem: Any): Boolean {
             return when (elem) {
                 is Command -> oracle.owningKey in elem.signers && elem.value is Fix
@@ -242,5 +245,6 @@ class NodeInterestRatesTest {
         }
     }
 
-    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
+    private fun makeTX() = TransactionType.General.Builder(DUMMY_NOTARY).withItems(
+        1000.DOLLARS.CASH `issued by` DUMMY_CASH_ISSUER `owned by` ALICE `with notary` DUMMY_NOTARY)
 }
