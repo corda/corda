@@ -4,24 +4,18 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
 import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.core.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
-import net.corda.core.days
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StateMachineRunId
-import net.corda.core.getOrThrow
+import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.AbstractParty
-import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
-import net.corda.core.rootCause
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -86,9 +80,10 @@ class TwoPartyTradeFlowTests {
         net = MockNetwork(false, true)
 
         ledger {
-            val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
-            val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
+            val basketOfNodes = net.createSomeNodes(2)
+            val notaryNode = basketOfNodes.notaryNode
+            val aliceNode = basketOfNodes.partyNodes[0]
+            val bobNode = basketOfNodes.partyNodes[1]
 
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
@@ -137,8 +132,7 @@ class TwoPartyTradeFlowTests {
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
-            val cashStates =
-                bobNode.database.transaction {
+            val cashStates = bobNode.database.transaction {
                     bobNode.services.fillWithSomeTestCash(2000.DOLLARS, notaryNode.info.notaryIdentity, 3, 3)
                 }
 
@@ -239,7 +233,7 @@ class TwoPartyTradeFlowTests {
             }, true, BOB.name)
 
             // Find the future representing the result of this state machine again.
-            val bobFuture = bobNode.smm.findStateMachines(Buyer::class.java).single().second
+            val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
             // And off we go again.
             net.runNetwork()
@@ -489,25 +483,42 @@ class TwoPartyTradeFlowTests {
                                   sellerNode: MockNetwork.MockNode,
                                   buyerNode: MockNetwork.MockNode,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
-        @InitiatingFlow
-        class SellerRunnerFlow(val buyer: Party, val notary: NodeInfo) : FlowLogic<SignedTransaction>() {
-            @Suspendable
-            override fun call(): SignedTransaction = subFlow(Seller(
-                    buyer,
-                    notary,
-                    assetToSell,
-                    1000.DOLLARS,
-                    serviceHub.legalIdentityKey))
-        }
-
         sellerNode.services.identityService.registerIdentity(buyerNode.info.legalIdentity)
         buyerNode.services.identityService.registerIdentity(sellerNode.info.legalIdentity)
-        val buyerFuture = buyerNode.initiateSingleShotFlow(SellerRunnerFlow::class) { otherParty ->
-            Buyer(otherParty, notaryNode.info.notaryIdentity, 1000.DOLLARS, CommercialPaper.State::class.java)
-        }.map { it.stateMachine }
-        val seller = SellerRunnerFlow(buyerNode.info.legalIdentity, notaryNode.info)
-        val sellerResultFuture = sellerNode.services.startFlow(seller).resultFuture
-        return RunResult(buyerFuture, sellerResultFuture, seller.stateMachine.id)
+        val buyerFlows: Observable<BuyerAcceptor> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
+        val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
+        val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS)
+        val sellerResult = sellerNode.services.startFlow(seller).resultFuture
+        return RunResult(firstBuyerFiber, sellerResult, seller.stateMachine.id)
+    }
+
+    @InitiatingFlow
+    class SellerInitiator(val buyer: Party,
+                          val notary: NodeInfo,
+                          val assetToSell: StateAndRef<OwnableState>,
+                          val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            send(buyer, Pair(notary.notaryIdentity, price))
+            return subFlow(Seller(
+                buyer,
+                notary,
+                assetToSell,
+                price,
+                serviceHub.legalIdentityKey))
+        }
+    }
+
+    @InitiatedBy(SellerInitiator::class)
+    class BuyerAcceptor(val seller: Party) : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            val (notary, price) = receive<Pair<Party, Amount<Currency>>>(seller).unwrap {
+                require(serviceHub.networkMapCache.isNotary(it.first)) { "${it.first} is not a notary" }
+                it
+            }
+            return subFlow(Buyer(seller, notary, price, CommercialPaper.State::class.java))
+        }
     }
 
     private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.runWithError(

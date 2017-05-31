@@ -15,7 +15,7 @@ import net.corda.core.utilities.UntrustworthyData
 interface SessionMessage
 
 data class SessionInit(val initiatorSessionId: Long,
-                       val clientFlowClass: Class<out FlowLogic<*>>,
+                       val initiatingFlowClass: Class<out FlowLogic<*>>,
                        val flowVerison: Int,
                        val firstPayload: Any?) : SessionMessage
 

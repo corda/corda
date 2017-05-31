@@ -419,48 +419,56 @@ sequence of message transfers. Flows end pre-maturely due to exceptions, and as 
 
 Taking a step back, we mentioned that the other side has to accept the session request for there to be a communication
 channel. A node accepts a session request if it has registered the flow type (the fully-qualified class name) that is
-making the request - each session initiation includes the initiating flow type. The registration is done by a CorDapp
-which has made available the particular flow communication, using ``PluginServiceHub.registerServiceFlow``. This method
-specifies a flow factory for generating the counter-flow to any given initiating flow. If this registration doesn't exist
-then no further communication takes place and the initiating flow ends with an exception. The initiating flow has to be
-annotated with ``InitiatingFlow``.
+making the request - each session initiation includes the initiating flow type. This registration is done automatically
+by the node at startup by searching for flows which are annotated with ``@InitiatedBy``. This annotation points to the
+flow that is doing the initiating, and this flow must be annotated with ``@InitiatingFlow``. The ``InitiatedBy`` flow
+must have a constructor which takes in a single parameter of type ``Party`` - this is the initiating party.
 
 Going back to our buyer and seller flows, we need a way to initiate communication between the two. This is typically done
-with one side started manually using the ``startFlowDynamic`` RPC and this initiates the counter-flow on the other side.
-In this case it doesn't matter which flow is the initiator and which is the initiated, which is why neither ``Buyer`` nor
-``Seller`` are annotated with ``InitiatingFlow``. For example, if we choose the seller side as the initiator then we need
-to create a simple seller starter flow that has the annotation we need:
+with one side started manually using the ``startFlowDynamic`` RPC and this initiates the flow on the other side. In our
+case it doesn't matter which flow is the initiator and which is the initiated, which is why neither ``Buyer`` nor ``Seller``
+are annotated with ``InitiatedBy`` or ``InitiatingFlow``. If we, for example, choose the seller side as the initiator then
+we need to create a simple seller starter flow that has the annotation we need:
 
 .. container:: codeset
 
     .. sourcecode:: kotlin
 
         @InitiatingFlow
-        class SellerStarter(val otherParty: Party, val assetToSell: StateAndRef<OwnableState>, val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
+        class SellerInitiator(val buyer: Party,
+                              val notary: NodeInfo,
+                              val assetToSell: StateAndRef<OwnableState>,
+                              val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
             @Suspendable
             override fun call(): SignedTransaction {
-                val notary: NodeInfo = serviceHub.networkMapCache.notaryNodes[0]
-                val cpOwnerKey: PublicKey = serviceHub.legalIdentityKey
-                return subFlow(TwoPartyTradeFlow.Seller(otherParty, notary, assetToSell, price, cpOwnerKey))
+                send(buyer, Pair(notary.notaryIdentity, price))
+                return subFlow(Seller(
+                    buyer,
+                    notary,
+                    assetToSell,
+                    price,
+                    serviceHub.legalIdentityKey))
             }
         }
 
-The buyer side would then need to register their flow, perhaps with something like:
+The buyer side would look something like this. Notice the constructor takes in a single ``Party`` object which represents
+the seller.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        val services: PluginServiceHub = TODO()
-        services.registerServiceFlow(SellerStarter::class.java) { otherParty ->
-            val notary = services.networkMapCache.notaryNodes[0]
-            val acceptablePrice = TODO()
-            val typeToBuy = TODO()
-            Buyer(otherParty, notary, acceptablePrice, typeToBuy)
+        @InitiatedBy(SellerInitiator::class)
+        class BuyerAcceptor(val seller: Party) : FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() {
+                val (notary, price) = receive<Pair<Party, Amount<Currency>>>(seller).unwrap {
+                    require(serviceHub.networkMapCache.isNotary(it.first)) { "${it.first} is not a notary" }
+                    it
+                }
+                subFlow(Buyer(seller, notary, price, CommercialPaper.State::class.java))
+            }
         }
-
-This is telling the buyer node to fire up an instance of ``Buyer`` (the code in the lambda) when the initiating flow
-is a seller (``SellerStarter::class.java``).
 
 .. _progress-tracking:
 

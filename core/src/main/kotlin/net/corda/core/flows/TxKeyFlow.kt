@@ -15,7 +15,7 @@ import java.security.cert.X509Certificate
  * This is intended for use as a subflow of another flow.
  */
 object TxKeyFlow {
-    abstract class AbstractIdentityFlow(val otherSide: Party, val revocationEnabled: Boolean): FlowLogic<Map<Party, AnonymousIdentity>>() {
+    abstract class AbstractIdentityFlow<out T>(val otherSide: Party): FlowLogic<T>() {
         fun validateIdentity(untrustedIdentity: Pair<X509CertificateHolder, CertPath>): AnonymousIdentity {
             val (wellKnownCert, certPath) = untrustedIdentity
             val theirCert = certPath.certificates.last()
@@ -26,20 +26,21 @@ object TxKeyFlow {
                     val anonymousParty = AnonymousParty(theirCert.publicKey)
                     serviceHub.identityService.registerPath(wellKnownCert, anonymousParty, certPath)
                     AnonymousIdentity(certPath, X509CertificateHolder(theirCert.encoded), anonymousParty)
-                } else
-                    throw IllegalStateException("Expected certificate subject to be ${otherSide.name} but found ${certName}")
-            } else
+                } else {
+                    throw IllegalStateException("Expected certificate subject to be ${otherSide.name} but found $certName")
+                }
+            } else {
                 throw IllegalStateException("Expected an X.509 certificate but received ${theirCert.javaClass.name}")
+            }
         }
     }
 
     @StartableByRPC
     @InitiatingFlow
     class Requester(otherSide: Party,
-                    revocationEnabled: Boolean,
-                    override val progressTracker: ProgressTracker) : AbstractIdentityFlow(otherSide, revocationEnabled) {
-        constructor(otherSide: Party,
-                    revocationEnabled: Boolean) : this(otherSide, revocationEnabled, tracker())
+                    val revocationEnabled: Boolean,
+                    override val progressTracker: ProgressTracker) : AbstractIdentityFlow<Map<Party, AnonymousIdentity>>(otherSide) {
+        constructor(otherSide: Party, revocationEnabled: Boolean) : this(otherSide, revocationEnabled, tracker())
 
         companion object {
             object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
@@ -62,26 +63,21 @@ object TxKeyFlow {
      * Flow which waits for a key request from a counterparty, generates a new key and then returns it to the
      * counterparty and as the result from the flow.
      */
-    class Provider(otherSide: Party,
-                   revocationEnabled: Boolean,
-                   override val progressTracker: ProgressTracker) : AbstractIdentityFlow(otherSide,revocationEnabled) {
-        constructor(otherSide: Party,
-                    revocationEnabled: Boolean = false) : this(otherSide, revocationEnabled, tracker())
-
+    @InitiatedBy(Requester::class)
+    class Provider(otherSide: Party) : AbstractIdentityFlow<Unit>(otherSide) {
         companion object {
             object SENDING_KEY : ProgressTracker.Step("Sending key")
-
-            fun tracker() = ProgressTracker(SENDING_KEY)
         }
 
+        override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
+
         @Suspendable
-        override fun call(): Map<Party, AnonymousIdentity> {
+        override fun call() {
+            val revocationEnabled = false
             progressTracker.currentStep = SENDING_KEY
             val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentity, revocationEnabled)
             send(otherSide, myIdentityFragment)
-            val theirIdentity = receive<Pair<X509CertificateHolder, CertPath>>(otherSide).unwrap { validateIdentity(it) }
-            return mapOf(Pair(otherSide, AnonymousIdentity(myIdentityFragment)),
-                    Pair(serviceHub.myInfo.legalIdentity, theirIdentity))
+            receive<Pair<X509CertificateHolder, CertPath>>(otherSide).unwrap { validateIdentity(it) }
         }
     }
 

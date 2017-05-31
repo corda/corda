@@ -1,13 +1,15 @@
 package net.corda.core.flows;
 
-import co.paralleluniverse.fibers.*;
+import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.identity.Party;
-import net.corda.testing.node.*;
-import org.junit.*;
+import net.corda.testing.node.MockNetwork;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.util.concurrent.*;
+import java.util.concurrent.Future;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class FlowsInJavaTest {
 
@@ -30,13 +32,12 @@ public class FlowsInJavaTest {
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
-        node2.getServices().registerServiceFlow(SendInUnwrapFlow.class, (otherParty) -> new OtherFlow(otherParty, "Hello"));
+        node2.registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
         net.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
 
-    @SuppressWarnings("unused")
     @InitiatingFlow
     private static class SendInUnwrapFlow extends FlowLogic<String> {
         private final Party otherParty;
@@ -55,19 +56,18 @@ public class FlowsInJavaTest {
         }
     }
 
-    private static class OtherFlow extends FlowLogic<String> {
+    @InitiatedBy(SendInUnwrapFlow.class)
+    private static class SendHelloAndThenReceive extends FlowLogic<String> {
         private final Party otherParty;
-        private final String payload;
 
-        private OtherFlow(Party otherParty, String payload) {
+        private SendHelloAndThenReceive(Party otherParty) {
             this.otherParty = otherParty;
-            this.payload = payload;
         }
 
         @Suspendable
         @Override
         public String call() throws FlowException {
-            return sendAndReceive(String.class, otherParty, payload).unwrap(data -> data);
+            return sendAndReceive(String.class, otherParty, "Hello").unwrap(data -> data);
         }
     }
 

@@ -2,16 +2,15 @@ package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
+import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.*
 import net.corda.core.crypto.*
-import net.corda.core.flows.FlowInitiator
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
@@ -19,6 +18,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
@@ -45,7 +45,7 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.statemachine.StateMachineManager
-import net.corda.node.services.statemachine.flowVersion
+import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
 import net.corda.node.services.vault.NodeVaultService
@@ -60,9 +60,11 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
+import rx.Observable
 import java.io.IOException
 import java.lang.reflect.Modifier.*
-import java.net.URL
+import java.net.JarURLConnection
+import java.net.URI
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -73,6 +75,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
@@ -106,7 +109,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // low-performance prototyping period.
     protected abstract val serverThread: AffinityExecutor
 
-    protected val serviceFlowFactories = ConcurrentHashMap<Class<*>, ServiceFlowInfo>()
+    private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
+    private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
@@ -122,6 +126,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val schemaService: SchemaService get() = schemas
         override val transactionVerifierService: TransactionVerifierService get() = txVerifierService
         override val auditService: AuditService get() = auditService
+
+        override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
+            require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
+            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+        }
+
         override val rpcFlows: List<Class<out FlowLogic<*>>> get() = this@AbstractNode.rpcFlows
 
         // Internal only
@@ -131,17 +141,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
         }
 
-        override fun registerServiceFlow(initiatingFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) {
-            require(initiatingFlowClass !in serviceFlowFactories) {
-                "${initiatingFlowClass.name} has already been used to register a service flow"
-            }
-            val info = ServiceFlowInfo.CorDapp(initiatingFlowClass.flowVersion, serviceFlowFactory)
-            log.info("Registering service flow for ${initiatingFlowClass.name}: $info")
-            serviceFlowFactories[initiatingFlowClass] = info
-        }
-
-        override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? {
-            return serviceFlowFactories[clientFlowClass]
+        override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
+            return flowFactories[initiatingFlowClass]
         }
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) {
@@ -167,14 +168,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var scheduler: NodeSchedulerService
     lateinit var schemas: SchemaService
     lateinit var auditService: AuditService
-    val customServices: ArrayList<Any> = ArrayList()
     protected val runOnStop: ArrayList<Runnable> = ArrayList()
     lateinit var database: Database
     protected var dbCloser: Runnable? = null
     private lateinit var rpcFlows: List<Class<out FlowLogic<*>>>
-
-    /** Locates and returns a service of the given type if loaded, or throws an exception if not found. */
-    inline fun <reified T : Any> findService() = customServices.filterIsInstance<T>().single()
 
     var isPreviousCheckpointsPresent = false
         private set
@@ -217,7 +214,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
-                    listOf(tokenizableServices),
                     checkpointStorage,
                     serverThread,
                     database,
@@ -240,22 +236,24 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
 
-            fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
-                return isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || isStatic(modifiers))
+            val scanResult = scanCorDapps()
+            if (scanResult != null) {
+                val cordappServices = installCordaServices(scanResult)
+                tokenizableServices.addAll(cordappServices)
+                registerInitiatedFlows(scanResult)
+                rpcFlows = findRPCFlows(scanResult)
+            } else {
+                rpcFlows = emptyList()
             }
 
-            val flows = scanForFlows()
-            rpcFlows = flows.filter { it.isUserInvokable() && it.isAnnotationPresent(StartableByRPC::class.java) } +
-                    // Add any core flows here
-                    listOf(ContractUpgradeFlow::class.java,
-                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
-                            CashIssueFlow::class.java,
-                            CashExitFlow::class.java,
-                            CashPaymentFlow::class.java)
+            // TODO Remove this once the cash stuff is in its own CorDapp
+            registerInitiatedFlow(IssuerFlow.Issuer::class.java)
+
+            initUploaders()
 
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
-            smm.start()
+            smm.start(tokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += Runnable { smm.stop(acceptableLiveFiberCountOnStop()) }
             scheduler.start()
@@ -264,18 +262,142 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return this
     }
 
+    private fun installCordaServices(scanResult: ScanResult): List<SerializeAsToken> {
+        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class).mapNotNull {
+            try {
+                installCordaService(it)
+            } catch (e: NoSuchMethodException) {
+                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
+                        "of type ${PluginServiceHub::class.java.name}")
+                null
+            } catch (e: Exception) {
+                log.error("Unable to install Corda service ${it.name}", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * Use this method to install your Corda services in your tests. This is automatically done by the node when it
+     * starts up for all classes it finds which are annotated with [CordaService].
+     */
+    fun <T : SerializeAsToken> installCordaService(clazz: Class<T>): T {
+        clazz.requireAnnotation<CordaService>()
+        val ctor = clazz.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val service = ctor.newInstance(services)
+        cordappServices.putInstance(clazz, service)
+        log.info("Installed ${clazz.name} Corda service")
+        return service
+    }
+
+    private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
+        return requireNotNull(getDeclaredAnnotation(A::class.java)) { "$name needs to be annotated with ${A::class.java.name}" }
+    }
+
+    private fun registerInitiatedFlows(scanResult: ScanResult) {
+        scanResult
+                .getClassesWithAnnotation(FlowLogic::class, InitiatedBy::class)
+                // First group by the initiating flow class in case there are multiple mappings
+                .groupBy { it.requireAnnotation<InitiatedBy>().value.java }
+                .map { (initiatingFlow, initiatedFlows) ->
+                    val sorted = initiatedFlows.sortedWith(FlowTypeHierarchyComparator(initiatingFlow))
+                    if (sorted.size > 1) {
+                        log.warn("${initiatingFlow.name} has been specified as the inititating flow by multiple flows " +
+                                "in the same type hierarchy: ${sorted.joinToString { it.name }}. Choosing the most " +
+                                "specific sub-type for registration: ${sorted[0].name}.")
+                    }
+                    sorted[0]
+                }
+                .forEach {
+                    try {
+                        registerInitiatedFlowInternal(it, track = false)
+                    } catch (e: NoSuchMethodException) {
+                        log.error("${it.name}, as an initiated flow, must have a constructor with a single parameter " +
+                                "of type ${Party::class.java.name}")
+                    } catch (e: Exception) {
+                        log.error("Unable to register initiated flow ${it.name}", e)
+                    }
+                }
+    }
+
+    private class FlowTypeHierarchyComparator(val initiatingFlow: Class<out FlowLogic<*>>) : Comparator<Class<out FlowLogic<*>>> {
+        override fun compare(o1: Class<out FlowLogic<*>>, o2: Class<out FlowLogic<*>>): Int {
+            return if (o1 == o2) {
+                0
+            } else if (o1.isAssignableFrom(o2)) {
+                1
+            } else if (o2.isAssignableFrom(o1)) {
+                -1
+            } else {
+                throw IllegalArgumentException("${initiatingFlow.name} has been specified as the initiating flow by " +
+                        "both ${o1.name} and ${o2.name}")
+            }
+        }
+    }
+
+    /**
+     * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
+     * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
+     * @return An [Observable] of the initiated flows started by counter-parties.
+     */
+    fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>): Observable<T> {
+        return registerInitiatedFlowInternal(initiatedFlowClass, track = true)
+    }
+
+    private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
+        val ctor = initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
+        val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
+        val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
+        require(classWithAnnotation == initiatingFlow) {
+            "${InitiatingFlow::class.java.name} must be annotated on ${initiatingFlow.name} and not on a super-type"
+        }
+        val flowFactory = InitiatedFlowFactory.CorDapp(version, { ctor.newInstance(it) })
+        val observable = registerFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
+        log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
+        return observable
+    }
+
+    @VisibleForTesting
+    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                               flowFactory: InitiatedFlowFactory<F>,
+                                               initiatedFlowClass: Class<F>,
+                                               track: Boolean): Observable<F> {
+        val observable = if (track) {
+            smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
+        } else {
+            Observable.empty()
+        }
+        flowFactories[initiatingFlowClass] = flowFactory
+        return observable
+    }
+
+    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+        fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
+            return isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || isStatic(modifiers))
+        }
+
+        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() } +
+                // Add any core flows here
+                listOf(
+                        ContractUpgradeFlow::class.java,
+                        // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
+                        CashIssueFlow::class.java,
+                        CashExitFlow::class.java,
+                        CashPaymentFlow::class.java)
+    }
+
     /**
      * Installs a flow that's core to the Corda platform. Unlike CorDapp flows which are versioned individually using
      * [InitiatingFlow.version], core flows have the same version as the node's platform version. To cater for backwards
-     * compatibility [serviceFlowFactory] provides a second parameter which is the platform version of the initiating party.
+     * compatibility [flowFactory] provides a second parameter which is the platform version of the initiating party.
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, serviceFlowFactory: (Party, Int) -> FlowLogic<*>) {
-        require(clientFlowClass.java.flowVersion == 1) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
+        require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
-        serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.Core(serviceFlowFactory)
+        flowFactories[clientFlowClass.java] = InitiatedFlowFactory.Core(flowFactory)
         log.debug { "Installed core flow ${clientFlowClass.java.name}" }
     }
 
@@ -313,61 +435,62 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
 
-        customServices.clear()
-        customServices.addAll(makePluginServices(tokenizableServices))
-
-        initUploaders(storageServices)
         return tokenizableServices
     }
 
-    private fun scanForFlows(): List<Class<out FlowLogic<*>>> {
-        val pluginsDir = configuration.baseDirectory / "plugins"
-        log.info("Scanning plugins in $pluginsDir ...")
-        if (!pluginsDir.exists()) return emptyList()
-
-        val pluginJars = pluginsDir.list {
-            it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.toArray()
+    private fun scanCorDapps(): ScanResult? {
+        val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
+        val paths = if (scanPackage != null) {
+            // This is purely for integration tests so that classes defined in the test can automatically be picked up
+            check(configuration.devMode) { "Package scanning can only occur in dev mode" }
+            val resource = scanPackage.replace('.', '/')
+            javaClass.classLoader.getResources(resource)
+                    .asSequence()
+                    .map {
+                        val uri = if (it.protocol == "jar") {
+                            (it.openConnection() as JarURLConnection).jarFileURL.toURI()
+                        } else {
+                            URI(it.toExternalForm().removeSuffix(resource))
+                        }
+                        Paths.get(uri)
+                    }
+                    .toList()
+        } else {
+            val pluginsDir = configuration.baseDirectory / "plugins"
+            if (!pluginsDir.exists()) return null
+            pluginsDir.list {
+                it.filter { it.isRegularFile() && it.toString().endsWith(".jar") }.collect(toList())
+            }
         }
 
-        if (pluginJars.isEmpty()) return emptyList()
+        log.info("Scanning CorDapps in $paths")
 
-        val scanResult = FastClasspathScanner().overrideClasspath(*pluginJars).scan()  // This will only scan the plugin jars and nothing else
+        // This will only scan the plugin jars and nothing else
+        return if (paths.isNotEmpty()) FastClasspathScanner().overrideClasspath(paths).scan() else null
+    }
 
-        fun loadFlowClass(className: String): Class<out FlowLogic<*>>? {
+    private fun <T : Any> ScanResult.getClassesWithAnnotation(type: KClass<T>, annotation: KClass<out Annotation>): List<Class<out T>> {
+        fun loadClass(className: String): Class<out T>? {
             return try {
                 // TODO Make sure this is loaded by the correct class loader
-                @Suppress("UNCHECKED_CAST")
-                Class.forName(className, false, javaClass.classLoader) as Class<out FlowLogic<*>>
+                Class.forName(className, false, javaClass.classLoader).asSubclass(type.java)
+            } catch (e: ClassCastException) {
+                log.warn("As $className is annotated with ${annotation.qualifiedName} it must be a sub-type of ${type.java.name}")
+                null
             } catch (e: Exception) {
-                log.warn("Unable to load flow class $className", e)
+                log.warn("Unable to load class $className", e)
                 null
             }
         }
 
-        val flowClasses = scanResult.getNamesOfSubclassesOf(FlowLogic::class.java)
-                .mapNotNull { loadFlowClass(it) }
+        return getNamesOfClassesWithAnnotation(annotation.java)
+                .mapNotNull { loadClass(it) }
                 .filterNot { isAbstract(it.modifiers) }
-
-        fun URL.pluginName(): String {
-            return try {
-                Paths.get(toURI()).fileName.toString()
-            } catch (e: Exception) {
-                toString()
-            }
-        }
-
-        flowClasses.groupBy {
-            scanResult.classNameToClassInfo[it.name]!!.classpathElementURLs.first()
-        }.forEach { url, classes ->
-            log.info("Found flows in plugin ${url.pluginName()}: ${classes.joinToString { it.name }}")
-        }
-
-        return flowClasses
     }
 
-    private fun initUploaders(storageServices: Pair<TxWritableStorageService, CheckpointStorage>) {
-        val uploaders: List<FileUploader> = listOf(storageServices.first.attachments as NodeAttachmentService) +
-                customServices.filterIsInstance(AcceptsFileUpload::class.java)
+    private fun initUploaders() {
+        val uploaders: List<FileUploader> = listOf(storage.attachments as NodeAttachmentService) +
+            cordappServices.values.filterIsInstance(AcceptsFileUpload::class.java)
         (storage as StorageServiceImpl).initUploaders(uploaders)
     }
 
@@ -431,12 +554,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         } else {
             throw DatabaseConfigurationException("There must be a database configured.")
         }
-    }
-
-    private fun makePluginServices(tokenizableServices: MutableList<Any>): List<Any> {
-        val pluginServices = pluginRegistries.flatMap { it.servicePlugins }.map { it.apply(services) }
-        tokenizableServices.addAll(pluginServices)
-        return pluginServices
     }
 
     /**
@@ -656,11 +773,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected fun createNodeDir() {
         configuration.baseDirectory.createDirectories()
     }
-}
-
-sealed class ServiceFlowInfo {
-    data class Core(val factory: (Party, Int) -> FlowLogic<*>) : ServiceFlowInfo()
-    data class CorDapp(val version: Int, val factory: (Party) -> FlowLogic<*>) : ServiceFlowInfo()
 }
 
 private class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
