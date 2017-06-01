@@ -35,7 +35,6 @@ abstract class AbstractClass
 
 interface Interface
 
-@CordaSerializable
 interface SerializableInterface
 
 interface SerializableSubInterface : SerializableInterface
@@ -73,6 +72,21 @@ class SubSubNotSerialisedElement : SubNotSerialisedElement()
 interface NotSerializableInterface
 
 interface SubNotSerializableInterface : NotSerializableInterface
+
+interface SubSubNotSerializableInterface : SubNotSerializableInterface
+
+@CordaNotSerializable
+@CordaSerializable
+class DualElement
+
+@CordaSerializable
+class SerialisableElementWithNonSerialisableInteface : NotSerializableInterface
+
+class NotSerializableViaInterface : NotSerializableInterface
+
+open class NotSerializableViaSubInterface : SubNotSerializableInterface
+
+class NotSerializableViaSuperSubInterface : NotSerializableViaSubInterface()
 
 class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
@@ -175,23 +189,122 @@ class CordaClassResolverTests {
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerializableViaSuperSubInterface::class.java)
     }
 
+    // Blacklisting checks
     @get:Rule
     val expectedEx = ExpectedException.none()
 
     @Test
-    @Throws(Exception::class)
-    fun `Catch CordaNotSerialisable interface`() {
+    fun `check  corda not serialisable inherited from interfaces`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializableViaInterface cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerializableViaInterface::class.java)
+    }
+
+    @Test
+    fun `check CordaNotSerialisable inherited from subinterface`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializableViaSubInterface cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerializableViaSubInterface::class.java)
+    }
+
+    @Test
+    fun `check CordaNotSerialisable supersubinterface`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializableViaSuperSubInterface cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerializableViaSuperSubInterface::class.java)
+    }
+
+    @Test
+    fun `check CordaNotSerialisable class`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.NotSerialisedElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(NotSerialisedElement::class.java)
     }
 
     @Test
-    @Throws(Exception::class)
-    fun `Catch CordaNotSerialisable subinterface`() {
+    fun `check CordaNotSerialisable subclass`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.SubNotSerialisedElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
         CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubNotSerialisedElement::class.java)
+    }
+
+    @Test
+    fun `check CordaNotSerialisable subsubclass`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SubSubNotSerialisedElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SubSubNotSerialisedElement::class.java)
+    }
+
+    @Test
+    fun `check blacklisted class`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializable is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(NotSerializable::class.java)
+        resolver.getRegistration(NotSerializable::class.java)
+    }
+
+    @Test
+    fun `blacklisting is always checked before whitelisting`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializable is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(GlobalTransientClassList(EmptyClassList), GlobalTransientClassList(EmptyClassList))
+        // add to whitelist.
+        (resolver.whitelist as MutableClassList).add(NotSerializable::class.java)
+        // add to blacklist.
+        (resolver.blacklist as MutableClassList).add(NotSerializable::class.java)
+
+        resolver.getRegistration(NotSerializable::class.java)
+    }
+
+    @Test
+    fun `blacklisting is always checked beforeCordaSerializable annotated class`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.Element is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(Element::class.java)
+        resolver.getRegistration(Element::class.java)
+    }
+
+    @Test
+    fun `blacklisting is always checked before CordaSerializable annotated subclass`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SubElement is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(SubElement::class.java)
+        resolver.getRegistration(SubElement::class.java)
+    }
+
+    @Test
+    fun `blacklisting is always checked beforeCordaSerializable annotated subsubclass`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SubSubElement is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(SubSubElement::class.java)
+        resolver.getRegistration(SubSubElement::class.java)
+    }
+
+    @Test
+    fun `blacklisting is always checked before CordaSerializable class inherited from interfaces`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SerializableViaInterface is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(SerializableViaInterface::class.java)
+        resolver.getRegistration(SerializableViaInterface::class.java)
+    }
+
+    @Test
+    fun `Elements with both CordaSeriasable and CordaNotSerialisable are not allowed`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.DualElement cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(DualElement::class.java)
+    }
+
+    @Test
+    fun `CordaSerialisable elements that implement a non serialisable interface are not allowed`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.SerialisableElementWithNonSerialisableInteface cannot be used in serialization. This class or at least one of its superclasses or implemented interfaces is annotated as CordaNotSerializable and thus, serialization is not permitted")
+        CordaClassResolver(EmptyClassList, EmptyClassList).getRegistration(SerialisableElementWithNonSerialisableInteface::class.java)
     }
 
     @Test
