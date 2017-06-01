@@ -162,11 +162,21 @@ object AllClassList : ClassList {
 
 // TODO: Need some concept of from which class loader
 class GlobalTransientWhiteList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
-
-    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+    companion object {
+        val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+    }
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in whitelist) || delegate.hasListed(type)
+        if (type.name in whitelist || delegate.hasListed(type))
+            return true
+        else {
+            val aMatch = whitelist.firstOrNull { Class.forName(it).isAssignableFrom(type) }
+            if (aMatch != null) {
+                whitelist += type.name // add it, so checking is faster next time we encounter this class.
+                return true
+            }
+        }
+        return false
     }
 
     override fun add(entry: Class<*>) {
@@ -174,12 +184,24 @@ class GlobalTransientWhiteList(val delegate: ClassList) : MutableClassList, Clas
     }
 }
 
+// TODO: GlobalTransientBlackList and GlobalTransientWhiteList share the same logic. Consider refactoring.
 class GlobalTransientBlackList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
-
-    val blacklist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+    companion object {
+        val blacklist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+    }
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in blacklist) || delegate.hasListed(type)
+        if (type.name in blacklist || delegate.hasListed(type))
+            return true
+        else {
+            // TODO: avoid class.forName
+            val aMatch = blacklist.firstOrNull { Class.forName(it).isAssignableFrom(type) }
+            if (aMatch != null) {
+                blacklist += type.name // add it, so checking is faster next time we encounter this class.
+                return true
+            }
+        }
+        return false
     }
 
     override fun add(entry: Class<*>) {

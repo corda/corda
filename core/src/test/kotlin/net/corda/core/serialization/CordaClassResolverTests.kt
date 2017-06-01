@@ -88,6 +88,13 @@ open class NotSerializableViaSubInterface : SubNotSerializableInterface
 
 class NotSerializableViaSuperSubInterface : NotSerializableViaSubInterface()
 
+open class Clazz
+class subClazz : Clazz()
+
+interface Interfaze
+class InterfazeImpl : Interfaze
+
+
 class DefaultSerializableSerializer : Serializer<DefaultSerializable>() {
     override fun write(kryo: Kryo, output: Output, obj: DefaultSerializable) {
     }
@@ -308,7 +315,20 @@ class CordaClassResolverTests {
     }
 
     @Test
-    fun `Annotation is needed for blacklisting`() {
+    fun `Blacklisting class inheritance`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.subClazz is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(Clazz::class.java)
+        resolver.getRegistration(subClazz::class.java)
+    }
 
+    @Test
+    fun `Blacklisted interface causes its implementation to be blacklisted`() {
+        expectedEx.expect(KryoException::class.java)
+        expectedEx.expectMessage("Class net.corda.core.serialization.InterfazeImpl is blacklisted and cannot be used in serialization")
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
+        (resolver.blacklist as MutableClassList).add(Interfaze::class.java)
+        resolver.getRegistration(InterfazeImpl::class.java)
     }
 }
