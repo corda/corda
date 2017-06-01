@@ -104,7 +104,9 @@ fun main(args: Array<String>) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
-    SerialFilter.install(if (conf.bftReplicaId != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
+    // TODO: Replace with "::funcName" notation when Dokka is upgraded to not crash when analysing the notation
+    val filterFunc = if (conf.bftReplicaId != null) { it: Class<*> -> bftSMaRtSerialFilter(it) } else { it: Class<*> -> defaultSerialFilter(it) }
+    SerialFilter.install(filterFunc)
     if (cmdlineOptions.isRegistration) {
         println()
         println("******************************************************************")
