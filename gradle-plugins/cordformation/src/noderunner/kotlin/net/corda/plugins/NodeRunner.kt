@@ -64,6 +64,13 @@ private object WebJarType : JarType("corda-webserver.jar") {
 }
 
 private abstract class JavaCommand(jarName: String, internal val dir: File, debugPort: Int?, internal val nodeName: String, init: MutableList<String>.() -> Unit, args: List<String>) {
+    private val javaPath: String by lazy {
+        val path = File(File(System.getProperty("java.home"), "bin"), "java").path
+        // Replace below is to fix an issue with spaces in paths on Windows.
+        // Quoting the entire path does not work, only the space or directory within the path.
+        if(os == OS.WINDOWS) path.replace(" ", "\" \"") else path
+    }
+
     internal val command: List<String> = mutableListOf<String>().apply {
         add(javaPath)
         add("-Dname=$nodeName")
@@ -76,13 +83,6 @@ private abstract class JavaCommand(jarName: String, internal val dir: File, debu
 
     internal abstract fun processBuilder(): ProcessBuilder
     internal fun start() = processBuilder().directory(dir).start()
-
-    private val javaPath: String by lazy {
-        val path = File(File(System.getProperty("java.home"), "bin"), "java").path
-        // Replace below is to fix an issue with spaces in paths on Windows.
-        // Quoting the entire path does not work, only the space or directory within the path.
-        if(os == OS.WINDOWS) path.replace(" ", "\" \"") else path
-    }
 }
 
 private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args) {
