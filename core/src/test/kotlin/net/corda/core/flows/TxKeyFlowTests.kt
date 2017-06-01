@@ -14,22 +14,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 class TxKeyFlowTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
 
     @Before
     fun before() {
-        net = MockNetwork(false)
+        mockNet = MockNetwork(false)
     }
 
     @Test
     fun `issue key`() {
         // We run this in parallel threads to help catch any race conditions that may exist.
-        net = MockNetwork(false, true)
+        mockNet = MockNetwork(false, true)
 
         // Set up values we'll need
-        val notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = net.createPartyNode(notaryNode.info.address, ALICE.name)
-        val bobNode = net.createPartyNode(notaryNode.info.address, BOB.name)
+        val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
         val alice: PartyAndCertificate = aliceNode.services.myInfo.legalIdentity
         val bob: PartyAndCertificate = bobNode.services.myInfo.legalIdentity
         aliceNode.services.identityService.registerIdentity(bob)
