@@ -113,7 +113,7 @@ object TwoPartyDealFlow {
             if (regulators.isNotEmpty()) {
                 // Copy the transaction to every regulator in the network. This is obviously completely bogus, it's
                 // just for demo purposes.
-                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first().party, ftx) }
+                regulators.forEach { send(it.serviceIdentities(ServiceType.regulator).first(), ftx) }
             }
 
             progressTracker.currentStep = COPYING_TO_COUNTERPARTY

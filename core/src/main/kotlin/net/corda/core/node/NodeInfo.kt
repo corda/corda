@@ -32,7 +32,10 @@ data class NodeInfo(val address: SingleMessageRecipient,
         get() = legalIdentityAndCert.party
     val notaryIdentity: Party
         get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
-    fun serviceIdentities(type: ServiceType): List<PartyAndCertificate> {
+    fun serviceIdentities(type: ServiceType): List<Party> {
+        return advertisedServices.filter { it.info.type.isSubTypeOf(type) }.map { it.identity.party }
+    }
+    fun servideIdentitiesAndCert(type: ServiceType): List<PartyAndCertificate> {
         return advertisedServices.filter { it.info.type.isSubTypeOf(type) }.map { it.identity }
     }
 }

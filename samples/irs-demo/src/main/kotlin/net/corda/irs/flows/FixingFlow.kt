@@ -62,7 +62,7 @@ object FixingFlow {
             val ptx = TransactionType.General.Builder(txState.notary)
 
             val oracle = serviceHub.networkMapCache.getNodesWithService(handshake.payload.oracleType).first()
-            val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first().party
+            val oracleParty = oracle.serviceIdentities(handshake.payload.oracleType).first()
 
             // DOCSTART 1
             val addFixing = object : RatesFixFlow(ptx, oracleParty, fixOf, BigDecimal.ZERO, BigDecimal.ONE) {

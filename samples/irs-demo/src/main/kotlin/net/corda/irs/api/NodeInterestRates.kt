@@ -89,7 +89,7 @@ object NodeInterestRates {
     @CordaService
     class Oracle(val identity: Party, private val signingKey: PublicKey, val services: ServiceHub) : AcceptsFileUpload, SingletonSerializeAsToken() {
         constructor(services: PluginServiceHub) : this(
-            services.myInfo.serviceIdentities(type).first().party,
+            services.myInfo.serviceIdentities(type).first(),
             services.myInfo.serviceIdentities(type).first().owningKey.keys.first { services.keyManagementService.keys.contains(it) },
             services
         )
