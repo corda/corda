@@ -7,18 +7,27 @@ import java.security.PublicKey
 import java.security.cert.CertPath
 
 /**
- * A party plus the X.509 certificate and path linking the party back to a trust root.
+ * A full party plus the X.509 certificate and path linking the party back to a trust root. Equality of
+ * [PartyAndCertificate] instances is based on the party only, as certificate and path are data associated with the party,
+ * not part of the identifier themselves.
  */
 @CordaSerializable
 data class PartyAndCertificate(val party: Party,
                                val certificate: X509CertificateHolder,
                                val certPath: CertPath) {
     constructor(name: X500Name, owningKey: PublicKey, certificate: X509CertificateHolder, certPath: CertPath) : this(Party(name, owningKey), certificate, certPath)
-
     val name: X500Name
         get() = party.name
     val owningKey: PublicKey
         get() = party.owningKey
 
+    override fun equals(other: Any?): Boolean {
+        return if (other is PartyAndCertificate)
+            party == other.party
+        else
+            false
+    }
+
+    override fun hashCode(): Int = party.hashCode()
     override fun toString(): String = party.toString()
 }
