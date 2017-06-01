@@ -244,7 +244,6 @@ private fun messageOfTheDay(): Pair<String, String> {
             "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
             "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
             "Old bankers never die, they just\n... pass the buck",
-            "My wife made me into millionaire.\nI was a multi-millionaire before we met.",
             "I won $3M on the lottery so I donated\na quarter of it to charity. Now I have $2,999,999.75.",
             "There are two rules for financial success:\n1) Don't tell everything you know.",
             "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
