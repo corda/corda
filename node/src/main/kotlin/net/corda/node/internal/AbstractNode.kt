@@ -63,6 +63,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
 import java.net.JarURLConnection
 import java.net.URI
@@ -81,6 +82,8 @@ import java.util.stream.Collectors.toList
 import kotlin.collections.ArrayList
 import kotlin.reflect.KClass
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
+
+class ServiceInstantiationException(message: String, cause: Throwable?) : Exception(message, cause)
 
 /**
  * A base node implementation that can be customised either for production (with real implementations that do real
@@ -285,12 +288,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Use this method to install your Corda services in your tests. This is automatically done by the node when it
      * starts up for all classes it finds which are annotated with [CordaService].
      */
-    fun <T : SerializeAsToken> installCordaService(clazz: Class<T>): T {
-        clazz.requireAnnotation<CordaService>()
-        val ctor = clazz.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
-        val service = ctor.newInstance(services)
-        cordappServices.putInstance(clazz, service)
-        log.info("Installed ${clazz.name} Corda service")
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
+        serviceClass.requireAnnotation<CordaService>()
+        val constructor = serviceClass.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val service = try {
+            constructor.newInstance(services)
+        } catch (e: InvocationTargetException) {
+            throw ServiceInstantiationException(serviceClass.name, e.cause)
+        }
+        cordappServices.putInstance(serviceClass, service)
+        log.info("Installed ${serviceClass.name} Corda service")
         return service
     }
 
