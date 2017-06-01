@@ -19,7 +19,7 @@ fun Kryo.addToBlacklist(type: Class<*>) = ((classResolver as? CordaClassResolver
 
 /** Support both a whitelist and a blacklist. */
 fun makeStandardClassResolver(): ClassResolver {
-    return CordaClassResolver(GlobalTransientClassList(BuiltInExceptionsClassList()), GlobalTransientClassList(EmptyClassList))
+    return CordaClassResolver(GlobalTransientWhiteList(BuiltInExceptionsClassList()), GlobalTransientBlackList(EmptyClassList))
 }
 
 /** Allow everything for serialisation. */
@@ -29,7 +29,7 @@ fun makeAcceptAllClassResolver(): ClassResolver {
 
 /** Allow everything except those in the blacklist. */
 fun makeBlackListOnlyClassResolver(): ClassResolver {
-    return CordaClassResolver(AllClassList, GlobalTransientClassList(EmptyClassList))
+    return CordaClassResolver(AllClassList, GlobalTransientBlackList(EmptyClassList))
 }
 
 /**
@@ -161,15 +161,29 @@ object AllClassList : ClassList {
 }
 
 // TODO: Need some concept of from which class loader
-class GlobalTransientClassList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
-    val classlist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+class GlobalTransientWhiteList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
+
+    val whitelist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     override fun hasListed(type: Class<*>): Boolean {
-        return (type.name in classlist) || delegate.hasListed(type)
+        return (type.name in whitelist) || delegate.hasListed(type)
     }
 
     override fun add(entry: Class<*>) {
-        classlist += entry.name
+        whitelist += entry.name
+    }
+}
+
+class GlobalTransientBlackList(val delegate: ClassList) : MutableClassList, ClassList by delegate {
+
+    val blacklist: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+
+    override fun hasListed(type: Class<*>): Boolean {
+        return (type.name in blacklist) || delegate.hasListed(type)
+    }
+
+    override fun add(entry: Class<*>) {
+        blacklist += entry.name
     }
 }
 

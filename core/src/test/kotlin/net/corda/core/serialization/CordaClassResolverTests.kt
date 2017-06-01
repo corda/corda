@@ -140,7 +140,7 @@ class CordaClassResolverTests {
 
     @Test
     fun `Annotation is not needed with whitelisting`() {
-        val resolver = CordaClassResolver(GlobalTransientClassList(EmptyClassList), EmptyClassList)
+        val resolver = CordaClassResolver(GlobalTransientWhiteList(EmptyClassList), EmptyClassList)
         (resolver.whitelist as MutableClassList).add(NotSerializable::class.java)
         resolver.getRegistration(NotSerializable::class.java)
     }
@@ -239,7 +239,7 @@ class CordaClassResolverTests {
     fun `check blacklisted class`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializable is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
         (resolver.blacklist as MutableClassList).add(NotSerializable::class.java)
         resolver.getRegistration(NotSerializable::class.java)
     }
@@ -248,7 +248,7 @@ class CordaClassResolverTests {
     fun `blacklisting is always checked before whitelisting`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.NotSerializable is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(GlobalTransientClassList(EmptyClassList), GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(GlobalTransientWhiteList(EmptyClassList), GlobalTransientBlackList(EmptyClassList))
         // add to whitelist.
         (resolver.whitelist as MutableClassList).add(NotSerializable::class.java)
         // add to blacklist.
@@ -261,7 +261,7 @@ class CordaClassResolverTests {
     fun `blacklisting is always checked beforeCordaSerializable annotated class`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.Element is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
         (resolver.blacklist as MutableClassList).add(Element::class.java)
         resolver.getRegistration(Element::class.java)
     }
@@ -270,7 +270,7 @@ class CordaClassResolverTests {
     fun `blacklisting is always checked before CordaSerializable annotated subclass`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.SubElement is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
         (resolver.blacklist as MutableClassList).add(SubElement::class.java)
         resolver.getRegistration(SubElement::class.java)
     }
@@ -279,7 +279,7 @@ class CordaClassResolverTests {
     fun `blacklisting is always checked beforeCordaSerializable annotated subsubclass`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.SubSubElement is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
         (resolver.blacklist as MutableClassList).add(SubSubElement::class.java)
         resolver.getRegistration(SubSubElement::class.java)
     }
@@ -288,7 +288,7 @@ class CordaClassResolverTests {
     fun `blacklisting is always checked before CordaSerializable class inherited from interfaces`() {
         expectedEx.expect(KryoException::class.java)
         expectedEx.expectMessage("Class net.corda.core.serialization.SerializableViaInterface is blacklisted and cannot be used in serialization")
-        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientClassList(EmptyClassList))
+        val resolver = CordaClassResolver(EmptyClassList, GlobalTransientBlackList(EmptyClassList))
         (resolver.blacklist as MutableClassList).add(SerializableViaInterface::class.java)
         resolver.getRegistration(SerializableViaInterface::class.java)
     }
