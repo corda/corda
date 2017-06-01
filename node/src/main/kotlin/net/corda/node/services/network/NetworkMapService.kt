@@ -5,7 +5,6 @@ import net.corda.core.ThreadBox
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.isFulfilledBy
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
@@ -83,7 +82,7 @@ interface NetworkMapService {
     @CordaSerializable
     data class FetchMapResponse(val nodes: List<NodeRegistration>?, val version: Int)
 
-    data class QueryIdentityRequest(val identity: Party,
+    data class QueryIdentityRequest(val identity: PartyAndCertificate,
                                     override val replyTo: SingleMessageRecipient,
                                     override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
@@ -253,7 +252,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
-            nodeRegistrations.compute(node.legalIdentity) { _, existing: NodeRegistrationInfo? ->
+            nodeRegistrations.compute(node.legalIdentityAndCert) { _, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"
                 }

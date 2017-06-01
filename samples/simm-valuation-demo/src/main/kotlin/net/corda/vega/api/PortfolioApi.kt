@@ -5,11 +5,11 @@ import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.crypto.*
+import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.crypto.toBase58String
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.DUMMY_MAP
@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response
 
 @Path("simmvaluationdemo")
 class PortfolioApi(val rpc: CordaRPCOps) {
-    private val ownParty: PartyAndCertificate get() = rpc.nodeIdentity().legalIdentity
+    private val ownParty: Party get() = rpc.nodeIdentity().legalIdentity
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
@@ -49,7 +49,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
      * DSL to get a party and then executing the passed function with the party as a parameter.
      * Used as such: withParty(name) { doSomethingWith(it) }
      */
-    private fun withParty(partyName: String, func: (PartyAndCertificate) -> Response): Response {
+    private fun withParty(partyName: String, func: (Party) -> Response): Response {
         val otherParty = rpc.partyFromKey(parsePublicKeyBase58(partyName))
         return if (otherParty != null) {
             func(otherParty)

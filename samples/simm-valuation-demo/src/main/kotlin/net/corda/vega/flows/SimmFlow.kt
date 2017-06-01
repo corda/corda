@@ -15,8 +15,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -186,7 +184,7 @@ object SimmFlow {
      * Receives and validates a portfolio and comes to consensus over the portfolio initial margin using SIMM.
      */
     @InitiatedBy(Requester::class)
-    class Receiver(val replyToParty: PartyAndCertificate) : FlowLogic<Unit>() {
+    class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
         lateinit var ownParty: Party
         lateinit var offer: OfferMessage
 

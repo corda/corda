@@ -11,7 +11,6 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
@@ -232,18 +231,18 @@ interface CordaRPCOps : RPCOps {
     /**
      * Returns the [Party] corresponding to the given key, if found.
      */
-    fun partyFromKey(key: PublicKey): PartyAndCertificate?
+    fun partyFromKey(key: PublicKey): Party?
 
     /**
      * Returns the [Party] with the given name as it's [Party.name]
      */
     @Deprecated("Use partyFromX500Name instead")
-    fun partyFromName(name: String): PartyAndCertificate?
+    fun partyFromName(name: String): Party?
 
     /**
      * Returns the [Party] with the X.500 principal as it's [Party.name]
      */
-    fun partyFromX500Name(x500Name: X500Name): PartyAndCertificate?
+    fun partyFromX500Name(x500Name: X500Name): Party?
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
