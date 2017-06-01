@@ -35,7 +35,7 @@ class CashIssueFlow(val amount: Amount<Currency>,
     @Suspendable
     override fun call(): SignedTransaction {
         progressTracker.currentStep = GENERATING_TX
-        val builder: TransactionBuilder = TransactionType.General.Builder(notary = null)
+        val builder: TransactionBuilder = TransactionType.General.Builder(notary = notary)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
         // TODO: Get a transaction key, don't just re-use the owning key
         Cash().generateIssue(builder, amount.issuedBy(issuer), recipient, notary)

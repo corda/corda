@@ -6,9 +6,7 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
-import java.security.cert.TrustAnchor
-import java.security.cert.X509Certificate
+import org.bouncycastle.cert.X509CertificateHolder
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -22,14 +20,19 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
  */
 @CordaSerializable
 data class NodeInfo(val address: SingleMessageRecipient,
-                    val legalIdentity: PartyAndCertificate,
+                    val legalIdentityAndCert: PartyAndCertificate,
                     val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
                     val physicalLocation: PhysicalLocation? = null) {
     init {
-        require(advertisedServices.none { it.identity == legalIdentity }) { "Service identities must be different from node legal identity" }
+        require(advertisedServices.none { it.identity == legalIdentityAndCert }) { "Service identities must be different from node legal identity" }
     }
 
-    val notaryIdentity: PartyAndCertificate get() = advertisedServices.single { it.info.type.isNotary() }.identity
-    fun serviceIdentities(type: ServiceType): List<Party> = advertisedServices.filter { it.info.type.isSubTypeOf(type) }.map { it.identity }
+    val legalIdentity: Party
+        get() = legalIdentityAndCert.party
+    val notaryIdentity: Party
+        get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
+    fun serviceIdentities(type: ServiceType): List<PartyAndCertificate> {
+        return advertisedServices.filter { it.info.type.isSubTypeOf(type) }.map { it.identity }
+    }
 }

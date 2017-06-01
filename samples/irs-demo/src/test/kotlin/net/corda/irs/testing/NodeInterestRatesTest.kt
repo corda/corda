@@ -217,7 +217,7 @@ class NodeInterestRatesTest {
         }
         val tx = TransactionType.General.Builder(null)
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val oracle = n2.info.serviceIdentities(NodeInterestRates.type).first()
+        val oracle = n2.info.serviceIdentities(NodeInterestRates.type).first().party
         val flow = FilteredRatesFlow(tx, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         net.runNetwork()

@@ -6,6 +6,7 @@ import com.zaxxer.hikari.HikariDataSource
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.node.utilities.StrandLocalTransactionManager.Boundary
 import org.bouncycastle.cert.X509CertificateHolder
 import org.h2.jdbc.JdbcBlob
@@ -284,9 +285,9 @@ fun Table.secureHash(name: String) = this.registerColumn<SecureHash>(name, Secur
 fun Table.party(nameColumnName: String,
                 keyColumnName: String) = PartyColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName))
 fun Table.partyAndCertificate(nameColumnName: String,
-                keyColumnName: String,
-                certificateColumnName: String,
-                pathColumnName: String) = PartyAndCertificateColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName),
+                              keyColumnName: String,
+                              certificateColumnName: String,
+                              pathColumnName: String) = PartyAndCertificateColumns(this.varchar(nameColumnName, length = 255), this.publicKey(keyColumnName),
         this.certificate(certificateColumnName), this.certificatePath(pathColumnName))
 fun Table.uuidString(name: String) = this.registerColumn<UUID>(name, UUIDStringColumnType)
 fun Table.localDate(name: String) = this.registerColumn<LocalDate>(name, LocalDateColumnType)
