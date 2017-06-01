@@ -15,7 +15,6 @@ import net.corda.core.flows.FlowStateMachine
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_CA
@@ -48,7 +47,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
 
     override fun startMainSimulation(): ListenableFuture<Unit> {
         val future = SettableFuture.create<Unit>()
-        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentity }, trustRoot = DUMMY_CA.certificate))
+        om = JacksonSupport.createInMemoryMapper(InMemoryIdentityService((banks + regulators + networkMap).map { it.info.legalIdentityAndCert }, trustRoot = DUMMY_CA.certificate))
 
         startIRSDealBetween(0, 1).success {
             // Next iteration is a pause.
@@ -131,7 +130,7 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         node2.registerInitiatedFlow(FixingFlow.Fixer::class.java)
 
         @InitiatingFlow
-        class StartDealFlow(val otherParty: PartyAndCertificate,
+        class StartDealFlow(val otherParty: Party,
                             val payload: AutoOffer,
                             val myKey: PublicKey) : FlowLogic<SignedTransaction>() {
             @Suspendable

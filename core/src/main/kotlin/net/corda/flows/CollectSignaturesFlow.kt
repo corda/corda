@@ -7,7 +7,6 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -174,7 +173,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  *
  * @param otherParty The counter-party which is providing you a transaction to sign.
  */
-abstract class SignTransactionFlow(val otherParty: PartyAndCertificate,
+abstract class SignTransactionFlow(val otherParty: Party,
                                    override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {

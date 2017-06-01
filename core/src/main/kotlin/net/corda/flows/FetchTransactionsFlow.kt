@@ -2,7 +2,7 @@ package net.corda.flows
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 
 /**
@@ -14,7 +14,7 @@ import net.corda.core.transactions.SignedTransaction
  * the database, because it's up to the caller to actually verify the transactions are valid.
  */
 @InitiatingFlow
-class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: PartyAndCertificate) :
+class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide) {
 
     override fun load(txid: SecureHash): SignedTransaction? {

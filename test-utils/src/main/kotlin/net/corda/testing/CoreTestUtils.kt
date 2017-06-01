@@ -9,6 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
@@ -31,6 +33,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.CertPath
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -66,22 +69,27 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
-val MINI_CORP: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
+val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
+val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
+val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
 val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC: PartyAndCertificate get() = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
+val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
+val BOC: Party get() = BOC_IDENTITY.party
 val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
+val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
 val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(listOf(MEGA_CORP, MINI_CORP, DUMMY_NOTARY), emptyMap(), DUMMY_CA.certificate)
+val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
+val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate)
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 

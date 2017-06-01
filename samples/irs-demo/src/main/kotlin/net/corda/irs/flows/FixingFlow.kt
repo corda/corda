@@ -9,7 +9,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
@@ -31,7 +30,7 @@ object FixingFlow {
      * who does what in the flow.
      */
     @InitiatedBy(FixingRoleDecider::class)
-    class Fixer(override val otherParty: PartyAndCertificate) : TwoPartyDealFlow.Secondary<FixingSession>() {
+    class Fixer(override val otherParty: Party) : TwoPartyDealFlow.Secondary<FixingSession>() {
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -97,7 +96,7 @@ object FixingFlow {
      * is just the "side" of the flow run by the party with the floating leg as a way of deciding who
      * does what in the flow.
      */
-    class Floater(override val otherParty: PartyAndCertificate,
+    class Floater(override val otherParty: Party,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
 
