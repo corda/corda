@@ -6,7 +6,7 @@ import java.lang.reflect.Type
 /**
  * Implemented to serialize and deserialize different types of objects to/from AMQP.
  */
-interface AMQPSerializer {
+interface AMQPSerializer<out T> {
     /**
      * The JVM type this can serialize and deserialize.
      */
@@ -34,5 +34,5 @@ interface AMQPSerializer {
     /**
      * Read the given object from the input. The envelope is provided in case the schema is required.
      */
-    fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any
+    fun readObject(obj: Any, schema: Schema, input: DeserializationInput): T
 }

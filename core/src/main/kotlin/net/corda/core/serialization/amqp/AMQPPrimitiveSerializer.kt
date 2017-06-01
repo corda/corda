@@ -7,7 +7,7 @@ import java.lang.reflect.Type
 /**
  * Serializer / deserializer for native AMQP types (Int, Float, String etc).
  */
-class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer {
+class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
     override val typeDescriptor: String = SerializerFactory.primitiveTypeName(Primitives.wrap(clazz))!!
     override val type: Type = clazz
 
@@ -19,5 +19,5 @@ class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer {
         data.putObject(obj)
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any = obj
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any = obj
 }

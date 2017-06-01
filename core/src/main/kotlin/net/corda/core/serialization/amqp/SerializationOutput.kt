@@ -14,10 +14,10 @@ import kotlin.collections.LinkedHashSet
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-class SerializationOutput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
+open class SerializationOutput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableMap<Any, Int> = IdentityHashMap()
-    private val serializerHistory: MutableSet<AMQPSerializer> = LinkedHashSet()
+    private val serializerHistory: MutableSet<AMQPSerializer<*>> = LinkedHashSet()
     private val schemaHistory: MutableSet<TypeNotation> = LinkedHashSet()
 
     /**
@@ -64,19 +64,21 @@ class SerializationOutput(private val serializerFactory: SerializerFactory = Ser
     internal fun writeObject(obj: Any, data: Data, type: Type) {
         val serializer = serializerFactory.get(obj.javaClass, type)
         if (serializer !in serializerHistory) {
+            serializerHistory.add(serializer)
             serializer.writeClassInfo(this)
         }
         serializer.writeObject(obj, data, type, this)
     }
 
-    internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
+    open internal fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
         return schemaHistory.addAll(typeNotation)
     }
 
-    internal fun requireSerializer(type: Type) {
-        if (type != SerializerFactory.AnyType) {
+    open internal fun requireSerializer(type: Type) {
+        if (type != SerializerFactory.AnyType && type != Object::class.java) {
             val serializer = serializerFactory.get(null, type)
             if (serializer !in serializerHistory) {
+                serializerHistory.add(serializer)
                 serializer.writeClassInfo(this)
             }
         }

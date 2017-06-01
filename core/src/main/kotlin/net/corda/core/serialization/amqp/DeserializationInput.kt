@@ -15,7 +15,7 @@ import java.util.*
  * @param serializerFactory This is the factory for [AMQPSerializer] instances and can be shared across multiple
  * instances and threads.
  */
-class DeserializationInput(private val serializerFactory: SerializerFactory = SerializerFactory()) {
+class DeserializationInput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
 
@@ -41,7 +41,7 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
             }
             val envelope = Envelope.get(data)
             // Now pick out the obj and schema from the envelope.
-            return clazz.cast(readObjectOrNull(envelope.obj, envelope, clazz))
+            return clazz.cast(readObjectOrNull(envelope.obj, envelope.schema, clazz))
         } catch(nse: NotSerializableException) {
             throw nse
         } catch(t: Throwable) {
@@ -51,20 +51,21 @@ class DeserializationInput(private val serializerFactory: SerializerFactory = Se
         }
     }
 
-    internal fun readObjectOrNull(obj: Any?, envelope: Envelope, type: Type): Any? {
+    internal fun readObjectOrNull(obj: Any?, schema: Schema, type: Type): Any? {
         if (obj == null) {
             return null
         } else {
-            return readObject(obj, envelope, type)
+            return readObject(obj, schema, type)
         }
     }
 
-    internal fun readObject(obj: Any, envelope: Envelope, type: Type): Any {
+    internal fun readObject(obj: Any, schema: Schema, type: Type): Any {
         if (obj is DescribedType) {
             // Look up serializer in factory by descriptor
-            val serializer = serializerFactory.get(obj.descriptor, envelope)
-            if (serializer.type != type && !serializer.type.isSubClassOf(type)) throw NotSerializableException("Described type with descriptor ${obj.descriptor} was expected to be of type $type")
-            return serializer.readObject(obj.described, envelope, this)
+            val serializer = serializerFactory.get(obj.descriptor, schema)
+            if (serializer.type != type && !serializer.type.isSubClassOf(type))
+                throw NotSerializableException("Described type with descriptor ${obj.descriptor} was expected to be of type $type")
+            return serializer.readObject(obj.described, schema, this)
         } else {
             return obj
         }
