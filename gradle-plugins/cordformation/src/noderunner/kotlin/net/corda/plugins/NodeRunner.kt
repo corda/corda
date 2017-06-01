@@ -3,6 +3,7 @@ package net.corda.plugins
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 
 private val HEADLESS_FLAG = "--headless"
@@ -64,16 +65,24 @@ private object WebJarType : JarType("corda-webserver.jar") {
 
 private abstract class JavaCommand(jarName: String, internal val dir: File, debugPort: Int?, internal val nodeName: String, init: MutableList<String>.() -> Unit, args: List<String>) {
     internal val command: List<String> = mutableListOf<String>().apply {
-        add(File(File(System.getProperty("java.home"), "bin"), "java").path)
+        add(javaPath)
         add("-Dname=$nodeName")
         null != debugPort && add("-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$debugPort")
-        add("-jar"); add(jarName)
+        add("-jar")
+        add(jarName)
         init()
         addAll(args)
     }
 
     internal abstract fun processBuilder(): ProcessBuilder
     internal fun start() = processBuilder().directory(dir).start()
+
+    private val javaPath: String by lazy {
+        val path = File(File(System.getProperty("java.home"), "bin"), "java").path
+        // Replace below is to fix an issue with spaces in paths on Windows.
+        // Quoting the entire path does not work, only the space or directory within the path.
+        if(os == OS.WINDOWS) path.replace(" ", "\" \"") else path
+    }
 }
 
 private class HeadlessJavaCommand(jarName: String, dir: File, debugPort: Int?, args: List<String>) : JavaCommand(jarName, dir, debugPort, dir.name, { add("--no-local-shell") }, args) {
