@@ -2,7 +2,6 @@
 
 package net.corda.core.crypto
 
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -23,6 +22,7 @@ val NULL_PARTY = AnonymousParty(NullPublicKey)
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable
+@Deprecated("Has encoding format problems, consider entropyToKeyPair() instead")
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()

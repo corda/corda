@@ -52,7 +52,7 @@ fun main(args: Array<String>) {
 
 class SwapExample {
 
-    val VALUATION_DATE = LocalDate.of(2016, 6, 6)
+    val VALUATION_DATE = LocalDate.of(2016, 6, 6)!!
 
     fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
         val curveGroupDefinition = loadCurveGroup()

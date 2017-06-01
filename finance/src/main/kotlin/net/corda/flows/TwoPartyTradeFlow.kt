@@ -6,7 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
@@ -52,7 +52,7 @@ object TwoPartyTradeFlow {
             val sellerOwnerKey: PublicKey
     )
 
-    open class Seller(val otherParty: Party,
+    open class Seller(val otherParty: PartyAndCertificate,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
@@ -107,8 +107,8 @@ object TwoPartyTradeFlow {
         // express flow state machines on top of the messaging layer.
     }
 
-    open class Buyer(val otherParty: Party,
-                     val notary: Party,
+    open class Buyer(val otherParty: PartyAndCertificate,
+                     val notary: PartyAndCertificate,
                      val acceptablePrice: Amount<Currency>,
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
@@ -195,10 +195,10 @@ object TwoPartyTradeFlow {
             tx.addOutputState(state, tradeRequest.assetForSale.state.notary)
             tx.addCommand(command, tradeRequest.assetForSale.state.data.owner.owningKey)
 
-            // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
-            // to have one.
+            // And add a request for a time-window: it may be that none of the contracts need this!
+            // But it can't hurt to have one.
             val currentTime = serviceHub.clock.instant()
-            tx.setTime(currentTime, 30.seconds)
+            tx.addTimeWindow(currentTime, 30.seconds)
             return Pair(tx, cashSigningPubKeys)
         }
         // DOCEND 1

@@ -3,17 +3,19 @@ package net.corda.node.utilities.registration
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
-import net.corda.core.crypto.KeyStoreUtilities
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.*
 import net.corda.core.exists
+import net.corda.core.mapToArray
 import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.getTestX509Name
-import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.cert.Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -31,8 +33,9 @@ class NetworkRegistrationHelperTest {
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
                 .map { getTestX509Name(it) }
-        val certs = identities.map { X509Utilities.createSelfSignedCACert(it).certificate }
-                .toTypedArray()
+        val converter = JcaX509CertificateConverter()
+        val certs = identities.map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
+                .mapToArray(converter::getCertificate)
 
         val certService: NetworkRegistrationService = mock {
             on { submitRequest(any()) }.then { id }
@@ -44,32 +47,45 @@ class NetworkRegistrationHelperTest {
                 myLegalName = ALICE.name,
                 networkMapService = null)
 
-        assertFalse(config.keyStoreFile.exists())
+        assertFalse(config.nodeKeystore.exists())
+        assertFalse(config.sslKeystore.exists())
         assertFalse(config.trustStoreFile.exists())
 
         NetworkRegistrationHelper(config, certService).buildKeystore()
 
-        assertTrue(config.keyStoreFile.exists())
+        assertTrue(config.nodeKeystore.exists())
+        assertTrue(config.sslKeystore.exists())
         assertTrue(config.trustStoreFile.exists())
 
-        KeyStoreUtilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword).run {
-            assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
-            val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-            assertEquals(3, certificateChain.size)
+        val nodeKeystore = KeyStoreUtilities.loadKeyStore(config.nodeKeystore, config.keyStorePassword)
+        val sslKeystore = KeyStoreUtilities.loadKeyStore(config.sslKeystore, config.keyStorePassword)
+        val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
+
+
+        nodeKeystore.run {
             assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY))
             assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
+            assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
+            val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
+            assertEquals(3, certificateChain.size)
+            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { X509CertificateHolder(it.encoded).subject.commonName })
         }
 
-        KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword).run {
-            assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA_PRIVATE_KEY))
+        sslKeystore.run {
             assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
             assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
-            assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA_PRIVATE_KEY))
+            assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA))
+            assertTrue(containsAlias(X509Utilities.CORDA_CLIENT_TLS))
+            val certificateChain = getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
+            assertEquals(4, certificateChain.size)
+            assertEquals(listOf("CORDA_CLIENT_CA", "CORDA_CLIENT_CA", "CORDA_INTERMEDIATE_CA", "CORDA_ROOT_CA"), certificateChain.map { X509CertificateHolder(it.encoded).subject.commonName })
+        }
+
+        trustStore.run {
+            assertFalse(containsAlias(X509Utilities.CORDA_CLIENT_CA))
+            assertFalse(containsAlias(X509Utilities.CORDA_INTERMEDIATE_CA))
             assertTrue(containsAlias(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(containsAlias(X509Utilities.CORDA_ROOT_CA_PRIVATE_KEY))
         }
     }
 }

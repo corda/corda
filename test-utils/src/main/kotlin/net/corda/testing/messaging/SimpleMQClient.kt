@@ -1,7 +1,6 @@
 package net.corda.testing.messaging
 
 import com.google.common.net.HostAndPort
-import net.corda.core.crypto.X509Utilities
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
@@ -37,6 +36,10 @@ class SimpleMQClient(val target: HostAndPort,
     fun createMessage(): ClientMessage = session.createMessage(false)
 
     fun stop() {
-        sessionFactory.close()
+        try {
+            sessionFactory.close()
+        } catch (e: Exception) {
+            // sessionFactory might not have initialised.
+        }
     }
 }

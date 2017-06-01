@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
 import com.typesafe.config.*
-import net.corda.core.crypto.location
+import net.corda.core.crypto.locationOrNull
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
 import java.io.File
@@ -26,7 +26,7 @@ class NodeConfig(
         val defaultUser = user("guest")
     }
 
-    val nearestCity: String? = legalName.location
+    val nearestCity: String = legalName.locationOrNull ?: "Unknown location"
     val nodeDir: Path = baseDir.resolve(key)
     override val pluginDir: Path = nodeDir.resolve("plugins")
     val explorerDir: Path = baseDir.resolve("$key-explorer")
@@ -47,10 +47,9 @@ class NodeConfig(
             .withValue("myLegalName", valueFor(legalName.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
-            .withFallback(optional("networkMapService", networkMap, {
-                c, n ->
+            .withFallback(optional("networkMapService", networkMap, { c, n ->
                 c.withValue("address", addressValueFor(n.p2pPort))
-                        .withValue("legalName", valueFor(n.legalName.toString()))
+                    .withValue("legalName", valueFor(n.legalName.toString()))
             }))
             .withValue("webAddress", addressValueFor(webPort))
             .withValue("rpcAddress", addressValueFor(rpcPort))

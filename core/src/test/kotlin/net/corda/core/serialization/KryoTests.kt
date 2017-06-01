@@ -3,15 +3,21 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
 import net.corda.node.services.messaging.Ack
 import net.corda.node.services.persistence.NodeAttachmentService
+import net.corda.testing.BOB_PUBKEY
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Before
 import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -134,6 +140,25 @@ class KryoTests {
             assertEquals(rubbish[i], readRubbishStream.read().toByte())
         }
         assertEquals(-1, readRubbishStream.read())
+    }
+
+    @Test
+    fun `serialize - deserialize X509CertififcateHolder`() {
+        val expected: X509CertificateHolder = X509Utilities.createSelfSignedCACertificate(ALICE.name, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME))
+        val serialized = expected.serialize(kryo).bytes
+        val actual: X509CertificateHolder = serialized.deserialize(kryo)
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `serialize - deserialize X509CertPath`() {
+        val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
+        val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
+        val expected = X509Utilities.createCertificatePath(rootCACert, certificate, revocationEnabled = false)
+        val serialized = expected.serialize(kryo).bytes
+        val actual: CertPath = serialized.deserialize(kryo)
+        assertEquals(expected, actual)
     }
 
     @CordaSerializable

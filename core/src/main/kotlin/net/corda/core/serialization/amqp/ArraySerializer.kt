@@ -9,14 +9,12 @@ import java.lang.reflect.Type
 /**
  * Serialization / deserialization of arrays.
  */
-class ArraySerializer(override val type: Type) : AMQPSerializer {
-    private val typeName = type.typeName
+class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    internal val elementType: Type = makeElementType()
 
-    private val elementType: Type = makeElementType()
-
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(type.typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 
     private fun makeElementType(): Type {
         return (type as? Class<*>)?.componentType ?: (type as GenericArrayType).genericComponentType
@@ -39,8 +37,10 @@ class ArraySerializer(override val type: Type) : AMQPSerializer {
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
-        return (obj as List<*>).map { input.readObjectOrNull(it, envelope, elementType) }.toArrayOfType(elementType)
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
+        if (obj is List<*>) {
+            return obj.map { input.readObjectOrNull(it, schema, elementType) }.toArrayOfType(elementType)
+        } else throw NotSerializableException("Expected a List but found $obj")
     }
 
     private fun <T> List<T>.toArrayOfType(type: Type): Any {

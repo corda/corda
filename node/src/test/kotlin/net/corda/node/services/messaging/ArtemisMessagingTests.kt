@@ -24,10 +24,10 @@ import net.corda.node.utilities.transaction
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
+import net.corda.testing.freePort
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
@@ -46,8 +46,8 @@ import kotlin.test.assertNull
 class ArtemisMessagingTests {
     @Rule @JvmField val temporaryFolder = TemporaryFolder()
 
-    val hostAndPort = freeLocalHostAndPort()
-    val rpcHostAndPort = freeLocalHostAndPort()
+    val serverPort = freePort()
+    val rpcPort = freePort()
     val topic = "platform.self"
     val identity = generateKeyPair()
 
@@ -93,7 +93,7 @@ class ArtemisMessagingTests {
 
     @Test
     fun `server starting with the port already bound should throw`() {
-        ServerSocket(hostAndPort.port).use {
+        ServerSocket(serverPort).use {
             val messagingServer = createMessagingServer()
             assertThatThrownBy { messagingServer.start() }
         }
@@ -103,7 +103,7 @@ class ArtemisMessagingTests {
     fun `client should connect to remote server`() {
         val remoteServerAddress = freeLocalHostAndPort()
 
-        createMessagingServer(remoteServerAddress).start()
+        createMessagingServer(remoteServerAddress.port).start()
         createMessagingClient(server = remoteServerAddress)
         startNodeMessagingClient()
     }
@@ -113,7 +113,7 @@ class ArtemisMessagingTests {
         val serverAddress = freeLocalHostAndPort()
         val invalidServerAddress = freeLocalHostAndPort()
 
-        createMessagingServer(serverAddress).start()
+        createMessagingServer(serverAddress.port).start()
 
         messagingClient = createMessagingClient(server = invalidServerAddress)
         assertThatThrownBy { startNodeMessagingClient() }
@@ -218,7 +218,7 @@ class ArtemisMessagingTests {
         return messagingClient
     }
 
-    private fun createMessagingClient(server: HostAndPort = hostAndPort): NodeMessagingClient {
+    private fun createMessagingClient(server: HostAndPort = HostAndPort.fromParts("localhost", serverPort)): NodeMessagingClient {
         return database.transaction {
             NodeMessagingClient(
                     config,
@@ -235,7 +235,7 @@ class ArtemisMessagingTests {
         }
     }
 
-    private fun createMessagingServer(local: HostAndPort = hostAndPort, rpc: HostAndPort = rpcHostAndPort): ArtemisMessagingServer {
+    private fun createMessagingServer(local: Int = serverPort, rpc: Int = rpcPort): ArtemisMessagingServer {
         return ArtemisMessagingServer(config, local, rpc, networkMapCache, userService).apply {
             config.configureWithDevSSLCertificate()
             messagingServer = this

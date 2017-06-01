@@ -11,10 +11,11 @@ import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
@@ -182,18 +183,10 @@ object SimmFlow {
     }
 
     /**
-     * Service plugin for listening for incoming Simm flow communication
-     */
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerServiceFlow(Requester::class.java, ::Receiver)
-        }
-    }
-
-    /**
      * Receives and validates a portfolio and comes to consensus over the portfolio initial margin using SIMM.
      */
-    class Receiver(val replyToParty: Party) : FlowLogic<Unit>() {
+    @InitiatedBy(Requester::class)
+    class Receiver(val replyToParty: PartyAndCertificate) : FlowLogic<Unit>() {
         lateinit var ownParty: Party
         lateinit var offer: OfferMessage
 

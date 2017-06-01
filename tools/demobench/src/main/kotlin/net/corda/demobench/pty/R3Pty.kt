@@ -44,7 +44,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
 
     @Throws(IOException::class)
     fun run(args: Array<String>, envs: Map<String, String>, workingDir: String?) {
-        check(!terminal.isSessionRunning, { "${terminal.sessionName} is already running" })
+        check(!terminal.isSessionRunning) { "${terminal.sessionName} is already running" }
 
         val environment = envs.toMutableMap()
         if (!UIUtil.isWindows) {
@@ -64,8 +64,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
             onExit(exitValue)
         }
 
-        val session = terminal.createTerminalSession(connector)
-        session.start()
+        terminal.createTerminalSession(connector).apply { start() }
     }
 
     @Suppress("unused")

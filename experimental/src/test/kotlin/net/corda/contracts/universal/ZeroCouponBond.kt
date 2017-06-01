@@ -70,7 +70,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             tweak {
                 command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }
@@ -88,7 +88,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outState }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(momAndPop.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "condition must be met"
@@ -100,7 +100,7 @@ class ZeroCouponBond {
         transaction {
             input { inState }
             output { outStateWrong }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             command(acmeCorp.owningKey) { UniversalContract.Commands.Action("execute") }
             this `fails with` "output state must match action result state"

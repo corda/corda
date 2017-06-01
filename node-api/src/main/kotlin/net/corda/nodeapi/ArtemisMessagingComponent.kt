@@ -107,8 +107,10 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      */
     fun checkStorePasswords() {
         val config = config ?: return
-        config.keyStoreFile.read {
-            KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
+        arrayOf(config.sslKeystore, config.nodeKeystore).forEach {
+            it.read {
+                KeyStore.getInstance("JKS").load(it, config.keyStorePassword.toCharArray())
+            }
         }
         config.trustStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())

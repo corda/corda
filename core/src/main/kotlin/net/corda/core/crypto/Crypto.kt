@@ -9,15 +9,20 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.*
+import org.bouncycastle.asn1.x509.BasicConstraints
+import org.bouncycastle.asn1.x509.Extension
+import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
@@ -26,6 +31,8 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.operator.ContentSigner
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
@@ -39,7 +46,6 @@ import java.math.BigInteger
 import java.security.*
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
-import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -556,32 +562,78 @@ object Crypto {
     }
 
     /**
-     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key.
+     * Build a partial X.509 certificate ready for signing.
+     *
+     * @param issuer name of the issuing entity.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    fun createCertificate(issuer: X500Name, issuerKeyPair: KeyPair,
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
                           subject: X500Name, subjectPublicKey: PublicKey,
-                          keyUsage: KeyUsage, purposes: List<KeyPurposeId>,
                           validityWindow: Pair<Date, Date>,
-                          pathLength: Int? = null, subjectAlternativeName: List<GeneralName>? = null): X509Certificate {
+                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
+
+        val serial = BigInteger.valueOf(random63BitValue())
+        val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
+
+        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
+                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
+                .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
+                .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
+                .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
+
+        if (nameConstraints != null) {
+            builder.addExtension(Extension.nameConstraints, true, nameConstraints)
+        }
+        return builder
+    }
+
+    /**
+     * Build and sign an X.509 certificate with the given signer.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerSigner content signer to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+        return builder.build(issuerSigner).apply {
+            require(isValidOn(Date()))
+        }
+    }
+
+    /**
+     * Build and sign an X.509 certificate with CA cert private key.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerKeyPair the public & private key to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
 
         val signatureScheme = findSignatureScheme(issuerKeyPair.private)
         val provider = providerMap[signatureScheme.providerName]
-        val serial = BigInteger.valueOf(random63BitValue())
-        val keyPurposes = DERSequence(ASN1EncodableVector().apply { purposes.forEach { add(it) } })
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
 
-        val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
-                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(SubjectPublicKeyInfo.getInstance(subjectPublicKey.encoded)))
-                .addExtension(Extension.basicConstraints, pathLength != null, if (pathLength == null) BasicConstraints(false) else BasicConstraints(pathLength))
-                .addExtension(Extension.keyUsage, false, keyUsage)
-                .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
-
-        if (subjectAlternativeName != null && subjectAlternativeName.isNotEmpty()) {
-            builder.addExtension(Extension.subjectAlternativeName, false, DERSequence(subjectAlternativeName.toTypedArray()))
-        }
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-        return JcaX509CertificateConverter().setProvider(provider).getCertificate(builder.build(signer)).apply {
-            checkValidity(Date())
-            verify(issuerKeyPair.public, provider)
+        return builder.build(signer).apply {
+            require(isValidOn(Date()))
+            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
         }
     }
 
@@ -666,6 +718,19 @@ object Crypto {
             is BCRSAPrivateKey, is BCSphincs256PrivateKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
+    }
+
+    /**
+     * Convert a public key to a supported implementation. This method is usually required to retrieve a key from an
+     * [X509CertificateHolder].
+     *
+     * @param key a public key.
+     * @return a supported implementation of the input public key.
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
+     * is inappropriate for a supported key factory to produce a private key.
+     */
+    fun toSupportedPublicKey(key: SubjectPublicKeyInfo): PublicKey {
+        return Crypto.decodePublicKey(key.encoded)
     }
 
     /**

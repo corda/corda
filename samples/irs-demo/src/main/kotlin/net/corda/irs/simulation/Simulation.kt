@@ -2,6 +2,7 @@ package net.corda.irs.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.locationOrNull
 import net.corda.core.flatMap
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
@@ -56,7 +57,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                              advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                              entropyRoot: BigInteger)
         : MockNetwork.MockNode(config, mockNet, networkMapAddress, advertisedServices, id, overrideServices, entropyRoot) {
-        override fun findMyLocation(): PhysicalLocation? = CityDatabase[configuration.nearestCity]
+        override fun findMyLocation(): PhysicalLocation? {
+            return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
+        }
     }
 
     inner class BankFactory : MockNetwork.Factory {
@@ -126,9 +129,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
+                    registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
+                    registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
                     javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                         database.transaction {
-                            findService<NodeInterestRates.Service>().upload(it)
+                            installCordaService(NodeInterestRates.Oracle::class.java).upload(it)
                         }
                     }
                     return this

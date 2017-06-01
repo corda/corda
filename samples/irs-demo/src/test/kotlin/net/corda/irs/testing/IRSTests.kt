@@ -1,7 +1,6 @@
 package net.corda.irs.testing
 
 import net.corda.core.contracts.*
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -224,7 +223,7 @@ class IRSTests {
                     calculation = dummyIRS.calculation,
                     common = dummyIRS.common,
                     notary = DUMMY_NOTARY).apply {
-                setTime(TEST_TX_TIME, 30.seconds)
+                addTimeWindow(TEST_TX_TIME, 30.seconds)
                 signWith(MEGA_CORP_KEY)
                 signWith(MINI_CORP_KEY)
                 signWith(DUMMY_NOTARY_KEY)
@@ -310,7 +309,7 @@ class IRSTests {
                 val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
                 with(tx) {
-                    setTime(TEST_TX_TIME, 30.seconds)
+                    addTimeWindow(TEST_TX_TIME, 30.seconds)
                     signWith(MEGA_CORP_KEY)
                     signWith(MINI_CORP_KEY)
                     signWith(DUMMY_NOTARY_KEY)
@@ -375,7 +374,7 @@ class IRSTests {
             transaction("Agreement") {
                 output("irs post agreement") { singleIRS() }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
 
@@ -393,7 +392,7 @@ class IRSTests {
                 command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd))
                 }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
         }
@@ -406,7 +405,7 @@ class IRSTests {
             input { irs }
             output("irs post agreement") { irs }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "There are no in states for an agreement"
         }
     }
@@ -420,7 +419,7 @@ class IRSTests {
                 irs.copy(calculation = irs.calculation.copy(fixedLegPaymentSchedule = emptySchedule))
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "There are events in the fix schedule"
         }
     }
@@ -434,7 +433,7 @@ class IRSTests {
                 irs.copy(calculation = irs.calculation.copy(floatingLegPaymentSchedule = emptySchedule))
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "There are events in the float schedule"
         }
     }
@@ -447,7 +446,7 @@ class IRSTests {
                 irs.copy(irs.fixedLeg.copy(notional = irs.fixedLeg.notional.copy(quantity = 0)))
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "All notionals must be non zero"
         }
 
@@ -456,7 +455,7 @@ class IRSTests {
                 irs.copy(irs.fixedLeg.copy(notional = irs.floatingLeg.notional.copy(quantity = 0)))
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "All notionals must be non zero"
         }
     }
@@ -470,7 +469,7 @@ class IRSTests {
                 modifiedIRS
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The fixed leg rate must be positive"
         }
     }
@@ -487,7 +486,7 @@ class IRSTests {
                 modifiedIRS
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The currency of the notionals must be the same"
         }
     }
@@ -501,7 +500,7 @@ class IRSTests {
                 modifiedIRS
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "All leg notionals must be the same"
         }
     }
@@ -515,7 +514,7 @@ class IRSTests {
                 modifiedIRS1
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The effective date is before the termination date for the fixed leg"
         }
 
@@ -525,7 +524,7 @@ class IRSTests {
                 modifiedIRS2
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The effective date is before the termination date for the floating leg"
         }
     }
@@ -540,7 +539,7 @@ class IRSTests {
                 modifiedIRS3
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The termination dates are aligned"
         }
 
@@ -551,7 +550,7 @@ class IRSTests {
                 modifiedIRS4
             }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this `fails with` "The effective dates are aligned"
         }
     }
@@ -565,7 +564,7 @@ class IRSTests {
         transaction {
             output("irs post agreement") { singleIRS() }
             command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this.verifies()
         }
 
@@ -586,7 +585,7 @@ class IRSTests {
                 command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd))
                 }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 output { newIRS }
                 this.verifies()
             }
@@ -594,7 +593,7 @@ class IRSTests {
             // This test makes sure that verify confirms the fixing was applied and there is a difference in the old and new
             tweak {
                 command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 output { oldIRS }
                 this `fails with` "There is at least one difference in the IRS floating leg payment schedules"
             }
@@ -602,7 +601,7 @@ class IRSTests {
             // This tests tries to sneak in a change to another fixing (which may or may not be the latest one)
             tweak {
                 command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
 
                 val firstResetKey = newIRS.calculation.floatingLegPaymentSchedule.keys.toList()[1]
                 val firstResetValue = newIRS.calculation.floatingLegPaymentSchedule[firstResetKey]
@@ -623,7 +622,7 @@ class IRSTests {
             // This tests modifies the payment currency for the fixing
             tweak {
                 command(ORACLE_PUBKEY) { InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld, Tenor("3M")), bd)) }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
 
                 val latestReset = newIRS.calculation.floatingLegPaymentSchedule.filter { it.value.rate is FixedRate }.maxBy { it.key }
                 val modifiedLatestResetValue = latestReset!!.value.copy(notional = Amount(latestReset.value.notional.quantity, Currency.getInstance("JPY")))
@@ -666,7 +665,7 @@ class IRSTests {
                     )
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
 
@@ -681,7 +680,7 @@ class IRSTests {
                     )
                 }
                 command(MEGA_CORP_PUBKEY) { InterestRateSwap.Commands.Agree() }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
 
@@ -710,7 +709,7 @@ class IRSTests {
                 command(ORACLE_PUBKEY) {
                     InterestRateSwap.Commands.Refix(Fix(FixOf("ICE LIBOR", ld1, Tenor("3M")), bd1))
                 }
-                timestamp(TEST_TX_TIME)
+                timeWindow(TEST_TX_TIME)
                 this.verifies()
             }
         }

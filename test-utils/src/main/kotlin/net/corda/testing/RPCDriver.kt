@@ -419,7 +419,7 @@ data class RPCDriverDSL(
             server.start()
             driverDSL.shutdownManager.registerShutdown {
                 server.stop()
-                addressMustNotBeBound(driverDSL.executorService, hostAndPort).get()
+                addressMustNotBeBound(driverDSL.executorService, hostAndPort)
             }
             RpcBrokerHandle(
                     hostAndPort = hostAndPort,

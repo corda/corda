@@ -7,11 +7,16 @@ import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.cordform.CordformContext
+import net.corda.cordform.CordformNode
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.ShutdownHook
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -19,10 +24,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.*
 import net.corda.node.LOGS_DIRECTORY_NAME
 import net.corda.node.services.config.*
-import net.corda.node.services.config.ConfigHelper
-import net.corda.node.services.config.FullNodeConfiguration
-import net.corda.node.services.config.VerifierType
-import net.corda.node.services.config.configOf
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
@@ -30,13 +31,12 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.cordform.CordformNode
-import net.corda.cordform.CordformContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.io.File
+import java.io.File.pathSeparator
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -97,7 +97,7 @@ interface DriverDSLExposedInterface : CordformContext {
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
-            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
+            rpcUsers: List<User> = emptyList()): Future<Pair<PartyAndCertificate, List<NodeHandle>>>
 
     /**
      * Starts a web server for a node
@@ -236,22 +236,19 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    var shutdownHook: Thread? = null
+    var shutdownHook: ShutdownHook? = null
     try {
         driverDsl.start()
-        shutdownHook = Thread({
+        shutdownHook = addShutdownHook {
             driverDsl.shutdown()
-        })
-        Runtime.getRuntime().addShutdownHook(shutdownHook)
+        }
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
         driverDsl.shutdown()
-        if (shutdownHook != null) {
-            Runtime.getRuntime().removeShutdownHook(shutdownHook)
-        }
+        shutdownHook?.cancel()
     }
 }
 
@@ -264,7 +261,11 @@ class ListenProcessDeathException(message: String) : Exception(message)
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
  */
-fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
+fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process) {
+    addressMustBeBoundFuture(executorService, hostAndPort, listenProcess).getOrThrow()
+}
+
+fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (!listenProcess.isAlive) {
             throw ListenProcessDeathException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
@@ -278,7 +279,11 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
     }
 }
 
-fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: HostAndPort) {
+    addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
+}
+
+fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -557,22 +562,20 @@ class DriverDSL(
             type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>
-    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
-        val nodeNames = (1..clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(it.toString()) }
+    ): ListenableFuture<Pair<PartyAndCertificate, List<NodeHandle>>> {
+        val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
-
-        val serviceInfo = ServiceInfo(type, notaryName)
-        val advertisedService = setOf(serviceInfo)
+        ServiceIdentityGenerator.generateToDisk(paths, DUMMY_CA, type.id, notaryName)
+        val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 
         // Start the first node that will bootstrap the cluster
-        val firstNotaryFuture = startNode(nodeNames.first(), advertisedService, rpcUsers, verifierType, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
+        val firstNotaryFuture = startNode(nodeNames.first(), advertisedServices, rpcUsers, verifierType, mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
         // All other nodes will join the cluster
         val restNotaryFutures = nodeNames.drop(1).map {
             val nodeAddress = portAllocation.nextHostAndPort()
             val configOverride = mapOf("notaryNodeAddress" to nodeAddress.toString(), "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))
-            startNode(it, advertisedService, rpcUsers, verifierType, configOverride)
+            startNode(it, advertisedServices, rpcUsers, verifierType, configOverride)
         }
 
         return firstNotaryFuture.flatMap { firstNotary ->
@@ -613,11 +616,11 @@ class DriverDSL(
         )
         _shutdownManager = ShutdownManager(executorService)
         if (networkMapStartStrategy.startDedicated) {
-            startDedicatedNetworkMapService()
+            startDedicatedNetworkMapService().andForget(log) // Allow it to start concurrently with other nodes.
         }
     }
 
-    override fun baseDirectory(nodeName: X500Name) = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
+    override fun baseDirectory(nodeName: X500Name): Path = driverDirectory / nodeName.commonName.replace(WHITESPACE, "")
 
     override fun startDedicatedNetworkMapService(): ListenableFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
@@ -639,7 +642,7 @@ class DriverDSL(
         log.info("Starting network-map-service")
         val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
         registerProcess(startNode)
-        return startNode.flatMap { addressMustBeBound(executorService, dedicatedNetworkMapAddress, it) }
+        return startNode.flatMap { addressMustBeBoundFuture(executorService, dedicatedNetworkMapAddress, it) }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
@@ -682,6 +685,8 @@ class DriverDSL(
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
+                val pluginsDirectory = nodeConf.baseDirectory / "plugins"
+
                 ProcessUtilities.startJavaProcess(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
@@ -689,12 +694,14 @@ class DriverDSL(
                                 "--logging-level=$loggingLevel",
                                 "--no-local-shell"
                         ),
+                        // Like the capsule, include the node's plugin directory
+                        classpath = "${ProcessUtilities.defaultClassPath}$pathSeparator$pluginsDirectory/*",
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
                         workingDirectory = nodeConf.baseDirectory
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, nodeConf.p2pAddress, process).map { process } }
+            }.flatMap { process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process } }
         }
 
         private fun startWebserver(
@@ -714,7 +721,7 @@ class DriverDSL(
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
-            }.flatMap { process -> addressMustBeBound(executorService, handle.webAddress, process).map { process } }
+            }.flatMap { process -> addressMustBeBoundFuture(executorService, handle.webAddress, process).map { process } }
         }
     }
 }

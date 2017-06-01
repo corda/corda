@@ -1,14 +1,27 @@
 package net.corda.services.messaging
 
+import net.corda.core.copyTo
+import net.corda.core.createDirectories
+import net.corda.core.crypto.*
+import net.corda.core.exists
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.RPCApi
+import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MINI_CORP
 import net.corda.testing.messaging.SimpleMQClient
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQClusterSecurityException
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralSubtree
+import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.path.CertPath
 import org.junit.Test
+import java.nio.file.Files
 
 /**
  * Runs the security tests with the attacker pretending to be a node on the network.
@@ -64,6 +77,58 @@ class MQSecurityAsNodeTest : MQSecurityTest() {
         val attacker = clientTo(alice.configuration.rpcAddress!!, sslConfiguration = null)
         assertThatExceptionOfType(ActiveMQSecurityException::class.java).isThrownBy {
             attacker.start(PEER_USER, PEER_USER, enableSSL = false)  // Login as a peer
+        }
+    }
+
+    @Test
+    fun `login with invalid certificate chain`() {
+        val sslConfig = object : SSLConfiguration {
+            override val certificatesDirectory = Files.createTempDirectory("certs")
+            override val keyStorePassword: String get() = "cordacadevpass"
+            override val trustStorePassword: String get() = "trustpass"
+
+            init {
+                val legalName = MEGA_CORP.name
+                certificatesDirectory.createDirectories()
+                if (!trustStoreFile.exists()) {
+                    javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
+                }
+
+                val caKeyStore = KeyStoreUtilities.loadKeyStore(javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
+
+                val rootCACert = caKeyStore.getX509Certificate(X509Utilities.CORDA_ROOT_CA)
+                val intermediateCA = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cordacadevkeypass")
+                val clientKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+
+                // Set name constrain to the legal name.
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, legalName))), arrayOf())
+                val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCA.certificate, intermediateCA.keyPair, legalName, clientKey.public, nameConstraints = nameConstraints)
+                val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+                // Using different x500 name in the TLS cert which is not allowed in the name constraints.
+                val clientTLSCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientKey, MINI_CORP.name, tlsKey.public)
+                val keyPass = keyStorePassword.toCharArray()
+                val clientCAKeystore = KeyStoreUtilities.loadOrCreateKeyStore(nodeKeystore, keyStorePassword)
+                clientCAKeystore.addOrReplaceKey(
+                        X509Utilities.CORDA_CLIENT_CA,
+                        clientKey.private,
+                        keyPass,
+                        CertPath(arrayOf(clientCACert, intermediateCA.certificate, rootCACert)))
+                clientCAKeystore.save(nodeKeystore, keyStorePassword)
+
+                val tlsKeystore = KeyStoreUtilities.loadOrCreateKeyStore(sslKeystore, keyStorePassword)
+                tlsKeystore.addOrReplaceKey(
+                        X509Utilities.CORDA_CLIENT_TLS,
+                        tlsKey.private,
+                        keyPass,
+                        CertPath(arrayOf(clientTLSCert, clientCACert, intermediateCA.certificate, rootCACert)))
+                tlsKeystore.save(sslKeystore, keyStorePassword)
+            }
+        }
+
+        val attacker = clientTo(alice.configuration.p2pAddress, sslConfig)
+
+        assertThatExceptionOfType(ActiveMQNotConnectedException::class.java).isThrownBy {
+            attacker.start(PEER_USER, PEER_USER)
         }
     }
 }

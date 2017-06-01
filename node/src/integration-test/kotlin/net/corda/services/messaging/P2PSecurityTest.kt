@@ -2,16 +2,14 @@ package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
-import net.corda.core.div
 import net.corda.core.getOrThrow
-import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -26,6 +24,7 @@ import net.corda.testing.node.SimpleNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
 import java.time.Instant
 import java.util.concurrent.TimeoutException
@@ -58,17 +57,19 @@ class P2PSecurityTest : NodeBasedTest() {
         }
     }
 
-    private fun startSimpleNode(legalName: X500Name): SimpleNode {
+    private fun startSimpleNode(legalName: X500Name,
+                                trustRoot: X509CertificateHolder? = null): SimpleNode {
         val config = TestNodeConfiguration(
-                baseDirectory = tempFolder.root.toPath() / legalName.commonName,
+                baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName,
                 networkMapService = NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
-        return SimpleNode(config).apply { start() }
+        return SimpleNode(config, trustRoot = trustRoot).apply { start() }
     }
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): ListenableFuture<NetworkMapService.RegistrationResponse> {
-        val nodeInfo = NodeInfo(net.myAddress, Party(registrationName, identity.public), MOCK_VERSION_INFO.platformVersion)
+        val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
+        val nodeInfo = NodeInfo(net.myAddress, legalIdentity, MOCK_VERSION_INFO.platformVersion)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), net.myAddress)
         return net.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.net.myAddress)

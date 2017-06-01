@@ -18,6 +18,7 @@ import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
@@ -26,9 +27,12 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.objenesis.strategy.StdInstantiatorStrategy
 import org.slf4j.Logger
+import sun.security.provider.certpath.X509CertPath
 import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.InputStream
+import java.security.cert.CertPath
+import java.security.cert.X509Certificate
 import java.util.*
 
 object DefaultKryoCustomizer {
@@ -97,7 +101,10 @@ object DefaultKryoCustomizer {
             // Note that return type should be specifically set to InputStream, otherwise it may not work, i.e. val aStream : InputStream = HashCheckingStream(...).
             addDefaultSerializer(InputStream::class.java, InputStreamSerializer)
 
+            register(CertPath::class.java, CertPathSerializer)
+            register(X509CertPath::class.java, CertPathSerializer)
             register(X500Name::class.java, X500NameSerializer)
+            register(X509CertificateHolder::class.java, X509CertificateSerializer)
 
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
             register(BCECPublicKey::class.java, PublicKeySerializer)

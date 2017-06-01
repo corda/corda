@@ -60,7 +60,7 @@ class Swaption {
     fun issue() {
         transaction {
             output { stateInitial }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 

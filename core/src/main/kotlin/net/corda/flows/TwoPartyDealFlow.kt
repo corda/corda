@@ -4,10 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.DealState
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.expandedCompositeKeys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
@@ -46,7 +46,7 @@ object TwoPartyDealFlow {
 
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
-        abstract val otherParty: Party
+        abstract val otherParty: PartyAndCertificate
         abstract val myKey: PublicKey
 
         @Suspendable override fun call(): SignedTransaction {
@@ -150,7 +150,7 @@ object TwoPartyDealFlow {
     /**
      * One side of the flow for inserting a pre-agreed deal.
      */
-    open class Instigator(override val otherParty: Party,
+    open class Instigator(override val otherParty: PartyAndCertificate,
                           override val payload: AutoOffer,
                           override val myKey: PublicKey,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {
@@ -181,9 +181,9 @@ object TwoPartyDealFlow {
             val deal = handshake.payload.dealBeingOffered
             val ptx = deal.generateAgreement(handshake.payload.notary)
 
-            // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
-            // to have one.
-            ptx.setTime(serviceHub.clock.instant(), 30.seconds)
+            // And add a request for a time-window: it may be that none of the contracts need this!
+            // But it can't hurt to have one.
+            ptx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
             return Pair(ptx, arrayListOf(deal.parties.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
         }
     }

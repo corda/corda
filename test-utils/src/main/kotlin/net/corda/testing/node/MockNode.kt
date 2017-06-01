@@ -1,14 +1,13 @@
 package net.corda.testing.node
 
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -16,16 +15,15 @@ import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
-import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.statemachine.flowVersion
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -42,10 +40,10 @@ import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
 import java.security.KeyPair
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.reflect.KClass
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -73,7 +71,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
 
-    val identities = ArrayList<Party>()
+    val identities = ArrayList<PartyAndCertificate>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
@@ -167,12 +165,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities)
+        // TODO: Specify a CA to validate registration against
+        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities, trustRoot = null as X509Certificate?)
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
-        override fun makeKeyManagementService(): KeyManagementService {
-            return E2ETestKeyManagementService(partyKeys + (overrideServices?.values ?: emptySet()))
+        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
+            return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -192,7 +191,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, Party(it.identity.name, override.public))
+                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
                     } else {
                         it
                     }
@@ -232,13 +231,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
 
-        @VisibleForTesting
-        fun registerServiceFlow(clientFlowClass: KClass<out FlowLogic<*>>,
-                                flowVersion: Int = clientFlowClass.java.flowVersion,
-                                serviceFlowFactory: (Party) -> FlowLogic<*>) {
-            serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.CorDapp(flowVersion, serviceFlowFactory)
-        }
-
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
             return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
         }
@@ -262,8 +254,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * Returns a node, optionally created by the passed factory method.
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
-     * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
@@ -369,6 +359,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info.address)
+        }
+        nodes.forEach { node ->
+            nodes.map { it.info.legalIdentity }.forEach { identity ->
+                node.services.identityService.registerIdentity(identity)
+            }
         }
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }

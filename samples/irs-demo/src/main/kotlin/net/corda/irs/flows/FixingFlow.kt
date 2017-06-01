@@ -5,11 +5,12 @@ import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
@@ -22,13 +23,6 @@ import java.math.BigDecimal
 import java.security.PublicKey
 
 object FixingFlow {
-
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerServiceFlow(FixingRoleDecider::class.java) { Fixer(it) }
-        }
-    }
-
     /**
      * One side of the fixing flow for an interest rate swap, but could easily be generalised further.
      *
@@ -36,8 +30,8 @@ object FixingFlow {
      * of the flow that is run by the party with the fixed leg of swap deal, which is the basis for deciding
      * who does what in the flow.
      */
-    class Fixer(override val otherParty: Party,
-                override val progressTracker: ProgressTracker = TwoPartyDealFlow.Secondary.tracker()) : TwoPartyDealFlow.Secondary<FixingSession>() {
+    @InitiatedBy(FixingRoleDecider::class)
+    class Fixer(override val otherParty: PartyAndCertificate) : TwoPartyDealFlow.Secondary<FixingSession>() {
 
         private lateinit var txState: TransactionState<*>
         private lateinit var deal: FixableDealState
@@ -77,9 +71,9 @@ object FixingFlow {
                 override fun beforeSigning(fix: Fix) {
                     newDeal.generateFix(ptx, StateAndRef(txState, handshake.payload.ref), fix)
 
-                    // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
-                    // to have one.
-                    ptx.setTime(serviceHub.clock.instant(), 30.seconds)
+                    // And add a request for a time-window: it may be that none of the contracts need this!
+                    // But it can't hurt to have one.
+                    ptx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
                 }
 
                 @Suspendable
@@ -103,7 +97,7 @@ object FixingFlow {
      * is just the "side" of the flow run by the party with the floating leg as a way of deciding who
      * does what in the flow.
      */
-    class Floater(override val otherParty: Party,
+    class Floater(override val otherParty: PartyAndCertificate,
                   override val payload: FixingSession,
                   override val progressTracker: ProgressTracker = TwoPartyDealFlow.Primary.tracker()) : TwoPartyDealFlow.Primary() {
 

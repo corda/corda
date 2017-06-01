@@ -9,8 +9,10 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.unconsumedStates
@@ -21,18 +23,11 @@ import net.corda.flows.FinalityFlow
 import net.corda.flows.ResolveTransactionsFlow
 import java.util.*
 
-object FxTransactionDemoTutorial {
-    // Would normally be called by custom service init in a CorDapp
-    fun registerFxProtocols(pluginHub: PluginServiceHub) {
-        pluginHub.registerServiceFlow(ForeignExchangeFlow::class.java, ::ForeignExchangeRemoteFlow)
-    }
-}
-
 @CordaSerializable
 private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
-                             val owner: Party,
-                             val counterparty: Party,
+                             val owner: PartyAndCertificate,
+                             val counterparty: PartyAndCertificate,
                              val notary: Party? = null)
 
 @CordaSerializable
@@ -108,8 +103,8 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
 class ForeignExchangeFlow(val tradeId: String,
                           val baseCurrencyAmount: Amount<Issued<Currency>>,
                           val quoteCurrencyAmount: Amount<Issued<Currency>>,
-                          val baseCurrencyBuyer: Party,
-                          val baseCurrencySeller: Party) : FlowLogic<SecureHash>() {
+                          val baseCurrencyBuyer: PartyAndCertificate,
+                          val baseCurrencySeller: PartyAndCertificate) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
@@ -212,7 +207,8 @@ class ForeignExchangeFlow(val tradeId: String,
     // DOCEND 3
 }
 
-class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
+@InitiatedBy(ForeignExchangeFlow::class)
+class ForeignExchangeRemoteFlow(val source: PartyAndCertificate) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // Initial receive from remote party

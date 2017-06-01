@@ -7,15 +7,18 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.unwrap
 import net.corda.flows.FetchAttachmentsFlow
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.AttachmentEntity
+import net.corda.node.services.statemachine.SessionInit
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -136,7 +139,11 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int) {
-        server.services.registerServiceFlow(clientLogic.javaClass, ::ServerLogic)
+        server.registerFlowFactory(ClientLogic::class.java, object : InitiatedFlowFactory<ServerLogic> {
+            override fun createFlow(platformVersion: Int, otherParty: PartyAndCertificate, sessionInit: SessionInit): ServerLogic {
+                return ServerLogic(otherParty)
+            }
+        }, ServerLogic::class.java, track = false)
         client.services.startFlow(clientLogic)
         network.runNetwork(rounds)
     }

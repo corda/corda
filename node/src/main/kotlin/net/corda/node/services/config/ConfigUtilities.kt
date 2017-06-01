@@ -54,8 +54,8 @@ fun SSLConfiguration.configureDevKeyAndTrustStores(myLegalName: X500Name) {
     if (!trustStoreFile.exists()) {
         javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordatruststore.jks").copyTo(trustStoreFile)
     }
-    if (!keyStoreFile.exists()) {
+    if (!sslKeystore.exists() || !nodeKeystore.exists()) {
         val caKeyStore = KeyStoreUtilities.loadKeyStore(javaClass.classLoader.getResourceAsStream("net/corda/node/internal/certificates/cordadevcakeys.jks"), "cordacadevpass")
-        X509Utilities.createKeystoreForSSL(keyStoreFile, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
+        X509Utilities.createKeystoreForCordaNode(sslKeystore, nodeKeystore, keyStorePassword, keyStorePassword, caKeyStore, "cordacadevkeypass", myLegalName)
     }
 }

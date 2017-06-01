@@ -46,6 +46,14 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
+processIntegrationTestResources {
+    // Build one of the demos so that we can test CorDapp scanning in CordappScanningTest. It doesn't matter which demo
+    // we use, just make sure the test is updated accordingly.
+    from(project(':samples:trader-demo').tasks.jar) {
+        rename 'trader-demo-(.*)', 'trader-demo.jar'
+    }
+}
+
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
 // build/reports/project/dependencies/index.html for green highlighted parts of the tree.
 
@@ -75,7 +83,10 @@ dependencies {
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
+    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        // Gains our proton-j version from core module.
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
@@ -126,7 +137,8 @@ dependencies {
     compile "org.hibernate:hibernate-java8:$hibernate_version"
 
     // Capsule is a library for building independently executable fat JARs.
-    compile 'co.paralleluniverse:capsule:1.0.3'
+    // We only need this dependency to compile our Caplet against.
+    compileOnly "co.paralleluniverse:capsule:$capsule_version"
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.3'
@@ -152,7 +164,7 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 
     // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"

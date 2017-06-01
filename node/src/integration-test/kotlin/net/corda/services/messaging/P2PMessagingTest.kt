@@ -3,8 +3,6 @@ package net.corda.services.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -64,10 +62,9 @@ class P2PMessagingTest : NodeBasedTest() {
     // TODO Use a dummy distributed service
     @Test
     fun `communicating with a distributed service which the network map node is part of`() {
-
-        val root = tempFolder.root.toPath()
         ServiceIdentityGenerator.generateToDisk(
-                listOf(root / DUMMY_MAP.name.commonName, root / SERVICE_2_NAME.commonName),
+                listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
+                DUMMY_CA,
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 

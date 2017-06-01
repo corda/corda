@@ -25,7 +25,8 @@ public class CordformNode {
     public List<String> advertisedServices = emptyList();
 
     /**
-     * If running a distributed notary, a list of node addresses for joining the Raft cluster
+     * If running a Raft notary cluster, the address of at least one node in the cluster, or leave blank to start a new cluster.
+     * If running a BFT notary cluster, the addresses of all nodes in the cluster.
      */
     public List<String> notaryClusterAddresses = emptyList();
     /**
@@ -55,15 +56,6 @@ public class CordformNode {
     }
 
     /**
-     * Set the nearest city to the node.
-     *
-     * @param nearestCity The name of the nearest city to the node.
-     */
-    public void nearestCity(String nearestCity) {
-        config = config.withValue("nearestCity", ConfigValueFactory.fromAnyRef(nearestCity));
-    }
-
-    /**
      * Set the Artemis P2P port for this node.
      *
      * @param p2pPort The Artemis messaging queue port.
@@ -82,11 +74,18 @@ public class CordformNode {
     }
 
     /**
-     * Set the port which to bind the Copycat (Raft) node to
+     * Set the port which to bind the Copycat (Raft) node to.
      *
      * @param notaryPort The Raft port.
      */
     public void notaryNodePort(Integer notaryPort) {
         config = config.withValue("notaryNodeAddress", ConfigValueFactory.fromAnyRef(DEFAULT_HOST + ':' + notaryPort));
+    }
+
+    /**
+     * @param id The (0-based) BFT replica ID.
+     */
+    public void bftReplicaId(Integer id) {
+        config = config.withValue("bftReplicaId", ConfigValueFactory.fromAnyRef(id));
     }
 }

@@ -20,6 +20,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
@@ -30,6 +31,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.time.Instant
 import java.util.*
@@ -322,7 +326,7 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
         kryo.writeClassAndObject(output, obj.notary)
         kryo.writeClassAndObject(output, obj.mustSign)
         kryo.writeClassAndObject(output, obj.type)
-        kryo.writeClassAndObject(output, obj.timestamp)
+        kryo.writeClassAndObject(output, obj.timeWindow)
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
@@ -350,8 +354,8 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
             val notary = kryo.readClassAndObject(input) as Party?
             val signers = kryo.readClassAndObject(input) as List<PublicKey>
             val transactionType = kryo.readClassAndObject(input) as TransactionType
-            val timestamp = kryo.readClassAndObject(input) as Timestamp?
-            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, signers, transactionType, timestamp)
+            val timeWindow = kryo.readClassAndObject(input) as TimeWindow?
+            return WireTransaction(inputs, attachmentHashes, outputs, commands, notary, signers, transactionType, timeWindow)
         }
     }
 }
@@ -609,6 +613,35 @@ object X500NameSerializer : Serializer<X500Name>() {
     }
 
     override fun write(kryo: Kryo, output: Output, obj: X500Name) {
+        output.writeBytes(obj.encoded)
+    }
+}
+
+/**
+ * For serialising an [CertPath] in an X.500 standard format.
+ */
+@ThreadSafe
+object CertPathSerializer : Serializer<CertPath>() {
+    val factory = CertificateFactory.getInstance("X.509")
+    override fun read(kryo: Kryo, input: Input, type: Class<CertPath>): CertPath {
+        return factory.generateCertPath(input)
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: CertPath) {
+        output.writeBytes(obj.encoded)
+    }
+}
+
+/**
+ * For serialising an [CX509CertificateHolder] in an X.500 standard format.
+ */
+@ThreadSafe
+object X509CertificateSerializer : Serializer<X509CertificateHolder>() {
+    override fun read(kryo: Kryo, input: Input, type: Class<X509CertificateHolder>): X509CertificateHolder {
+        return X509CertificateHolder(input.readBytes())
+    }
+
+    override fun write(kryo: Kryo, output: Output, obj: X509CertificateHolder) {
         output.writeBytes(obj.encoded)
     }
 }

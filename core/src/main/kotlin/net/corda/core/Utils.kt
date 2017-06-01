@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import rx.Observable
@@ -32,13 +33,7 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.Iterable
 import kotlin.collections.LinkedHashMap
-import kotlin.collections.List
-import kotlin.collections.filter
-import kotlin.collections.firstOrNull
-import kotlin.collections.fold
-import kotlin.collections.forEach
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -111,12 +106,14 @@ fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Uni
 infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
 infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
+fun <T> ListenableFuture<T>.andForget(log: Logger) = failure(RunOnCallerThread) { log.error("Background task failed:", it) }
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = run {
-    val iterator = iterator()
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = mapToArray(transform, iterator(), size)
+inline fun <reified R> IntProgression.mapToArray(transform: (Int) -> R) = mapToArray(transform, iterator(), 1 + (last - first) / step)
+inline fun <T, reified R> mapToArray(transform: (T) -> R, iterator: Iterator<T>, size: Int) = run {
     var expected = 0
     Array(size) {
         expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")
@@ -151,6 +148,12 @@ operator fun String.div(other: String) = Paths.get(this) / other
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)
 fun Path.exists(vararg options: LinkOption): Boolean = Files.exists(this, *options)
+fun Path.copyToDirectory(targetDir: Path, vararg options: CopyOption): Path {
+    require(targetDir.isDirectory()) { "$targetDir is not a directory" }
+    val targetFile = targetDir.resolve(fileName)
+    Files.copy(this, targetFile, *options)
+    return targetFile
+}
 fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
 fun Path.isRegularFile(vararg options: LinkOption): Boolean = Files.isRegularFile(this, *options)
 fun Path.isDirectory(vararg options: LinkOption): Boolean = Files.isDirectory(this, *options)
@@ -281,7 +284,7 @@ class ThreadBox<out T>(val content: T, val lock: ReentrantLock = ReentrantLock()
  * We avoid the use of the word transient here to hopefully reduce confusion with the term in relation to (Java) serialization.
  */
 @CordaSerializable
-abstract class RetryableException(message: String) : Exception(message)
+abstract class RetryableException(message: String) : FlowException(message)
 
 /**
  * A simple wrapper that enables the use of Kotlin's "val x by TransientProperty { ... }" syntax. Such a property
@@ -477,3 +480,6 @@ fun <T> Class<T>.checkNotUnorderedHashMap() {
         throw NotSerializableException("Map type $this is unstable under iteration. Suggested fix: use LinkedHashMap instead.")
     }
 }
+
+fun Class<*>.requireExternal(msg: String = "Internal class")
+        = require(!name.startsWith("net.corda.node.") && !name.contains(".internal.")) { "$msg: $name" }

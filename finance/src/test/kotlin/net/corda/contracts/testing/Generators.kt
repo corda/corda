@@ -75,7 +75,7 @@ class WiredTransactionGenerator : Generator<WireTransaction>(WireTransaction::cl
                 notary = PartyGenerator().generate(random, status),
                 signers = commands.flatMap { it.signers },
                 type = TransactionType.General,
-                timestamp = TimestampGenerator().generate(random, status)
+                timeWindow = TimeWindowGenerator().generate(random, status)
         )
     }
 }

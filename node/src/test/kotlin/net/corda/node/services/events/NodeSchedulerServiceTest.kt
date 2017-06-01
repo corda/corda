@@ -10,8 +10,10 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.ALICE_KEY
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
+import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
@@ -75,9 +77,10 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val dataSourceAndDatabase = configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
+        val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
         database.transaction {
-            val kms = MockKeyManagementService(ALICE_KEY)
             val nullIdentity = X500Name("cn=None")
             val mockMessagingService = InMemoryMessagingNetwork(false).InMemoryMessaging(
                     false,
@@ -90,13 +93,13 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
             }
             scheduler = NodeSchedulerService(services, database, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
-            val mockSMM = StateMachineManager(services, listOf(services, scheduler), DBCheckpointStorage(), smmExecutor, database)
+            val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->
                 if (change is StateMachineManager.Change.Removed && mockSMM.allStateMachines.isEmpty()) {
                     smmHasRemovedAllFlows.countDown()
                 }
             }
-            mockSMM.start()
+            mockSMM.start(listOf(services, scheduler))
             services.smm = mockSMM
             scheduler.start()
         }

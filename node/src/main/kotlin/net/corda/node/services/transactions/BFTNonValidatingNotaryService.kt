@@ -2,9 +2,9 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
-import net.corda.core.node.services.TimestampChecker
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.FilteredTransaction
@@ -14,21 +14,26 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
 import org.jetbrains.exposed.sql.Database
+import java.nio.file.Path
 import kotlin.concurrent.thread
 
 /**
  * A non-validating notary service operated by a group of parties that don't necessarily trust each other.
  *
- * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and timestamp validity.
+ * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(services: ServiceHubInternal,
-                                    timestampChecker: TimestampChecker,
+class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
+                                    services: ServiceHubInternal,
+                                    timeWindowChecker: TimeWindowChecker,
                                     serverId: Int,
                                     db: Database,
-                                    val client: BFTSMaRt.Client) : NotaryService {
+                                    private val client: BFTSMaRt.Client) : NotaryService {
     init {
+        val configHandle = config.handle()
         thread(name = "BFTSmartServer-$serverId", isDaemon = true) {
-            Server(serverId, db, "bft_smart_notary_committed_states", services, timestampChecker)
+            configHandle.use {
+                Server(configHandle.path, serverId, db, "bft_smart_notary_committed_states", services, timeWindowChecker)
+            }
         }
     }
 
@@ -37,11 +42,11 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    override val serviceFlowFactory: (Party, Int) -> FlowLogic<Void?> = { otherParty, _ ->
+    override val serviceFlowFactory: (PartyAndCertificate, Int) -> FlowLogic<Void?> = { otherParty, _ ->
         ServiceFlow(otherParty, client)
     }
 
-    private class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSide: PartyAndCertificate, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
@@ -62,11 +67,12 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
         }
     }
 
-    private class Server(id: Int,
+    private class Server(configHome: Path,
+                         id: Int,
                          db: Database,
                          tableName: String,
                          services: ServiceHubInternal,
-                         timestampChecker: TimestampChecker) : BFTSMaRt.Server(id, db, tableName, services, timestampChecker) {
+                         timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Server(configHome, id, db, tableName, services, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
@@ -75,12 +81,12 @@ class BFTNonValidatingNotaryService(services: ServiceHubInternal,
             return response.serialize().bytes
         }
 
-        fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
+        fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: PartyAndCertificate): BFTSMaRt.ReplicaResponse {
             return try {
                 val id = ftx.rootHash
                 val inputs = ftx.filteredLeaves.inputs
 
-                validateTimestamp(ftx.filteredLeaves.timestamp)
+                validateTimeWindow(ftx.filteredLeaves.timeWindow)
                 commitInputStates(inputs, id, callerIdentity)
 
                 log.debug { "Inputs committed successfully, signing $id" }

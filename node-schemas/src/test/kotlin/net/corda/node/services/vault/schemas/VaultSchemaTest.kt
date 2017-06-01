@@ -119,7 +119,7 @@ class VaultSchemaTest {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timestamp: Timestamp? = null
+        val timeWindow: TimeWindow? = null
         transaction = LedgerTransaction(
                 inputs,
                 outputs,
@@ -128,7 +128,7 @@ class VaultSchemaTest {
                 id,
                 notary,
                 signers,
-                timestamp,
+                timeWindow,
                 TransactionType.General
         )
     }
@@ -151,7 +151,7 @@ class VaultSchemaTest {
         val attachments = emptyList<Attachment>()
         val id = SecureHash.randomSHA256()
         val signers = listOf(DUMMY_NOTARY_KEY.public)
-        val timestamp: Timestamp? = null
+        val timeWindow: TimeWindow? = null
         return LedgerTransaction(
                 inputs,
                 outputs,
@@ -160,7 +160,7 @@ class VaultSchemaTest {
                 id,
                 notary,
                 signers,
-                timestamp,
+                timeWindow,
                 TransactionType.General
         )
     }

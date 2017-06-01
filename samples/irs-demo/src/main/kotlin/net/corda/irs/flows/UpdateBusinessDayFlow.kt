@@ -1,20 +1,18 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.PluginServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.node.utilities.TestClock
 import net.corda.testing.node.MockNetworkMapCache
 import java.time.LocalDate
-import java.util.function.Function
 
 /**
  * This is a less temporary, demo-oriented way of initiating processing of temporal events.
@@ -26,16 +24,7 @@ object UpdateBusinessDayFlow {
     @CordaSerializable
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
-    class Plugin : CordaPluginRegistry() {
-        override val servicePlugins = listOf(Function(::Service))
-    }
-
-    class Service(services: PluginServiceHub) {
-        init {
-            services.registerServiceFlow(Broadcast::class.java, ::UpdateBusinessDayHandler)
-        }
-    }
-
+    @InitiatedBy(Broadcast::class)
     private class UpdateBusinessDayHandler(val otherParty: Party) : FlowLogic<Unit>() {
         override fun call() {
             val message = receive<UpdateBusinessDayMessage>(otherParty).unwrap { it }
@@ -66,7 +55,7 @@ object UpdateBusinessDayFlow {
         /**
          * Returns recipients ordered by legal name, with notary nodes taking priority over party nodes.
          * Ordering is required so that we avoid situations where on clock update a party starts a scheduled flow, but
-         * the notary or counterparty still use the old clock, so the timestamp on the transaction does not validate.
+         * the notary or counterparty still use the old clock, so the time-window on the transaction does not validate.
          */
         private fun getRecipients(): Iterable<NodeInfo> {
             val notaryNodes = serviceHub.networkMapCache.notaryNodes

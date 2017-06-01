@@ -19,17 +19,14 @@ configurations {
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
 
-dependencies {
-    compile project(':webserver')
-}
-
-task buildWebserverJar(type: FatCapsule) {
+task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.webserver.WebServer'
     archiveName "corda-webserver-${corda_release_version}.jar"
     applicationSource = files(
-            project.tasks.findByName('jar'),
-            new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet.class'),
-            new File(project(':node').rootDir, 'node/build/classes/main/CordaCaplet$1.class'),
+            project(':webserver').configurations.compile,
+            project(':webserver').jar,
+            new File(project(':node').buildDir, 'classes/main/CordaCaplet.class'),
+            new File(project(':node').buildDir, 'classes/main/CordaCaplet$1.class'),
             "$rootDir/config/dev/log4j2.xml"
     )
     from 'NOTICE' // Copy CDDL notice

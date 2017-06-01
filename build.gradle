@@ -16,6 +16,11 @@ buildscript {
     // TODO: Sort this alphabetically.
     ext.kotlin_version = constants.getProperty("kotlinVersion")
     ext.quasar_version = '0.7.6'    // TODO: Upgrade to 0.7.7+ when Quasar bug 238 is resolved.
+
+    // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1
+    // TODO: Upgrade gradle-capsule-plugin to a version with capsule:1.0.3
+    ext.capsule_version = '1.0.1'
+
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.5.3'
     ext.jackson_version = '2.8.5'
@@ -68,6 +73,7 @@ buildscript {
 plugins {
     // TODO The capsule plugin requires the newer DSL plugin block.It would be nice if we could unify all the plugins into one style,
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
+    // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
 }
 
@@ -216,14 +222,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
     node {
         name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
     }
     node {
         name "CN=Bank A,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
         advertisedServices = []
         p2pPort 10012
         rpcPort 10013
@@ -232,7 +236,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     }
     node {
         name "CN=Bank B,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "New York"
         advertisedServices = []
         p2pPort 10007
         rpcPort 10008
