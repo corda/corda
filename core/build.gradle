@@ -95,3 +95,7 @@ artifacts {
 jar {
     baseName 'corda-core'
 }
+
+publish {
+    name = jar.baseName
+}
