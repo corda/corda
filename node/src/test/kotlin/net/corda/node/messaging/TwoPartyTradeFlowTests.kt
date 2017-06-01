@@ -308,7 +308,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val extraKey = bobNode.keyManagement.freshKey()
+            val extraKey = bobNode.keyManagement.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(extraKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -407,7 +407,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsKey = bobNode.keyManagement.freshKey()
+            val bobsKey = bobNode.keyManagement.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(bobsKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second

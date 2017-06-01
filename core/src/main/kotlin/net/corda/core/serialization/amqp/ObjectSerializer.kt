@@ -10,26 +10,30 @@ import kotlin.reflect.jvm.javaConstructor
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties (matched with a constructor).
  */
-class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
+class ObjectSerializer(val clazz: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     private val javaConstructor: Constructor<Any>?
-    private val propertySerializers: Collection<PropertySerializer>
+    internal val propertySerializers: Collection<PropertySerializer>
 
     init {
         val kotlinConstructor = constructorForDeserialization(clazz)
         javaConstructor = kotlinConstructor?.javaConstructor
-        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz)
+        propertySerializers = propertiesForSerialization(kotlinConstructor, clazz, factory)
     }
     private val typeName = clazz.name
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
     private val interfaces = interfacesForSerialization(clazz) // TODO maybe this proves too much and we need annotations to restrict.
 
-    private val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
+    internal val typeNotation: TypeNotation = CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor, null), generateFields())
 
     override fun writeClassInfo(output: SerializationOutput) {
-        output.writeTypeNotations(typeNotation)
-        for (iface in interfaces) {
-            output.requireSerializer(iface)
+        if (output.writeTypeNotations(typeNotation)) {
+            for (iface in interfaces) {
+                output.requireSerializer(iface)
+            }
+            for (property in propertySerializers) {
+                property.writeClassInfo(output)
+            }
         }
     }
 
@@ -45,13 +49,13 @@ class ObjectSerializer(val clazz: Class<*>) : AMQPSerializer {
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         if (obj is UnsignedInteger) {
             // TODO: Object refs
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         } else if (obj is List<*>) {
             if (obj.size > propertySerializers.size) throw NotSerializableException("Too many properties in described type $typeName")
-            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, envelope, input) }
+            val params = obj.zip(propertySerializers).map { it.second.readProperty(it.first, schema, input) }
             return construct(params)
         } else throw NotSerializableException("Body of described type is unexpected $obj")
     }

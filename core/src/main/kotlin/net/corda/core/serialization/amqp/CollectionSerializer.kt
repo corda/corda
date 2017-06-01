@@ -12,28 +12,27 @@ import kotlin.collections.Set
 /**
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
-class CollectionSerializer(val declaredType: ParameterizedType) : AMQPSerializer {
+class CollectionSerializer(val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType as? DeserializedParameterizedType ?: DeserializedParameterizedType.make(declaredType.toString())
-    private val typeName = declaredType.toString()
-    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type)}"
+    override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
     companion object {
-        private val supportedTypes: Map<Class<out Collection<*>>, (Collection<*>) -> Collection<*>> = mapOf(
-                Collection::class.java to { coll -> coll },
-                List::class.java to { coll -> coll },
-                Set::class.java to { coll -> Collections.unmodifiableSet(LinkedHashSet(coll)) },
-                SortedSet::class.java to { coll -> Collections.unmodifiableSortedSet(TreeSet(coll)) },
-                NavigableSet::class.java to { coll -> Collections.unmodifiableNavigableSet(TreeSet(coll)) }
+        private val supportedTypes: Map<Class<out Collection<*>>, (List<*>) -> Collection<*>> = mapOf(
+                Collection::class.java to { list -> Collections.unmodifiableCollection(list) },
+                List::class.java to { list -> Collections.unmodifiableList(list) },
+                Set::class.java to { list -> Collections.unmodifiableSet(LinkedHashSet(list)) },
+                SortedSet::class.java to { list -> Collections.unmodifiableSortedSet(TreeSet(list)) },
+                NavigableSet::class.java to { list -> Collections.unmodifiableNavigableSet(TreeSet(list)) }
         )
+
+        private fun findConcreteType(clazz: Class<*>): (List<*>) -> Collection<*> {
+            return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported collection type $clazz.")
+        }
     }
 
-    private val concreteBuilder: (Collection<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
+    private val concreteBuilder: (List<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private fun findConcreteType(clazz: Class<*>): (Collection<*>) -> Collection<*> {
-        return supportedTypes[clazz] ?: throw NotSerializableException("Unsupported map type $clazz.")
-    }
-
-    private val typeNotation: TypeNotation = RestrictedType(typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(declaredType.toString(), null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -52,8 +51,8 @@ class CollectionSerializer(val declaredType: ParameterizedType) : AMQPSerializer
         }
     }
 
-    override fun readObject(obj: Any, envelope: Envelope, input: DeserializationInput): Any {
+    override fun readObject(obj: Any, schema: Schema, input: DeserializationInput): Any {
         // TODO: Can we verify the entries in the list?
-        return concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, envelope, declaredType.actualTypeArguments[0]) })
+        return concreteBuilder((obj as List<*>).map { input.readObjectOrNull(it, schema, declaredType.actualTypeArguments[0]) })
     }
 }
