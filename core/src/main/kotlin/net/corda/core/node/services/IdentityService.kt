@@ -11,9 +11,9 @@ import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
 
 /**
- * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
- * lookup of a party given its key. This is obviously very incomplete and does not reflect everything a real identity
- * service would provide.
+ * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
+ * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
+ * identities back to the well known identity (i.e. the identity in the network map) of a party.
  */
 interface IdentityService {
     /**
