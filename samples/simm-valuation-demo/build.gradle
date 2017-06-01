@@ -31,8 +31,8 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
-    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':node')
     compile project(':webserver')

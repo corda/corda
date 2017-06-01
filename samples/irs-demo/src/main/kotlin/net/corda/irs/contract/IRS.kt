@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
@@ -189,10 +190,6 @@ class FloatingRatePaymentEvent(date: LocalDate,
  */
 class InterestRateSwap : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
-
-    companion object {
-        val oracleType = ServiceType.corda.getSubType("interest_rates")
-    }
 
     /**
      * This Common area contains all the information that is not leg specific.
@@ -665,7 +662,7 @@ class InterestRateSwap : Contract {
         override val contract = IRS_PROGRAM_ID
 
         override val oracleType: ServiceType
-            get() = InterestRateSwap.oracleType
+            get() = NodeInterestRates.Oracle.type
 
         override val ref = common.tradeID
 

@@ -39,7 +39,7 @@ class IRSDemoTest : IntegrationTestCategory {
                 systemProperties = mapOf("net.corda.node.cordapp.scan.package" to "net.corda.irs"))
         {
             val (controller, nodeA, nodeB) = Futures.allAsList(
-                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                    startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),
                     startNode(DUMMY_BANK_B.name)
             ).getOrThrow()
