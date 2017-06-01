@@ -52,6 +52,13 @@ interface IdentityService {
      */
     fun getAllIdentities(): Iterable<PartyAndCertificate>
 
+    /**
+     * Get the certificate and path for a well known identity.
+     *
+     * @return the party and certificate, or null if unknown.
+     */
+    fun certificateFromParty(party: Party): PartyAndCertificate?
+
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
     // but for now this is not supported.

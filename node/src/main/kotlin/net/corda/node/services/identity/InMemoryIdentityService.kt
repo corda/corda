@@ -5,7 +5,6 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.*
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
@@ -75,6 +74,8 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         principalToParties[party.name] = party
     }
 
+    override fun certificateFromParty(party: Party): PartyAndCertificate? = principalToParties[party.name]
+
     // We give the caller a copy of the data set to avoid any locking problems
     override fun getAllIdentities(): Iterable<PartyAndCertificate> = ArrayList(keyToParties.values)
 
@@ -111,7 +112,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
 
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
     override fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath) {
-        val fullParty = principalToParties[party.name] ?: throw IllegalArgumentException("Unknown identity ${party.name}")
+        val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
         val validator = CertPathValidator.getInstance("PKIX")
