@@ -22,13 +22,17 @@ import kotlin.test.assertNull
 class InMemoryIdentityServiceTests {
     @Test
     fun `get all identities`() {
-        val service = InMemoryIdentityService(setOf(ALICE_IDENTITY, BOB_IDENTITY), emptyMap(), DUMMY_CA.certificate)
+        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        // Nothing registered, so empty set
         assertNull(service.getAllIdentities().firstOrNull())
+
+        service.registerIdentity(ALICE_IDENTITY)
         var expected = setOf<Party>(ALICE)
         var actual = service.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
 
         // Add a second party and check we get both back
+        service.registerIdentity(BOB_IDENTITY)
         expected = setOf<Party>(ALICE, BOB)
         actual = service.getAllIdentities().map { it.party }.toHashSet()
         assertEquals(expected, actual)
