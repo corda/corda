@@ -5,9 +5,8 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
+import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.core.flatMap
-import net.corda.core.internal.ShutdownHook
-import net.corda.core.internal.addShutdownHook
 import net.corda.core.messaging.RPCOps
 import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
@@ -40,6 +39,7 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.addShutdownHook
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
