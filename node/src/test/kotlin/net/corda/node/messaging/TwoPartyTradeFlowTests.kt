@@ -13,8 +13,6 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
@@ -308,7 +306,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val extraKey = bobNode.keyManagement.freshKey()
+            val extraKey = bobNode.keyManagement.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(extraKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -407,7 +405,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsKey = bobNode.keyManagement.freshKey()
+            val bobsKey = bobNode.keyManagement.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(bobsKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -485,8 +483,8 @@ class TwoPartyTradeFlowTests {
                                   sellerNode: MockNetwork.MockNode,
                                   buyerNode: MockNetwork.MockNode,
                                   assetToSell: StateAndRef<OwnableState>): RunResult {
-        sellerNode.services.identityService.registerIdentity(buyerNode.info.legalIdentity)
-        buyerNode.services.identityService.registerIdentity(sellerNode.info.legalIdentity)
+        sellerNode.services.identityService.registerIdentity(buyerNode.info.legalIdentityAndCert)
+        buyerNode.services.identityService.registerIdentity(sellerNode.info.legalIdentityAndCert)
         val buyerFlows: Observable<BuyerAcceptor> = buyerNode.registerInitiatedFlow(BuyerAcceptor::class.java)
         val firstBuyerFiber = buyerFlows.toFuture().map { it.stateMachine }
         val seller = SellerInitiator(buyerNode.info.legalIdentity, notaryNode.info, assetToSell, 1000.DOLLARS)
@@ -495,7 +493,7 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatingFlow
-    class SellerInitiator(val buyer: PartyAndCertificate,
+    class SellerInitiator(val buyer: Party,
                           val notary: NodeInfo,
                           val assetToSell: StateAndRef<OwnableState>,
                           val price: Amount<Currency>) : FlowLogic<SignedTransaction>() {
@@ -512,10 +510,10 @@ class TwoPartyTradeFlowTests {
     }
 
     @InitiatedBy(SellerInitiator::class)
-    class BuyerAcceptor(val seller: PartyAndCertificate) : FlowLogic<SignedTransaction>() {
+    class BuyerAcceptor(val seller: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val (notary, price) = receive<Pair<PartyAndCertificate, Amount<Currency>>>(seller).unwrap {
+            val (notary, price) = receive<Pair<Party, Amount<Currency>>>(seller).unwrap {
                 require(serviceHub.networkMapCache.isNotary(it.first)) { "${it.first} is not a notary" }
                 it
             }

@@ -363,13 +363,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun <F : FlowLogic<*>> registerInitiatedFlowInternal(initiatedFlow: Class<F>, track: Boolean): Observable<F> {
-        val ctor = try {
-            initiatedFlow.getDeclaredConstructor(PartyAndCertificate::class.java).apply { isAccessible = true }
-        } catch(ex: NoSuchMethodException) {
-            // Fall back to a constructor that takes in a Party
-            // TODO: Consider removing for 1.0 release, as flows should generally take the more detailed class
-            initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
-        }
+        val ctor = initiatedFlow.getDeclaredConstructor(Party::class.java).apply { isAccessible = true }
         val initiatingFlow = initiatedFlow.requireAnnotation<InitiatedBy>().value.java
         val (version, classWithAnnotation) = initiatingFlow.flowVersionAndInitiatingClass
         require(classWithAnnotation == initiatingFlow) {
@@ -417,7 +411,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * @suppress
      */
     @VisibleForTesting
-    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (PartyAndCertificate, Int) -> FlowLogic<*>) {
+    fun installCoreFlow(clientFlowClass: KClass<out FlowLogic<*>>, flowFactory: (Party, Int) -> FlowLogic<*>) {
         require(clientFlowClass.java.flowVersionAndInitiatingClass.first == 1) {
             "${InitiatingFlow::class.java.name}.version not applicable for core flows; their version is the node's platform version"
         }
@@ -681,13 +675,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeIdentityService(): IdentityService {
         val keyStore = KeyStoreUtilities.loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)
         val trustRoot = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as? X509Certificate
-        val service = InMemoryIdentityService(trustRoot = trustRoot)
-        service.registerIdentity(info.legalIdentity)
-        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentity) }
+        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot)
+        services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
         netMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
-                service.registerIdentity(mapChange.node.legalIdentity)
+                service.registerIdentity(mapChange.node.legalIdentityAndCert)
             }
         }
         return service
