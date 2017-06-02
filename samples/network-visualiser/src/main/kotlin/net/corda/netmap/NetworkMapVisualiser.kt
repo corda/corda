@@ -11,6 +11,7 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
+import net.corda.core.crypto.commonName
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.deserialize
 import net.corda.core.then
@@ -234,7 +235,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name.toString()
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.commonName}: $extraLabel" else node.info.legalIdentity.name.commonName
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget
