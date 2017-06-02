@@ -273,6 +273,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun <T : SerializeAsToken> tryInstallCordaService(serviceClass: Class<T>): T? {
+        /** TODO: This mechanism may get replaced by a different one, see comments on [CordaService]. */
         val typeField = try {
             serviceClass.getField("type")
         } catch (e: NoSuchFieldException) {
