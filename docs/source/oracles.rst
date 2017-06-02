@@ -275,3 +275,11 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
     When overriding be careful when making the sub-class an anonymous or inner class (object declarations in Kotlin),
     because that kind of classes can access variables from the enclosing scope and cause serialization problems when
     checkpointed.
+
+Testing
+-------
+
+When unit testing we make use of the ``MockNetwork`` which allows us to create ``MockNode``s, which are simplified nodes
+suitable for tests. One feature we lose (and which is not suitable in unit testing anyway) is the node's ability to scan
+and automatically install orcales it finds in the CorDapp jars. Instead when working with ``MockNode`` use the
+``installCordaService`` method to manually install the oracle on the relevant node.

@@ -2,17 +2,11 @@ package net.corda.kotlin.rpc
 
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
-import java.io.FilterInputStream
-import java.io.InputStream
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.time.Duration.ofSeconds
-import java.util.Currency
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.*
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.notUsed
-import net.corda.core.contracts.*
+import net.corda.core.contracts.DOLLARS
+import net.corda.core.contracts.POUNDS
+import net.corda.core.contracts.SWISS_FRANCS
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
@@ -20,27 +14,34 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
 import net.corda.nodeapi.User
+import net.corda.smoketesting.NodeConfig
+import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.io.FilterInputStream
+import java.io.InputStream
+import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 
 class StandaloneCordaRPClientTest {
     private companion object {
         val log = loggerFor<StandaloneCordaRPClientTest>()
-        val buildDir: Path = Paths.get(System.getProperty("build.dir"))
-        val nodesDir: Path = buildDir.resolve("nodes")
         val user = User("user1", "test", permissions = setOf("ALL"))
-        val factory = NodeProcess.Factory(nodesDir)
         val port = AtomicInteger(15000)
         const val attachmentSize = 2116
-        const val timeout = 60L
+        val timeout = 60.seconds
     }
 
     private lateinit var notary: NodeProcess
@@ -59,7 +60,7 @@ class StandaloneCordaRPClientTest {
 
     @Before
     fun setUp() {
-        notary = factory.create(notaryConfig)
+        notary = NodeProcess.Factory().create(notaryConfig)
         connection = notary.connect()
         rpcProxy = connection.proxy
         notaryIdentity = fetchNotaryIdentity()
@@ -91,7 +92,7 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test starting flow`() {
         rpcProxy.startFlow(::CashIssueFlow, 127.POUNDS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
-            .returnValue.getOrThrow(ofSeconds(timeout))
+            .returnValue.getOrThrow(timeout)
     }
 
     @Test
@@ -104,7 +105,7 @@ class StandaloneCordaRPClientTest {
             log.info("Flow>> $msg")
             ++trackCount
         }
-        handle.returnValue.getOrThrow(ofSeconds(timeout))
+        handle.returnValue.getOrThrow(timeout)
         assertNotEquals(0, trackCount)
     }
 
@@ -128,7 +129,7 @@ class StandaloneCordaRPClientTest {
 
         // Now issue some cash
         rpcProxy.startFlow(::CashIssueFlow, 513.SWISS_FRANCS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
-            .returnValue.getOrThrow(ofSeconds(timeout))
+            .returnValue.getOrThrow(timeout)
         assertEquals(1, updateCount)
     }
 
@@ -145,7 +146,7 @@ class StandaloneCordaRPClientTest {
 
         // Now issue some cash
         rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
-            .returnValue.getOrThrow(ofSeconds(timeout))
+            .returnValue.getOrThrow(timeout)
         assertNotEquals(0, updateCount)
 
         // Check that this cash exists in the vault
