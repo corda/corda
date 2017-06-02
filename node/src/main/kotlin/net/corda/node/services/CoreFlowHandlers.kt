@@ -9,7 +9,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 import net.corda.flows.*
@@ -26,20 +25,20 @@ import net.corda.flows.*
  *
  * Additionally, because nodes do not store invalid transactions, requesting such a transaction will always yield null.
  */
-class FetchTransactionsHandler(otherParty: PartyAndCertificate) : FetchDataHandler<SignedTransaction>(otherParty) {
+class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
     override fun getData(id: SecureHash): SignedTransaction? {
         return serviceHub.storageService.validatedTransactions.getTransaction(id)
     }
 }
 
 // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
-class FetchAttachmentsHandler(otherParty: PartyAndCertificate) : FetchDataHandler<ByteArray>(otherParty) {
+class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
     override fun getData(id: SecureHash): ByteArray? {
         return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
     }
 }
 
-abstract class FetchDataHandler<out T>(val otherParty: PartyAndCertificate) : FlowLogic<Unit>() {
+abstract class FetchDataHandler<out T>(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class)
     override fun call() {
@@ -60,7 +59,7 @@ abstract class FetchDataHandler<out T>(val otherParty: PartyAndCertificate) : Fl
 //       includes us in any outside that list. Potentially just if it includes any outside that list at all.
 // TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
 //       cash without from unknown parties?
-class NotifyTransactionHandler(val otherParty: PartyAndCertificate) : FlowLogic<Unit>() {
+class NotifyTransactionHandler(val otherParty: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         val request = receive<BroadcastTransactionFlow.NotifyTxRequest>(otherParty).unwrap { it }
@@ -69,7 +68,7 @@ class NotifyTransactionHandler(val otherParty: PartyAndCertificate) : FlowLogic<
     }
 }
 
-class NotaryChangeHandler(otherSide: PartyAndCertificate) : AbstractStateReplacementFlow.Acceptor<PartyAndCertificate>(otherSide) {
+class NotaryChangeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Party>(otherSide) {
     /**
      * Check the notary change proposal.
      *
@@ -77,7 +76,7 @@ class NotaryChangeHandler(otherSide: PartyAndCertificate) : AbstractStateReplace
      * and is also in a geographically convenient location we can just automatically approve the change.
      * TODO: In more difficult cases this should call for human attention to manually verify and approve the proposal
      */
-    override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<PartyAndCertificate>): Unit {
+    override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Party>): Unit {
         val state = proposal.stateRef
         val proposedTx = proposal.stx.tx
 
@@ -102,7 +101,7 @@ class NotaryChangeHandler(otherSide: PartyAndCertificate) : AbstractStateReplace
     }
 }
 
-class ContractUpgradeHandler(otherSide: PartyAndCertificate) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
+class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Acceptor<Class<out UpgradedContract<ContractState, *>>>(otherSide) {
     @Suspendable
     @Throws(StateReplacementException::class)
     override fun verifyProposal(proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {

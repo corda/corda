@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -166,7 +165,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         // TODO: Specify a CA to validate registration against
-        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities, trustRoot = null as X509Certificate?)
+        override fun makeIdentityService(): IdentityService {
+            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(), trustRoot = null as X509Certificate?)
+        }
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
@@ -217,7 +218,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun start(): MockNode {
             super.start()
-            mockNet.identities.add(info.legalIdentity)
+            mockNet.identities.add(info.legalIdentityAndCert)
             return this
         }
 
@@ -360,10 +361,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info.address)
         }
-        nodes.forEach { node ->
-            nodes.map { it.info.legalIdentity }.forEach { identity ->
-                node.services.identityService.registerIdentity(identity)
-            }
+        nodes.forEach { itNode ->
+            nodes.map { it.info.legalIdentityAndCert }.forEach(itNode.services.identityService::registerIdentity)
         }
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }

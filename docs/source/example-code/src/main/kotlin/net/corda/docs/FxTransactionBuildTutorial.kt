@@ -26,8 +26,8 @@ import java.util.*
 @CordaSerializable
 private data class FxRequest(val tradeId: String,
                              val amount: Amount<Issued<Currency>>,
-                             val owner: PartyAndCertificate,
-                             val counterparty: PartyAndCertificate,
+                             val owner: Party,
+                             val counterparty: Party,
                              val notary: Party? = null)
 
 @CordaSerializable
@@ -103,8 +103,8 @@ private fun prepareOurInputsAndOutputs(serviceHub: ServiceHub, request: FxReques
 class ForeignExchangeFlow(val tradeId: String,
                           val baseCurrencyAmount: Amount<Issued<Currency>>,
                           val quoteCurrencyAmount: Amount<Issued<Currency>>,
-                          val baseCurrencyBuyer: PartyAndCertificate,
-                          val baseCurrencySeller: PartyAndCertificate) : FlowLogic<SecureHash>() {
+                          val baseCurrencyBuyer: Party,
+                          val baseCurrencySeller: Party) : FlowLogic<SecureHash>() {
     @Suspendable
     override fun call(): SecureHash {
         // Select correct sides of the Fx exchange to query for.
@@ -208,7 +208,7 @@ class ForeignExchangeFlow(val tradeId: String,
 }
 
 @InitiatedBy(ForeignExchangeFlow::class)
-class ForeignExchangeRemoteFlow(val source: PartyAndCertificate) : FlowLogic<Unit>() {
+class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         // Initial receive from remote party

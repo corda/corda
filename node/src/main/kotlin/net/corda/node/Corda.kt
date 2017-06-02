@@ -228,7 +228,7 @@ private fun printPluginsAndServices(node: Node) {
 private fun messageOfTheDay(): Pair<String, String> {
     val messages = arrayListOf(
             "The only distributed ledger that pays\nhomage to Pac Man in its logo.",
-            "You know, I was a banker once ...\nbut I lost interest. ${Emoji.bagOfCash}",
+            "You know, I was a banker\nonce ... but I lost interest. ${Emoji.bagOfCash}",
             "It's not who you know, it's who you know\nknows what you know you know.",
             "It runs on the JVM because QuickBasic\nis apparently not 'professional' enough.",
             "\"It's OK computer, I go to sleep after\ntwenty minutes of inactivity too!\"",
@@ -240,12 +240,11 @@ private fun messageOfTheDay(): Pair<String, String> {
             "There was an earthquake in California,\na local bank went into de-fault.",
             "I asked for insurance if the nearby\nvolcano erupted. They said I'd be covered.",
             "I had an account with a bank in the\nNorth Pole, but they froze all my assets ${Emoji.santaClaus}",
-            "Check your contracts carefully. The\nfine print is usually a clause for suspicion ${Emoji.santaClaus}",
+            "Check your contracts carefully. The fine print\nis usually a clause for suspicion ${Emoji.santaClaus}",
             "Some bankers are generous ...\nto a vault! ${Emoji.bagOfCash} ${Emoji.coolGuy}",
             "What you can buy for a dollar these\ndays is absolute non-cents! ${Emoji.bagOfCash}",
-            "Old bankers never die, they just\n... pass the buck",
-            "My wife made me into millionaire.\nI was a multi-millionaire before we met.",
-            "I won $3M on the lottery so I donated\na quarter of it to charity. Now I have $2,999,999.75.",
+            "Old bankers never die, they\njust... pass the buck",
+            "I won $3M on the lottery so I donated a quarter\nof it to charity. Now I have $2,999,999.75.",
             "There are two rules for financial success:\n1) Don't tell everything you know.",
             "Top tip: never say \"oops\", instead\nalways say \"Ah, Interesting!\"",
             "Computers are useless. They can only\ngive you answers.  -- Picasso"

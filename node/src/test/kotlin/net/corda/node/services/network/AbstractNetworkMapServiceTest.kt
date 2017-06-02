@@ -198,7 +198,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun MockNode.identityQuery(): NodeInfo? {
-        val request = QueryIdentityRequest(info.legalIdentity, info.address)
+        val request = QueryIdentityRequest(info.legalIdentityAndCert, info.address)
         val response = services.networkService.sendRequest<QueryIdentityResponse>(QUERY_TOPIC, request, mapServiceNode.info.address)
         mockNet.runNetwork()
         return response.getOrThrow().node
