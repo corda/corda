@@ -3,7 +3,7 @@ package net.corda.node.services.transactions
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.Party
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -42,11 +42,11 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    override val serviceFlowFactory: (PartyAndCertificate, Int) -> FlowLogic<Void?> = { otherParty, _ ->
+    override val serviceFlowFactory: (Party, Int) -> FlowLogic<Void?> = { otherParty, _ ->
         ServiceFlow(otherParty, client)
     }
 
-    private class ServiceFlow(val otherSide: PartyAndCertificate, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
@@ -81,7 +81,7 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
             return response.serialize().bytes
         }
 
-        fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: PartyAndCertificate): BFTSMaRt.ReplicaResponse {
+        fun verifyAndCommitTx(ftx: FilteredTransaction, callerIdentity: Party): BFTSMaRt.ReplicaResponse {
             return try {
                 val id = ftx.rootHash
                 val inputs = ftx.filteredLeaves.inputs

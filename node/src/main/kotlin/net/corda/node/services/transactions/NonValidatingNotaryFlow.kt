@@ -1,7 +1,7 @@
 package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.Party
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.transactions.FilteredTransaction
@@ -9,7 +9,7 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.NotaryFlow
 import net.corda.flows.TransactionParts
 
-class NonValidatingNotaryFlow(otherSide: PartyAndCertificate,
+class NonValidatingNotaryFlow(otherSide: Party,
                               timeWindowChecker: TimeWindowChecker,
                               uniquenessProvider: UniquenessProvider) : NotaryFlow.Service(otherSide, timeWindowChecker, uniquenessProvider) {
     /**

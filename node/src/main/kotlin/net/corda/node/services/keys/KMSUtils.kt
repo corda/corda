@@ -41,7 +41,7 @@ fun freshCertificate(identityService: IdentityService,
     val ourCertPath = X509Utilities.createCertificatePath(issuerCertificate, ourCertificate, revocationEnabled = revocationEnabled)
     require(Arrays.equals(ourCertificate.subjectPublicKeyInfo.encoded, subjectPublicKey.encoded))
     identityService.registerAnonymousIdentity(AnonymousParty(subjectPublicKey),
-            issuer,
+            issuer.party,
             ourCertPath)
     return Pair(issuerCertificate, ourCertPath)
 }

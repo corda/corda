@@ -7,7 +7,7 @@ import net.corda.core.contracts.TransactionGraphSearch
 import net.corda.core.div
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
-import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
@@ -17,7 +17,7 @@ import net.corda.flows.TwoPartyTradeFlow
 import java.util.*
 
 @InitiatedBy(SellerFlow::class)
-class BuyerFlow(val otherParty: PartyAndCertificate) : FlowLogic<Unit>() {
+class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
 
     object STARTING_BUY : ProgressTracker.Step("Seller connected, purchasing commercial paper asset")
 

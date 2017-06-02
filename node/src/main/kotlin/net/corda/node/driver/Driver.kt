@@ -97,7 +97,7 @@ interface DriverDSLExposedInterface : CordformContext {
             clusterSize: Int = 3,
             type: ServiceType = RaftValidatingNotaryService.type,
             verifierType: VerifierType = VerifierType.InMemory,
-            rpcUsers: List<User> = emptyList()): Future<Pair<PartyAndCertificate, List<NodeHandle>>>
+            rpcUsers: List<User> = emptyList()): Future<Pair<Party, List<NodeHandle>>>
 
     /**
      * Starts a web server for a node
@@ -562,7 +562,7 @@ class DriverDSL(
             type: ServiceType,
             verifierType: VerifierType,
             rpcUsers: List<User>
-    ): ListenableFuture<Pair<PartyAndCertificate, List<NodeHandle>>> {
+    ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
         ServiceIdentityGenerator.generateToDisk(paths, DUMMY_CA, type.id, notaryName)
