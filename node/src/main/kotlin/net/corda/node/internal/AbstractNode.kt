@@ -222,6 +222,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     serverThread,
                     database,
                     busyNodeLatch)
+
+            smm.tokenizableServices.addAll(tokenizableServices)
+
             if (serverThread is ExecutorService) {
                 runOnStop += Runnable {
                     // We wait here, even though any in-flight messages should have been drained away because the
@@ -240,10 +243,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             startMessagingService(rpcOps)
             installCoreFlows()
 
-            val scanResult = scanCorDapps()
+            val scanResult = scanCordapps()
             if (scanResult != null) {
-                val cordappServices = installCordaServices(scanResult)
-                tokenizableServices.addAll(cordappServices)
+                installCordaServices(scanResult)
                 registerInitiatedFlows(scanResult)
                 rpcFlows = findRPCFlows(scanResult)
             } else {
@@ -257,7 +259,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             runOnStop += Runnable { net.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
-            smm.start(tokenizableServices)
+            smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += Runnable { smm.stop(acceptableLiveFiberCountOnStop()) }
             scheduler.start()
@@ -266,34 +268,37 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return this
     }
 
-    private fun installCordaServices(scanResult: ScanResult): List<SerializeAsToken> {
-        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class).mapNotNull {
-            tryInstallCordaService(it)
+    private fun installCordaServices(scanResult: ScanResult) {
+        fun getServiceType(clazz: Class<*>): ServiceType? {
+            return try {
+                clazz.getField("type").get(null) as ServiceType
+            } catch (e: NoSuchFieldException) {
+                log.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
+                null
+            }
         }
-    }
 
-    private fun <T : SerializeAsToken> tryInstallCordaService(serviceClass: Class<T>): T? {
-        /** TODO: This mechanism may get replaced by a different one, see comments on [CordaService]. */
-        val typeField = try {
-            serviceClass.getField("type")
-        } catch (e: NoSuchFieldException) {
-            null
-        }
-        if (typeField == null) {
-            log.warn("${serviceClass.name} does not have a type field, optimistically proceeding with install.")
-        } else if (info.serviceIdentities(typeField.get(null) as ServiceType).isEmpty()) {
-            return null
-        }
-        return try {
-            installCordaService(serviceClass)
-        } catch (e: NoSuchMethodException) {
-            log.error("${serviceClass.name}, as a Corda service, must have a constructor with a single parameter " +
-                    "of type ${PluginServiceHub::class.java.name}")
-            null
-        } catch (e: Exception) {
-            log.error("Unable to install Corda service ${serviceClass.name}", e)
-            null
-        }
+        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+                .filter {
+                    val serviceType = getServiceType(it)
+                    if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
+                        log.debug { "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
+                                "advertised services" }
+                        false
+                    } else {
+                        true
+                    }
+                }
+                .forEach {
+                    try {
+                        installCordaService(it)
+                    } catch (e: NoSuchMethodException) {
+                        log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
+                                "of type ${PluginServiceHub::class.java.name}")
+                    } catch (e: Exception) {
+                        log.error("Unable to install Corda service ${it.name}", e)
+                    }
+                }
     }
 
     /**
@@ -305,6 +310,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val ctor = clazz.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
         val service = ctor.newInstance(services)
         cordappServices.putInstance(clazz, service)
+        smm.tokenizableServices += service
         log.info("Installed ${clazz.name} Corda service")
         return service
     }
@@ -371,16 +377,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             "${InitiatingFlow::class.java.name} must be annotated on ${initiatingFlow.name} and not on a super-type"
         }
         val flowFactory = InitiatedFlowFactory.CorDapp(version, { ctor.newInstance(it) })
-        val observable = registerFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
+        val observable = internalRegisterFlowFactory(initiatingFlow, flowFactory, initiatedFlow, track)
         log.info("Registered ${initiatingFlow.name} to initiate ${initiatedFlow.name} (version $version)")
         return observable
     }
 
     @VisibleForTesting
-    fun <F : FlowLogic<*>> registerFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
-                                               flowFactory: InitiatedFlowFactory<F>,
-                                               initiatedFlowClass: Class<F>,
-                                               track: Boolean): Observable<F> {
+    fun <F : FlowLogic<*>> internalRegisterFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
+                                                       flowFactory: InitiatedFlowFactory<F>,
+                                                       initiatedFlowClass: Class<F>,
+                                                       track: Boolean): Observable<F> {
         val observable = if (track) {
             smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
         } else {
@@ -453,14 +459,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
-
         return tokenizableServices
     }
 
-    private fun scanCorDapps(): ScanResult? {
+    private fun scanCordapps(): ScanResult? {
         val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
         val paths = if (scanPackage != null) {
-            // This is purely for integration tests so that classes defined in the test can automatically be picked up
+            // Rather than looking in the plugins directory, figure out the classpath for the given package and scan that
+            // instead. This is used in tests where we avoid having to package stuff up in jars and then having to move
+            // them to the plugins directory for each node.
             check(configuration.devMode) { "Package scanning can only occur in dev mode" }
             val resource = scanPackage.replace('.', '/')
             javaClass.classLoader.getResources(resource)
@@ -545,7 +552,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun hasSSLCertificates(): Boolean {
         val (sslKeystore, keystore) = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            Pair(KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword), KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword))
+            Pair(
+                    KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword),
+                    KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword))
         } catch (e: IOException) {
             return false
         } catch (e: KeyStoreException) {

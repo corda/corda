@@ -138,7 +138,7 @@ class AttachmentSerializationTest {
     }
 
     private fun launchFlow(clientLogic: ClientLogic, rounds: Int) {
-        server.registerFlowFactory(ClientLogic::class.java, object : InitiatedFlowFactory<ServerLogic> {
+        server.internalRegisterFlowFactory(ClientLogic::class.java, object : InitiatedFlowFactory<ServerLogic> {
             override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): ServerLogic {
                 return ServerLogic(otherParty)
             }

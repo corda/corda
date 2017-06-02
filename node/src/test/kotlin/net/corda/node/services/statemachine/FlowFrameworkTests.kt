@@ -625,7 +625,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `unsupported new flow version`() {
-        node2.registerFlowFactory(
+        node2.internalRegisterFlowFactory(
                 UpgradedFlow::class.java,
                 InitiatedFlowFactory.CorDapp(version = 1, factory = ::DoubleInlinedSubFlow),
                 DoubleInlinedSubFlow::class.java,
@@ -675,7 +675,7 @@ class FlowFrameworkTests {
         initiatingFlowClass: KClass<out FlowLogic<*>>,
         noinline flowFactory: (Party) -> P): ListenableFuture<P>
     {
-        val observable = registerFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
+        val observable = internalRegisterFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
             override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
                 return flowFactory(otherParty)
             }

@@ -33,7 +33,6 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -141,8 +140,8 @@ fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
 }
 
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
-operator fun Path.div(other: String) = resolve(other)
-operator fun String.div(other: String) = Paths.get(this) / other
+operator fun Path.div(other: String): Path = resolve(other)
+operator fun String.div(other: String): Path = Paths.get(this) / other
 
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)

@@ -99,7 +99,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     smmHasRemovedAllFlows.countDown()
                 }
             }
-            mockSMM.start(listOf(services, scheduler))
+            mockSMM.start()
             services.smm = mockSMM
             scheduler.start()
         }
@@ -124,7 +124,9 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean = true
 
-        override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? = ScheduledActivity(flowLogicRef, instant)
+        override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
+            return ScheduledActivity(flowLogicRef, instant)
+        }
 
         override val contract: Contract
             get() = throw UnsupportedOperationException()

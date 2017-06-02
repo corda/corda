@@ -60,6 +60,7 @@ dependencies {
     testCompile project(':client:mock')
 
     // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile project(':finance')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
@@ -76,5 +77,4 @@ task integrationTest(type: Test) {
 task smokeTest(type: Test) {
     testClassesDir = sourceSets.smokeTest.output.classesDir
     classpath = sourceSets.smokeTest.runtimeClasspath
-    systemProperties['build.dir'] = buildDir
 }

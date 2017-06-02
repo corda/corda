@@ -32,7 +32,7 @@ class SimmValuationTest : IntegrationTestCategory {
 
     @Test
     fun `runs SIMM valuation demo`() {
-        driver(isDebug = true, systemProperties = mapOf("net.corda.node.cordapp.scan.package" to "net.corda.vega")) {
+        driver(isDebug = true) {
             startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
             val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
             val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
