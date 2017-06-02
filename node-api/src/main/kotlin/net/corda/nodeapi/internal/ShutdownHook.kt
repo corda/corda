@@ -1,4 +1,4 @@
-package net.corda.core.internal
+package net.corda.nodeapi.internal
 
 interface ShutdownHook {
     /**

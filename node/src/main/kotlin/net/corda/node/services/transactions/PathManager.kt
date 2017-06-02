@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.internal.addShutdownHook
+import net.corda.nodeapi.internal.addShutdownHook
 import java.io.Closeable
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
