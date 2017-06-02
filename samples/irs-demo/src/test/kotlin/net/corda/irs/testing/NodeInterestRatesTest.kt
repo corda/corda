@@ -209,7 +209,7 @@ class NodeInterestRatesTest {
     fun `network tearoff`() {
         val mockNet = MockNetwork()
         val n1 = mockNet.createNotaryNode()
-        val n2 = mockNet.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.type))
+        val n2 = mockNet.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
         n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {
@@ -217,7 +217,7 @@ class NodeInterestRatesTest {
         }
         val tx = TransactionType.General.Builder(null)
         val fixOf = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-        val oracle = n2.info.serviceIdentities(NodeInterestRates.type).first()
+        val oracle = n2.info.serviceIdentities(NodeInterestRates.Oracle.type).first()
         val flow = FilteredRatesFlow(tx, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
         mockNet.runNetwork()

@@ -18,6 +18,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
@@ -135,10 +136,10 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
                                          val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(services) {
     companion object {
         /**
-         * Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
+         * Maximum credible size for a registration request. Generally requests are around 2000-6000 bytes, so this gives a
          * 10 times overhead.
          */
-        private const val MAX_SIZE_REGISTRATION_REQUEST_BYTES = 5500
+        private const val MAX_SIZE_REGISTRATION_REQUEST_BYTES = 40000
         private val logger = loggerFor<AbstractNetworkMapService>()
     }
 
@@ -232,7 +233,9 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     }
 
     private fun processRegistrationRequest(request: RegistrationRequest): RegistrationResponse {
-        if (request.wireReg.raw.size > MAX_SIZE_REGISTRATION_REQUEST_BYTES) {
+        val requestSize = request.wireReg.raw.size
+        logger.debug { "Received registration request of size: $requestSize" }
+        if (requestSize > MAX_SIZE_REGISTRATION_REQUEST_BYTES) {
             return RegistrationResponse("Request is too big")
         }
 

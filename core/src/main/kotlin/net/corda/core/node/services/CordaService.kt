@@ -11,6 +11,9 @@ import kotlin.annotation.AnnotationTarget.CLASS
  *
  * The service class has to implement [net.corda.core.serialization.SerializeAsToken] to ensure correct usage within flows.
  * (If possible extend [net.corda.core.serialization.SingletonSerializeAsToken] instead as it removes the boilerplate.)
+ *
+ * The annotated class should expose its [ServiceType] via a public static field named `type`, so that the service is
+ * only loaded in nodes that declare the type in their advertisedServices.
  */
 // TODO Handle the singleton serialisation of Corda services automatically, removing the need to implement SerializeAsToken
 // TODO Currently all nodes which load the plugin will attempt to load the service even if it's not revelant to them. The

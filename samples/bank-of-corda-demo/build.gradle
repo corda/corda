@@ -26,8 +26,8 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client:jfx')
     compile project(':client:rpc')

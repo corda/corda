@@ -268,16 +268,31 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun installCordaServices(scanResult: ScanResult): List<SerializeAsToken> {
         return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class).mapNotNull {
-            try {
-                installCordaService(it)
-            } catch (e: NoSuchMethodException) {
-                log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
-                        "of type ${PluginServiceHub::class.java.name}")
-                null
-            } catch (e: Exception) {
-                log.error("Unable to install Corda service ${it.name}", e)
-                null
-            }
+            tryInstallCordaService(it)
+        }
+    }
+
+    private fun <T : SerializeAsToken> tryInstallCordaService(serviceClass: Class<T>): T? {
+        /** TODO: This mechanism may get replaced by a different one, see comments on [CordaService]. */
+        val typeField = try {
+            serviceClass.getField("type")
+        } catch (e: NoSuchFieldException) {
+            null
+        }
+        if (typeField == null) {
+            log.warn("${serviceClass.name} does not have a type field, optimistically proceeding with install.")
+        } else if (info.serviceIdentities(typeField.get(null) as ServiceType).isEmpty()) {
+            return null
+        }
+        return try {
+            installCordaService(serviceClass)
+        } catch (e: NoSuchMethodException) {
+            log.error("${serviceClass.name}, as a Corda service, must have a constructor with a single parameter " +
+                    "of type ${PluginServiceHub::class.java.name}")
+            null
+        } catch (e: Exception) {
+            log.error("Unable to install Corda service ${serviceClass.name}", e)
+            null
         }
     }
 
