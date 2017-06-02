@@ -232,8 +232,7 @@ class Node(override val configuration: FullNodeConfiguration,
         }
 
         // Start up the MQ client.
-        val net = network as NodeMessagingClient
-        net.start(rpcOps, userService)
+        (network as NodeMessagingClient).start(rpcOps, userService)
     }
 
     /**

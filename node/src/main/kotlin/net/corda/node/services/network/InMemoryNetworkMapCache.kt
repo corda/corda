@@ -77,16 +77,16 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         }
     }
 
-    override fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
+    override fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient, subscribe: Boolean,
                                ifChangedSinceVer: Int?): ListenableFuture<Unit> {
         if (subscribe && !registeredForPush) {
             // Add handler to the network, for updates received from the remote network map service.
-            net.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
+            network.addMessageHandler(NetworkMapService.PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
                 try {
                     val req = message.data.deserialize<NetworkMapService.Update>()
-                    val ackMessage = net.createMessage(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID,
-                            NetworkMapService.UpdateAcknowledge(req.mapVersion, net.myAddress).serialize().bytes)
-                    net.send(ackMessage, req.replyTo)
+                    val ackMessage = network.createMessage(NetworkMapService.PUSH_ACK_TOPIC, DEFAULT_SESSION_ID,
+                            NetworkMapService.UpdateAcknowledge(req.mapVersion, network.myAddress).serialize().bytes)
+                    network.send(ackMessage, req.replyTo)
                     processUpdatePush(req)
                 } catch(e: NodeMapError) {
                     logger.warn("Failure during node map update due to bad update: ${e.javaClass.name}")
@@ -98,8 +98,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         }
 
         // Fetch the network map and register for updates at the same time
-        val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, net.myAddress)
-        val future = net.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
+        val req = NetworkMapService.FetchMapRequest(subscribe, ifChangedSinceVer, network.myAddress)
+        val future = network.sendRequest<FetchMapResponse>(NetworkMapService.FETCH_TOPIC, req, networkMapAddress).map { (nodes) ->
             // We may not receive any nodes back, if the map hasn't changed since the version specified
             nodes?.forEach { processRegistration(it) }
             Unit
@@ -131,10 +131,10 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
      * Unsubscribes from updates from the given map service.
      * @param service the network map service to listen to updates from.
      */
-    override fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
+    override fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
         // Fetch the network map and register for updates at the same time
-        val req = NetworkMapService.SubscribeRequest(false, net.myAddress)
-        val future = net.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, service.address).map {
+        val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
+        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, service.address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
         _registrationFuture.setFuture(future)
