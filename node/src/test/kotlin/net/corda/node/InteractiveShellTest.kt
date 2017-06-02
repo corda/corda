@@ -17,6 +17,7 @@ import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.shell.InteractiveShell
 import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_IDENTITY
 import org.junit.Test
 import org.slf4j.Logger
 import java.util.*
@@ -33,7 +34,7 @@ class InteractiveShellTest {
         override fun call() = a
     }
 
-    private val ids = InMemoryIdentityService(listOf(MEGA_CORP), trustRoot = DUMMY_CA.certificate)
+    private val ids = InMemoryIdentityService(listOf(MEGA_CORP_IDENTITY), trustRoot = DUMMY_CA.certificate)
     private val om = JacksonSupport.createInMemoryMapper(ids, YAMLFactory())
 
     private fun check(input: String, expected: String) {

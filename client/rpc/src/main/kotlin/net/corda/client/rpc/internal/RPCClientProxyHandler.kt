@@ -157,7 +157,7 @@ class RPCClientProxyHandler(
         lifeCycle.requireState(State.UNSTARTED)
         reaperExecutor = Executors.newScheduledThreadPool(
                 1,
-                ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").build()
+                ThreadFactoryBuilder().setNameFormat("rpc-client-reaper-%d").setDaemon(true).build()
         )
         reaperScheduledFuture = reaperExecutor!!.scheduleAtFixedRate(
                 this::reapObservables,

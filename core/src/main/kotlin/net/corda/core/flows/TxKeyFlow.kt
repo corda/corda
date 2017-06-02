@@ -15,7 +15,7 @@ import java.security.cert.CertPath
  * This is intended for use as a subflow of another flow.
  */
 object TxKeyFlow {
-    abstract class AbstractIdentityFlow<out T>(val otherSide: PartyAndCertificate, val revocationEnabled: Boolean): FlowLogic<T>() {
+    abstract class AbstractIdentityFlow<out T>(val otherSide: Party, val revocationEnabled: Boolean): FlowLogic<T>() {
         fun validateIdentity(untrustedIdentity: AnonymousIdentity): AnonymousIdentity {
             val (certPath, theirCert, txIdentity) = untrustedIdentity
             if (theirCert.subject == otherSide.name) {
@@ -28,9 +28,9 @@ object TxKeyFlow {
 
     @StartableByRPC
     @InitiatingFlow
-    class Requester(otherSide: PartyAndCertificate,
+    class Requester(otherSide: Party,
                     override val progressTracker: ProgressTracker) : AbstractIdentityFlow<Map<Party, AnonymousIdentity>>(otherSide, false) {
-        constructor(otherSide: PartyAndCertificate) : this(otherSide, tracker())
+        constructor(otherSide: Party) : this(otherSide, tracker())
         companion object {
             object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
 
@@ -40,7 +40,7 @@ object TxKeyFlow {
         @Suspendable
         override fun call(): Map<Party, AnonymousIdentity> {
             progressTracker.currentStep = AWAITING_KEY
-            val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentity, revocationEnabled)
+            val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
             val myIdentity = AnonymousIdentity(myIdentityFragment)
             val theirIdentity = receive<AnonymousIdentity>(otherSide).unwrap { validateIdentity(it) }
             send(otherSide, myIdentity)
@@ -54,7 +54,7 @@ object TxKeyFlow {
      * counterparty and as the result from the flow.
      */
     @InitiatedBy(Requester::class)
-    class Provider(otherSide: PartyAndCertificate) : AbstractIdentityFlow<Map<Party, AnonymousIdentity>>(otherSide, false) {
+    class Provider(otherSide: Party) : AbstractIdentityFlow<Map<Party, AnonymousIdentity>>(otherSide, false) {
         companion object {
             object SENDING_KEY : ProgressTracker.Step("Sending key")
         }
@@ -65,7 +65,7 @@ object TxKeyFlow {
         override fun call(): Map<Party, AnonymousIdentity> {
             val revocationEnabled = false
             progressTracker.currentStep = SENDING_KEY
-            val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentity, revocationEnabled)
+            val myIdentityFragment = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
             val myIdentity = AnonymousIdentity(myIdentityFragment)
             send(otherSide, myIdentity)
             val theirIdentity = receive<AnonymousIdentity>(otherSide).unwrap { validateIdentity(it) }
