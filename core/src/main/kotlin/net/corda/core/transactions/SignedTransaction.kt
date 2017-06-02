@@ -26,9 +26,11 @@ import java.util.*
  * when verifying composite key signatures, but may be used as individual signatures where a single key is expected to
  * sign.
  */
+// DOCSTART 1
 data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
                              val sigs: List<DigitalSignature.WithKey>
 ) : NamedByHash {
+// DOCEND 1
     init {
         require(sigs.isNotEmpty())
     }
@@ -64,8 +66,10 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignatureException if any signatures are invalid or unrecognised.
      * @throws SignaturesMissingException if any signatures should have been present but were not.
      */
+    // DOCSTART 2
     @Throws(SignatureException::class)
     fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
+    // DOCEND 2
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 

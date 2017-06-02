@@ -4,7 +4,7 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Upgrading Contracts
+Upgrading contracts
 ===================
 
 While every care is taken in development of contract code, 

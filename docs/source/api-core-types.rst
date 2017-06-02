@@ -1,30 +1,16 @@
-Core types
-==========
+API: Core types
+===============
 
-Corda provides a large standard library of data types used to represent the :doc:`key-concepts-data-model` previously described.
-In addition, there are a series of helper libraries which provide date manipulation, maths and cryptography functions.
+Corda provides a large standard library of data types used to represent the Corda data model. In addition, there are a
+series of helper libraries which provide date manipulation, maths and cryptography functions.
 
 State and References
 --------------------
 State objects contain mutable data which we would expect to evolve over the lifetime of a contract.
 
 A reference to a state in the ledger (whether it has been consumed or not) is represented with a ``StateRef`` object.
-If the state ref has been looked up from storage, you will have a ``StateAndRef`` which is simply a ``StateRef`` plus the data.
-
-The ``ContractState`` type is an interface that all states must implement. A ``TransactionState`` is a simple
-container for a ``ContractState`` (the custom data used by a contract program) and additional platform-level state
-information, such as the *notary* pointer (see :doc:`key-concepts-consensus-notaries`).
-
-A number of interfaces then extend ``ContractState``, representing standardised functionality for common kinds
-of state such as:
-
-      ``OwnableState``
-      A state which has an owner (represented as a ``PublicKey`` which can be a ``CompositeKey``, discussed later). Exposes the owner and a function
-      for replacing the owner e.g. when an asset is sold.
-
-      ``SchedulableState``
-      A state to indicate whether there is some activity to be performed at some future point in time with respect to this
-      contract, what that activity is and at what point in time it should be initiated.
+If the state ref has been looked up from storage, you will have a ``StateAndRef`` which is simply a ``StateRef`` plus
+the data.
 
 NamedByHash and UniqueIdentifier
 --------------------------------
@@ -43,11 +29,10 @@ Transaction lifecycle types
 ---------------------------
 
 A ``WireTransaction`` instance contains the core of a transaction without signatures, and with references to attachments
-in place of the attachments themselves (see also :doc:`key-concepts-data-model`). Once signed these are encapsulated in a
-``SignedTransaction`` instance. For processing a transaction (i.e. to verify it) a ``SignedTransaction`` is then converted to a
-``LedgerTransaction``, which involves verifying the signatures and associating them to the relevant command(s), and
-resolving the attachment references to the attachments. Commands with valid signatures are encapsulated in the
-``AuthenticatedObject`` type.
+in place of the attachments themselves. Once signed these are encapsulated in a ``SignedTransaction`` instance. For
+processing a transaction (i.e. to verify it) a ``SignedTransaction`` is then converted to a ``LedgerTransaction``,
+which involves verifying the signatures and associating them to the relevant command(s), and resolving the attachment
+ references to the attachments. Commands with valid signatures are encapsulated in the ``AuthenticatedObject`` type.
 
 .. note:: A ``LedgerTransaction`` has not necessarily had its contract code executed, and thus could be contract-invalid
           (but not signature-invalid). You can use the ``verify`` method as shown below to validate the contracts.
@@ -57,7 +42,7 @@ can be signed once its construction is complete. This builder class should be us
 (before signature, before verification). It is intended to be passed around code that may edit it by adding new states/commands.
 Then once the states and commands are right then an initial DigitalSignature.WithKey can be added to freeze the transaction data.
 Typically, the signInitialTransaction method on the flow's serviceHub object will be used to look up the default node identity PrivateKey,
-sign the transaction and return a partially signed SignedTransaction. This can then be distributed to other participants using the :doc:`key-concepts-flow-framework`.
+sign the transaction and return a partially signed SignedTransaction. This can then be distributed to other participants using the :doc:`key-concepts-flows`.
 
 Here's an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
 contract type in the library):

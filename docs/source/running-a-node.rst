@@ -1,47 +1,8 @@
-CorDapp basics
+Running a node
 ==============
 
-A CorDapp is an application that runs on the Corda platform using the platform APIs and plugin system. They are self
-contained in separate JARs from the node server JAR that are created and distributed.
-
-App plugins
------------
-
-.. note:: Currently apps are only supported for JVM languages.
-
-To create an app plugin you must extend from `CordaPluginRegistry`_. The JavaDoc contains
-specific details of the implementation, but you can extend the server in the following ways:
-
-1. Register your flows and services (see below).
-2. Web APIs: You may register your own endpoints under /api/ of the bundled web server.
-3. Static web endpoints: You may register your own static serving directories for serving web content from the web server.
-4. Whitelisting your additional contract, state and other classes for object serialization.  Any class that forms part
-   of a persisted state, that is used in messaging between flows or in RPC needs to be whitelisted.
-
-Flows and services
-------------------
-
-Flows are of two types: initiating and initiated. Initiating flows need to be annotated with ``@InitiatingFlow`` and can
-be started in one of three ways:
-
-1. By a user of your CorDapp via RPC in which the flow also needs to be annotated with ``@StartableByRPC``.
-2. By another CorDapp executing it as a sub-flow in their own flow.
-3. By a ``SchedulableState`` activity event, in which the flow also needs to be annotated with ``@SchedulableFlow``
-
-``InitiatingFlow`` also has a ``version`` property to enable you to version your flows. A node will only accept communication
-from an initiating party if the version numbers match up.
-
-Initiated flows are typically private to your CorDapp and need to be annotated with ``@InitiatedBy`` which point to
-initiating flow Class. The node scans your CorDapps for these annotations and automatically registers the initiating to
-initiated mapping for you.
-
-If your CorDapp also needs to have additional services running in the node, such as oracles, then annotate your service
-class with ``@CordaService``. As with the flows, the node will automatically register it and make it available for use by
-your flows. The service class has to implement ``SerializeAsToken`` to ensure they work correctly within flows. If possible
-extend ``SingletonSerializeAsToken`` instead to avoid the boilerplate.
-
-Starting nodes
---------------
+Deploying your node
+-------------------
 
 To use an app you must also have a node server. To create a node server run the ``gradle deployNodes`` task.
 
@@ -57,14 +18,6 @@ workspace directory. The directory can be overridden by the ``--base-directory=<
 .. warning:: Also note that the bootstrapping process of the ``corda.jar`` unpacks the Corda dependencies into a
    temporary folder. It is therefore suggested that the CAPSULE_CACHE_DIR environment variable be set before
    starting the process to control this location.
-
-Installing apps
----------------
-
-Once you have created your app JAR you can install it to a node by adding it to ``<node_dir>/plugins/``. In this
-case the ``node_dir`` is the location where your node server's JAR and configuration file is.
-
-.. note:: If the directory does not exist you can create it manually.
 
 Starting your node
 ------------------

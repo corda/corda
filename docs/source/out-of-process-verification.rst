@@ -1,4 +1,4 @@
-Out of process verification
+Out-of-process verification
 ===========================
 
 A Corda node does transaction verification through ``ServiceHub.transactionVerifierService``. This is by default an

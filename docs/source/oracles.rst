@@ -171,7 +171,7 @@ Let's see what parameters we pass to the constructor of this oracle.
    class Oracle(val identity: Party, private val signingKey: PublicKey, val clock: Clock) = TODO()
 
 Here we see the oracle needs to have its own identity, so it can check which transaction commands it is expected to
-sign for, and also needs the PublicKey portion of its signing key. Later this PublicKey will be passed to the KeyManagementService 
+sign for, and also needs the PublicKey portion of its signing key. Later this PublicKey will be passed to the KeyManagementService
 to identify the internal PrivateKey used for transaction signing.
 The clock is used for the deadline functionality which we will not discuss further here.
 
@@ -200,7 +200,7 @@ Binding to the network
 
 .. note:: Before reading any further, we advise that you understand the concept of flows and how to write them and use
    them. See :doc:`flow-state-machines`.  Likewise some understanding of Cordapps, plugins and services will be helpful.
-   See :doc:`creating-a-cordapp`.
+   See :doc:`running-a-node`.
 
 The first step is to create the oracle as a service by annotating its class with ``@CordaService``.  Let's see how that's
 done:
