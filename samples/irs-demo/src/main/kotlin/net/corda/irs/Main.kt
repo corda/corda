@@ -17,7 +17,7 @@ import net.corda.node.services.transactions.SimpleNotaryService
 fun main(args: Array<String>) {
     driver(dsl = {
         val (controller, nodeA, nodeB) = Futures.allAsList(
-                startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.type))),
+                startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                 startNode(DUMMY_BANK_A.name),
                 startNode(DUMMY_BANK_B.name)
         ).getOrThrow()

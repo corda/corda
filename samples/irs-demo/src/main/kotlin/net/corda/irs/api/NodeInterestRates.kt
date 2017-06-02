@@ -49,8 +49,6 @@ import kotlin.collections.set
  * for signing.
  */
 object NodeInterestRates {
-    val type = ServiceType.corda.getSubType("interest_rates")
-
     // DOCSTART 2
     @InitiatedBy(RatesFixFlow.FixSignFlow::class)
     class FixSignHandler(val otherParty: Party) : FlowLogic<Unit>() {
@@ -94,6 +92,11 @@ object NodeInterestRates {
             services
         )
         // DOCEND 3
+
+        companion object {
+            @JvmField
+            val type = ServiceType.corda.getSubType("interest_rates")
+        }
 
         private object Table : JDBCHashedTable("demo_interest_rate_fixes") {
             val name = varchar("index_name", length = 255)
