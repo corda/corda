@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.seconds
@@ -46,7 +45,7 @@ object TwoPartyDealFlow {
 
         abstract val payload: Any
         abstract val notaryNode: NodeInfo
-        abstract val otherParty: PartyAndCertificate
+        abstract val otherParty: Party
         abstract val myKey: PublicKey
 
         @Suspendable override fun call(): SignedTransaction {
@@ -150,7 +149,7 @@ object TwoPartyDealFlow {
     /**
      * One side of the flow for inserting a pre-agreed deal.
      */
-    open class Instigator(override val otherParty: PartyAndCertificate,
+    open class Instigator(override val otherParty: Party,
                           override val payload: AutoOffer,
                           override val myKey: PublicKey,
                           override val progressTracker: ProgressTracker = Primary.tracker()) : Primary() {

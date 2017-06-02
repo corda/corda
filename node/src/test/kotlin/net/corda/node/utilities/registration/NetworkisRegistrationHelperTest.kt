@@ -7,7 +7,6 @@ import net.corda.core.crypto.*
 import net.corda.core.exists
 import net.corda.core.toTypedArray
 import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.cert.X509CertificateHolder
@@ -15,7 +14,6 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.security.cert.Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
