@@ -38,148 +38,19 @@ Documentation Contents:
 =======================
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Quickstart
+   :maxdepth: 2
 
-   getting-set-up
-   tutorial-cordapp
-   running-the-demos
-   CLI-vs-IDE
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Key concepts
-
-   key-concepts
-   key-concepts-ecosystem
-   key-concepts-ledger
-   key-concepts-states
-   key-concepts-contracts
-   key-concepts-transactions
-   key-concepts-flows
-   key-concepts-consensus
-   key-concepts-notaries
-   key-concepts-time-windows
-   key-concepts-oracles
-   key-concepts-node
-   key-concepts-tradeoffs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Building a CorDapp
-
-   cordapp-overview
-   writing-cordapps
-   api
-   api-states
-   api-contracts
-   api-transactions
-   api-flows
-   api-core-types
-   cheat-sheet
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Corda nodes
-
-   running-a-node
-   clientrpc
-   shell
-   node-administration
-   corda-configuration-file
-   out-of-process-verification
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Corda networks
-
-   setting-up-a-corda-network
-   permissioning
-   versioning
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tutorials
-
-   tutorial-contract
-   tutorial-contract-clauses
-   tutorial-test-dsl
-   contract-upgrade
-   tutorial-integration-testing
-   tutorial-clientrpc-api
-   tutorial-building-transactions
-   flow-state-machines
-   flow-testing
-   running-a-notary
-   using-a-notary
-   oracles
-   tutorial-attachments
-   event-scheduling
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tools
-
-   network-simulator
-   demobench
-   node-explorer
-   azure-vm
-   loadtesting
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Node internals
-
-   node-services
-   vault
-   serialization
-   messaging
-   persistence
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Component library
-
-   flow-library
-   contract-catalogue
-   financial-model
-   contract-irs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Release process
-
-   release-process
-   release-notes
-   changelog
-   publishing-corda
-   codestyle
-
-.. toctree::
-   :maxdepth: 1
-   :caption: FAQ
-
-   faq
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Troubleshooting
-
-   troubleshooting
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Other
-
-   clauses
-   merkle-trees
-   json
-   secure-coding-guidelines
-   corda-repo-layout
-   building-the-docs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Glossary
-
-   glossary
+   quickstart-index.rst
+   key-concepts.rst
+   building-a-cordapp-index.rst
+   corda-nodes-index.rst
+   corda-networks-index.rst
+   tutorials-index.rst
+   tools-index.rst
+   node-internals-index.rst
+   component-library-index.rst
+   release-process-index.rst
+   faq.rst
+   troubleshooting.rst
+   other-index.rst
+   glossary.rst

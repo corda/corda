@@ -1,23 +1,26 @@
-Overview
-========
+Key concepts
+============
 
 This section describes the key concepts and features of the Corda platform. It is intended for readers who are new to
 Corda, and want to understand its architecture. It does not contain any code, and is suitable for non-developers.
 
 This section should be read in order:
 
-    * :doc:`key-concepts-ecosystem`
-    * :doc:`key-concepts-ledger`
-    * :doc:`key-concepts-states`
-    * :doc:`key-concepts-contracts`
-    * :doc:`key-concepts-transactions`
-    * :doc:`key-concepts-flows`
-    * :doc:`key-concepts-consensus`
-    * :doc:`key-concepts-notaries`
-    * :doc:`key-concepts-time-windows`
-    * :doc:`key-concepts-oracles`
-    * :doc:`key-concepts-node`
-    * :doc:`key-concepts-tradeoffs`
+.. toctree::
+   :maxdepth: 1
+
+   key-concepts-ecosystem
+   key-concepts-ledger
+   key-concepts-states
+   key-concepts-contracts
+   key-concepts-transactions
+   key-concepts-flows
+   key-concepts-consensus
+   key-concepts-notaries
+   key-concepts-time-windows
+   key-concepts-oracles
+   key-concepts-node
+   key-concepts-tradeoffs
 
 The detailed thinking and rationale behind these concepts are presented in two white papers:
 
