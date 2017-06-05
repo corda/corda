@@ -25,6 +25,7 @@ class StabilityTest {
     private val memoryThreshold = 0.95
     private val iteration = 1000
     private val startingFrequency = 8
+    private val statsUpdateRate = 1000L
 
     @Test
     fun `node stress test`() {
@@ -64,7 +65,7 @@ class StabilityTest {
                 cashFlowCommand.startFlow(rpc).returnValue.success { counter.success.incrementAndGet() }.failure { counter.failed.incrementAndGet() }
                 counter.started.incrementAndGet()
             }
-        }, 0, 1000 / frequency.toLong(), TimeUnit.MILLISECONDS)
+        }, 0, 1 / frequency.toLong(), TimeUnit.SECONDS)
 
         return future {
             val stats = mutableListOf<StabilityTestStat>()
@@ -76,7 +77,7 @@ class StabilityTest {
                     executor.shutdown()
                     println("Waiting for State machines to finish.")
                 }
-                Thread.sleep(1000)
+                Thread.sleep(statsUpdateRate)
             }
             val nodeStatus = rpc.nodeStatus()
             stats.add(StabilityTestStat(nodeStatus.stateMachineCount, nodeStatus.freeMemory, nodeStatus.totalMemory, counter.started.get(), counter.success.get(), counter.failed.get()))
