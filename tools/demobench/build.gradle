@@ -1,7 +1,7 @@
 buildscript {
     ext.tornadofx_version = '1.7.3'
     ext.jna_version = '4.1.0'
-    ext.purejavacomm_version = '0.0.17'
+    ext.purejavacomm_version = '0.0.18'
     ext.controlsfx_version = '8.40.12'
 
     ext.java_home = System.properties.'java.home'
