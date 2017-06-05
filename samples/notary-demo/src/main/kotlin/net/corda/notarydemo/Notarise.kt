@@ -10,11 +10,11 @@ import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.singleOrNull
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
+import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
     val address = HostAndPort.fromParts("localhost", 10003)
@@ -29,7 +29,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     private val notary by lazy {
         val (parties, partyUpdates) = rpc.networkMapUpdates()
         partyUpdates.notUsed()
-        val id = parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().singleOrNull()
+        val id = parties.stream().filter { it.advertisedServices.any { it.info.type.isNotary() } }.map { it.notaryIdentity }.distinct().asSequence().singleOrNull()
         checkNotNull(id) { "No unique notary identity, try cleaning the node directories." }
     }
 
