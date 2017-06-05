@@ -77,6 +77,7 @@ open class TransactionBuilder(
         this.timeWindow = timeWindow
     }
 
+    // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
     fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
@@ -91,6 +92,7 @@ open class TransactionBuilder(
         }
         return this
     }
+    // DOCEND 1
 
     /** The signatures that have been collected so far - might be incomplete! */
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()

@@ -86,7 +86,7 @@ Whitelisting classes with the Corda node
 To avoid the RPC interface being wide open to all
 classes on the classpath, Cordapps have to whitelist any classes they require with the serialization framework of Corda,
 if they are not one of those whitelisted by default in ``DefaultWhitelist``, via either the plugin architecture or simply
-with the annotation ``@CordaSerializable``.  See :doc:`creating-a-cordapp` or :doc:`serialization`.  An example is shown in :doc:`tutorial-clientrpc-api`.
+with the annotation ``@CordaSerializable``.  See :doc:`running-a-node` or :doc:`serialization`.  An example is shown in :doc:`tutorial-clientrpc-api`.
 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.
 

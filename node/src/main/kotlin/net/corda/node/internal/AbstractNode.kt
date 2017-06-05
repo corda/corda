@@ -119,7 +119,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
-        override val networkService: MessagingService get() = net
+        override val networkService: MessagingService get() = network
         override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
@@ -170,7 +170,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var txVerifierService: TransactionVerifierService
     lateinit var identity: IdentityService
-    lateinit var net: MessagingService
+    lateinit var network: MessagingService
     lateinit var netMapCache: NetworkMapCacheInternal
     lateinit var scheduler: NodeSchedulerService
     lateinit var schemas: SchemaService
@@ -258,7 +258,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             initUploaders()
 
-            runOnStop += Runnable { net.stop() }
+            runOnStop += Runnable { network.stop() }
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start(tokenizableServices)
             // Shut down the SMM so no Fibers are scheduled.
@@ -444,7 +444,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         storage = storageServices.first
         checkpointStorage = storageServices.second
         netMapCache = InMemoryNetworkMapCache()
-        net = makeMessagingService()
+        network = makeMessagingService()
         schemas = makeSchemaService()
         vault = makeVaultService(configuration.dataSourceProperties)
         txVerifierService = makeTransactionVerifierService()
@@ -458,7 +458,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         keyManagement = makeKeyManagementService(identity)
         scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
-        val tokenizableServices = mutableListOf(storage, net, vault, keyManagement, identity, platformClock, scheduler)
+        val tokenizableServices = mutableListOf(storage, network, vault, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
 
         return tokenizableServices
@@ -530,7 +530,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
-        return NodeInfo(net.myAddress, legalIdentity, platformVersion, advertisedServiceEntries, findMyLocation())
+        return NodeInfo(network.myAddress, legalIdentity, platformVersion, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -624,7 +624,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
             // The future returned addMapService will complete on the same executor as sendNetworkMapRegistration, namely the one used by net
-            services.networkMapCache.addMapService(net, address, true, null)
+            services.networkMapCache.addMapService(network, address, true, null)
         }
     }
 
@@ -634,8 +634,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
         val legalIdentityKey = obtainLegalIdentityKey()
-        val request = NetworkMapService.RegistrationRequest(reg.toWire(keyManagement, legalIdentityKey.public), net.myAddress)
-        return net.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
+        val request = NetworkMapService.RegistrationRequest(reg.toWire(keyManagement, legalIdentityKey.public), network.myAddress)
+        return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */

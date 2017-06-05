@@ -31,14 +31,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class AttachmentTests {
-    lateinit var network: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var dataSource: Closeable
     lateinit var database: Database
     lateinit var configuration: RequeryConfiguration
 
     @Before
     fun setUp() {
-        network = MockNetwork()
+        mockNet = MockNetwork()
 
         val dataSourceProperties = makeTestDataSourceProperties()
 
@@ -57,7 +57,7 @@ class AttachmentTests {
 
     @Test
     fun `download and store`() {
-        val (n0, n1) = network.createTwoNodes()
+        val (n0, n1) = mockNet.createTwoNodes()
 
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
@@ -65,9 +65,9 @@ class AttachmentTests {
         }
 
         // Get node one to run a flow to fetch it and insert it.
-        network.runNetwork()
+        mockNet.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
-        network.runNetwork()
+        mockNet.runNetwork()
         assertEquals(0, f1.resultFuture.getOrThrow().fromDisk.size)
 
         // Verify it was inserted into node one's store.
@@ -86,13 +86,13 @@ class AttachmentTests {
 
     @Test
     fun `missing`() {
-        val (n0, n1) = network.createTwoNodes()
+        val (n0, n1) = mockNet.createTwoNodes()
 
         // Get node one to fetch a non-existent attachment.
         val hash = SecureHash.randomSHA256()
-        network.runNetwork()
+        mockNet.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(hash), n0.info.legalIdentity))
-        network.runNetwork()
+        mockNet.runNetwork()
         val e = assertFailsWith<FetchDataFlow.HashNotFound> { f1.resultFuture.getOrThrow() }
         assertEquals(hash, e.requested)
     }
@@ -100,7 +100,7 @@ class AttachmentTests {
     @Test
     fun `malicious response`() {
         // Make a node that doesn't do sanity checking at load time.
-        val n0 = network.createNode(null, -1, object : MockNetwork.Factory {
+        val n0 = mockNet.createNode(null, -1, object : MockNetwork.Factory {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                                 advertisedServices: Set<ServiceInfo>, id: Int,
                                 overrideServices: Map<ServiceInfo, KeyPair>?,
@@ -114,7 +114,7 @@ class AttachmentTests {
                 }
             }
         }, true, null, null, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
-        val n1 = network.createNode(n0.info.address)
+        val n1 = mockNet.createNode(n0.info.address)
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
@@ -135,9 +135,9 @@ class AttachmentTests {
 
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
-        network.runNetwork()
+        mockNet.runNetwork()
         val f1 = n1.services.startFlow(FetchAttachmentsFlow(setOf(id), n0.info.legalIdentity))
-        network.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<FetchDataFlow.DownloadedVsRequestedDataMismatch> { f1.resultFuture.getOrThrow() }
     }
 }

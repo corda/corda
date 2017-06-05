@@ -81,7 +81,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         fun createAll(): List<SimulatedNode> {
             return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-                network.createNode(networkMap.info.address, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
+                mockNet.createNode(networkMap.info.address, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
             }
         }
     }
@@ -158,15 +158,15 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val network = MockNetwork(networkSendManuallyPumped, runAsync)
+    val mockNet = MockNetwork(networkSendManuallyPumped, runAsync)
     // This one must come first.
     val networkMap: SimulatedNode
-            = network.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type)) as SimulatedNode
+            = mockNet.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type)) as SimulatedNode
     val notary: SimulatedNode
-            = network.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type)) as SimulatedNode
-    val regulators: List<SimulatedNode> = listOf(network.createNode(networkMap.info.address, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
+            = mockNet.createNode(networkMap.info.address, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type)) as SimulatedNode
+    val regulators: List<SimulatedNode> = listOf(mockNet.createNode(networkMap.info.address, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = network.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type)) as SimulatedNode
+            = mockNet.createNode(networkMap.info.address, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type)) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
@@ -220,11 +220,11 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      */
     open fun iterate(): InMemoryMessagingNetwork.MessageTransfer? {
         if (networkSendManuallyPumped) {
-            network.messagingNetwork.pumpSend(false)
+            mockNet.messagingNetwork.pumpSend(false)
         }
 
         // Keep going until one of the nodes has something to do, or we have checked every node.
-        val endpoints = network.messagingNetwork.endpoints
+        val endpoints = mockNet.messagingNetwork.endpoints
         var countDown = endpoints.size
         while (countDown > 0) {
             val handledMessage = endpoints[pumpCursor].pumpReceive(false)
@@ -271,10 +271,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     val networkInitialisationFinished: ListenableFuture<*> =
-            Futures.allAsList(network.nodes.map { it.networkMapRegistrationFuture })
+            Futures.allAsList(mockNet.nodes.map { it.networkMapRegistrationFuture })
 
     fun start(): ListenableFuture<Unit> {
-        network.startNodes()
+        mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.flatMap { startMainSimulation() }
     }
@@ -288,6 +288,6 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     }
 
     fun stop() {
-        network.stopNodes()
+        mockNet.stopNodes()
     }
 }

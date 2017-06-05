@@ -214,7 +214,7 @@ We have four fields in our state:
   relationships such as a derivative contract.
 * ``faceValue``, an ``Amount<Issued<Currency>>``, which wraps an integer number of pennies and a currency that is
   specific to some issuer (e.g. a regular bank, a central bank, etc). You can read more about this very common
-  type in :doc:`key-concepts-core-types`.
+  type in :doc:`api-core-types`.
 * ``maturityDate``, an `Instant <https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html>`_, which is a type
   from the Java 8 standard time library. It defines a point on the timeline.
 
@@ -641,7 +641,7 @@ any ``StateAndRef`` (input), ``ContractState`` (output) or ``Command`` objects a
 for you.
 
 There's one final thing to be aware of: we ask the caller to select a *notary* that controls this state and
-prevents it from being double spent. You can learn more about this topic in the :doc:`key-concepts-consensus-notaries` article.
+prevents it from being double spent. You can learn more about this topic in the :doc:`key-concepts-notaries` article.
 
 .. note:: For now, don't worry about how to pick a notary. More infrastructure will come later to automate this
    decision for you.

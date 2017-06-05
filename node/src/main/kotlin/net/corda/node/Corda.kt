@@ -180,7 +180,7 @@ private fun lookupMachineNameAndMaybeWarn(): String {
         // Also see https://bugs.openjdk.java.net/browse/JDK-8143378
         val messages = listOf(
                 "Your computer took over a second to resolve localhost due an incorrect configuration. Corda will work but start very slowly until this is fixed. ",
-                "Please see https://docs.corda.net/getting-set-up-fault-finding.html#slow-localhost-resolution for information on how to fix this. ",
+                "Please see https://docs.corda.net/troubleshooting.html#slow-localhost-resolution for information on how to fix this. ",
                 "It will only take a few seconds for you to resolve."
         )
         log.warn(messages.joinToString(""))

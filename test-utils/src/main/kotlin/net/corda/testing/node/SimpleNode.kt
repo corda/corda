@@ -45,7 +45,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
-    val net = database.transaction {
+    val network = database.transaction {
         NodeMessagingClient(
                 config,
                 MOCK_VERSION_INFO,
@@ -59,18 +59,18 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
 
     fun start() {
         broker.start()
-        net.start(
+        network.start(
                 object : RPCOps {
                     override val protocolVersion = 0
                 },
                 userService)
         thread(name = config.myLegalName.commonName) {
-            net.run(broker.serverControl)
+            network.run(broker.serverControl)
         }
     }
 
     override fun close() {
-        net.stop()
+        network.stop()
         broker.stop()
         databaseWithCloseable.first.close()
         executor.shutdownNow()

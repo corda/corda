@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashIssueFlowTests {
-    private val net = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
     private lateinit var bankOfCordaNode: MockNode
     private lateinit var bankOfCorda: Party
     private lateinit var notaryNode: MockNode
@@ -24,18 +24,18 @@ class CashIssueFlowTests {
 
     @Before
     fun start() {
-        val nodes = net.createTwoNodes()
+        val nodes = mockNet.createTwoNodes()
         notaryNode = nodes.first
         bankOfCordaNode = nodes.second
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        net.runNetwork()
+        mockNet.runNetwork()
     }
 
     @After
     fun cleanUp() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test
@@ -45,7 +45,7 @@ class CashIssueFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, ref,
                 bankOfCorda,
                 notary)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         val issueTx = future.getOrThrow()
         val output = issueTx.tx.outputs.single().data as Cash.State
         assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), output.amount)
@@ -57,7 +57,7 @@ class CashIssueFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(expected, OpaqueBytes.of(0x01),
                 bankOfCorda,
                 notary)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()
         }

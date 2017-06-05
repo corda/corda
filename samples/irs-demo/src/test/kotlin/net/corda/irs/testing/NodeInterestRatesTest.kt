@@ -207,9 +207,9 @@ class NodeInterestRatesTest {
 
     @Test
     fun `network tearoff`() {
-        val net = MockNetwork()
-        val n1 = net.createNotaryNode()
-        val n2 = net.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
+        val mockNet = MockNetwork()
+        val n1 = mockNet.createNotaryNode()
+        val n2 = mockNet.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
         n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {
@@ -220,9 +220,9 @@ class NodeInterestRatesTest {
         val oracle = n2.info.serviceIdentities(NodeInterestRates.Oracle.type).first()
         val flow = FilteredRatesFlow(tx, oracle, fixOf, "0.675".bd, "0.1".bd)
         LogHelper.setLevel("rates")
-        net.runNetwork()
+        mockNet.runNetwork()
         val future = n1.services.startFlow(flow).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
         // We should now have a valid signature over our tx from the oracle.
         val fix = tx.toSignedTransaction(true).tx.commands.map { it.value as Fix }.first()

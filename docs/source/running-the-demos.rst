@@ -1,7 +1,8 @@
 Running the demos
 =================
 
-The Corda repository contains a number of demo programs demonstrating the functionality developed so far:
+The `Corda repository <https://github.com/corda/corda>`_ contains a number of demo programs demonstrating
+Corda's functionality:
 
 1. The Trader Demo, which shows a delivery-vs-payment atomic swap of commercial paper for cash
 2. The IRS Demo, which shows two nodes establishing an interest rate swap and performing fixings with a

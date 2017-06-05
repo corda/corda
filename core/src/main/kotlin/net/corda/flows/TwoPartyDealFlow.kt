@@ -99,7 +99,10 @@ object TwoPartyDealFlow {
             logger.trace { "Signed proposed transaction." }
 
             progressTracker.currentStep = COLLECTING_SIGNATURES
+
+            // DOCSTART 1
             val stx = subFlow(CollectSignaturesFlow(ptx))
+            // DOCEND 1
 
             logger.trace { "Got signatures from other party, verifying ... " }
 

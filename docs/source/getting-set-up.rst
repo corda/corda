@@ -3,54 +3,49 @@ Getting set up
 
 Software requirements
 ---------------------
+Corda uses industry-standard tools:
 
-Corda uses industry-standard tools to make set-up as simple as possible. Following the software recommendations below will minimize the number of errors you encounter, and make it easier for others to provide support. However, if you do use other tools, we'd be interested to hear about any issues that arise.
+* **Oracle JDK 8 JVM** - supported version **8u131**
+* **IntelliJ IDEA** - supported versions **2017.1**, **2017.2** and **2017.3**
+* **Gradle** - supported version **3.4**
+* **Kotlin** - supported version **1.1.2**
+* **Git**
 
-JVM
-~~~
+You do not need to install Gradle or Kotlin. A standalone Gradle wrapper is provided, and it will download the correct
+version of Kotlin.
 
-Corda is written in Kotlin and runs in a JVM. We develop against Oracle JDK 8, and other JVM implementations are not actively supported.
+Please note:
 
-Please ensure that you keep your Oracle JDK installation updated to the latest version while working with Corda. Even earlier versions of JDK 8 versions can cause cryptic errors.
+* Corda runs in a JVM. JVM implementations other than Oracle JDK 8 are not actively supported. However, if you do
+  choose to use OpenJDK, you will also need to install OpenJFX
 
-If you do choose to use OpenJDK instead of Oracle's JDK, you will also need to install OpenJFX.
+* Applications on Corda (CorDapps) can be written in any language targeting the JVM. However, Corda itself and most of
+  the samples are written in Kotlin. Kotlin is an
+  `official Android language <https://developer.android.com/kotlin/index.html>`_, and you can read more about why
+  Kotlin is a strong successor to Java
+  `here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_. If you're
+  unfamiliar with Kotlin, there is an official
+  `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
+  `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
 
-Kotlin
-~~~~~~
+* IntelliJ IDEA is recommended due to the strength of its Kotlin integration.
 
-Applications on Corda (CorDapps) can be written in any JVM-targeting language. However, Corda itself and most of the samples are written in Kotlin. If you're unfamiliar with Kotlin, there is an official `getting started guide <https://kotlinlang.org/docs/tutorials/>`_.
-
-See also our :doc:`further-notes-on-kotlin`.
-
-IDE
-~~~
-
-We strongly recommend the use of IntelliJ IDEA as an IDE, primarily due to the strength of its Kotlin integration.
-
-Please make sure that you're running the latest version of IDEA, as older versions have been known to have problems integrating with Gradle, the build tool used by Corda.
-
-Git
-~~~
-
-We use git to version-control Corda.
-
-Gradle
-~~~~~~
-
-We use Gradle as the build tool for Corda. However, you do not need to install Gradle itself, as a wrapper is provided.
+Following these software recommendations will minimize the number of errors you encounter, and make it easier for
+others to provide support. However, if you do use other tools, we'd be interested to hear about any issues that arise.
 
 Set-up instructions
 -------------------
-
-The instructions below will allow you to set up a Corda development environment and run a basic CorDapp on a Windows or Mac machine. If you have any issues, please consult the :doc:`getting-set-up-fault-finding` page, or reach out on `Slack <http://slack.corda.net/>`_ or the `forums <https://discourse.corda.net/>`_.
+The instructions below will allow you to set up a Corda development environment and run a basic CorDapp on a Windows
+or Mac machine. If you have any issues, please consult the :doc:`troubleshooting` page, or reach out on
+`Slack <http://slack.corda.net/>`_ or the `forums <https://discourse.corda.net/>`_.
 
 .. note:: The set-up instructions are also available in video form for both `Windows <https://vimeo.com/217462250>`_ and `Mac <https://vimeo.com/217462230>`_.
 
 Windows
-~~~~~~~
+^^^^^^^
 
 Java
-""""
+~~~~
 1. Visit http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
 2. Scroll down to "Java SE Development Kit 8uXXX" (where "XXX" is the latest minor version number)
 3. Toggle "Accept License Agreement"
@@ -59,19 +54,19 @@ Java
 6. Open a new command prompt and run ``java -version`` to test that Java is installed correctly
 
 Git
-"""
+~~~
 1. Visit https://git-scm.com/download/win
 2. Click the "64-bit Git for Windows Setup" download link.
 3. Download and run the executable to install Git (use the default settings)
 4. Open a new command prompt and type ``git --version`` to test that git is installed correctly
 
 IntelliJ
-""""""""
+~~~~~~~~
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 
 Download a sample project
-"""""""""""""""""""""""""
+~~~~~~~~~~~~~~~~~~~~~~~~~
 1. Open a command prompt
 2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
 3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
@@ -79,14 +74,14 @@ Download a sample project
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the command prompt
-"""""""""""""""""""""""""""
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 1. From the cordapp-tutorial folder, deploy the nodes by running ``gradlew deployNodes``
 2. Start the nodes by running ``call kotlin-source/build/nodes/runnodes.bat``
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Run from IntelliJ
-"""""""""""""""""
+~~~~~~~~~~~~~~~~~
 1. Open IntelliJ Community Edition
 2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-template folder
 
@@ -100,10 +95,10 @@ Run from IntelliJ
 8. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Mac
-~~~
+^^^
 
 Java
-""""
+~~~~
 1. Open "System Preferences > Java"
 2. In the Java Control Panel, if an update is available, click "Update Now"
 3. In the "Software Update" window, click "Install Update". If required, enter your password and click "Install Helper" when prompted
@@ -111,12 +106,12 @@ Java
 5. Open a new terminal and type ``java -version`` to test that Java is installed correctly
 
 IntelliJ
-""""""""
+~~~~~~~~
 1. Visit https://www.jetbrains.com/idea/download/download-thanks.html?platform=mac&code=IIC
 2. Download and run the executable to install IntelliJ Community Edition (use the default settings)
 
 Download a sample project
-"""""""""""""""""""""""""
+~~~~~~~~~~~~~~~~~~~~~~~~~
 1. Open a terminal
 2. Clone the CorDapp tutorial repo by running ``git clone https://github.com/corda/cordapp-tutorial``
 3. Move into the cordapp-tutorial folder by running ``cd cordapp-tutorial``
@@ -124,14 +119,14 @@ Download a sample project
 5. Check out the latest milestone release by running ``git checkout release-MX`` (where "X" is the latest milestone)
 
 Run from the terminal
-"""""""""""""""""""""
+~~~~~~~~~~~~~~~~~~~~~
 1. From the cordapp-tutorial folder, deploy the nodes by running ``./gradlew deployNodes``
 2. Start the nodes by running ``kotlin-source/build/nodes/runnodes``. Do not click while 8 additional terminal windows start up.
 3. Wait until all the terminal windows display either "Webserver started up in XX.X sec" or "Node for "NodeC" started up and registered in XX.XX sec"
 4. Test the CorDapp is running correctly by visiting the front end at http://localhost:10007/web/example/
 
 Run from IntelliJ
-"""""""""""""""""
+~~~~~~~~~~~~~~~~~
 1. Open IntelliJ Community Edition
 2. On the splash screen, click "Open" (do NOT click "Import Project") and select the cordapp-template folder
 3. Once the project is open, click "File > Project Structure". Under "Project SDK:", set the project SDK by clicking "New...", clicking "JDK", and navigating to /Library/Java/JavaVirtualMachines/jdk1.8.0_XXX (where "XXX" is the latest minor version number). Click "OK".
@@ -158,7 +153,8 @@ And a simple example CorDapp for you to explore basic concepts is available here
 
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
-By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release instead by running ``git checkout release-M11.1``.
+By default, these repos will be on the unstable ``master`` branch. You should check out the latest milestone release
+instead by running ``git checkout release-M11.1``.
 
 Next steps
 ----------
@@ -168,5 +164,5 @@ The best way to check that everything is working fine is by :doc:`running-the-de
 Once you have these demos running, you may be interested in writing your own CorDapps, in which case you should refer to 
 :doc:`tutorial-cordapp`.
 
-If you encounter any issues, please see the :doc:`getting-set-up-fault-finding` page, or get in touch with us on the 
+If you encounter any issues, please see the :doc:`troubleshooting` page, or get in touch with us on the
 `forums <https://discourse.corda.net/>`_ or via `slack <http://slack.corda.net/>`_.

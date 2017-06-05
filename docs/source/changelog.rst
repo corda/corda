@@ -530,7 +530,7 @@ New features in this release:
       are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
       boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
       is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
-      key trees in the ":doc:`key-concepts-core-types`" article.
+      key trees in the ":doc:`api-core-types`" article.
     * A new tutorial has been added showing how to use transaction attachments in more detail.
 
 * Testnet
@@ -546,7 +546,7 @@ New features in this release:
 * Standalone app development:
 
     * The Corda libraries that app developers need to link against can now be installed into your local Maven
-      repository, where they can then be used like any other JAR. See :doc:`creating-a-cordapp`.
+      repository, where they can then be used like any other JAR. See :doc:`running-a-node`.
 
 * User interfaces:
 
@@ -705,8 +705,8 @@ Highlights of this release:
 We have new documentation on:
 
 * :doc:`event-scheduling`
-* :doc:`key-concepts-core-types`
-* :doc:`key-concepts-consensus-notaries`
+* :doc:`core-types`
+* :doc:`key-concepts-consensus`
 
 Summary of API changes (not exhaustive):
 

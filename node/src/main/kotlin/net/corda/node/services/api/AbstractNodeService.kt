@@ -13,7 +13,7 @@ import javax.annotation.concurrent.ThreadSafe
 @ThreadSafe
 abstract class AbstractNodeService(val services: ServiceHubInternal) : SingletonSerializeAsToken() {
 
-    val net: MessagingService get() = services.networkService
+    val network: MessagingService get() = services.networkService
 
     /**
      * Register a handler for a message topic. In comparison to using net.addMessageHandler() this manages a lot of
@@ -28,14 +28,14 @@ abstract class AbstractNodeService(val services: ServiceHubInternal) : Singleton
             addMessageHandler(topic: String,
                               crossinline handler: (Q) -> R,
                               crossinline exceptionConsumer: (Message, Exception) -> Unit): MessageHandlerRegistration {
-        return net.addMessageHandler(topic, DEFAULT_SESSION_ID) { message, _ ->
+        return network.addMessageHandler(topic, DEFAULT_SESSION_ID) { message, _ ->
             try {
                 val request = message.data.deserialize<Q>()
                 val response = handler(request)
                 // If the return type R is Unit, then do not send a response
                 if (response.javaClass != Unit.javaClass) {
-                    val msg = net.createMessage(topic, request.sessionID, response.serialize().bytes)
-                    net.send(msg, request.replyTo)
+                    val msg = network.createMessage(topic, request.sessionID, response.serialize().bytes)
+                    network.send(msg, request.replyTo)
                 }
             } catch(e: Exception) {
                 exceptionConsumer(message, e)

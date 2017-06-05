@@ -33,7 +33,8 @@ allowed to do anything! Things to watch out for:
   sides of the flow.
 
 The theme should be clear: signing is a very sensitive operation, so you need to be sure you know what it is you
-are about to sign, and that nothing has changed in the small print!
+are about to sign, and that nothing has changed in the small print! Once you have provided your signature over a
+transaction to a counterparty, there is no longer anything you can do to prevent them from committing it to the ledger.
 
 Contracts
 ---------

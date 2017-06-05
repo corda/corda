@@ -38,56 +38,67 @@ Documentation Contents:
 =======================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Getting started
+   :maxdepth: 1
+   :caption: Quickstart
 
-   inthebox
    getting-set-up
-   getting-set-up-fault-finding
+   tutorial-cordapp
    running-the-demos
    CLI-vs-IDE
-   cheat-sheet
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Key concepts
 
    key-concepts
    key-concepts-ecosystem
-   key-concepts-data-model
-   key-concepts-core-types
-   key-concepts-financial-model
-   key-concepts-flow-framework
-   key-concepts-consensus-notaries
-   key-concepts-vault
-   key-concepts-security-model
+   key-concepts-ledger
+   key-concepts-states
+   key-concepts-contracts
+   key-concepts-transactions
+   key-concepts-flows
+   key-concepts-consensus
+   key-concepts-notaries
+   key-concepts-time-windows
+   key-concepts-oracles
+   key-concepts-node
+   key-concepts-tradeoffs
 
 .. toctree::
-   :maxdepth: 2
-   :caption: CorDapps
+   :maxdepth: 1
+   :caption: Building a CorDapp
 
-   creating-a-cordapp
-   tutorial-cordapp
+   cordapp-overview
+   writing-cordapps
+   api
+   api-states
+   api-contracts
+   api-transactions
+   api-flows
+   api-core-types
+   cheat-sheet
 
 .. toctree::
-   :maxdepth: 2
-   :caption: The Corda node
+   :maxdepth: 1
+   :caption: Corda nodes
 
-   versioning
-   shell
-   serialization
+   running-a-node
    clientrpc
-   messaging
-   persistence
+   shell
    node-administration
    corda-configuration-file
-   corda-plugins
-   node-services
-   node-explorer
-   permissioning
+   out-of-process-verification
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Corda networks
+
+   setting-up-a-corda-network
+   permissioning
+   versioning
+
+.. toctree::
+   :maxdepth: 1
    :caption: Tutorials
 
    tutorial-contract
@@ -106,42 +117,69 @@ Documentation Contents:
    event-scheduling
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Other
+   :maxdepth: 1
+   :caption: Tools
 
    network-simulator
-   clauses
-   merkle-trees
-   json
+   demobench
+   node-explorer
+   azure-vm
+   loadtesting
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Node internals
+
+   node-services
+   vault
+   serialization
+   messaging
+   persistence
+
+.. toctree::
+   :maxdepth: 1
    :caption: Component library
 
    flow-library
    contract-catalogue
+   financial-model
    contract-irs
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Appendix
+   :maxdepth: 1
+   :caption: Release process
 
-   loadtesting
-   demobench
-   setting-up-a-corda-network
-   secure-coding-guidelines
    release-process
    release-notes
    changelog
-   codestyle
-   building-the-docs
-   further-notes-on-kotlin
    publishing-corda
-   azure-vm
-   out-of-process-verification
+   codestyle
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: FAQ
+
+   faq
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Troubleshooting
+
+   troubleshooting
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Other
+
+   clauses
+   merkle-trees
+   json
+   secure-coding-guidelines
+   corda-repo-layout
+   building-the-docs
+
+.. toctree::
+   :maxdepth: 1
    :caption: Glossary
 
    glossary
