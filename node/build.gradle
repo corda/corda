@@ -25,6 +25,8 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+    stabilityTestCompile.extendsFrom testCompile
+    stabilityTestRuntime.extendsFrom testRuntime
 }
 
 sourceSets {
@@ -36,6 +38,16 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+        }
+    }
+    stabilityTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/stability-test/kotlin')
+        }
+        resources {
+            srcDir file('src/stability-test/resources')
         }
     }
 }
@@ -174,3 +186,10 @@ task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
+
+task stabilityTest(type: Test) {
+    group = 'build'
+    testClassesDir = sourceSets.stabilityTest.output.classesDir
+    classpath = sourceSets.stabilityTest.runtimeClasspath
+}
+

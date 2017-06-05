@@ -12,6 +12,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NodeStatus
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
@@ -99,7 +100,7 @@ interface CordaRPCOps : RPCOps {
      *
      * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
-    */
+     */
     // DOCSTART VaultTrackByAPI
     @RPCReturnsObservables
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
@@ -112,6 +113,7 @@ interface CordaRPCOps : RPCOps {
 
     // DOCSTART VaultQueryAPIJavaHelpers
     fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria): Vault.Page<T> = vaultQueryBy(criteria = criteria)
+
     fun <T : ContractState> vaultQueryByWithPagingSpec(criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = vaultQueryBy(criteria, paging = paging)
     fun <T : ContractState> vaultQueryByWithSorting(criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = vaultQueryBy(criteria, sorting = sorting)
 
@@ -124,8 +126,8 @@ interface CordaRPCOps : RPCOps {
      * Returns a pair of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
-    // TODO: Remove this from the interface
-    // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
+            // TODO: Remove this from the interface
+            // @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
     fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
 
     /**
@@ -246,6 +248,11 @@ interface CordaRPCOps : RPCOps {
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
+
+    /**
+     * Return status of the node.
+     */
+    fun nodeStatus(): NodeStatus
 }
 
 /**
