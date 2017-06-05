@@ -54,6 +54,7 @@ interface MultilateralNettableState<out T : Any> {
 interface NettableState<N : BilateralNettableState<N>, out T : Any> : BilateralNettableState<N>,
         MultilateralNettableState<T>
 
+// DOCSTART 1
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
@@ -116,7 +117,9 @@ interface ContractState {
      */
     val participants: List<AbstractParty>
 }
+// DOCEND 1
 
+// DOCSTART 4
 /**
  * A wrapper for [ContractState] containing additional platform-level state information.
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
@@ -145,6 +148,7 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * otherwise the transaction is not valid.
          */
         val encumbrance: Int? = null)
+// DOCEND 4
 
 /** Wraps the [ContractState] in a [TransactionState] object */
 infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
@@ -169,6 +173,7 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
  */
 fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
+// DOCSTART 3
 /**
  * A contract state that can have a single owner.
  */
@@ -179,6 +184,7 @@ interface OwnableState : ContractState {
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
     fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
 }
+// DOCEND 3
 
 /** Something which is scheduled to happen at a point in time */
 interface Scheduled {
@@ -207,6 +213,7 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
  */
 data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
+// DOCSTART 2
 /**
  * A state that evolves by superseding itself, all of which share the common "linearId".
  *
@@ -245,6 +252,7 @@ interface LinearState : ContractState {
         }
     }
 }
+// DOCEND 2
 
 interface SchedulableState : ContractState {
     /**
@@ -325,13 +333,17 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
  * transaction defined the state and where in that transaction it was.
  */
 @CordaSerializable
+// DOCSTART 8
 data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
 }
+// DOCEND 8
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
 @CordaSerializable
+// DOCSTART 7
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
+// DOCEND 7
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
@@ -359,7 +371,9 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
+// DOCSTART 9
 data class Command(val value: CommandData, val signers: List<PublicKey>) {
+// DOCEND 9
     init {
         require(signers.isNotEmpty())
     }
@@ -395,6 +409,7 @@ interface NetCommand : CommandData {
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
+// DOCSTART 6
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 @CordaSerializable
 data class AuthenticatedObject<out T : Any>(
@@ -403,6 +418,7 @@ data class AuthenticatedObject<out T : Any>(
         val signingParties: List<Party>,
         val value: T
 )
+// DOCEND 6
 
 /**
  * A time-window is required for validation/notarization purposes.
@@ -457,6 +473,7 @@ class TimeWindow private constructor(
     override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
 }
 
+// DOCSTART 5
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
@@ -482,6 +499,7 @@ interface Contract {
      */
     val legalContractReference: SecureHash
 }
+// DOCEND 5
 
 /**
  * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.

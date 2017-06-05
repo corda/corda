@@ -156,7 +156,7 @@ simply flow messages or exceptions. The other two represent the buyer and seller
 Going through the data needed to become a seller, we have:
 
 - ``otherParty: Party`` - the party with which you are trading.
-- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`key-concepts-consensus-notaries`" for more
+- ``notaryNode: NodeInfo`` - the entry in the network map for the chosen notary. See ":doc:`key-concepts-notaries`" for more
   information on notaries.
 - ``assetToSell: StateAndRef<OwnableState>`` - a pointer to the ledger entry that represents the thing being sold.
 - ``price: Amount<Currency>`` - the agreed on price that the asset is being sold for (without an issuer constraint).

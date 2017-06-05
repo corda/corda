@@ -54,7 +54,9 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
      * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
      * that is inconsistent with the legal contract.
      */
+    // DOCSTART 2
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html")
+    // DOCEND 2
     override fun extractCommands(commands: Collection<AuthenticatedObject<CommandData>>): List<AuthenticatedObject<Cash.Commands>>
             = commands.select<Cash.Commands>()
 
@@ -81,6 +83,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         class ConserveAmount : AbstractConserveAmount<State, Commands, Currency>()
     }
 
+    // DOCSTART 1
     /** A state representing a cash claim against some party. */
     data class State(
             override val amount: Amount<Issued<Currency>>,
@@ -119,6 +122,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1)
     }
+    // DOCEND 1
 
     // Just for grouping
     interface Commands : FungibleAsset.Commands {
