@@ -123,23 +123,9 @@ annotation.
 
 ServiceHub
 ----------
-Within ``FlowLogic.call()``, the flow developer has access to the node's ``ServiceHub`` that provides access to the
-various services the node provides.
-
-The key ``ServiceHub`` services are:
-
-* ``ServiceHub.networkMapCache``
-    * Provides info on other nodes on the network (e.g. notaries…)
-* ``ServiceHub.vaultService``
-    * Stores the node’s current and historic states
-* ``ServiceHub.storageService``
-    * Stores additional info such as transactions and attachments
-* ``ServiceHub.keyManagementService``
-    * Manages the node’s digital signing keys
-* ``ServiceHub.myInfo``
-    * Other information about the node
-* ``ServiceHub.clock``
-    * Provides access to the node’s internal time and date
+Within ``FlowLogic.call``, the flow developer has access to the node's ``ServiceHub``, which provides access to the
+various services the node provides. See :doc:`api-service-hub` for information about the services the ``ServiceHub``
+offers.
 
 Some common tasks performed using the ``ServiceHub`` are:
 

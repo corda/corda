@@ -11,6 +11,14 @@ Nodes
 
    * *The node's functionality is extended by installing CorDapps in the plugin registry*
 
+Video
+-----
+.. raw:: html
+
+    <p><a href="https://vimeo.com/214168860">Corda Node, CorDapps and Network</a></p>
+    <iframe src="https://player.vimeo.com/video/214168860" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Node architecture
 -----------------
 A Corda node is a JVM run-time environment with a unique identity on the network that hosts Corda services and
@@ -46,11 +54,8 @@ node's owner does not interact with other network nodes directly.
 
 RPC interface
 -------------
-The node's owner interacts with the node via remote procedure calls (RPC). RPC operations exposed by the node include:
-
-* Starting a flow
-* Reading the contents of the vault or the transaction storage
-* Uploading and downloading attachments
+The node's owner interacts with the node via remote procedure calls (RPC). The key RPC operations the node exposes
+are documented in :doc:``api-rpc``.
 
 The service hub
 ---------------

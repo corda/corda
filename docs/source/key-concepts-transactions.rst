@@ -10,6 +10,15 @@ Transactions
      * *It is contractually valid*
      * *It is signed by the required parties*
 
+Video
+-----
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879807" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
+Overview
+--------
 Corda uses a *UTXO* (unspent transaction output) model where every state on the ledger is immutable. The ledger
 evolves over time by applying *transactions*, which update the ledger by marking zero or more existing ledger states
 as historic (the *inputs*) and producing zero or more new ledger states (the *outputs*). Transactions represent a
@@ -113,6 +122,11 @@ We explore the role played by the remaining transaction components below.
 
 Commands
 ^^^^^^^^
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213881538" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Suppose we have a transaction with a cash state and a bond state as inputs, and a cash state and a bond state as
 outputs. This transaction could represent two different scenarios:
 
@@ -141,6 +155,11 @@ We can visualize this situation as follows:
 
 Attachments
 ^^^^^^^^^^^
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879328" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Sometimes, we have a large piece of data that can be reused across many different transactions. Some examples:
 
 * A calendar of public holidays

@@ -7,6 +7,13 @@ Time-windows
    * *The notary is the timestamping authority, refusing to commit transactions outside of that window*
    * *Time-windows can have a start and end time, or be open at either end*
 
+Video
+-----
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879314" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Time in a distributed system
 ----------------------------
 A notary also act as the *timestamping authority*, verifying that a transaction occurred during a specific time-window

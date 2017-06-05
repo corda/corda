@@ -11,5 +11,6 @@ Building a CorDapp
    api-contracts
    api-transactions
    api-flows
+   api-service-hub
    api-core-types
    cheat-sheet
