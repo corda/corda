@@ -284,7 +284,9 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
         while (!networkMapRegistrationFuture.isDone && processMessage(consumer)) {
         }
-        networkMapRegistrationFuture.getOrThrow() // Trigger node shutdown here to avoid deadlock in shutdown hooks.
+        if (networkMapRegistrationFuture.isDone) {
+            networkMapRegistrationFuture.getOrThrow() // Trigger node shutdown here to avoid deadlock in shutdown hooks.
+        }
     }
 
     private fun runPostNetworkMap() {
