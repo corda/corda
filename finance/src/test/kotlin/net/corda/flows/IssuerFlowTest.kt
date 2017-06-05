@@ -27,18 +27,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class IssuerFlowTest {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNode
     lateinit var bankOfCordaNode: MockNode
     lateinit var bankClientNode: MockNode
 
     @Test
     fun `test issuer flow`() {
-        net = MockNetwork(false, true)
+        mockNet = MockNetwork(false, true)
         ledger {
-            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name)
-            bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
+            bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
 
             // using default IssueTo Party Reference
             val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
@@ -58,10 +58,10 @@ class IssuerFlowTest {
 
     @Test
     fun `test issue flow to self`() {
-        net = MockNetwork(false, true)
+        mockNet = MockNetwork(false, true)
         ledger {
-            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name)
+            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
 
             // using default IssueTo Party Reference
             val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
@@ -74,11 +74,11 @@ class IssuerFlowTest {
 
     @Test
     fun `test concurrent issuer flow`() {
-        net = MockNetwork(false, true)
+        mockNet = MockNetwork(false, true)
         ledger {
-            notaryNode = net.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = net.createPartyNode(notaryNode.info.address, BOC.name)
-            bankClientNode = net.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
+            bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
 
             // this test exercises the Cashflow issue and move subflows to ensure consistent spending of issued states
             val amount = 10000.DOLLARS

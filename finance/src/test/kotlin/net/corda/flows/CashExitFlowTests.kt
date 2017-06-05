@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashExitFlowTests {
-    private val net = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
     private lateinit var bankOfCordaNode: MockNode
@@ -26,23 +26,23 @@ class CashExitFlowTests {
 
     @Before
     fun start() {
-        val nodes = net.createTwoNodes()
+        val nodes = mockNet.createTwoNodes()
         notaryNode = nodes.first
         bankOfCordaNode = nodes.second
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        net.runNetwork()
+        mockNet.runNetwork()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
                 bankOfCorda,
                 notary)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
     }
 
     @After
     fun cleanUp() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test
@@ -50,7 +50,7 @@ class CashExitFlowTests {
         val exitAmount = 500.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashExitFlow(exitAmount,
                 ref)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         val exitTx = future.getOrThrow().tx
         val expected = (initialBalance - exitAmount).`issued by`(bankOfCorda.ref(ref))
         assertEquals(1, exitTx.inputs.size)
@@ -64,7 +64,7 @@ class CashExitFlowTests {
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashExitFlow(expected,
                 ref)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
         }

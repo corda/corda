@@ -14,7 +14,7 @@ import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
 class InMemoryMessagingTests {
-    val network = MockNetwork()
+    val mockNet = MockNetwork()
 
     @Test
     fun topicStringValidation() {
@@ -33,45 +33,45 @@ class InMemoryMessagingTests {
 
     @Test
     fun basics() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = network.createNode(networkMapAddress = node1.info.address)
-        val node3 = network.createNode(networkMapAddress = node1.info.address)
+        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
+        val node3 = mockNet.createNode(networkMapAddress = node1.info.address)
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
 
         with(node2) {
-            node2.net.addMessageHandler { msg, _ ->
-                node2.net.send(msg, node3.info.address)
+            node2.network.addMessageHandler { msg, _ ->
+                node2.network.send(msg, node3.info.address)
             }
         }
 
         with(node3) {
-            node2.net.addMessageHandler { msg, _ ->
+            node2.network.addMessageHandler { msg, _ ->
                 finalDelivery = msg
             }
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        node1.net.send(node1.net.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.info.address)
+        node1.network.send(node1.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.info.address)
 
-        network.runNetwork(rounds = 1)
+        mockNet.runNetwork(rounds = 1)
 
         assertTrue(Arrays.equals(finalDelivery!!.data, bits))
     }
 
     @Test
     fun broadcast() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = network.createNode(networkMapAddress = node1.info.address)
-        val node3 = network.createNode(networkMapAddress = node1.info.address)
+        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
+        val node3 = mockNet.createNode(networkMapAddress = node1.info.address)
 
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.net.addMessageHandler { _, _ -> counter++ } }
-        node1.net.send(node2.net.createMessage("test.topic", DEFAULT_SESSION_ID, bits), network.messagingNetwork.everyoneOnline)
-        network.runNetwork(rounds = 1)
+        listOf(node1, node2, node3).forEach { it.network.addMessageHandler { _, _ -> counter++ } }
+        node1.network.send(node2.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), mockNet.messagingNetwork.everyoneOnline)
+        mockNet.runNetwork(rounds = 1)
         assertEquals(3, counter)
     }
 
@@ -81,31 +81,31 @@ class InMemoryMessagingTests {
      */
     @Test
     fun `skip unhandled messages`() {
-        val node1 = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = network.createNode(networkMapAddress = node1.info.address)
+        val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
         var received: Int = 0
 
-        node1.net.addMessageHandler("valid_message") { _, _ ->
+        node1.network.addMessageHandler("valid_message") { _, _ ->
             received++
         }
 
-        val invalidMessage = node2.net.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        val validMessage = node2.net.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        node2.net.send(invalidMessage, node1.net.myAddress)
-        network.runNetwork()
+        val invalidMessage = node2.network.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val validMessage = node2.network.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        node2.network.send(invalidMessage, node1.network.myAddress)
+        mockNet.runNetwork()
         assertEquals(0, received)
 
-        node2.net.send(validMessage, node1.net.myAddress)
-        network.runNetwork()
+        node2.network.send(validMessage, node1.network.myAddress)
+        mockNet.runNetwork()
         assertEquals(1, received)
 
         // Here's the core of the test; previously the unhandled message would cause runNetwork() to abort early, so
         // this would fail. Make fresh messages to stop duplicate uniqueMessageId causing drops
-        val invalidMessage2 = node2.net.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        val validMessage2 = node2.net.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
-        node2.net.send(invalidMessage2, node1.net.myAddress)
-        node2.net.send(validMessage2, node1.net.myAddress)
-        network.runNetwork()
+        val invalidMessage2 = node2.network.createMessage("invalid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        val validMessage2 = node2.network.createMessage("valid_message", DEFAULT_SESSION_ID, ByteArray(0))
+        node2.network.send(invalidMessage2, node1.network.myAddress)
+        node2.network.send(validMessage2, node1.network.myAddress)
+        mockNet.runNetwork()
         assertEquals(2, received)
     }
 }

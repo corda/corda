@@ -61,22 +61,22 @@ private fun NodeAttachmentService.updateAttachment(attachmentId: SecureHash, dat
 }
 
 class AttachmentSerializationTest {
-    private lateinit var network: MockNetwork
+    private lateinit var mockNet: MockNetwork
     private lateinit var server: MockNetwork.MockNode
     private lateinit var client: MockNetwork.MockNode
 
     @Before
     fun setUp() {
-        network = MockNetwork()
-        server = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        client = network.createNode(server.info.address)
+        mockNet = MockNetwork()
+        server = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        client = mockNet.createNode(server.info.address)
         client.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
-        network.runNetwork()
+        mockNet.runNetwork()
     }
 
     @After
     fun tearDown() {
-        network.stopNodes()
+        mockNet.stopNodes()
     }
 
     private class ServerLogic(private val client: Party) : FlowLogic<Unit>() {
@@ -144,12 +144,12 @@ class AttachmentSerializationTest {
             }
         }, ServerLogic::class.java, track = false)
         client.services.startFlow(clientLogic)
-        network.runNetwork(rounds)
+        mockNet.runNetwork(rounds)
     }
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.stop()
-        client = network.createNode(server.info.address, client.id, object : MockNetwork.Factory {
+        client = mockNet.createNode(server.info.address, client.id, object : MockNetwork.Factory {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun startMessagingService(rpcOps: RPCOps) {
@@ -159,7 +159,7 @@ class AttachmentSerializationTest {
                 }
             }
         })
-        return (client.smm.allStateMachines[0].stateMachine.resultFuture.apply { network.runNetwork() }.getOrThrow() as ClientResult).attachmentContent
+        return (client.smm.allStateMachines[0].stateMachine.resultFuture.apply { mockNet.runNetwork() }.getOrThrow() as ClientResult).attachmentContent
     }
 
     @Test

@@ -53,7 +53,7 @@ class P2PMessagingTest : NodeBasedTest() {
         networkMapNode.respondWith("Hello")
         val alice = startNode(ALICE.name).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
         val received = alice.receiveFrom(serviceAddress).getOrThrow(10.seconds)
         assertThat(received).isEqualTo("Hello")
@@ -98,7 +98,7 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
 
         val dummyTopic = "dummy.topic"
@@ -107,7 +107,7 @@ class P2PMessagingTest : NodeBasedTest() {
         simulateCrashingNode(distributedServiceNodes, dummyTopic, responseMessage)
 
         // Send a single request with retry
-        val response = with(alice.net) {
+        val response = with(alice.network) {
             val request = TestRequest(replyTo = myAddress)
             val responseFuture = onNext<Any>(dummyTopic, request.sessionID)
             val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
@@ -123,7 +123,7 @@ class P2PMessagingTest : NodeBasedTest() {
         val distributedServiceNodes = startNotaryCluster(DISTRIBUTED_SERVICE_NAME, 2).getOrThrow()
         val alice = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
         val serviceAddress = alice.services.networkMapCache.run {
-            alice.net.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
+            alice.network.getAddressOfParty(getPartyInfo(getAnyNotary()!!)!!)
         }
 
         val dummyTopic = "dummy.topic"
@@ -134,7 +134,7 @@ class P2PMessagingTest : NodeBasedTest() {
         val sessionId = random63BitValue()
 
         // Send a single request with retry
-        with(alice.net) {
+        with(alice.network) {
             val request = TestRequest(sessionId, myAddress)
             val msg = createMessage(TopicSession(dummyTopic), data = request.serialize().bytes)
             send(msg, serviceAddress, retryId = request.sessionID)
@@ -148,7 +148,7 @@ class P2PMessagingTest : NodeBasedTest() {
 
         // Restart the node and expect a response
         val aliceRestarted = startNode(ALICE.name, configOverrides = mapOf("messageRedeliveryDelaySeconds" to 1)).getOrThrow()
-        val response = aliceRestarted.net.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
+        val response = aliceRestarted.network.onNext<Any>(dummyTopic, sessionId).getOrThrow(5.seconds)
 
         assertThat(requestsReceived.get()).isGreaterThanOrEqualTo(2)
         assertThat(response).isEqualTo(responseMessage)
@@ -166,7 +166,7 @@ class P2PMessagingTest : NodeBasedTest() {
         distributedServiceNodes.forEach {
             val nodeName = it.info.legalIdentity.name
             var ignoreRequests = false
-            it.net.addMessageHandler(dummyTopic, DEFAULT_SESSION_ID) { netMessage, _ ->
+            it.network.addMessageHandler(dummyTopic, DEFAULT_SESSION_ID) { netMessage, _ ->
                 requestsReceived.incrementAndGet()
                 firstRequestReceived.countDown()
                 // The node which receives the first request will ignore all requests
@@ -179,8 +179,8 @@ class P2PMessagingTest : NodeBasedTest() {
                 } else {
                     println("sending response")
                     val request = netMessage.data.deserialize<TestRequest>()
-                    val response = it.net.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes)
-                    it.net.send(response, request.replyTo)
+                    val response = it.network.createMessage(dummyTopic, request.sessionID, responseMessage.serialize().bytes)
+                    it.network.send(response, request.replyTo)
                 }
             }
         }
@@ -193,7 +193,7 @@ class P2PMessagingTest : NodeBasedTest() {
             node.respondWith(node.info)
         }
         val serviceAddress = originatingNode.services.networkMapCache.run {
-            originatingNode.net.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
+            originatingNode.network.getAddressOfParty(getPartyInfo(getNotary(serviceName)!!)!!)
         }
         val participatingNodes = HashSet<Any>()
         // Try several times so that we can be fairly sure that any node not participating is not due to Artemis' selection
@@ -209,16 +209,16 @@ class P2PMessagingTest : NodeBasedTest() {
     }
 
     private fun Node.respondWith(message: Any) {
-        net.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, _ ->
+        network.addMessageHandler(javaClass.name, DEFAULT_SESSION_ID) { netMessage, _ ->
             val request = netMessage.data.deserialize<TestRequest>()
-            val response = net.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
-            net.send(response, request.replyTo)
+            val response = network.createMessage(javaClass.name, request.sessionID, message.serialize().bytes)
+            network.send(response, request.replyTo)
         }
     }
 
     private fun Node.receiveFrom(target: MessageRecipients): ListenableFuture<Any> {
-        val request = TestRequest(replyTo = net.myAddress)
-        return net.sendRequest<Any>(javaClass.name, request, target)
+        val request = TestRequest(replyTo = network.myAddress)
+        return network.sendRequest<Any>(javaClass.name, request, target)
     }
 
     @CordaSerializable

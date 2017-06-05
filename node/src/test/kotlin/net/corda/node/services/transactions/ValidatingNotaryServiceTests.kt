@@ -23,18 +23,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ValidatingNotaryServiceTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var clientNode: MockNetwork.MockNode
 
     @Before fun setup() {
-        net = MockNetwork()
-        notaryNode = net.createNode(
+        mockNet = MockNetwork()
+        notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
         )
-        clientNode = net.createNode(networkMapAddress = notaryNode.info.address)
-        net.runNetwork() // Clear network map registration messages
+        clientNode = mockNet.createNode(networkMapAddress = notaryNode.info.address)
+        mockNet.runNetwork() // Clear network map registration messages
     }
 
     @Test fun `should report error for invalid transaction dependency`() {
@@ -74,7 +74,7 @@ class ValidatingNotaryServiceTests {
     private fun runClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         return future
     }
 

@@ -28,24 +28,24 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class ResolveTransactionsFlowTest {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var a: MockNetwork.MockNode
     lateinit var b: MockNetwork.MockNode
     lateinit var notary: Party
 
     @Before
     fun setup() {
-        net = MockNetwork()
-        val nodes = net.createSomeNodes()
+        mockNet = MockNetwork()
+        val nodes = mockNet.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
         notary = nodes.notaryNode.info.notaryIdentity
-        net.runNetwork()
+        mockNet.runNetwork()
     }
 
     @After
     fun tearDown() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     // DOCSTART 1
@@ -54,7 +54,7 @@ class ResolveTransactionsFlowTest {
         val (stx1, stx2) = makeTransactions()
         val p = ResolveTransactionsFlow(setOf(stx2.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
         b.database.transaction {
@@ -69,7 +69,7 @@ class ResolveTransactionsFlowTest {
         val stx = makeTransactions(signFirstTX = false).second
         val p = ResolveTransactionsFlow(setOf(stx.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith(SignatureException::class) { future.getOrThrow() }
     }
 
@@ -78,7 +78,7 @@ class ResolveTransactionsFlowTest {
         val (stx1, stx2) = makeTransactions()
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
         b.database.transaction {
             assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
@@ -105,7 +105,7 @@ class ResolveTransactionsFlowTest {
         val p = ResolveTransactionsFlow(setOf(cursor.id), a.info.legalIdentity)
         p.transactionCountLimit = 40
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<ResolveTransactionsFlow.ExcessivelyLargeTransactionGraph> { future.getOrThrow() }
     }
 
@@ -131,7 +131,7 @@ class ResolveTransactionsFlowTest {
 
         val p = ResolveTransactionsFlow(setOf(stx3.id), a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
     }
 
@@ -153,7 +153,7 @@ class ResolveTransactionsFlowTest {
         val stx2 = makeTransactions(withAttachment = id).second
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
         val future = b.services.startFlow(p).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
 
         // TODO: this operation should not require an explicit transaction
