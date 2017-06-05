@@ -9,6 +9,7 @@ import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NodeDefinition
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
@@ -256,7 +257,7 @@ fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-class ListenProcessDeathException(message: String) : Exception(message)
+class ListenProcessDeathException(hostAndPort: HostAndPort, listenProcess: Process) : Exception("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
 
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
@@ -268,7 +269,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
 fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (!listenProcess.isAlive) {
-            throw ListenProcessDeathException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+            throw ListenProcessDeathException(hostAndPort, listenProcess)
         }
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -464,9 +465,12 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
+    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
         val client = CordaRPCClient(nodeAddress, sslConfig)
         return poll(executorService, "for RPC connection") {
+            if (!listenProcess.isAlive) {
+                throw ListenProcessDeathException(nodeAddress, listenProcess)
+            }
             try {
                 val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
                 shutdownManager.registerShutdown { connection.close() }
@@ -478,7 +482,7 @@ class DriverDSL(
         }
     }
 
-    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CordformNode>): (X500Name) -> Map<String, String>? {
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (X500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
                 is NetworkMapStartStrategy.Dedicated -> {
@@ -508,13 +512,17 @@ class DriverDSL(
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
+        val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
+            override fun getName() = name.toString()
+            override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
+        }))
         return startNode(p2pAddress, webAddress, name, configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to networkMapServiceConfigLookup(emptyList())(name),
+                "networkMapService" to networkMapServiceConfigLookup(name),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map { it.toMap() },
                 "verifierType" to verifierType.name
@@ -532,7 +540,7 @@ class DriverDSL(
         registerProcess(processFuture)
         processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
-            establishRpc(p2pAddress, configuration).flatMap { rpc ->
+            establishRpc(p2pAddress, configuration, process).flatMap { rpc ->
                 rpc.waitUntilRegisteredWithNetworkMap().map {
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
