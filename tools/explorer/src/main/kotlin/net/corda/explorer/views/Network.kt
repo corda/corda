@@ -83,6 +83,7 @@ class Network : CordaView() {
     private fun NodeInfo.renderButton(mapLabel: Label): Button {
         val node = this
         return button {
+            useMaxWidth = true
             graphic = vbox {
                 label(PartyNameFormatter.short.format(node.legalIdentity.name)) { font = Font.font(font.family, FontWeight.BOLD, 15.0) }
                 gridpane {
