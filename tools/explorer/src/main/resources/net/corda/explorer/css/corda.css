@@ -279,7 +279,7 @@
 }
 
 .flow-expanded {
-    -fx-background-color: rgba(255, 255, 255, 0.5);
+    -fx-background-color: rgba(255, 255, 255);
     -fx-background-size: Auto 90%;
     -fx-background-repeat: no-repeat;
     -fx-background-position: center center;

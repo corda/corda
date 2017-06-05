@@ -100,7 +100,7 @@ class ExplorerSimulation(val options: OptionSet) {
 
             when {
                 options.has("S") -> startNormalSimulation()
-                options.has("F") -> starErrorFlowsSimulation()
+                options.has("F") -> startErrorFlowsSimulation()
             }
 
             waitForAllNodesToFinish()
@@ -191,7 +191,7 @@ class ExplorerSimulation(val options: OptionSet) {
         onEnd()
     }
 
-    private fun starErrorFlowsSimulation() {
+    private fun startErrorFlowsSimulation() {
         println("Running flows with errors simulation mode ...")
         setUpRPC()
         val eventGenerator = ErrorFlowsEventGenerator(

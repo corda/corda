@@ -271,7 +271,6 @@ class StateMachineViewer : CordaView("Flow Triage") {
         }
     }
 
-    // TODO test
     private fun makeScheduledGrid(gridPane: GridPane, initiator: FlowInitiator.Scheduled) {
         gridPane.apply {
             row {
