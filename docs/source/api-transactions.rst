@@ -29,7 +29,7 @@ we can create this transaction, we will need to change the notary service associ
 
 * Deciding which notary service we want to notarise the transaction
 * For each set of inputs states that point to the same notary service that isn't the desired notary service, creating a
-``TransactionType.NotaryChange`` transaction that:
+  ``TransactionType.NotaryChange`` transaction that:
 
   * Consumes the input states pointing to the old notary
   * Outputs the same states, but that now point to the new notary
@@ -202,8 +202,8 @@ The signatures on a ``SignedTransaction`` have not necessarily been checked for 
 transaction is missing any signatures without the corresponding public keys being passed in, a
 ``SignaturesMissingException`` is thrown.
 
-Verifying a transaction
-^^^^^^^^^^^^^^^^^^^^^^^
+Verifying the transaction
+^^^^^^^^^^^^^^^^^^^^^^^^^
 Verifying a transaction is a multi-step process:
 
 * We check the transaction's signatures:
@@ -267,8 +267,8 @@ Verifying a transaction is a multi-step process:
             throw new FlowException("Proposed input value too high!");
         }
 
-Signing a transaction
-^^^^^^^^^^^^^^^^^^^^^
+Signing the transaction
+^^^^^^^^^^^^^^^^^^^^^^^
 We add an additional signature to an existing ``SignedTransaction`` using:
 
 .. container:: codeset

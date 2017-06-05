@@ -4,10 +4,9 @@ Running a node
 Deploying your node
 -------------------
 
-To use an app you must also have a node server. To create a node server run the ``gradle deployNodes`` task.
-
-This will output the node JAR to ``build/libs/corda.jar`` and several sample/standard
-node setups to ``build/nodes``. For now you can use the ``build/nodes/nodea`` configuration as a template.
+You deploy a node by running the ``gradle deployNodes`` task. This will output the node JAR to
+``build/libs/corda.jar`` and several sample/standard node setups to ``build/nodes``. For now you can use the
+``build/nodes/nodea`` configuration as a template.
 
 Each node server by default must have a ``node.conf`` file in the current working directory. After first
 execution of the node server there will be many other configuration and persistence files created in this

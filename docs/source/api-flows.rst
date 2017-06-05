@@ -155,6 +155,34 @@ Common flow tasks
 There are a number of common tasks that you will need to perform within ``FlowLogic.call`` in order to agree ledger
 updates. This section details the API for the most common tasks.
 
+Retrieving information about other nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We use the network map to retrieve information about other nodes on the network:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        val networkMap = serviceHub.networkMapCache
+
+        val allNodes = networkMap.partyNodes
+        val allNotaryNodes = networkMap.notaryNodes
+        val randomNotaryNode = networkMap.getAnyNotary()
+
+        val alice = networkMap.getNodeByLegalName(X500Name("CN=Alice,O=Alice,L=London,C=UK"))
+        val bob = networkMap.getNodeByLegalIdentityKey(bobsKey)
+
+   .. sourcecode:: java
+
+        final NetworkMapCache networkMap = getServiceHub().getNetworkMapCache();
+
+        final List<NodeInfo> allNodes = networkMap.getPartyNodes();
+        final List<NodeInfo> allNotaryNodes = networkMap.getNotaryNodes();
+        final Party randomNotaryNode = networkMap.getAnyNotary(null);
+
+        final NodeInfo alice = networkMap.getNodeByLegalName(new X500Name("CN=Alice,O=Alice,L=London,C=UK"));
+        final NodeInfo bob = networkMap.getNodeByLegalIdentityKey(bobsKey);
+
 Communication between parties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ``FlowLogic`` instances communicate using three functions:
@@ -211,34 +239,6 @@ We verify the ``UntrustworthyData`` and retrieve its payload by calling ``unwrap
                 return tx;
             });
 
-Retrieving information about other nodes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-We use the network map to retrieve information about other nodes on the network:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val networkMap = serviceHub.networkMapCache
-
-        val allNodes = networkMap.partyNodes
-        val allNotaryNodes = networkMap.notaryNodes
-        val randomNotaryNode = networkMap.getAnyNotary()
-
-        val alice = networkMap.getNodeByLegalName(X500Name("CN=Alice,O=Alice,L=London,C=UK"))
-        val bob = networkMap.getNodeByLegalIdentityKey(bobsKey)
-
-   .. sourcecode:: java
-
-        final NetworkMapCache networkMap = getServiceHub().getNetworkMapCache();
-
-        final List<NodeInfo> allNodes = networkMap.getPartyNodes();
-        final List<NodeInfo> allNotaryNodes = networkMap.getNotaryNodes();
-        final Party randomNotaryNode = networkMap.getAnyNotary(null);
-
-        final NodeInfo alice = networkMap.getNodeByLegalName(new X500Name("CN=Alice,O=Alice,L=London,C=UK"));
-        final NodeInfo bob = networkMap.getNodeByLegalIdentityKey(bobsKey);
-
 Subflows
 --------
 Corda provides a number of built-in flows that should be used for handling common tasks. The most important are:
@@ -250,7 +250,7 @@ Corda provides a number of built-in flows that should be used for handling commo
 * ``NotaryChangeFlow``, which should be used to change a state's notary
 
 These flows are designed to be used as building blocks in your own flows. You invoke them by calling
-``FlowLogic.subFlow`` from within your flow's ``call()`` method. Here is an example from ``TwoPartyDealFlow.kt``:
+``FlowLogic.subFlow`` from within your flow's ``call`` method. Here is an example from ``TwoPartyDealFlow.kt``:
 
 .. container:: codeset
 

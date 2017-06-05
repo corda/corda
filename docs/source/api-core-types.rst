@@ -4,14 +4,6 @@ API: Core types
 Corda provides a large standard library of data types used to represent the Corda data model. In addition, there are a
 series of helper libraries which provide date manipulation, maths and cryptography functions.
 
-State and References
---------------------
-State objects contain mutable data which we would expect to evolve over the lifetime of a contract.
-
-A reference to a state in the ledger (whether it has been consumed or not) is represented with a ``StateRef`` object.
-If the state ref has been looked up from storage, you will have a ``StateAndRef`` which is simply a ``StateRef`` plus
-the data.
-
 NamedByHash and UniqueIdentifier
 --------------------------------
 
@@ -23,46 +15,6 @@ can't be identified by hash because their contents would be identical. Instead y
 This is a combination of a (Java) ``UUID`` representing a globally unique 128 bit random number, and an arbitrary
 string which can be paired with it. For instance the string may represent an existing "weak" (not guaranteed unique)
 identifier for convenience purposes.
-
-
-Transaction lifecycle types
----------------------------
-
-A ``WireTransaction`` instance contains the core of a transaction without signatures, and with references to attachments
-in place of the attachments themselves. Once signed these are encapsulated in a ``SignedTransaction`` instance. For
-processing a transaction (i.e. to verify it) a ``SignedTransaction`` is then converted to a ``LedgerTransaction``,
-which involves verifying the signatures and associating them to the relevant command(s), and resolving the attachment
- references to the attachments. Commands with valid signatures are encapsulated in the ``AuthenticatedObject`` type.
-
-.. note:: A ``LedgerTransaction`` has not necessarily had its contract code executed, and thus could be contract-invalid
-          (but not signature-invalid). You can use the ``verify`` method as shown below to validate the contracts.
-
-When constructing a new transaction from scratch, you use ``TransactionBuilder``, which is a mutable transaction that
-can be signed once its construction is complete. This builder class should be used to create the initial transaction representation
-(before signature, before verification). It is intended to be passed around code that may edit it by adding new states/commands.
-Then once the states and commands are right then an initial DigitalSignature.WithKey can be added to freeze the transaction data.
-Typically, the signInitialTransaction method on the flow's serviceHub object will be used to look up the default node identity PrivateKey,
-sign the transaction and return a partially signed SignedTransaction. This can then be distributed to other participants using the :doc:`key-concepts-flows`.
-
-Here's an example of building a transaction that creates an issuance of bananas (note that bananas are not a real
-contract type in the library):
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-      val notaryToUse: Party = ...
-      val txb = TransactionBuilder(notary = notaryToUse).withItems(BananaState(Amount(20, Bananas), fromCountry = "Elbonia"))
-      txb.setTime(Instant.now(), notaryToUse, 30.seconds)
-      // Carry out the initial signing of the transaction and creation of a (partial) SignedTransation.
-      val stx = serviceHub.signInitialTransaction(txb)
-      // Alternatively, let's just check it verifies pretending it was fully signed. To do this, we get
-      // a WireTransaction, which is what the SignedTransaction wraps. Thus by verifying that directly we
-      // skip signature checking.
-      txb.toWireTransaction().toLedgerTransaction(services).verify()
-
-In a unit test, you would typically use a freshly created ``MockServices`` object, or more realistically, you would
-write your tests using the :doc:`domain specific language for writing tests <tutorial-test-dsl>`.
 
 Party and CompositeKey
 ----------------------

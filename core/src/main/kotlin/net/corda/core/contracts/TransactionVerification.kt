@@ -9,11 +9,11 @@ import java.util.*
 
 // TODO: Consider moving this out of the core module and providing a different way for unit tests to test contracts.
 
-// DOCSTART 1
 /**
  * A transaction to be passed as input to a contract verification function. Defines helper methods to
  * simplify verification logic in contracts.
  */
+// DOCSTART 1
 data class TransactionForContract(val inputs: List<ContractState>,
                                   val outputs: List<ContractState>,
                                   val attachments: List<Attachment>,
@@ -21,6 +21,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
                                   val origHash: SecureHash,
                                   val inputNotary: Party? = null,
                                   val timeWindow: TimeWindow? = null) {
+// DOCEND 1
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
