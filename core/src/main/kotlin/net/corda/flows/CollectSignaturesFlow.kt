@@ -122,6 +122,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         partyNode.legalIdentity
     }
 
+    // DOCSTART 1
     /**
      * Get and check the required signature.
      */
@@ -131,6 +132,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
             it
         }
     }
+    // DOCEND 1
 }
 
 /**

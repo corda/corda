@@ -1,5 +1,5 @@
-Brief introduction to the node services
-=======================================
+Node services
+=============
 
 This document is intended as a very brief introduction to the current 
 service components inside the node. Whilst not at all exhaustive it is 

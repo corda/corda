@@ -1,4 +1,4 @@
-Flow Library
+Flow library
 ============
 
 There are a number of built-in flows supplied with Corda, which cover some core functionality.

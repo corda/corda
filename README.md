@@ -12,8 +12,6 @@ Corda is a decentralised database system in which nodes trust each other as litt
 * "Notary" infrastructure to validate uniqueness of transactions
 * Written as a platform for distributed apps called CorDapps
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM
- 
-Read our full and planned feature list [here](https://docs.corda.net/inthebox.html).
 
 ## Getting started
 
