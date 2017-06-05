@@ -110,7 +110,6 @@ object InteractiveShell {
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
-        ExternalResolver.INSTANCE.addCommand("stateMachines", "Provides information on state machines running currently on the node", StateMachinesCommand::class.java)
         val shell = ShellLifecycle(dir).start(config)
 
         if (runSSH) {
@@ -316,7 +315,6 @@ object InteractiveShell {
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         val subscriber = SMMPrintingSubscriber(out)
         stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
-
         var result: Any? = subscriber.future
         if (result is Future<*>) {
             if (!result.isDone) {

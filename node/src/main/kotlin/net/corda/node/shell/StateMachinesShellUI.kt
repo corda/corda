@@ -19,8 +19,6 @@ import rx.Subscriber
 
 class SMMPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
     private val indexMap = HashMap<StateMachineRunId, Int>()
-    // TODO Find better way than refreshing it every time the observation comes.
-    //  Unfortunately all examples from crash library are based on constant refreshing.
     private val table = createStateMachinesTable()
     val future: SettableFuture<Unit> = SettableFuture.create()
 
@@ -82,7 +80,7 @@ class SMMPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscribe
             }
             is StateMachineUpdate.Removed -> {
                 val idx = indexMap[smmUpdate.id]
-                if (idx != null) { // Theoretically else branch shouldn't happen.
+                if (idx != null) {
                     val oldRow = table.rows[idx]
                     val flowNameLabel = oldRow.getCol(1) as LabelElement
                     val flowInitiatorLabel = oldRow.getCol(2) as LabelElement
