@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import sun.misc.Unsafe
 import sun.security.util.Password
 import java.io.*
 import java.lang.invoke.*
@@ -9,6 +10,7 @@ import java.security.*
 import java.sql.Connection
 import java.util.HashMap
 import java.util.logging.Handler
+import java.util.zip.ZipFile
 import kotlin.collections.HashSet
 import kotlin.collections.LinkedHashSet
 
@@ -31,6 +33,11 @@ object Blacklist : ClassWhitelist {
             HashMap::class.java.name,
             ClassLoader::class.java.name,
             Handler::class.java.name, // MemoryHandler, StreamHandler
+            Runtime::class.java.name,
+            Unsafe::class.java.name,
+            ZipFile::class.java.name,
+            Provider::class.java.name,
+            SecurityManager::class.java.name,
 
             // known blacklisted interfaces.
             Connection::class.java.name,
@@ -41,6 +48,8 @@ object Blacklist : ClassWhitelist {
             KeyPair::class.java.name,
             KeyStore::class.java.name,
             Password::class.java.name,
+            AccessController::class.java.name,
+            Permission::class.java.name,
 
             // java.net classes.
             DatagramSocket::class.java.name,
