@@ -1,6 +1,5 @@
 package net.corda.core
 
-import org.junit.Assert
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import java.util.stream.IntStream
@@ -35,9 +34,9 @@ class StreamsTest {
     fun `Stream toTypedArray works`() {
         val a: Array<String> = Stream.of("one", "two").toTypedArray()
         assertEquals(Array<String>::class.java, a.javaClass)
-        Assert.assertArrayEquals(arrayOf("one", "two"), a)
+        assertArrayEquals(arrayOf("one", "two"), a)
         val b: Array<String?> = Stream.of("one", "two", null).toTypedArray()
         assertEquals(Array<String?>::class.java, b.javaClass)
-        Assert.assertArrayEquals(arrayOf("one", "two", null), b)
+        assertArrayEquals(arrayOf("one", "two", null), b)
     }
 }
