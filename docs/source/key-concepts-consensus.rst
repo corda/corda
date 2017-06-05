@@ -34,6 +34,8 @@ transferring us a treasury bond. We can only be sure that the bond transfer is v
 The only way to be sure of both conditions is to walk the transaction's chain. We can visualize this process as follows:
 
 .. image:: resources/validation-consensus.png
+   :scale: 25%
+   :align: center
 
 When verifying a proposed transaction, a given party may not have every transaction in the transaction chain that they
 need to verify. In this case, they can request the missing transactions from the transaction proposer(s). The
@@ -52,6 +54,8 @@ This is a problem because, although both transactions will achieve validity cons
 "double-spend" his USD to get double the amount of GBP and EUR. We can visualize this as follows:
 
 .. image:: resources/uniqueness-consensus.png
+   :scale: 25%
+   :align: center
 
 To prevent this, a valid transaction proposal must also achieve uniqueness consensus. Uniqueness consensus is the
 requirement that none of the inputs to a proposed transaction have already been consumed in another transaction.

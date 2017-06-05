@@ -32,6 +32,8 @@ there can never be "true time", only an approximation of it. Time windows can be
 "before" and "after") or they can be fully bounded.
 
 .. image:: resources/time-window.gif
+   :scale: 25%
+   :align: center
 
 In this way, we express the idea that the *true value* of the fact "the current time" is actually unknowable. Even when
 both a before and an after time are included, the transaction could have occurred at any point within that time-window.

@@ -23,6 +23,8 @@ transaction gathers all the required signatures, it is only valid if it is also 
 We can picture this situation as follows:
 
 .. image:: resources/tx-validation.png
+   :scale: 25%
+   :align: center
 
 The contract code can be written in any JVM language, and has access to the full capabilities of the language,
 including:

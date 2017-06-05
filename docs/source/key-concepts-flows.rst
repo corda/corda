@@ -35,6 +35,8 @@ An example flow
 Here is a visualisation of an example flow, showing Alice and Bob agreeing on a ledger update:
 
 .. image:: resources/flow.gif
+   :scale: 25%
+   :align: center
 
 The flow library
 ----------------

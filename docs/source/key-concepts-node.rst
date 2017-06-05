@@ -19,6 +19,8 @@ CorDapps.
 We can visualize the node's internal architecture as follows:
 
 .. image:: resources/node-architecture.png
+   :scale: 25%
+   :align: center
 
 The core elements of the architecture are:
 

@@ -14,6 +14,8 @@ identity information...).
 For example, the following state represents an IOU - an agreement that Alice owes Bob an amount X:
 
 .. image:: resources/state.png
+   :scale: 25%
+   :align: center
 
 Specifically, this state represents an IOU of £10 from Alice to Bob.
 
@@ -32,6 +34,8 @@ This sequence of state replacements gives us a full view of the evolution of the
 picture this situation as follows:
 
 .. image:: resources/state-sequence.png
+   :scale: 25%
+   :align: center
 
 The vault
 ---------
@@ -39,6 +43,8 @@ Each node on the network maintains a *vault* - a database where it tracks all th
 is aware of, and which it considers to be relevant to itself:
 
 .. image:: resources/vault-simple.png
+   :scale: 25%
+   :align: center
 
 We can think of the ledger from each node's point of view as the set of all the current (i.e. non-historic) states that
 it is aware of.

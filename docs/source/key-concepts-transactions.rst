@@ -18,6 +18,8 @@ single link in the state sequences seen in :doc:`key-concepts-states`.
 Here is an example of an update transaction, with two inputs and two outputs:
 
 .. image:: resources/basic-tx.png
+   :scale: 25%
+   :align: center
 
 A transaction can contain any number of inputs and outputs of any type:
 
@@ -46,6 +48,8 @@ These input states references are a combination of:
 This situation can be illustrated as follows:
 
 .. image:: resources/tx-chain.png
+   :scale: 25%
+   :align: center
 
 These input state references link together transactions over time, forming what is known as a *transaction chain*.
 
@@ -55,15 +59,21 @@ Initially, a transaction is just a **proposal** to update the ledger. It represe
 that is desired by the transaction builder(s):
 
 .. image:: resources/uncommitted_tx.png
+   :scale: 25%
+   :align: center
 
 To become reality, the transaction must receive signatures from all of the *required signers* (see **Commands**, below). Each
 required signer appends their signature to the transaction to indicate that they approve the proposal:
 
 .. image:: resources/tx_with_sigs.png
+   :scale: 25%
+   :align: center
 
 If all of the required signatures are gathered, the transaction becomes committed:
 
 .. image:: resources/committed_tx.png
+   :scale: 25%
+   :align: center
 
 This means that:
 
@@ -96,6 +106,8 @@ For example, a transaction where Alice pays off Â£5 of an IOU with Bob using a Â
 attachments and a timestamp, may look as follows:
 
 .. image:: resources/full-tx.png
+   :scale: 25%
+   :align: center
 
 We explore the role played by the remaining transaction components below.
 
@@ -124,6 +136,8 @@ listed in the commands, we get the list of the transaction's required signers. I
 We can visualize this situation as follows:
 
 .. image:: resources/commands.png
+   :scale: 25%
+   :align: center
 
 Attachments
 ^^^^^^^^^^^
