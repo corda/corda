@@ -1,13 +1,16 @@
 package net.corda.core.serialization
 
+import sun.security.util.Password
 import java.io.*
 import java.lang.invoke.*
-import java.net.DatagramSocket
-import java.net.ServerSocket
-import java.net.Socket
-import java.net.URLConnection
+import java.lang.reflect.*
+import java.net.*
+import java.security.*
 import java.sql.Connection
+import java.util.HashMap
 import java.util.logging.Handler
+import kotlin.collections.HashSet
+import kotlin.collections.LinkedHashSet
 
 /**
  * This object keeps a set of blacklisted classes and interfaces that should not be used
@@ -22,15 +25,22 @@ object Blacklist : ClassWhitelist {
 
     private val blacklistedClasses = hashSetOf<String>(
 
-            // known blacklisted classes
+            // known blacklisted classes.
             Thread::class.java.name,
             HashSet::class.java.name,
+            HashMap::class.java.name,
             ClassLoader::class.java.name,
             Handler::class.java.name, // MemoryHandler, StreamHandler
 
-            // known blacklisted interfaces
+            // known blacklisted interfaces.
             Connection::class.java.name,
             // TODO: add AutoCloseable, but exclude (hardcode) those we may need, such as InputStream.
+
+            // java.security.
+            PrivateKey::class.java.name,
+            KeyPair::class.java.name,
+            KeyStore::class.java.name,
+            Password::class.java.name,
 
             // java.net classes.
             DatagramSocket::class.java.name,
@@ -65,9 +75,14 @@ object Blacklist : ClassWhitelist {
 
             // java.lang.invoke package exceptions.
             LambdaConversionException::class.java.name,
-            WrongMethodTypeException::class.java.name
+            WrongMethodTypeException::class.java.name,
 
-            // TODO: add java.lang.reflect.
+            // java.lang.reflect
+            AccessibleObject::class.java.name, // for Executable, Field, Method, Constructor
+            Modifier::class.java.name,
+            Parameter::class.java.name,
+            ReflectPermission::class.java.name
+            // TODO: add more from java.lang.reflect.
     )
 
     override fun hasListed(type: Class<*>): Boolean {
@@ -83,7 +98,7 @@ object Blacklist : ClassWhitelist {
         else {
             val aMatch = blacklistedClasses.firstOrNull { Class.forName(it).isAssignableFrom(type) }
             if (aMatch != null) {
-                // TODO: blacklistedClasses += type.name -- add it, so checking is faster next time we encounter this class.
+                // TODO: blacklistedClasses += type.name // add it, so checking is faster next time we encounter this class.
                 return true
             }
         }
