@@ -22,6 +22,7 @@ import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.utilities.StrandLocalTransactionManager
 import net.corda.node.utilities.createTransaction
+import org.apache.logging.log4j.ThreadContext
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -46,6 +47,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             field.get(null)
         }
 
+        private val flowLogger: Logger = LoggerFactory.getLogger("net.corda.flow")
         /**
          * Return the current [FlowStateMachineImpl] or null if executing outside of one.
          */
@@ -78,10 +80,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient private var txTrampoline: Transaction? = null
 
     /**
-     * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
+     * The logger of the state machine. The ThreadContext will include the [id] and so including it in the log message
      * is not necessary.
      */
-    override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
+    override val logger = flowLogger
 
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
@@ -102,6 +104,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     @Suspendable
     override fun run() {
+        addLogContext()
         createTransaction()
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
@@ -410,7 +413,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 resume(scheduler)
             }
         }
-
+        addLogContext()
         createTransaction()
         // TODO Now that we're throwing outside of the suspend the FlowLogic can catch it. We need Quasar to terminate
         // the fiber when exceptions occur inside a suspend.
@@ -419,6 +422,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     internal fun resume(scheduler: FiberScheduler) {
+        addLogContext()
         try {
             if (fromCheckpoint) {
                 logger.info("Resumed from checkpoint")
@@ -446,6 +450,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // Start time gets serialized along with the fiber when it suspends
         val duration = System.nanoTime() - startTime
         timer.update(duration, TimeUnit.NANOSECONDS)
+    }
+
+    private fun addLogContext() {
+        ThreadContext.put("flow-id", id.toString())
     }
 }
 
