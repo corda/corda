@@ -466,12 +466,13 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig)
         return poll(executorService, "for RPC connection") {
             if (!listenProcess.isAlive) {
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
-            val connectionFuture = executorService.submit(Callable { client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER) })
+            val connectionFuture = executorService.submit(Callable {
+                CordaRPCClient(nodeAddress, sslConfig).start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+            })
             try {
                 val connection = connectionFuture.getOrThrow(500.millis) // Timeout to re-check whether the process is alive.
                 shutdownManager.registerShutdown(connection::close)
