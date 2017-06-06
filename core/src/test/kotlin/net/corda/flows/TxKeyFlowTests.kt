@@ -1,4 +1,4 @@
-package net.corda.core.flows
+package net.corda.flows
 
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
@@ -37,7 +37,6 @@ class TxKeyFlowTests {
         bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
 
         // Run the flows
-        bobNode.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bob))
 
         // Get the results
