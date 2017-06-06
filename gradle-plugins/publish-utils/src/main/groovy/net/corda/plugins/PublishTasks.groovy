@@ -71,23 +71,14 @@ class PublishTasks implements Plugin<Project> {
                 delegate.artifact it
             }
 
+            if (!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
+                from project.components.java
+            } else if (publishConfig.publishWar) {
+                from project.components.web
+            }
+
             extendPomForMavenCentral(pom, bintrayConfig)
         }
-
-        // This is to ensure that the project is fully evaluated before resolving any dependencies
-        // otherwise the dependencies will have the project name as the artifactId and not the one specified in the
-        // build.gradle.
-        def configureTask = project.task("configure${publishName}Source") {
-            doLast {
-                def publication = ((MavenPublication) project.publishing.publications.getByName(publishName))
-                if (!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
-                    publication.from project.components.java
-                } else if (publishConfig.publishWar) {
-                    publication.from project.components.web
-                }
-            }
-        }
-        project.tasks['publishToMavenLocal'].dependsOn(configureTask)
         project.task("install", dependsOn: "publishToMavenLocal")
     }
 
