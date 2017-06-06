@@ -10,11 +10,9 @@ Corda's functionality:
 3. The Attachment Demo, which demonstrates uploading attachments to nodes
 4. The SIMM Valuation Demo, which shows two nodes agreeing on a portfolio and valuing the initial margin
    using the Standard Initial Margin Model
-5. The Distributed Notary Demo, which shows a single node getting multiple transactions notarised by a distributed (Raft-based) notary
+5. The Notary Demo, which shows three different types of notaries and a single node getting multiple transactions notarised.
 6. The Bank of Corda Demo, which shows a node acting as an issuer of assets (the Bank of Corda) while remote client
    applications request issuance of some cash on behalf of a node called Big Corporation
-
-We recommend running the demos from the command line rather than from IntelliJ. For more details about running via the command line or from within IntelliJ, see :doc:`CLI-vs-IDE`.
 
 If any of the demos don't work, please raise an issue on GitHub.
 
@@ -64,8 +62,8 @@ To run from the command line in Unix:
 5. Run ``./install/irs-demo/bin/irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
-6. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. You should
-   see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
+6. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
+   ``run stateMachinesAndUpdates`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
 7. Now run ``./install/irs-demo/bin/irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from the command line in Windows:
@@ -77,8 +75,8 @@ To run from the command line in Windows:
 5. Run ``install\irs-demo\bin\irs-demo --role UploadRates``. You should see a
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
-6. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. You should
-   see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
+6. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
+   ``run stateMachinesAndUpdates`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
 7. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 This demo also has a web app. To use this, run nodes and upload rates, then navigate to
@@ -125,7 +123,7 @@ You will notice that successive transactions get signed by different members of 
 To run the Raft version of the demo from the command line in Unix:
 
 1. Run ``./gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
 2. Run ``./samples/notary-demo/build/nodes/nodesRaft/runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``./gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
@@ -134,7 +132,7 @@ with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` a
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
 2. Run ``samples\notary-demo\build\nodes\nodesRaft\runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
@@ -197,20 +195,17 @@ To run from the command line in Windows:
           http://localhost:10007/api/bank/date
 
 .. note:: The Bank of Corda node explicitly advertises with a node service type as follows:
-          ``advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer"))))``
+          ``advertisedServices = ["corda.issuer.USD"]``
           This allows for 3rd party applications to perform actions based on Node Type.
           For example, the Explorer tool only allows nodes of this type to issue and exit cash.
 
-In the "Bank Of Corda Demo: Run Issuer" window, you should see the following progress steps displayed:
+In the window you run the command you should see (in case of Web, RPC is simmilar):
 
-- Awaiting issuance request
-- Self issuing asset
-- Transferring asset to issuance requester
-- Confirming asset issuance to requester
-
-In the client issue request window, you should see the following printed:
-
+- Requesting Cash via Web ...
 - Successfully processed Cash Issue request
+
+If you want to see flow activity enter in node's shell ``run stateMachinesAndUpdates``. It will display all state machines
+running currently on the node.
 
 Launch the Explorer application to visualize the issuance and transfer of cash for each node:
 
