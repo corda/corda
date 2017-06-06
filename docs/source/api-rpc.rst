@@ -5,21 +5,25 @@ access to the node's ``ServiceHub``.
 
 The key RPC operations exposed by the node are:
 
-* ``CordaRPCOps.vaultQueryBy/CordaRPCOps.vaultTrackBy``
-    *
+* ``CordaRPCOps.vaultQueryBy``
+    * Extract states from the node's vault based on a query criteria
+* ``CordaRPCOps.vaultTrackBy``
+    * As above, but also returns an observable of future states matching the query
 * ``CordaRPCOps.verifiedTransactions``
-    *
+    * Extract all transactions from the node's local storage, as well as an observable of all future transactions
 * ``CordaRPCOps.networkMapUpdates``
-    *
-* ``CordaRPCOps.startFlowDynamic/CordaRPCOps.startTrackedFlowDynamic``
-    *
-* ``CordaRPCOps.nodeIdentity``
-    *
-* ``CordaRPCOps.currentNodeTime``
-    *
-* ``CordaRPCOps.partyFromKey/CordaRPCOps.partyFromX500Name``
-    *
-* ``CordaRPCOps.attachmentExists``/``CordaRPCOps.openAttachment``/``CordaRPCOps.uploadAttachment``
-    *
+    * A list of network nodes, and an observable of changes to the network map
 * ``CordaRPCOps.registeredFlows``
-    *
+    * See a list of registered flows on the node
+* ``CordaRPCOps.startFlowDynamic``
+    * Start one of the node's registered flows
+* ``CordaRPCOps.startTrackedFlowDynamic``
+    * As above, but also returns a progress handle for the flow
+* ``CordaRPCOps.nodeIdentity``
+    * Returns the node's identity
+* ``CordaRPCOps.currentNodeTime``
+    * Returns the node's current time
+* ``CordaRPCOps.partyFromKey/CordaRPCOps.partyFromX500Name``
+    * Retrieves a party on the network based on a public key or X500 name
+* ``CordaRPCOps.uploadAttachment``/``CordaRPCOps.openAttachment``/``CordaRPCOps.attachmentExists``
+    * Uploads, opens and checks for the existence of attachments
