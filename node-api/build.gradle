@@ -31,3 +31,11 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile project(':test-utils')
 }
+
+jar {
+    baseName 'corda-node-api'
+}
+
+publish {
+    name = jar.baseName
+}

@@ -23,3 +23,11 @@ dependencies {
 
     testCompile project(':test-utils')
 }
+
+jar {
+    baseName 'corda-mock'
+}
+
+publish {
+    name = jar.baseName
+}

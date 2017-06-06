@@ -1,6 +1,10 @@
-package net.corda.kotlin.rpc
+package net.corda.smoketesting
 
-import com.typesafe.config.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory.empty
+import com.typesafe.config.ConfigRenderOptions
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
 import net.corda.nodeapi.User
@@ -18,13 +22,13 @@ class NodeConfig(
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
     }
 
-    val commonName: String = party.name.commonName
+    val commonName: String get() = party.name.commonName
 
     /*
      * The configuration object depends upon the networkMap,
      * which is mutable.
      */
-    fun toFileConfig(): Config = ConfigFactory.empty()
+    fun toFileConfig(): Config = empty()
             .withValue("myLegalName", valueFor(party.name.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
@@ -42,7 +46,6 @@ class NodeConfig(
     private fun <T> valueFor(any: T): ConfigValue? = ConfigValueFactory.fromAnyRef(any)
     private fun addressValueFor(port: Int) = valueFor("localhost:$port")
     private inline fun <T> optional(path: String, obj: T?, body: (Config, T) -> Config): Config {
-        val config = ConfigFactory.empty()
-        return if (obj == null) config else body(config, obj).atPath(path)
+        return if (obj == null) empty() else body(empty(), obj).atPath(path)
     }
 }

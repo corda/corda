@@ -7,8 +7,12 @@ import net.corda.core.codePointsString
  */
 object Emoji {
     // Unfortunately only Apple has a terminal that can do colour emoji AND an emoji font installed by default.
+    // However the JediTerm java terminal emulator can also do emoji on OS X when using the JetBrains JRE.
+    // Check for that here. DemoBench sets TERM_PROGRAM appropriately.
     val hasEmojiTerminal by lazy {
-        System.getenv("CORDA_FORCE_EMOJI") != null || System.getenv("TERM_PROGRAM") in listOf("Apple_Terminal", "iTerm.app")
+        System.getenv("CORDA_FORCE_EMOJI") != null ||
+        System.getenv("TERM_PROGRAM") in listOf("Apple_Terminal", "iTerm.app") ||
+        (System.getenv("TERM_PROGRAM") == "JediTerm" && System.getProperty("java.vendor") == "JetBrains s.r.o")
     }
 
     @JvmStatic val CODE_SANTA_CLAUS: String = codePointsString(0x1F385)
