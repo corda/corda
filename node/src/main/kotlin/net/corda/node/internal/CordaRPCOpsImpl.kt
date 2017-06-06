@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NodeStatus
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
@@ -174,9 +175,14 @@ class CordaRPCOpsImpl(
     @Suppress("DEPRECATION")
     @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
-    override fun partyFromX500Name(x500Name: X500Name)= services.identityService.partyFromX500Name(x500Name)
+
+    override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
 
     override fun registeredFlows(): List<String> = services.rpcFlows.map { it.name }.sorted()
+
+    override fun nodeStatus(): NodeStatus {
+        return NodeStatus(smm.allStateMachines.size, Runtime.getRuntime().freeMemory(), Runtime.getRuntime().totalMemory())
+    }
 
     companion object {
         private fun stateMachineInfoFromFlowLogic(flowLogic: FlowLogic<*>): StateMachineInfo {
