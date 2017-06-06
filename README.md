@@ -27,7 +27,7 @@ After the above, watching the following webinars will give you a great introduct
 
 ### Webinar 1 – [Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1)
  
-Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](https://www.r3.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
+Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](https://www.r3cev.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
  
 ### Webinar 2 – [Corda Developers’ Tutorial](https://vimeo.com/192797322/aab499b152)
  
