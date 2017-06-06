@@ -17,8 +17,6 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.FetchAttachmentsFlow
-import net.corda.flows.FetchDataFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
