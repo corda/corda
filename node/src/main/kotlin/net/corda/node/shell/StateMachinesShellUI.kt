@@ -48,7 +48,6 @@ class SMMPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscribe
     @Synchronized
     override fun onError(e: Throwable) {
         toStream.println("Observable completed with an error")
-        e.printStackTrace()
         future.setException(e)
     }
 
