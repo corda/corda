@@ -89,8 +89,9 @@ class Network : CordaView() {
                 gridpane {
                     hgap = 5.0
                     vgap = 5.0
-                    row("Full name :") { label(PartyNameFormatter.full.format(node.legalIdentity.name)) }
-                    row("Pub Key :") { copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())) }
+                    row("Pub Key :") {
+                        copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
+                    }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
                     node.physicalLocation?.apply { row("Location :") { label(this@apply.description) } }
                 }
