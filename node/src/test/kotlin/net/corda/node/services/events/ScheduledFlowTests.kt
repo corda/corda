@@ -27,7 +27,7 @@ import java.time.Instant
 import kotlin.test.assertEquals
 
 class ScheduledFlowTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var nodeA: MockNetwork.MockNode
     lateinit var nodeB: MockNetwork.MockNode
@@ -90,18 +90,18 @@ class ScheduledFlowTests {
 
     @Before
     fun setup() {
-        net = MockNetwork(threadPerNode = true)
-        notaryNode = net.createNode(
+        mockNet = MockNetwork(threadPerNode = true)
+        notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
-        nodeA = net.createNode(notaryNode.info.address, start = false)
-        nodeB = net.createNode(notaryNode.info.address, start = false)
-        net.startNodes()
+        nodeA = mockNet.createNode(notaryNode.info.address, start = false)
+        nodeB = mockNet.createNode(notaryNode.info.address, start = false)
+        mockNet.startNodes()
     }
 
     @After
     fun cleanUp() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test
@@ -116,7 +116,7 @@ class ScheduledFlowTests {
             }
         }
         nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
-        net.waitQuiescent()
+        mockNet.waitQuiescent()
         val stateFromA = nodeA.database.transaction {
             nodeA.services.vaultService.linearHeadsOfType<ScheduledState>().values.first()
         }
@@ -135,7 +135,7 @@ class ScheduledFlowTests {
             nodeA.services.startFlow(InsertInitialStateFlow(nodeB.info.legalIdentity))
             nodeB.services.startFlow(InsertInitialStateFlow(nodeA.info.legalIdentity))
         }
-        net.waitQuiescent()
+        mockNet.waitQuiescent()
         val statesFromA = nodeA.database.transaction {
             nodeA.services.vaultService.linearHeadsOfType<ScheduledState>()
         }

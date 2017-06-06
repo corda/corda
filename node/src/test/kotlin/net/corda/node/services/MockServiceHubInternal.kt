@@ -23,7 +23,7 @@ import java.time.Clock
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
         val keyManagement: KeyManagementService? = null,
-        val net: MessagingService? = null,
+        val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         val storage: TxWritableStorageService? = MockStorageService(),
         val mapCache: NetworkMapCacheInternal? = MockNetworkMapCache(),
@@ -41,7 +41,7 @@ open class MockServiceHubInternal(
     override val identityService: IdentityService
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
-        get() = net ?: throw UnsupportedOperationException()
+        get() = network ?: throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCacheInternal
         get() = mapCache ?: throw UnsupportedOperationException()
     override val storageService: StorageService

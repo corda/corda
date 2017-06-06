@@ -13,28 +13,28 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class FlowsInJavaTest {
 
-    private final MockNetwork net = new MockNetwork();
+    private final MockNetwork mockNet = new MockNetwork();
     private MockNetwork.MockNode node1;
     private MockNetwork.MockNode node2;
 
     @Before
     public void setUp() {
-        MockNetwork.BasketOfNodes someNodes = net.createSomeNodes(2);
+        MockNetwork.BasketOfNodes someNodes = mockNet.createSomeNodes(2);
         node1 = someNodes.getPartyNodes().get(0);
         node2 = someNodes.getPartyNodes().get(1);
-        net.runNetwork();
+        mockNet.runNetwork();
     }
 
     @After
     public void cleanUp() {
-        net.stopNodes();
+        mockNet.stopNodes();
     }
 
     @Test
     public void suspendableActionInsideUnwrap() throws Exception {
         node2.registerInitiatedFlow(SendHelloAndThenReceive.class);
         Future<String> result = node1.getServices().startFlow(new SendInUnwrapFlow(node2.getInfo().getLegalIdentity())).getResultFuture();
-        net.runNetwork();
+        mockNet.runNetwork();
         assertThat(result.get()).isEqualTo("Hello");
     }
 

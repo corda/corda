@@ -47,7 +47,7 @@ class CordaRPCOpsImplTest {
         val testJar = "net/corda/node/testing/test.jar"
     }
 
-    lateinit var network: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var aliceNode: MockNode
     lateinit var notaryNode: MockNode
     lateinit var rpc: CordaRPCOpsImpl
@@ -57,10 +57,10 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        network = MockNetwork()
-        val networkMap = network.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        aliceNode = network.createNode(networkMapAddress = networkMap.info.address)
-        notaryNode = network.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
+        mockNet = MockNetwork()
+        val networkMap = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
+        aliceNode = mockNet.createNode(networkMapAddress = networkMap.info.address)
+        notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),
@@ -87,7 +87,7 @@ class CordaRPCOpsImplTest {
         // Tell the monitoring service node to issue some cash
         val recipient = aliceNode.info.legalIdentity
         rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
-        network.runNetwork()
+        mockNet.runNetwork()
 
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
@@ -129,11 +129,11 @@ class CordaRPCOpsImplTest {
                 notaryNode.info.notaryIdentity
         )
 
-        network.runNetwork()
+        mockNet.runNetwork()
 
         rpc.startFlow(::CashPaymentFlow, Amount(100, USD), aliceNode.info.legalIdentity)
 
-        network.runNetwork()
+        mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
