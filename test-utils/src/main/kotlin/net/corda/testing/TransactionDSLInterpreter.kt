@@ -111,6 +111,13 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
 
     /**
      * @see TransactionDSLInterpreter._command
+     * Allows us to pass in lists of signers instead of arrays from Java.
+     */
+    fun command(signers: List<PublicKey>, commandDataClosure: () -> CommandData) =
+            _command(signers, commandDataClosure())
+
+    /**
+     * @see TransactionDSLInterpreter._command
      */
     fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
 
