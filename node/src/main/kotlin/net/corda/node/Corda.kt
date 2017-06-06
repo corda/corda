@@ -166,7 +166,7 @@ fun main(args: Array<String>) {
         }
         node.run()
     } catch (e: Exception) {
-        if (e.message!!.startsWith("Unknown named curve:")) {
+        if (e.message?.startsWith("Unknown named curve:") ?: false) {
             log.error("Exception during node startup - ${e.message}. " +
                     "This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
         } else
