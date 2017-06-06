@@ -27,6 +27,7 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name())
         val url = URL("http://$hostAndPort/upload/interest-rates")
         check(uploadFile(url, fileContents))
+        println("Rates successfully uploaded!")
     }
 
     private companion object {
