@@ -15,7 +15,7 @@ import java.io.InputStream
  */
 interface OutputStateLookup {
     /**
-     * Retrieves an output previously defined by [TransactionDSLInterpreter._output] with a label passed in.
+     * Retrieves an output previously defined by [TransactionDSLInterpreter.output] with a label passed in.
      * @param clazz The class object holding the type of the output state expected.
      * @param label The label of the to-be-retrieved output state.
      * @return The output [StateAndRef].
