@@ -17,6 +17,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
+import org.apache.activemq.artemis.ArtemisConstants
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -217,6 +218,7 @@ class RPCStabilityTests {
 
     @Test
     fun `client reconnects to rebooted server`() {
+        val trials = if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") 1 else 25
         rpcDriver {
             val coreBurner = thread {
                 while (!Thread.interrupted()) {
@@ -235,7 +237,6 @@ class RPCStabilityTests {
                 val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
                 clientFollower.unfollow()
                 assertEquals("pong", client.ping())
-                val trials = 25
                 val background = Executors.newSingleThreadExecutor()
                 (1..trials).forEach {
                     System.err.println("Start trial $it of $trials.")
