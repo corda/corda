@@ -284,7 +284,6 @@
     -fx-background-color: transparent;
     -fx-background-radius: 0em;
     -fx-padding: 0 0 10 0;
-
 }
 
 .scroll-bar:vertical .increment-button,
@@ -292,7 +291,6 @@
     -fx-background-color: transparent;
     -fx-background-radius: 0em;
     -fx-padding: 0 10 0 0;
-
 }
 
 .scroll-bar .increment-arrow,
@@ -306,7 +304,6 @@
     -fx-background-color: derive(black, 90%);
     -fx-background-insets: 2, 0, 0;
     -fx-background-radius: 2em;
-
 }
 
 .scroll-bar:vertical {
