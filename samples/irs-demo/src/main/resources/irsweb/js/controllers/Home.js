@@ -16,6 +16,17 @@ define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, no
                 $scope.date = newDate
             }, handleHttpFail);
         };
+        /* Extract the common name from an X500 name */
+        $scope.renderX500Name = (x500Name) => {
+            var name = x500Name
+            x500Name.split(',').forEach(function(element) {
+                var keyValue = element.split('=');
+                if (keyValue[0].toUpperCase() == 'CN') {
+                    name = keyValue[1];
+                }
+            });
+            return name;
+        };
 
         nodeService.getDate().then((date) => $scope.date = date);
         nodeService.getDeals().then((deals) => $scope.deals = deals);
