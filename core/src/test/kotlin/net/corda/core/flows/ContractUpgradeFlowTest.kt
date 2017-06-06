@@ -45,8 +45,6 @@ class ContractUpgradeFlowTest {
         val nodes = mockNet.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
-        // Let the nodes know about [TxKeyFlow] - in normal use the node startup automatically finds this
-        nodes.partyNodes.forEach { node -> node.registerInitiatedFlow(TxKeyFlow.Provider::class.java) }
         notary = nodes.notaryNode.info.notaryIdentity
 
         mockNet.runNetwork()
@@ -189,6 +187,7 @@ class ContractUpgradeFlowTest {
         val firstState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
+        assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {

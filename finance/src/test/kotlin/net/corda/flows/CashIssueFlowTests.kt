@@ -3,7 +3,6 @@ package net.corda.flows
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
-import net.corda.core.flows.TxKeyFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
@@ -28,7 +27,6 @@ class CashIssueFlowTests {
         val nodes = mockNet.createTwoNodes()
         notaryNode = nodes.first
         bankOfCordaNode = nodes.second
-        bankOfCordaNode.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 

@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.flows.TxKeyFlow
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -16,6 +17,8 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
+import net.corda.flows.FetchAttachmentsFlow
+import net.corda.flows.FetchDataFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -287,6 +290,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
+            // Register flows that are normally found via plugins
+            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
             if (threadPerNode && networkMapAddress != null)
                 node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }

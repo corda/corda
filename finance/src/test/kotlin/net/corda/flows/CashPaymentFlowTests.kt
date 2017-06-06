@@ -3,7 +3,6 @@ package net.corda.flows
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
-import net.corda.core.flows.TxKeyFlow
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
@@ -13,11 +12,8 @@ import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.PublicKey
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 
 class CashPaymentFlowTests {
     private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
