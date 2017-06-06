@@ -24,7 +24,6 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.HashMap
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
@@ -110,16 +109,6 @@ fun <T> ListenableFuture<T>.andForget(log: Logger) = failure(RunOnCallerThread) 
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
-
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = mapToArray(transform, iterator(), size)
-inline fun <reified R> IntProgression.mapToArray(transform: (Int) -> R) = mapToArray(transform, iterator(), 1 + (last - first) / step)
-inline fun <T, reified R> mapToArray(transform: (T) -> R, iterator: Iterator<T>, size: Int) = run {
-    var expected = 0
-    Array(size) {
-        expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")
-        transform(iterator.next())
-    }
-}
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {

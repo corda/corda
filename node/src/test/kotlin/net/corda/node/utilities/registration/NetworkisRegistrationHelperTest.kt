@@ -5,7 +5,7 @@ import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.crypto.*
 import net.corda.core.exists
-import net.corda.core.mapToArray
+import net.corda.core.toTypedArray
 import net.corda.core.utilities.ALICE
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.getTestX509Name
@@ -32,8 +32,8 @@ class NetworkRegistrationHelperTest {
                 "CORDA_ROOT_CA")
                 .map { getTestX509Name(it) }
         val converter = JcaX509CertificateConverter()
-        val certs = identities.map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
-                .mapToArray(converter::getCertificate)
+        val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
+                .map(converter::getCertificate).toTypedArray()
 
         val certService: NetworkRegistrationService = mock {
             on { submitRequest(any()) }.then { id }
