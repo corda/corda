@@ -15,7 +15,11 @@ UNRELEASED
    * ``CordaPluginRegistry.servicePlugins`` is also no longer used, along with ``PluginServiceHub.registerFlowInitiator``.
      Instead annotate your initiated flows with ``@InitiatedBy``. This annotation takes a single parameter which is the
      initiating flow. This initiating flow further has to be annotated with ``@InitiatingFlow``. For any services you
-     may have, such as oracles, annotate them with ``@CordaService``.
+     may have, such as oracles, annotate them with ``@CordaService``. These annotations will be picked up automatically
+     when the node starts up.
+
+   * Due to these changes, when unit testing flows make sure to use ``AbstractNode.registerInitiatedFlow`` so that the flows
+     are wired up. Likewise for services use ``AbstractNode.installCordaService``.
 
    * Related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
      removed. This was an unfortunate parameter that unnecessarily exposed the inner workings of flow sessions. Now, if

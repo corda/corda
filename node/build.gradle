@@ -25,6 +25,9 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
 }
 
 sourceSets {
@@ -38,6 +41,15 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+    smokeTest {
+        kotlin {
+            // We must NOT have any Node code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+    }
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
@@ -46,11 +58,14 @@ processResources {
     from file("$rootDir/config/dev/log4j2.xml")
 }
 
-processIntegrationTestResources {
+processSmokeTestResources {
     // Build one of the demos so that we can test CorDapp scanning in CordappScanningTest. It doesn't matter which demo
     // we use, just make sure the test is updated accordingly.
     from(project(':samples:trader-demo').tasks.jar) {
         rename 'trader-demo-(.*)', 'trader-demo.jar'
+    }
+    from(project(':node:capsule').tasks.buildCordaJAR) {
+        rename 'corda-(.*)', 'corda.jar'
     }
 }
 
@@ -168,11 +183,21 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
+
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task smokeTest(type: Test) {
+    testClassesDir = sourceSets.smokeTest.output.classesDir
+    classpath = sourceSets.smokeTest.runtimeClasspath
 }
 
 jar {

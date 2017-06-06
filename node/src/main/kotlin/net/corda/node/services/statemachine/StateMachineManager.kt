@@ -36,6 +36,7 @@ import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
 
 /**
  * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
@@ -145,8 +146,11 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private val openSessions = ConcurrentHashMap<Long, FlowSession>()
     private val recentlyClosedSessions = ConcurrentHashMap<Long, Party>()
 
+    internal val tokenizableServices = ArrayList<Any>()
     // Context for tokenized services in checkpoints
-    private lateinit var serializationContext: SerializeAsTokenContext
+    private val serializationContext by lazy {
+        SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
+    }
 
     /** Returns a list of all state machines executing the given flow logic at the top level (subflows do not count) */
     fun <P : FlowLogic<T>, T> findStateMachines(flowClass: Class<P>): List<Pair<P, ListenableFuture<T>>> {
@@ -170,8 +174,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      */
     val changes: Observable<Change> = mutex.content.changesPublisher.wrapWithDatabaseTransaction()
 
-    fun start(tokenizableServices: List<Any>) {
-        serializationContext = SerializeAsTokenContext(tokenizableServices, quasarKryoPool, serviceHub)
+    fun start() {
         restoreFibersFromCheckpoints()
         listenToLedgerTransactions()
         serviceHub.networkMapCache.mapServiceRegistered.then(executor) { resumeRestoredFibers() }
@@ -348,7 +351,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         val initiatedFlowFactory = serviceHub.getFlowFactory(sessionInit.initiatingFlowClass)
         if (initiatedFlowFactory == null) {
             logger.warn("${sessionInit.initiatingFlowClass} has not been registered: $sessionInit")
-            sendSessionReject("${sessionInit.initiatingFlowClass.name} has not been registered with a service flow")
+            sendSessionReject("${sessionInit.initiatingFlowClass.name} has not been registered")
             return
         }
 

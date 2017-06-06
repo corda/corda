@@ -60,6 +60,7 @@
       <module name="node-schemas_test" target="1.8" />
       <module name="node_integrationTest" target="1.8" />
       <module name="node_main" target="1.8" />
+      <module name="node_smokeTest" target="1.8" />
       <module name="node_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
@@ -76,6 +77,8 @@
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
+      <module name="smoke-test-utils_main" target="1.8" />
+      <module name="smoke-test-utils_test" target="1.8" />
       <module name="test-utils_main" target="1.8" />
       <module name="test-utils_test" target="1.8" />
       <module name="tools_main" target="1.8" />

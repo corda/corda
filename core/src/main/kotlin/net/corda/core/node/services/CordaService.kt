@@ -16,8 +16,7 @@ import kotlin.annotation.AnnotationTarget.CLASS
  * only loaded in nodes that declare the type in their advertisedServices.
  */
 // TODO Handle the singleton serialisation of Corda services automatically, removing the need to implement SerializeAsToken
-// TODO Currently all nodes which load the plugin will attempt to load the service even if it's not revelant to them. The
-// underlying problem is that the entire CorDapp jar is used as a dependency, when in fact it's just the client-facing
-// bit of the CorDapp that should be depended on (e.g. the initiating flows).
+// TODO Perhaps this should be an interface or abstract class due to the need for it to implement SerializeAsToken and
+// the need for the service type (which can be exposed by a simple getter)
 @Target(CLASS)
 annotation class CordaService
