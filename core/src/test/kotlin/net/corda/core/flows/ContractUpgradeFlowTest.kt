@@ -45,7 +45,10 @@ class ContractUpgradeFlowTest {
         val nodes = mockNet.createSomeNodes()
         a = nodes.partyNodes[0]
         b = nodes.partyNodes[1]
+        // Let the nodes know about [TxKeyFlow] - in normal use the node startup automatically finds this
+        nodes.partyNodes.forEach { node -> node.registerInitiatedFlow(TxKeyFlow.Provider::class.java) }
         notary = nodes.notaryNode.info.notaryIdentity
+
         mockNet.runNetwork()
     }
 
@@ -175,17 +178,17 @@ class ContractUpgradeFlowTest {
         // Create some cash.
         val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary)).resultFuture
         mockNet.runNetwork()
+        val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
         val baseState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
-        val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
         // Starts contract upgrade flow.
-        a.services.startFlow(ContractUpgradeFlow(stateAndRef, CashV2::class.java))
+        val upgradeResult = a.services.startFlow(ContractUpgradeFlow(stateAndRef, CashV2::class.java)).resultFuture
         mockNet.runNetwork()
+        upgradeResult.getOrThrow()
         // Get contract state from the vault.
         val firstState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
-        assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")
     }
 
     class CashV2 : UpgradedContract<Cash.State, CashV2.State> {
