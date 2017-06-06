@@ -60,11 +60,6 @@ class PublishTasks implements Plugin<Project> {
     void configureMavenPublish(BintrayConfigExtension bintrayConfig) {
         project.apply([plugin: 'maven-publish'])
         project.publishing.publications.create(publishName, MavenPublication) {
-            if(!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
-                from project.components.java
-            } else if(publishConfig.publishWar) {
-                from project.components.web
-            }
             groupId project.group
             artifactId publishName
 
@@ -74,6 +69,12 @@ class PublishTasks implements Plugin<Project> {
             project.configurations.publish.artifacts.each {
                 project.logger.debug("Adding artifact: $it")
                 delegate.artifact it
+            }
+
+            if (!publishConfig.disableDefaultJar && !publishConfig.publishWar) {
+                from project.components.java
+            } else if (publishConfig.publishWar) {
+                from project.components.web
             }
 
             extendPomForMavenCentral(pom, bintrayConfig)

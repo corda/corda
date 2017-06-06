@@ -78,3 +78,11 @@ task smokeTest(type: Test) {
     classpath = sourceSets.smokeTest.runtimeClasspath
     systemProperties['build.dir'] = buildDir
 }
+
+jar {
+    baseName 'corda-rpc'
+}
+
+publish {
+    name = jar.baseName
+}

@@ -174,3 +174,11 @@ task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
+
+jar {
+    baseName 'corda-node'
+}
+
+publish {
+    name = jar.baseName
+}
