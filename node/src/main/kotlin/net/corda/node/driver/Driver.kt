@@ -471,11 +471,12 @@ class DriverDSL(
             if (!listenProcess.isAlive) {
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
+            val connectionFuture = executorService.submit(Callable { client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER) })
             try {
-                val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-                shutdownManager.registerShutdown { connection.close() }
-                return@poll connection.proxy
-            } catch(e: Exception) {
+                val connection = connectionFuture.getOrThrow(500.millis) // Timeout to re-check whether the process is alive.
+                shutdownManager.registerShutdown(connection::close)
+                connection.proxy
+            } catch (e: Exception) {
                 log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 null
             }
