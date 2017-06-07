@@ -154,7 +154,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) {
             val states = dealsWith<IRSState>(it)
             val tradeState = states.first { it.state.data.swap.id.second == tradeId }.state.data
-            Response.ok().entity(portfolioUtils.createTradeView(tradeState)).build()
+            Response.ok().entity(portfolioUtils.createTradeView(rpc, tradeState)).build()
         }
     }
 
