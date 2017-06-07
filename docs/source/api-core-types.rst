@@ -42,7 +42,7 @@ fleshed out.
 
 AuthenticatedObject
 -------------------
-An ``AuthenticatedObject`` represents an object (like a command) that has been signed by a set of parties.
+An ``AuthenticatedObject`` represents an object (like a command) and the list of associated signers.
 
 Multi-signature support
 -----------------------
