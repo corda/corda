@@ -46,9 +46,9 @@
             <tbody>
             <tr class="center aligned" ng-repeat="deal in deals">
                 <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
-                <td class="single line">{{deal.fixedLeg.fixedRatePayer}}</td>
+                <td class="single line">{{renderX500Name(deal.fixedLeg.fixedRatePayer)}}</td>
                 <td class="single line">{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
-                <td class="single line">{{deal.floatingLeg.floatingRatePayer}}</td>
+                <td class="single line">{{renderX500Name(deal.floatingLeg.floatingRatePayer)}}</td>
                 <td class="single line">{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
             </tr>
             </tbody>

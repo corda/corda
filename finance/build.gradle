@@ -29,3 +29,11 @@ configurations.testCompile {
     // TODO: Remove this exclusion once junit-quickcheck 0.8 is released.
     exclude group: 'javassist', module: 'javassist'
 }
+
+jar {
+    baseName 'corda-finance'
+}
+
+publish {
+    name = jar.baseName
+}

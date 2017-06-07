@@ -9,7 +9,6 @@ dependencies {
     compile project(':core')
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
-    testCompile project(':test-utils')
 
     // Requery: SQL based query & persistence for Kotlin
     kapt "io.requery:requery-processor:$requery_version"
@@ -24,4 +23,12 @@ sourceSets {
             srcDir "$buildDir/generated/source/kapt/main"
         }
     }
+}
+
+jar {
+    baseName 'corda-node-schemas'
+}
+
+publish {
+    name = jar.baseName
 }

@@ -34,3 +34,11 @@ dependencies {
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
+
+jar {
+    baseName 'corda-test-utils'
+}
+
+publish {
+    name = jar.baseName
+}

@@ -67,4 +67,13 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
-build.dependsOn standaloneJar
+artifacts {
+    publish standaloneJar {
+        classifier ""
+    }
+}
+
+publish {
+    name = 'corda-verifier'
+    disableDefaultJar = true
+}

@@ -49,9 +49,8 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
         val environment = envs.toMutableMap()
         if (!UIUtil.isWindows) {
             environment["TERM"] = "xterm"
-
-            // This environment variable is specific to MacOSX.
-            environment.remove("TERM_PROGRAM")
+            // This, in combination with running on a Mac JetBrains JRE, enables emoji in Mac demobench.
+            environment["TERM_PROGRAM"] = "JediTerm"
         }
 
         val connector = createTtyConnector(args, environment, workingDir)

@@ -91,3 +91,11 @@ task testJar(type: Jar) {
 artifacts {
     testArtifacts testJar
 }
+
+jar {
+    baseName 'corda-core'
+}
+
+publish {
+    name = jar.baseName
+}

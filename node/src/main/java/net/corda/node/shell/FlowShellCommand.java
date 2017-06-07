@@ -18,9 +18,6 @@ import static net.corda.node.shell.InteractiveShell.*;
 )
 @Usage("Start a (work)flow on the node. This is how you can change the ledger.")
 public class FlowShellCommand extends InteractiveShellCommand {
-    // Note that the class name is deliberately lower case, because we want the command the user types to be
-    // lower case. CRaSH should ideally lowercase the command names for us, but it doesn't.
-
     @Command
     public void start(
             @Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,

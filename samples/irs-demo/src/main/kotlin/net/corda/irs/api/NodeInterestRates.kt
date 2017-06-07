@@ -55,7 +55,8 @@ object NodeInterestRates {
         @Suspendable
         override fun call() {
             val request = receive<RatesFixFlow.SignRequest>(otherParty).unwrap { it }
-            send(otherParty, serviceHub.cordaService(Oracle::class.java).sign(request.ftx))
+            val oracle = serviceHub.cordaService(Oracle::class.java)
+            send(otherParty, oracle.sign(request.ftx))
         }
     }
 
@@ -70,7 +71,8 @@ object NodeInterestRates {
         override fun call(): Unit {
             val request = receive<RatesFixFlow.QueryRequest>(otherParty).unwrap { it }
             progressTracker.currentStep = RECEIVED
-            val answers = serviceHub.cordaService(Oracle::class.java).query(request.queries, request.deadline)
+            val oracle = serviceHub.cordaService(Oracle::class.java)
+            val answers = oracle.query(request.queries, request.deadline)
             progressTracker.currentStep = SENDING
             send(otherParty, answers)
         }
