@@ -49,6 +49,7 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -466,12 +467,16 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
+        val abortConnect = AtomicBoolean(false)
         fun connect(): CordaRPCConnection {
             val client = CordaRPCClient(nodeAddress, sslConfig)
             while (true) {
                 try {
                     return client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
                 } catch (e: Exception) {
+                    if (abortConnect.get()) {
+                        throw e
+                    }
                     log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 }
             }
@@ -479,6 +484,7 @@ class DriverDSL(
         val connectionFuture = executorService.submit(::connect)
         return poll(executorService, "for RPC connection") {
             if (!listenProcess.isAlive) {
+                abortConnect.set(true)
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
             if (connectionFuture.isDone) {
