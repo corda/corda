@@ -16,7 +16,6 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -31,7 +30,6 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -238,19 +236,16 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    var shutdownHook: ShutdownHook? = null
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        shutdownHook = addShutdownHook {
-            driverDsl.shutdown()
-        }
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
         driverDsl.shutdown()
-        shutdownHook?.cancel()
+        shutdownHook.cancel()
     }
 }
 
@@ -463,7 +458,13 @@ class DriverDSL(
 
     override fun shutdown() {
         _shutdownManager?.shutdown()
-        _executorService?.shutdownNow()
+        _executorService?.let {
+            val n = it.shutdownNow().size
+            if (n != 0) log.warn("$n task(s) never started.")
+            if (!it.awaitTermination(1, SECONDS)) {
+                log.error("Driver executor still running!")
+            }
+        }
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
