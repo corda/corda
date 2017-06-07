@@ -40,11 +40,15 @@ class IRSDemoTest : IntegrationTestCategory {
                     startNode(DUMMY_BANK_B.name)
             ).getOrThrow()
 
+            println("All nodes started")
+
             val (controllerAddr, nodeAAddr, nodeBAddr) = Futures.allAsList(
                     startWebserver(controller),
                     startWebserver(nodeA),
                     startWebserver(nodeB)
             ).getOrThrow().map { it.listenAddress }
+
+            println("All webservers started")
 
             val nextFixingDates = getFixingDateObservable(nodeA.configuration)
             val numADeals = getTradeCount(nodeAAddr)
@@ -80,11 +84,13 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun runDateChange(nodeAddr: HostAndPort) {
+        println("Running date change against $nodeAddr")
         val url = URL("http://$nodeAddr/api/irs/demodate")
         assertThat(putJson(url, "\"$futureDate\"")).isTrue()
     }
 
     private fun runTrade(nodeAddr: HostAndPort) {
+        println("Running trade against $nodeAddr")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example-irs-trade.json")
         val tradeFile = fileContents.replace("tradeXXX", "trade1")
         val url = URL("http://$nodeAddr/api/irs/deals")
@@ -92,6 +98,7 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun runUploadRates(host: HostAndPort) {
+        println("Running upload rates against $host")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
         val url = URL("http://$host/upload/interest-rates")
         assertThat(uploadFile(url, fileContents)).isTrue()
@@ -102,12 +109,14 @@ class IRSDemoTest : IntegrationTestCategory {
     }
 
     private fun getTradeCount(nodeAddr: HostAndPort): Int {
+        println("Getting trade count from $nodeAddr")
         val api = HttpApi.fromHostAndPort(nodeAddr, "api/irs")
         val deals = api.getJson<Array<*>>("deals")
         return deals.size
     }
 
     private fun getTrades(nodeAddr: HostAndPort): Array<*> {
+        println("Getting trades from $nodeAddr")
         val api = HttpApi.fromHostAndPort(nodeAddr, "api/irs")
         val deals = api.getJson<Array<*>>("deals")
         return deals
