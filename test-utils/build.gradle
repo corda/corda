@@ -15,7 +15,6 @@ dependencies {
     compile project(':core')
     compile project(':node')
     compile project(':webserver')
-    compile project(':verifier')
     compile project(':client:mock')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
