@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCConnection
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
@@ -465,19 +466,26 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
+        fun connect(): CordaRPCConnection {
+            val client = CordaRPCClient(nodeAddress, sslConfig)
+            while (true) {
+                try {
+                    return client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+                } catch (e: Exception) {
+                    log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                }
+            }
+        }
+        val connectionFuture = executorService.submit(::connect)
         return poll(executorService, "for RPC connection") {
             if (!listenProcess.isAlive) {
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
-            val connectionFuture = executorService.submit(Callable {
-                CordaRPCClient(nodeAddress, sslConfig).start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-            })
-            try {
-                val connection = connectionFuture.getOrThrow(500.millis) // Timeout to re-check whether the process is alive.
+            if (connectionFuture.isDone) {
+                val connection = connectionFuture.getOrThrow()
                 shutdownManager.registerShutdown(connection::close)
                 connection.proxy
-            } catch (e: Exception) {
-                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+            } else {
                 null
             }
         }
