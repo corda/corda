@@ -10,6 +10,15 @@ Transactions
      * *It is contractually valid*
      * *It is signed by the required parties*
 
+Video
+-----
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879807" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
+Overview
+--------
 Corda uses a *UTXO* (unspent transaction output) model where every state on the ledger is immutable. The ledger
 evolves over time by applying *transactions*, which update the ledger by marking zero or more existing ledger states
 as historic (the *inputs*) and producing zero or more new ledger states (the *outputs*). Transactions represent a
@@ -18,6 +27,8 @@ single link in the state sequences seen in :doc:`key-concepts-states`.
 Here is an example of an update transaction, with two inputs and two outputs:
 
 .. image:: resources/basic-tx.png
+   :scale: 25%
+   :align: center
 
 A transaction can contain any number of inputs and outputs of any type:
 
@@ -46,6 +57,8 @@ These input states references are a combination of:
 This situation can be illustrated as follows:
 
 .. image:: resources/tx-chain.png
+   :scale: 25%
+   :align: center
 
 These input state references link together transactions over time, forming what is known as a *transaction chain*.
 
@@ -55,15 +68,21 @@ Initially, a transaction is just a **proposal** to update the ledger. It represe
 that is desired by the transaction builder(s):
 
 .. image:: resources/uncommitted_tx.png
+   :scale: 25%
+   :align: center
 
 To become reality, the transaction must receive signatures from all of the *required signers* (see **Commands**, below). Each
 required signer appends their signature to the transaction to indicate that they approve the proposal:
 
 .. image:: resources/tx_with_sigs.png
+   :scale: 25%
+   :align: center
 
 If all of the required signatures are gathered, the transaction becomes committed:
 
 .. image:: resources/committed_tx.png
+   :scale: 25%
+   :align: center
 
 This means that:
 
@@ -96,11 +115,18 @@ For example, a transaction where Alice pays off Â£5 of an IOU with Bob using a Â
 attachments and a timestamp, may look as follows:
 
 .. image:: resources/full-tx.png
+   :scale: 25%
+   :align: center
 
 We explore the role played by the remaining transaction components below.
 
 Commands
 ^^^^^^^^
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213881538" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Suppose we have a transaction with a cash state and a bond state as inputs, and a cash state and a bond state as
 outputs. This transaction could represent two different scenarios:
 
@@ -124,9 +150,16 @@ listed in the commands, we get the list of the transaction's required signers. I
 We can visualize this situation as follows:
 
 .. image:: resources/commands.png
+   :scale: 25%
+   :align: center
 
 Attachments
 ^^^^^^^^^^^
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879328" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Sometimes, we have a large piece of data that can be reused across many different transactions. Some examples:
 
 * A calendar of public holidays

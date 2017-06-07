@@ -123,7 +123,8 @@ You will notice that successive transactions get signed by different members of 
 To run the Raft version of the demo from the command line in Unix:
 
 1. Run ``./gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and
+   Single notaries).
 2. Run ``./samples/notary-demo/build/nodes/nodesRaft/runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``./gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests
@@ -132,7 +133,8 @@ To run the Raft version of the demo from the command line in Unix:
 To run from the command line in Windows:
 
 1. Run ``gradlew samples:notary-demo:deployNodes``, which will create all three types of notaries' node directories
-   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and Single notaries).
+   with configs under ``samples/notary-demo/build/nodes/nodesRaft`` (``nodesBFT`` and ``nodesSingle`` for BFT and
+   Single notaries).
 2. Run ``samples\notary-demo\build\nodes\nodesRaft\runnodes``, which will start the nodes in separate terminal windows/tabs.
    Wait until a "Node started up and registered in ..." message appears on each of the terminals
 3. Run ``gradlew samples:notary-demo:notarise`` to make a call to the "Party" node to initiate notarisation requests

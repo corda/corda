@@ -30,7 +30,7 @@ value of the commercial paper.
 
 This lifecycle for commercial paper is illustrated in the diagram below:
 
-.. image:: contract-cp.png
+.. image:: resources/contract-cp.png
 
 Where to put your code
 ----------------------
@@ -97,7 +97,7 @@ States
 
 A state is a class that stores data that is checked by the contract. A commercial paper state is structured as below:
 
-.. image:: contract-cp-state.png
+.. image:: resources/contract-cp-state.png
 
 
 .. container:: codeset
