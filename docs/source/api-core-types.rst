@@ -10,7 +10,7 @@ The ``SecureHash`` class represents a secure hash of unknown algorithm. We curre
 ``SecureHash.SHA256``. There are utility methods to create them, parse them and so on.
 
 We also provide some mathematical utilities, in particular a set of interpolators and classes for working with
-splines. These can be found in the `maths package <api/kotlin/net.corda.core.math/index.html>`_.
+splines. These can be found in the `maths package <api/kotlin/corda/net.corda.core.math/index.html>`_.
 
 NamedByHash and UniqueIdentifier
 --------------------------------
