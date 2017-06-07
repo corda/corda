@@ -17,7 +17,7 @@ import org.crsh.text.ui.Overflow
 import org.crsh.text.ui.RowElement
 import rx.Subscriber
 
-class SMMPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
+class FlowRunsPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
     private val indexMap = HashMap<StateMachineRunId, Int>()
     private val table = createStateMachinesTable()
     val future: SettableFuture<Unit> = SettableFuture.create()
@@ -30,7 +30,7 @@ class SMMPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscribe
 
     @Synchronized
     override fun onCompleted() {
-        toStream.println("Observable has completed")
+        // The observable of state machines will never complete.
         future.set(Unit)
     }
 
