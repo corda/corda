@@ -61,7 +61,7 @@ Kotlin syntax works.
       class CommercialPaper : Contract {
           override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
 
-          override fun verify(tx: TransactionForVerification) {
+          override fun verify(tx: TransactionForContract) {
               TODO()
           }
       }
@@ -75,7 +75,7 @@ Kotlin syntax works.
           }
 
           @Override
-          public void verify(TransactionForVerification tx) {
+          public void verify(TransactionForContract tx) {
               throw new UnsupportedOperationException();
           }
       }
