@@ -4,6 +4,7 @@ API overview
 This section describes the APIs that are available for the development of CorDapps:
 
 * :doc:`api-states`
+* :doc:`api-persistence`
 * :doc:`api-contracts`
 * :doc:`api-transactions`
 * :doc:`api-flows`

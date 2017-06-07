@@ -136,7 +136,7 @@ Commands
 
 ``TransactionForContract`` contains the commands as a list of ``AuthenticatedObject`` instances.
 ``AuthenticatedObject`` pairs an object with a list of signers. In this case, ``AuthenticatedObject`` pairs a command
- with a list of the entities that are required to sign a transaction where this command is present:
+with a list of the entities that are required to sign a transaction where this command is present:
 
 .. container:: codeset
 
