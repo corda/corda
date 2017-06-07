@@ -80,8 +80,7 @@ Further information on the available built-in flows can be found in :doc:`flow-l
 
 Concurrency
 -----------
-The flow framework allows nodes to have millions of flows active at once. These flows may last days, across node
-restarts and even upgrades.
+The flow framework allows nodes to have many flows active at once. These flows may last days, across node restarts and even upgrades.
 
 This is achieved by serializing flows to disk whenever they enter a blocking state (e.g. when they're waiting on I/O
 or a networking call). Instead of waiting for the flow to become unblocked, the node immediately starts work on any
