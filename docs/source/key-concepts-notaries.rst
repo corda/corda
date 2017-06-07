@@ -7,8 +7,15 @@ Notaries
    * *Notaries may optionally also validate transactions*
    * *A network can have several notaries, each running a different consensus algorithm*
 
-Notarisation
-------------
+Video
+-----
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/214138458" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
+Overview
+--------
 A *notary* is a network service that provides **uniqueness consensus** by attesting that, for a given transaction, it
 has not already signed other transactions that consumes any of the proposed transaction's input states.
 
@@ -28,7 +35,7 @@ Every state has an appointed notary, and a notary will only notarise a transacti
 of all the transaction's input states.
 
 Consensus algorithms
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 Corda has "pluggable" consensus, allowing notaries to choose a consensus algorithm based on their requirements in
 terms of privacy, scalability, legal-system compatibility and algorithmic agility.
 
@@ -60,7 +67,7 @@ In the case of the validating model, the use of anonymous, freshly-generated pub
 identify parties in a transaction limit the information the notary sees.
 
 Multiple notaries
-^^^^^^^^^^^^^^^^^
+-----------------
 Each Corda network can have multiple notaries, each potentially running a different consensus algorithm. This provides
 several benefits:
 

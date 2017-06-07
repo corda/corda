@@ -81,6 +81,12 @@ The vault tracks the head (i.e. the most recent version) of each ``LinearState``
 states all sharing a ``linearId``). To create a transaction updating a ``LinearState``, we retrieve the state from the
 vault using its ``linearId``.
 
+UniqueIdentifier
+~~~~~~~~~~~~~~~~
+``UniqueIdentifier`` is a combination of a (Java) ``UUID`` representing a globally unique 128 bit random number, and
+an arbitrary string which can be paired with it. For instance the string may represent an existing "weak" (not
+guaranteed unique) identifier for convenience purposes.
+
 OwnableState
 ^^^^^^^^^^^^
 ``OwnableState`` models fungible assets. Fungible assets are assets for which it's the total amount held that is
@@ -101,7 +107,7 @@ Where:
 * ``owner`` is the ``PublicKey`` of the asset's owner
 
   * ``OwnableState`` also override the default behavior of the vault's relevancy check. The default vault
-  implementation will track any ``OwnableState`` of which it is the owner.
+    implementation will track any ``OwnableState`` of which it is the owner.
 
 * ``withNewOwner(newOwner: PublicKey)`` creates an identical copy of the state, only with a new owner
 
