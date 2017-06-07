@@ -15,9 +15,6 @@ include 'client:mock'
 include 'client:rpc'
 include 'webserver'
 include 'webserver:webcapsule'
-include 'experimental'
-include 'experimental:sandbox'
-include 'experimental:quasar-hook'
 include 'verifier'
 include 'test-utils'
 include 'smoke-test-utils'
@@ -34,3 +31,10 @@ include 'samples:simm-valuation-demo'
 include 'samples:notary-demo'
 include 'samples:bank-of-corda-demo'
 include 'cordform-common'
+
+// Enable experimental modules with `gradle -Pexperimental`
+if (hasProperty("experimental")) {
+    include 'experimental'
+    include 'experimental:sandbox'
+    include 'experimental:quasar-hook'
+}
