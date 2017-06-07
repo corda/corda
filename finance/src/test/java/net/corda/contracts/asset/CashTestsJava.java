@@ -17,7 +17,7 @@ import static net.corda.testing.CoreTestUtils.*;
  */
 public class CashTestsJava {
     private final OpaqueBytes defaultRef = new OpaqueBytes(new byte[]{1});
-    private final PartyAndReference defaultIssuer = getMEGA_CORP().ref(defaultRef);
+    private final PartyAndReference defaultIssuer = MEGA_CORP.ref(defaultRef);
     private final Cash.State inState = new Cash.State(issuedBy(DOLLARS(1000), defaultIssuer), new AnonymousParty(getDUMMY_PUBKEY_1()));
     private final Cash.State outState = new Cash.State(inState.getAmount(), new AnonymousParty(getDUMMY_PUBKEY_2()));
 
@@ -47,7 +47,7 @@ public class CashTestsJava {
                     tw.output(outState);
                     // issuedBy() can't be directly imported because it conflicts with other identically named functions
                     // with different overloads (for some reason).
-                    tw.output(CashKt.issuedBy(outState, getMINI_CORP()));
+                    tw.output(CashKt.issuedBy(outState, MINI_CORP));
                     tw.command(getDUMMY_PUBKEY_1(), new Cash.Commands.Move());
                     return tw.failsWith("at least one asset input");
                 });
