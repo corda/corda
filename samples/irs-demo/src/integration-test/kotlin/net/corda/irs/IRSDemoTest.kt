@@ -61,6 +61,8 @@ class IRSDemoTest : IntegrationTestCategory {
 
             runDateChange(nodeBAddr)
             nextFixingDates.first { it == null || it > futureDate }
+
+            assertThat(getTrades(nodeAAddr)[0] as InterestRateSwap.State)
         }
     }
 
@@ -103,5 +105,11 @@ class IRSDemoTest : IntegrationTestCategory {
         val api = HttpApi.fromHostAndPort(nodeAddr, "api/irs")
         val deals = api.getJson<Array<*>>("deals")
         return deals.size
+    }
+
+    private fun getTrades(nodeAddr: HostAndPort): Array<*> {
+        val api = HttpApi.fromHostAndPort(nodeAddr, "api/irs")
+        val deals = api.getJson<Array<*>>("deals")
+        return deals
     }
 }
