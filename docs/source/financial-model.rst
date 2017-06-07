@@ -7,7 +7,7 @@ These provide a common language for states and contracts.
 Amount
 ------
 
-The `Amount <api/net.corda.core.contracts/-amount/index.html>`_ class is used to represent an amount of some
+The `Amount <api/kotlin/net.corda.core.contracts/-amount/index.html>`_ class is used to represent an amount of some
 fungible asset. It is a generic class which wraps around a type used to define the underlying product, called
 the *token*. For instance it can be the standard JDK type ``Currency``, or an ``Issued`` instance, or this can be
 a more complex type such as an obligation contract issuance definition (which in turn contains a token definition
