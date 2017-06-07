@@ -28,6 +28,8 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
+      <module name="doorman_main" target="1.8" />
+      <module name="doorman_test" target="1.8" />
       <module name="experimental_main" target="1.8" />
       <module name="experimental_test" target="1.8" />
       <module name="explorer-capsule_main" target="1.6" />
@@ -73,6 +75,12 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="sgx-jvm_main" target="1.8" />
+      <module name="sgx-jvm_sgx-signtool_main" target="1.8" />
+      <module name="sgx-jvm_sgx-signtool_test" target="1.8" />
+      <module name="sgx-jvm_test" target="1.8" />
+      <module name="sgx-signtool_main" target="1.8" />
+      <module name="sgx-signtool_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
@@ -86,6 +94,9 @@
       <module name="verifier_integrationTest" target="1.8" />
       <module name="verifier_main" target="1.8" />
       <module name="verifier_test" target="1.8" />
+      <module name="verify-enclave_integrationTest" target="1.8" />
+      <module name="verify-enclave_main" target="1.8" />
+      <module name="verify-enclave_test" target="1.8" />
       <module name="webcapsule_main" target="1.6" />
       <module name="webcapsule_test" target="1.6" />
       <module name="webserver-webcapsule_main" target="1.6" />
