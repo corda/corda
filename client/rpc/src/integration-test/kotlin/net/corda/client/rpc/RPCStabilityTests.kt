@@ -218,6 +218,9 @@ class RPCStabilityTests {
 
     @Test
     fun `client reconnects to rebooted server`() {
+        // Artemis 2.1.0 has a bug that makes this test fail, and 25 trials are needed to make it fail reliably.
+        // In the success case 25 trials take 2 minutes, so I've disabled them for the known-good Artemis version.
+        // TODO: Remove multiple trials when we fix the Artemis bug (which should have its own test(s)).
         val trials = if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") 1 else 25
         rpcDriver {
             val coreBurner = thread {
