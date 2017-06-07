@@ -455,11 +455,11 @@ class Obligation<P : Any> : Contract {
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
+     * @return the public keys who must sign the transaction for it to be valid.
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
-                     assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
+                     assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey>
             = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
             generateMoveCommand = { -> Commands.Move() },

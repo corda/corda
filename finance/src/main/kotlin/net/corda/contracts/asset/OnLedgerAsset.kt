@@ -159,7 +159,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
          * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
          * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
          * the responsibility of the caller to check that they do not attempt to exit funds held by others.
-         * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
+         * @return the public keys who must sign the transaction for it to be valid.
          */
         @Throws(InsufficientBalanceException::class)
         @JvmStatic
@@ -167,7 +167,7 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
                                                         assetStates: List<StateAndRef<S>>,
                                                         deriveState: (TransactionState<S>, Amount<Issued<T>>, AbstractParty) -> TransactionState<S>,
                                                         generateMoveCommand: () -> CommandData,
-                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): PublicKey {
+                                                        generateExitCommand: (Amount<Issued<T>>) -> CommandData): Set<PublicKey> {
             val owner = assetStates.map { it.state.data.owner }.toSet().singleOrNull() ?: throw InsufficientBalanceException(amountIssued)
             val currency = amountIssued.token.product
             val amount = Amount(amountIssued.quantity, currency)
@@ -193,9 +193,11 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
 
             for (state in gathered) tx.addInputState(state)
             for (state in outputs) tx.addOutputState(state)
-            tx.addCommand(generateMoveCommand(), gathered.map { it.state.data.owner.owningKey })
-            tx.addCommand(generateExitCommand(amountIssued), gathered.flatMap { it.state.data.exitKeys })
-            return amountIssued.token.issuer.party.owningKey
+            val moveKeys = gathered.map { it.state.data.owner.owningKey }
+            val exitKeys = gathered.flatMap { it.state.data.exitKeys }
+            tx.addCommand(generateMoveCommand(), moveKeys)
+            tx.addCommand(generateExitCommand(amountIssued), exitKeys)
+            return (moveKeys + exitKeys).toSet()
         }
 
         /**
@@ -226,11 +228,11 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
      * necessarily owned by us.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
+     * @return the public keys who must sign the transaction for it to be valid.
      */
     @Throws(InsufficientBalanceException::class)
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<T>>,
-                     assetStates: List<StateAndRef<S>>): PublicKey {
+                     assetStates: List<StateAndRef<S>>): Set<PublicKey> {
         return generateExit(
                 tx,
                 amountIssued,

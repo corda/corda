@@ -36,7 +36,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
         val exitStates = serviceHub.vaultService.unconsumedStatesForSpending<Cash.State>(amount, setOf(issuer.party), builder.notary, builder.lockId, setOf(issuer.reference))
-        try {
+        val signers = try {
             Cash().generateExit(
                     builder,
                     amount.issuedBy(issuer),
@@ -62,7 +62,9 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
                 .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
-        val tx = serviceHub.signInitialTransaction(builder)
+        val wtx = builder.toWireTransaction()
+        signers.forEach{ builder.addSignatureUnchecked(serviceHub.createSignature(wtx, it)) }
+        val tx = builder.toSignedTransaction(false)
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
