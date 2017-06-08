@@ -41,7 +41,13 @@ See :doc:`changelog` for full details.
 Added new Byzantine fault tolerant (BFT) decentralised notary demo, based on the `BFT-SMaRT protocol <https://bft-smart.github.io/library/>`_
 For how to run the demo see: :ref:`notary-demo`
 
-Initial work on the strategic wire format (not integrated).
+We continued to work on tools that enable diagnostics on the node. The newest addition to Corda Shell is ``flow watch`` command which
+lets the administrator see all flows currently running with result or error information as well as who is the flow initiator.
+Here is the view from DemoBench:
+
+.. image:: resources/flowWatchCmd.png
+
+We also started work on the strategic wire format (not integrated).
 
 Milestone 11
 ------------
