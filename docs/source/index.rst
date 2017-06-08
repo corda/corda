@@ -13,9 +13,11 @@ quick introduction about distributed ledgers and how corda is different, then wa
       <iframe src="https://player.vimeo.com/video/205410473" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
     </embed>
 
+
+
 Want to see Corda running ?  Download our demonstration application `demobench <https://www.corda.net/downloads/>`_
 
-If you want to start getting coding with Corda, then familiarise yourself with the key concepts - either by the documentation here or by watching some of our introductory videos on `vimeo <https://vimeo.com/album/4555732>`_ . For the background behind Corda, read the non technical `Introductory white paper`_ or for more detail, the `Technical white paper`_.
+If you want to start getting coding with Corda, then familiarise yourself with the :ref:`key-concepts-label`. For the background behind Corda, read the non technical `Introductory white paper`_ or for more detail, the `Technical white paper`_.
 
 Corda is a distributed ledger platform which runs CorDapps (**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ) that enables complex interactions (“Smart Contracts”) between parties on a Corda Network. There are several example CorDapps within the main Corda platform code repository under the samples folder, or you can clone and work from a templated CorDapp.
 
