@@ -56,4 +56,4 @@ If a time window needs to be converted to an absolute time (e.g. for display pur
 calculate the mid point.
 
 .. note:: It is assumed that the time feed for a notary is GPS/NaviStar time as defined by the atomic
-clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
+   clocks at the US Naval Observatory. This time feed is extremely accurate and available globally for free.
