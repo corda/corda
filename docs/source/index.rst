@@ -21,7 +21,7 @@ If you want to start getting coding with Corda, then familiarise yourself with t
 
 Corda is a distributed ledger platform which runs CorDapps (**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ) that enables complex interactions (“Smart Contracts”) between parties on a Corda Network. There are several example CorDapps within the main Corda platform code repository under the samples folder, or you can clone and work from a templated CorDapp.
 
-If you have questions or comments, then get in touch with us either on `Slack <https://slack.corda.net/>`_, `Discourse <https://discourse.corda.net/>`_, or write a question on `stackoverflow <https://stackoverflow.com/questions/tagged/corda>`_ .
+If you have questions or comments, then get in touch with us either on `Slack <https://slack.corda.net/>`_ , `Discourse <https://discourse.corda.net/>`_ , or write a question on `stackoverflow <https://stackoverflow.com/questions/tagged/corda>`_ .
 
 We look forward to seeing what you can do with Corda !
 
