@@ -111,6 +111,8 @@ To run from the command line in Windows:
 4. Run ``gradlew samples:attachment-demo:runSender`` in another terminal window to send the attachment. Now look at the other windows to
    see the output of the demo
 
+.. _notary-demo:
+
 Notary demo
 -----------
 
