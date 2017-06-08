@@ -52,9 +52,6 @@ Milestone 12.0 - First Public Beta
     * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
       name. As a result all node legal names must now be structured as X.500 distinguished names.
 
-* Flows can now accept ``PartyAndCertificate`` instead of ``Party`` in their constructor, which should be the default for
-  new flows. The sample flows have been updated to use ``PartyAndCertificate`` to illustrate this.
-
 * The identity management service takes an optional network trust root which it will validate certificate paths to, if
   provided. A later release will make this a required parameter.
 
