@@ -12,6 +12,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.*
+import net.corda.core.ThenContext.then
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
@@ -468,33 +469,29 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
-        val abortConnect = AtomicBoolean(false)
+        val reconnect = AtomicBoolean(true)
         fun connect(): CordaRPCConnection {
             val client = CordaRPCClient(nodeAddress, sslConfig)
             while (true) {
                 try {
                     return client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
                 } catch (e: Exception) {
-                    if (abortConnect.get()) {
-                        throw e
-                    }
-                    log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                    if (reconnect.get()) log.error("Exception $e, Retrying RPC connection at $nodeAddress") else throw e
                 }
             }
         }
         val connectionFuture = executorService.submit(::connect)
-        return poll(executorService, "for RPC connection") {
-            if (!listenProcess.isAlive) {
-                abortConnect.set(true)
+        val processDeathFuture = poll(executorService, "process death") {
+            if (listenProcess.isAlive) null else Unit
+        }
+        return listOf(connectionFuture, processDeathFuture) then {
+            if (it == processDeathFuture) {
+                reconnect.set(false)
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
-            if (connectionFuture.isDone) {
-                val connection = connectionFuture.getOrThrow()
-                shutdownManager.registerShutdown(connection::close)
-                connection.proxy
-            } else {
-                null
-            }
+            val connection = connectionFuture.getOrThrow()
+            shutdownManager.registerShutdown(connection::close)
+            connection.proxy
         }
     }
 
