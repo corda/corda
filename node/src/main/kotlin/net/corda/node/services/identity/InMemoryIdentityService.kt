@@ -87,13 +87,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     @Deprecated("Use partyFromX500Name")
     override fun partyFromName(name: String): Party? = principalToParties[X500Name(name)]?.party
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
-        return if (party is Party) {
-            party
-        } else {
-            partyFromKey(party.owningKey)
-        }
-    }
+    override fun partyFromAnonymous(party: AbstractParty) = party as? Party ?: partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
     override fun requirePartyFromAnonymous(party: AbstractParty): Party {
         return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
@@ -109,6 +103,11 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
                     results += party
                 } else if (!exactMatch) {
                     // We can imagine this being a query over a lucene index in future.
+                    //
+                    // Kostas says: We can easily use the Jaro-Winkler distance metric as it is best suited for short
+                    // strings such as entity/company names, and to detect small typos. We can also apply it for city
+                    // or any keyword related search in lists of records (not raw text - for raw text we need indexing)
+                    // and we can return results in hierarchical order (based on normalised String similarity 0.0-1.0).
                     if (component.contains(query, ignoreCase = true))
                         results += party
                 }
