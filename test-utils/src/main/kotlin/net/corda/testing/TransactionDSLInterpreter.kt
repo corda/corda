@@ -35,7 +35,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param encumbrance The position of the encumbrance state.
      * @param contractState The state itself.
      */
-    fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
+    fun output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState)
 
     /**
      * Adds an [Attachment] reference to the transaction.
@@ -48,7 +48,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param signers The signer public keys.
      * @param commandData The contents of the command.
      */
-    fun _command(signers: List<PublicKey>, commandData: CommandData)
+    fun command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
      * Adds a time-window to the transaction.
@@ -88,31 +88,38 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun input(stateClosure: () -> ContractState) = input(stateClosure())
 
     /**
-     * @see TransactionDSLInterpreter._output
+     * @see TransactionDSLInterpreter.output
      */
     @JvmOverloads
     fun output(label: String? = null, notary: Party = DUMMY_NOTARY, encumbrance: Int? = null, contractStateClosure: () -> ContractState) =
-            _output(label, notary, encumbrance, contractStateClosure())
+            output(label, notary, encumbrance, contractStateClosure())
 
     /**
-     * @see TransactionDSLInterpreter._output
+     * @see TransactionDSLInterpreter.output
      */
     fun output(label: String, contractState: ContractState) =
-            _output(label, DUMMY_NOTARY, null, contractState)
+            output(label, DUMMY_NOTARY, null, contractState)
 
     fun output(contractState: ContractState) =
-            _output(null, DUMMY_NOTARY, null, contractState)
+            output(null, DUMMY_NOTARY, null, contractState)
 
     /**
-     * @see TransactionDSLInterpreter._command
+     * @see TransactionDSLInterpreter.command
      */
     fun command(vararg signers: PublicKey, commandDataClosure: () -> CommandData) =
-            _command(listOf(*signers), commandDataClosure())
+            command(listOf(*signers), commandDataClosure())
 
     /**
-     * @see TransactionDSLInterpreter._command
+     * @see TransactionDSLInterpreter.command
      */
-    fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
+    fun command(signers: List<PublicKey>, commandDataClosure: () -> CommandData) =
+            command(signers, commandDataClosure())
+
+    /**
+     * @see TransactionDSLInterpreter.command
+     */
+    fun command(signer: PublicKey, commandData: CommandData) =
+            command(listOf(signer), commandData)
 
     /**
      * Adds a [TimeWindow] command to the transaction.

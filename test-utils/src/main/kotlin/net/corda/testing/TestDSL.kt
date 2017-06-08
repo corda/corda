@@ -115,7 +115,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addInputState(StateAndRef(state, stateRef))
     }
 
-    override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
+    override fun output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
         val outputIndex = transactionBuilder.addOutputState(contractState, notary, encumbrance)
         if (label != null) {
             if (label in labelToIndexMap) {
@@ -130,7 +130,7 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addAttachment(attachmentId)
     }
 
-    override fun _command(signers: List<PublicKey>, commandData: CommandData) {
+    override fun command(signers: List<PublicKey>, commandData: CommandData) {
         val command = Command(commandData, signers)
         transactionBuilder.addCommand(command)
     }

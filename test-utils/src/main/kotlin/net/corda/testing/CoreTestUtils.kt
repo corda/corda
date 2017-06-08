@@ -56,42 +56,42 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 
 // A few dummy values for testing.
-val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
+@JvmField val MEGA_CORP_KEY: KeyPair = generateKeyPair()
+@JvmField val MEGA_CORP_PUBKEY: PublicKey = MEGA_CORP_KEY.public
 
-val MINI_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val MINI_CORP_PUBKEY: PublicKey get() = MINI_CORP_KEY.public
+@JvmField val MINI_CORP_KEY: KeyPair = generateKeyPair()
+@JvmField val MINI_CORP_PUBKEY: PublicKey = MINI_CORP_KEY.public
 
-val ORACLE_KEY: KeyPair by lazy { generateKeyPair() }
-val ORACLE_PUBKEY: PublicKey get() = ORACLE_KEY.public
+@JvmField val ORACLE_KEY: KeyPair = generateKeyPair()
+@JvmField val ORACLE_PUBKEY: PublicKey = ORACLE_KEY.public
 
-val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
-val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
-val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
+@JvmField val ALICE_PUBKEY: PublicKey = ALICE_KEY.public
+@JvmField val BOB_PUBKEY: PublicKey = BOB_KEY.public
+@JvmField val CHARLIE_PUBKEY: PublicKey = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
-val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
-val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
+@JvmField val MEGA_CORP_IDENTITY: PartyAndCertificate = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
+@JvmField val MEGA_CORP: Party = MEGA_CORP_IDENTITY.party
+@JvmField val MINI_CORP_IDENTITY: PartyAndCertificate = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
+@JvmField val MINI_CORP: Party = MINI_CORP_IDENTITY.party
 
-val BOC_KEY: KeyPair by lazy { generateKeyPair() }
-val BOC_PUBKEY: PublicKey get() = BOC_KEY.public
-val BOC_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
-val BOC: Party get() = BOC_IDENTITY.party
-val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
+@JvmField val BOC_KEY: KeyPair = generateKeyPair()
+@JvmField val BOC_PUBKEY: PublicKey = BOC_KEY.public
+@JvmField val BOC_IDENTITY: PartyAndCertificate = getTestPartyAndCertificate(getTestX509Name("BankOfCorda"), BOC_PUBKEY)
+@JvmField val BOC: Party = BOC_IDENTITY.party
+@JvmField val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
-val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
-val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
-val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
-val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
+@JvmField val BIG_CORP_KEY: KeyPair = generateKeyPair()
+@JvmField val BIG_CORP_PUBKEY: PublicKey = BIG_CORP_KEY.public
+@JvmField val BIG_CORP_IDENTITY: PartyAndCertificate = getTestPartyAndCertificate(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
+@JvmField val BIG_CORP: Party = BIG_CORP_IDENTITY.party
+@JvmField val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 
-val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
+@JvmField val ALL_TEST_KEYS: List<KeyPair> = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DUMMY_NOTARY_KEY)
 
-val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
-val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate)
+@JvmField val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
+@JvmField val MOCK_IDENTITY_SERVICE: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate)
 
-val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+@JvmField val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
