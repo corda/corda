@@ -1,5 +1,6 @@
 package net.corda.irs.contract
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Tenor
 import net.corda.core.serialization.CordaSerializable
@@ -63,6 +64,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
  */
 @CordaSerializable
 class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
+    @JsonIgnore
     fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
 
     override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)

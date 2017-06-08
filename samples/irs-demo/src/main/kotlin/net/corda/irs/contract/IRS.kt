@@ -1,5 +1,8 @@
 package net.corda.irs.contract
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
@@ -129,6 +132,7 @@ class FixedRatePaymentEvent(date: LocalDate,
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FloatingRatePaymentEvent(date: LocalDate,
                                accrualStartDate: LocalDate,
                                accrualEndDate: LocalDate,
