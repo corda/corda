@@ -169,7 +169,7 @@ private fun printHelp(parser: OptionParser) {
 
 class AttachmentContract : Contract {
     override val legalContractReference: SecureHash
-        get() = TODO("not implemented")
+        get() = SecureHash.zeroHash // TODO not implemented
 
     override fun verify(tx: TransactionForContract) {
         val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()
