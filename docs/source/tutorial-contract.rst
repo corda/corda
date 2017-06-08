@@ -61,7 +61,7 @@ Kotlin syntax works.
       class CommercialPaper : Contract {
           override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
 
-          override fun verify(tx: TransactionForVerification) {
+          override fun verify(tx: TransactionForContract) {
               TODO()
           }
       }
@@ -75,7 +75,7 @@ Kotlin syntax works.
           }
 
           @Override
-          public void verify(TransactionForVerification tx) {
+          public void verify(TransactionForContract tx) {
               throw new UnsupportedOperationException();
           }
       }
@@ -106,14 +106,14 @@ A state is a class that stores data that is checked by the contract. A commercia
 
       data class State(
               val issuance: PartyAndReference,
-              override val owner: PublicKey,
+              override val owner: AbstractParty,
               val faceValue: Amount<Issued<Currency>>,
               val maturityDate: Instant
       ) : OwnableState {
           override val contract = CommercialPaper()
           override val participants = listOf(owner)
 
-          fun withoutOwner() = copy(owner = NullPublicKey)
+          fun withoutOwner() = copy(owner = AnonymousParty(NullPublicKey))
           override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
       }
 
@@ -121,7 +121,7 @@ A state is a class that stores data that is checked by the contract. A commercia
 
       public static class State implements OwnableState {
           private PartyAndReference issuance;
-          private PublicKey owner;
+          private AbstractParty owner;
           private Amount<Issued<Currency>> faceValue;
           private Instant maturityDate;
 
@@ -142,7 +142,7 @@ A state is a class that stores data that is checked by the contract. A commercia
 
           @NotNull
           @Override
-          public Pair<CommandData, OwnableState> withNewOwner(@NotNull PublicKey newOwner) {
+          public Pair<CommandData, OwnableState> withNewOwner(@NotNull AbstractParty newOwner) {
               return new Pair<>(new Commands.Move(), new State(this.issuance, newOwner, this.faceValue, this.maturityDate));
           }
 
@@ -150,7 +150,7 @@ A state is a class that stores data that is checked by the contract. A commercia
               return issuance;
           }
 
-          public PublicKey getOwner() {
+          public AbstractParty getOwner() {
               return owner;
           }
 
@@ -192,7 +192,7 @@ A state is a class that stores data that is checked by the contract. A commercia
 
           @NotNull
           @Override
-          public List<PublicKey> getParticipants() {
+          public List<AbstractParty> getParticipants() {
               return ImmutableList.of(this.owner);
           }
       }
@@ -408,7 +408,7 @@ blank out fields that are allowed to change, making the grouping key be "everyth
 
    .. sourcecode:: kotlin
 
-      val groups = tx.groupStates() { it: State -> it.withoutOwner() }
+      val groups = tx.groupStates(State::withoutOwner)
 
    .. sourcecode:: java
 
@@ -431,15 +431,15 @@ logic.
 
    .. sourcecode:: kotlin
 
-      val timestamp: Timestamp? = tx.timestamp
+      val timeWindow: TimeWindow? = tx.timeWindow
 
       for ((inputs, outputs, key) in groups) {
           when (command.value) {
               is Commands.Move -> {
                   val input = inputs.single()
                   requireThat {
-                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
-                      "the state is propagated" using (group.outputs.size == 1)
+                      "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
+                      "the state is propagated" using (outputs.size == 1)
                       // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                       // the input ignoring the owner field due to the grouping.
                   }
@@ -449,18 +449,18 @@ logic.
                   // Redemption of the paper requires movement of on-ledger cash.
                   val input = inputs.single()
                   val received = tx.outputs.sumCashBy(input.owner)
-                  val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
+                  val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must be timestamped")
                   requireThat {
                       "the paper must have matured" using (time >= input.maturityDate)
                       "the received amount equals the face value" using (received == input.faceValue)
                       "the paper must be destroyed" using outputs.isEmpty()
-                      "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                      "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
                   }
               }
 
               is Commands.Issue -> {
                   val output = outputs.single()
-                  val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
+                  val time = timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances must be timestamped")
                   requireThat {
                       // Don't allow people to issue commercial paper under other entities identities.
                       "output states are issued by a command signer" using (output.issuance.party.owningKey in command.signers)
@@ -492,12 +492,14 @@ logic.
               // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
               // the input ignoring the owner field due to the grouping.
           } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-              checkNotNull(timem "must be timestamped");
-              Instant t = time.getBefore();
+              TimeWindow timeWindow = tx.getTimeWindow();
+              Instant time = null == timeWindow
+                       ? null
+                       : timeWindow.getUntilTime();
               Amount<Issued<Currency>> received = CashKt.sumCashBy(tx.getOutputs(), input.getOwner());
 
               checkState(received.equals(input.getFaceValue()), "received amount equals the face value");
-              checkState(t.isBefore(input.getMaturityDate(), "the paper must have matured");
+              checkState(time != null && !time.isBefore(input.getMaturityDate(), "the paper must have matured");
               checkState(outputs.isEmpty(), "the paper must be destroyed");
           } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
               // .. etc .. (see Kotlin for full definition)
@@ -613,7 +615,7 @@ a method to wrap up the issuance process:
 
       fun generateIssue(issuance: PartyAndReference, faceValue: Amount<Issued<Currency>>, maturityDate: Instant,
                         notary: Party): TransactionBuilder {
-          val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+          val state = State(issuance, issuance.party, faceValue, maturityDate)
           return TransactionBuilder(notary = notary).withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
       }
 
@@ -652,10 +654,10 @@ What about moving the paper, i.e. reassigning ownership to someone else?
 
    .. sourcecode:: kotlin
 
-      fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
+      fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: AbstractParty) {
           tx.addInputState(paper)
           tx.addOutputState(paper.state.data.withOwner(newOwner))
-          tx.addCommand(Command(Commands.Move(), paper.state.data.owner))
+          tx.addCommand(Command(Commands.Move(), paper.state.data.owner.owningKey))
       }
 
 Here, the method takes a pre-existing ``TransactionBuilder`` and adds to it. This is correct because typically
@@ -678,28 +680,28 @@ Finally, we can do redemption.
    .. sourcecode:: kotlin
 
       @Throws(InsufficientBalanceException::class)
-      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: Wallet) {
-          // Add the cash movement using the states in our wallet.
-          Cash().generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner, wallet.statesOfType<Cash.State>())
+      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, vault: VaultService) {
+          // Add the cash movement using the states in our vault.
+          vault.generateSpend(tx, paper.state.data.faceValue.withoutIssuer(), paper.state.data.owner)
           tx.addInputState(paper)
-          tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner))
+          tx.addCommand(Command(Commands.Redeem(), paper.state.data.owner.owningKey))
       }
 
 Here we can see an example of composing contracts together. When an owner wishes to redeem the commercial paper, the
-issuer (i.e. the caller) must gather cash from its wallet and send the face value to the owner of the paper.
+issuer (i.e. the caller) must gather cash from its vault and send the face value to the owner of the paper.
 
 .. note:: This contract has no explicit concept of rollover.
 
-The *wallet* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of states (such as cash) that are
-owned by the caller. Here, we use the wallet to update the partial transaction we are handed with a movement of cash
-from the issuer of the commercial paper to the current owner. If we don't have enough quantity of cash in our wallet,
+The *vault* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of states (such as cash) that are
+owned by the caller. Here, we use the vault to update the partial transaction we are handed with a movement of cash
+from the issuer of the commercial paper to the current owner. If we don't have enough quantity of cash in our vault,
 an exception is thrown. Then we add the paper itself as an input, but, not an output (as we wish to remove it
 from the ledger). Finally, we add a Redeem command that should be signed by the owner of the commercial paper.
 
 .. warning:: The amount we pass to the ``generateSpend`` function has to be treated first with ``withoutIssuer``.
    This reflects the fact that the way we handle issuer constraints is still evolving; the commercial paper
    contract requires payment in the form of a currency issued by a specific party (e.g. the central bank,
-   or the issuers own bank perhaps). But the wallet wants to assemble spend transactions using cash states from
+   or the issuers own bank perhaps). But the vault wants to assemble spend transactions using cash states from
    any issuer, thus we must strip it here. This represents a design mismatch that we will resolve in future
    versions with a more complete way to express issuer constraints.
 
@@ -745,7 +747,7 @@ Making things happen at a particular time
 It would be nice if you could program your node to automatically redeem your commercial paper as soon as it matures.
 Corda provides a way for states to advertise scheduled events that should occur in future. Whilst this information
 is by default ignored, if the corresponding *Cordapp* is installed and active in your node, and if the state is
-considered relevant by your wallet (e.g. because you own it), then the node can automatically begin the process
+considered relevant by your vault (e.g. because you own it), then the node can automatically begin the process
 of creating a transaction and taking it through the life cycle. You can learn more about this in the article
 ":doc:`event-scheduling`".
 
