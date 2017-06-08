@@ -3,19 +3,24 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
-Milestone 12
-------------
+Unreleased
+----------
 
-One of our busiest releases, lots of changes that take us closer to API stability (for more detailed information what changed see :doc:`changelog`)
-This release we focused mainly on making developers lives easier. Taking into account feedback we got on numerous training and meetups
-we decided to add ``CollectSignaturesFlow`` which factors out a lot of code which CorDapp developers needed to write to get their transaction signed.
-The improvement is up to 150 lines less of code in each flow! Now signing the transaction by different parties is only calling
-a subflow which handles the collecting signatures from parties for us.
+Milestone 12 - First Public Beta
+--------------------------------
 
-Additionally we introduced classpath scanning to automatically wire-up flows. Writing CorDapps has been made simpler by removing
-boiler-plate code that was previously required when registering flows.
+One of our busiest releases, lots of changes that take us closer to API stability (for more detailed information about
+what has changed, see :doc:`changelog`). In this release we focused mainly on making developers' lives easier. Taking
+into account feedback from numerous training courses and meet-ups, we decided to add ``CollectSignaturesFlow`` which
+factors out a lot of code which CorDapp developers needed to write to get their transactions signed.
+The improvement is up to 150 fewer lines of code in each flow! To have your transaction signed by different parties, you
+need only now call a subflow which collects the parties' signatures for you.
 
-We made substantial RPC performance improvements (please note that this is separate to node performance, we are focusing on that area in future milestones):
+Additionally we introduced classpath scanning to wire-up flows automatically. Writing CorDapps has been made simpler by
+removing boiler-plate code that was previously required when registering flows. Writing services such as oracles has also been simplified.
+
+We made substantial RPC performance improvements (please note that this is separate to node performance, we are focusing
+on that area in future milestones):
 
 - 15-30k requests per second for a single client/server RPC connection.
   * 1Kb requests, 1Kb responses, server and client on same machine, parallelism 8, measured on a Dell XPS 17(i7-6700HQ, 16Gb RAM)
@@ -26,9 +31,8 @@ Security of the key management service has been improved by removing support for
 it can support use of a hardware security module (HSM) for key storage. Instead it exposes functionality for signing data
 (typically transactions). The service now also supports multiple signature schemes (not just EdDSA).
 
-We've added the ability for flows to be versioned by their CorDapp developers. This enables a node to support a particular
-version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future milestone
-release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
+We've added the beginnings of flow versioning. Nodes now reject flow requests if the initiating side is not using the same
+flow version. In a future milestone release will add the ability to support backwards compatibility.
 
 As with the previous few releases we have continued work extending identity support. There are major changes to the ``Party``
 class as part of confidential identities, and how parties and keys are stored in transaction state objects.

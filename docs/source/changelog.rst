@@ -7,6 +7,9 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+Milestone 12.0 - First Public Beta
+----------------------------------
+
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 
     * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
