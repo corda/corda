@@ -12,7 +12,7 @@ import java.util.*;
 import static net.corda.node.shell.InteractiveShell.*;
 
 @Man(
-    "Allows you to start flows, list the ones available and to show flows currently running on the node.\n\n" +
+    "Allows you to start flows, list the ones available and to watch flows currently running on the node.\n\n" +
     "Starting flow is the primary way in which you command the node to change the ledger.\n\n" +
     "This command is generic, so the right way to use it depends on the flow you wish to start. You can use the 'flow start'\n" +
     "command with either a full class name, or a substring of the class name that's unambiguous. The parameters to the \n" +
@@ -30,8 +30,8 @@ public class FlowShellCommand extends InteractiveShellCommand {
 
     // TODO Limit number of flows shown option?
     @Command
-    @Usage("show information about state machines running on the node with result information")
-    public void running(InvocationContext<TableElement> context) throws Exception {
+    @Usage("watch information about state machines running on the node with result information")
+    public void watch(InvocationContext<TableElement> context) throws Exception {
         runStateMachinesView(out, context);
     }
 

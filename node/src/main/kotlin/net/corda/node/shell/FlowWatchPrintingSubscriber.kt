@@ -17,7 +17,7 @@ import org.crsh.text.ui.Overflow
 import org.crsh.text.ui.RowElement
 import rx.Subscriber
 
-class FlowRunsPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
+class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
     private val indexMap = HashMap<StateMachineRunId, Int>()
     private val table = createStateMachinesTable()
     val future: SettableFuture<Unit> = SettableFuture.create()

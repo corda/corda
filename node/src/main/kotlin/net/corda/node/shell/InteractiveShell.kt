@@ -313,7 +313,7 @@ object InteractiveShell {
         val proxy = node.rpcOps
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
-        val subscriber = SMMPrintingSubscriber(out)
+        val subscriber = FlowWatchPrintingSubscriber(out)
         stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
         var result: Any? = subscriber.future
         if (result is Future<*>) {
