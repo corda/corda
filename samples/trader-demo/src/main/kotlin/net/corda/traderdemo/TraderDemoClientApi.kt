@@ -73,6 +73,6 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
 
         // The line below blocks and waits for the future to resolve.
         val stx = rpc.startFlow(::SellerFlow, otherParty, amount).returnValue.getOrThrow()
-        logger.info("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
+        println("Sale completed - we have a happy customer!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(stx.tx)}")
     }
 }
