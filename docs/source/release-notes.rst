@@ -3,9 +3,6 @@ Release notes
 
 Here are release notes for each snapshot release from M9 onwards.
 
-Unreleased
-----------
-
 Milestone 12 - First Public Beta
 --------------------------------
 
