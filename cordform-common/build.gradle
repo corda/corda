@@ -2,6 +2,9 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 apply plugin: 'net.corda.plugins.publish-utils'
 
+// This tracks the gradle plugins version and not Corda
+version gradle_plugins_version
+
 repositories {
     mavenCentral()
 }
