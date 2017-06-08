@@ -10,7 +10,7 @@ import net.corda.core.contracts.currency
 import net.corda.core.node.NodeInfo
 import tornadofx.*
 
-val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF)")
+val ISSUER_SERVICE_TYPE = Regex("corda.issuer.(USD|GBP|CHF|EUR)")
 
 class IssuerModel {
     private val networkIdentities by observableList(NetworkIdentityModel::networkIdentities)
