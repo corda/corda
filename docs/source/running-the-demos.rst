@@ -18,7 +18,7 @@ If any of the demos don't work, please raise an issue on GitHub.
 
 .. note:: If you are running the demos from the command line in Linux (but not macOS), you may have to install xterm.
 
-.. note:: If you would like to see flow activity on the nodes type in the node terminal ``run stateMachinesAndUpdates``.
+.. note:: If you would like to see flow activity on the nodes type in the node terminal ``flow watch``.
 
 .. _trader-demo:
 
@@ -33,7 +33,7 @@ To run from the command line in Unix:
 1. Run ``./gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
 2. Run ``./samples/trader-demo/build/nodes/runnodes`` to open up four new terminals with the four nodes
 3. Run ``./gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
-4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``run stateMachinesAndUpdates``
+4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
 
@@ -42,7 +42,7 @@ To run from the command line in Windows:
 1. Run ``gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples\trader-demo\build\nodes``
 2. Run ``samples\trader-demo\build\nodes\runnodes`` to open up four new terminals with the four nodes
 3. Run ``gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
-4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``run stateMachinesAndUpdates``
+4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
 
@@ -65,7 +65,7 @@ To run from the command line in Unix:
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
 6. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
-   ``run stateMachinesAndUpdates`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
+   ``flow watch`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
 7. Now run ``./install/irs-demo/bin/irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from the command line in Windows:
@@ -78,7 +78,7 @@ To run from the command line in Windows:
    message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
    interest rates
 6. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
-   ``run stateMachinesAndUpdates`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
+   ``flow watch`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
 7. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 This demo also has a web app. To use this, run nodes and upload rates, then navigate to
@@ -207,7 +207,7 @@ In the window you run the command you should see (in case of Web, RPC is simmila
 - Requesting Cash via Web ...
 - Successfully processed Cash Issue request
 
-If you want to see flow activity enter in node's shell ``run stateMachinesAndUpdates``. It will display all state machines
+If you want to see flow activity enter in node's shell ``flow watch``. It will display all state machines
 running currently on the node.
 
 Launch the Explorer application to visualize the issuance and transfer of cash for each node:
