@@ -11,6 +11,9 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.GeneralName
+import org.bouncycastle.asn1.x509.GeneralSubtree
+import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
 import org.junit.Before
@@ -139,12 +142,8 @@ class DBCertificateRequestStorageTest {
     private fun approveRequest(requestId: String) {
         storage.approveRequest(requestId) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createCertificate(
-                        CertificateType.TLS,
-                        intermediateCACert,
-                        intermediateCAKey,
-                        subject,
-                        publicKey)
+                val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, subject))), arrayOf())
+                X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints)
             }
         }
     }
