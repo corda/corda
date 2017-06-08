@@ -87,6 +87,9 @@ http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
 
+.. note:: The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings consistently.
+          The issues will be addressed in M13 milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+
 Attachment demo
 ---------------
 
