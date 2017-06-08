@@ -33,7 +33,6 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.CertPath
 import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.time.Instant
 import java.util.*
@@ -460,7 +459,7 @@ object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
 }
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
-private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeNoWhitelistClassResolver())) }.build()
+private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeAllButBlacklistedClassResolver())) }.build()
 private val kryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeStandardClassResolver())) }.build()
 
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.

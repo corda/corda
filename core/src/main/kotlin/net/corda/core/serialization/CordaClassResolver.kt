@@ -25,6 +25,10 @@ fun makeNoWhitelistClassResolver(): ClassResolver {
     return CordaClassResolver(AllWhitelist)
 }
 
+fun makeAllButBlacklistedClassResolver(): ClassResolver {
+    return CordaClassResolver(AllButBlacklisted)
+}
+
 class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {
@@ -57,6 +61,7 @@ class CordaClassResolver(val whitelist: ClassWhitelist) : DefaultClassResolver()
         // It's safe to have the Class already, since Kryo loads it with initialisation off.
         val hasAnnotation = checkForAnnotation(type)
         if (!hasAnnotation && !whitelist.hasListed(type)) {
+            // TODO: show another message if the class is blacklisted.
             throw KryoException("Class ${Util.className(type)} is not annotated or on the whitelist, so cannot be used in serialization")
         }
         return null
