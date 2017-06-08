@@ -136,7 +136,7 @@ and is included in the ``CommercialPaper.kt`` code.
                     val command = commands.requireSingleCommand<Commands.Move>()
                     val input = inputs.single()
                     requireThat {
-                        "the transaction is signed by the owner of the CP" using (input.owner in command.signers)
+                        "the transaction is signed by the owner of the CP" using (input.owner.owningKey in command.signers)
                         "the state is propagated" using (outputs.size == 1)
                         // Don't need to check anything else, as if outputs.size == 1 then the output is equal to
                         // the input ignoring the owner field due to the grouping.
@@ -167,7 +167,7 @@ and is included in the ``CommercialPaper.kt`` code.
                     // There should be only a single input due to aggregation above
                     State input = single(inputs);
 
-                    if (!cmd.getSigners().contains(input.getOwner()))
+                    if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                         throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
 
                     // Check the output CP state is the same as the input state, ignoring the owner field.
