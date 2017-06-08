@@ -1,3 +1,5 @@
+.. _key-concepts-label:
+
 Key concepts
 ============
 
