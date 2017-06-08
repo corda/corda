@@ -218,11 +218,24 @@ class RPCStabilityTests {
 
     @Test
     fun `client reconnects to rebooted server`() {
-        // With Artemis 1.5.3 this test fails maybe 1 in 100 times and retrying doesn't work, so disable until we upgrade:
-        if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") return
-        // Once we've upgraded make the test fail reliably, in the Artemis 2.1.0 case that takes 25 trials:
-        val trials = 25
         // TODO: Remove multiple trials when we fix the Artemis bug (which should have its own test(s)).
+        if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") {
+            // The test fails maybe 1 in 100 times, so to stay green until we upgrade Artemis, retry if it fails:
+            while (true) {
+                try {
+                    `client reconnects to rebooted server`(1)
+                } catch (e: TimeoutException) {
+                    continue
+                }
+                break
+            }
+        } else {
+            // We've upgraded Artemis so make the test fail reliably, in the 2.1.0 case that takes 25 trials:
+            `client reconnects to rebooted server`(25)
+        }
+    }
+
+    private fun `client reconnects to rebooted server`(trials: Int) {
         rpcDriver {
             val coreBurner = thread {
                 while (!Thread.interrupted()) {
