@@ -64,9 +64,9 @@ Milestone 12.0 - First Public Beta
        The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
            encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
            and other key management devices.
-     * The ``KeyManagementService`` now provides no mechanism to request the node's ``PrivateKey`` objects directly.
+     * The ``KeyManagementService`` no longer provides any mechanism to request the node's ``PrivateKey`` objects directly.
        Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
-       which of the node's multiple keys to use. This lookup also works for ``CompositeKey`` scenarios
+       which of the node's keypairs to use. This lookup also works for ``CompositeKey`` scenarios
        and the service will search for a leaf key hosted on the node.
      * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
        with the ``PrivateKey`` kept internally to the service.
