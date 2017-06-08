@@ -29,7 +29,7 @@ import java.time.Duration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-
+import kotlin.test.fail
 
 class RPCStabilityTests {
 
@@ -221,14 +221,15 @@ class RPCStabilityTests {
         // TODO: Remove multiple trials when we fix the Artemis bug (which should have its own test(s)).
         if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") {
             // The test fails maybe 1 in 100 times, so to stay green until we upgrade Artemis, retry if it fails:
-            while (true) {
+            for (i in (1..3)) {
                 try {
                     `client reconnects to rebooted server`(1)
                 } catch (e: TimeoutException) {
                     continue
                 }
-                break
+                return
             }
+            fail("Test failed 3 times, which is vanishingly unlikely unless something has changed.")
         } else {
             // We've upgraded Artemis so make the test fail reliably, in the 2.1.0 case that takes 25 trials:
             `client reconnects to rebooted server`(25)
