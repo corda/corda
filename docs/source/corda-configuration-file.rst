@@ -40,7 +40,7 @@ NetworkMapService plus Simple Notary configuration file.
     p2pAddress : "localhost:12345"
     rpcAddress : "localhost:12346"
     webAddress : "localhost:12347"
-    extraAdvertisedServiceIds : []
+    extraAdvertisedServiceIds : ["corda.notary.simple"]
     useHTTPS : false
     devMode : true
     // Certificate signing service will be hosted by R3 in the near future.
