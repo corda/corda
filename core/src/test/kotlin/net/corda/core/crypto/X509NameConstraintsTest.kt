@@ -1,16 +1,16 @@
 package net.corda.core.crypto
 
-import net.corda.core.mapToArray
+import net.corda.core.toTypedArray
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Test
 import java.security.KeyStore
 import java.security.cert.*
+import java.util.stream.Stream
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -38,7 +38,7 @@ class X509NameConstraintsTest {
         val keyStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
         keyStore.load(null, keyPass.toCharArray())
         keyStore.addOrReplaceKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, keyPass.toCharArray(),
-                listOf(tlsCert, clientCACert, intermediateCACert, rootCACert).mapToArray<X509CertificateHolder, Certificate>(converter::getCertificate))
+                Stream.of(tlsCert, clientCACert, intermediateCACert, rootCACert).map(converter::getCertificate).toTypedArray<Certificate>())
         return Pair(keyStore, trustStore)
     }
 

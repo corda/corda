@@ -7,6 +7,13 @@ Contracts
    * *Contracts are written in a JVM programming language (e.g. Java or Kotlin)*
    * *Contract execution is deterministic and its acceptance of a transaction is based on the transaction's contents alone*
 
+Video
+-----
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/214168839" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Transaction verification
 ------------------------
 Recall that a transaction is only valid if it is digitally signed by all required signers. However, even if a
@@ -23,6 +30,8 @@ transaction gathers all the required signatures, it is only valid if it is also 
 We can picture this situation as follows:
 
 .. image:: resources/tx-validation.png
+   :scale: 25%
+   :align: center
 
 The contract code can be written in any JVM language, and has access to the full capabilities of the language,
 including:
@@ -68,6 +77,12 @@ these cases, an oracle is required. See :doc:`key-concepts-oracles` for further 
 
 Legal prose
 -----------
+
+.. raw:: html
+
+    <iframe src="https://player.vimeo.com/video/213879293" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    <p></p>
+
 Each contract also refers to a legal prose document that states the rules governing the evolution of the state over
 time in a way that is compatible with traditional legal systems. This document can be relied upon in the case of
 legal disputes.

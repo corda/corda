@@ -31,6 +31,8 @@ This certificate certifies the node's identity when communicating with other par
 We can visualize a network as follows:
 
 .. image:: resources/network.png
+   :scale: 25%
+   :align: center
 
 Network services
 ----------------
@@ -44,7 +46,8 @@ Nodes can provide several types of services:
 These components are illustrated in the following diagram:
 
 .. image:: resources/cordaNetwork.png
-    :align: center
+   :scale: 25%
+   :align: center
 
 In this diagram, Corda infrastructure services are those upon which all participants depend, such as the network map
 and notary services. Corda services may be deployed by participants, third parties or a central network operator

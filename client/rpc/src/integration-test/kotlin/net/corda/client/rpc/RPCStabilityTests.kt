@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
+import com.google.common.base.Stopwatch
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
@@ -16,6 +17,7 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
+import org.apache.activemq.artemis.ArtemisConstants
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,12 +26,10 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
-
+import kotlin.concurrent.thread
+import kotlin.test.fail
 
 class RPCStabilityTests {
 
@@ -218,22 +218,65 @@ class RPCStabilityTests {
 
     @Test
     fun `client reconnects to rebooted server`() {
-        rpcDriver {
-            val ops = object : ReconnectOps {
-                override val protocolVersion = 0
-                override fun ping() = "pong"
+        // TODO: Remove multiple trials when we fix the Artemis bug (which should have its own test(s)).
+        if (ArtemisConstants::class.java.`package`.implementationVersion == "1.5.3") {
+            // The test fails maybe 1 in 100 times, so to stay green until we upgrade Artemis, retry if it fails:
+            for (i in (1..3)) {
+                try {
+                    `client reconnects to rebooted server`(1)
+                } catch (e: TimeoutException) {
+                    continue
+                }
+                return
             }
-            val serverFollower = shutdownManager.follower()
-            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
-            serverFollower.unfollow()
-            val clientFollower = shutdownManager.follower()
-            val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
-            clientFollower.unfollow()
-            assertEquals("pong", client.ping())
-            serverFollower.shutdown()
-            startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
-            assertEquals("pong", client.ping())
-            clientFollower.shutdown() // Driver would do this after the new server, causing hang.
+            fail("Test failed 3 times, which is vanishingly unlikely unless something has changed.")
+        } else {
+            // We've upgraded Artemis so make the test fail reliably, in the 2.1.0 case that takes 25 trials:
+            `client reconnects to rebooted server`(25)
+        }
+    }
+
+    private fun `client reconnects to rebooted server`(trials: Int) {
+        rpcDriver {
+            val coreBurner = thread {
+                while (!Thread.interrupted()) {
+                    // Spin.
+                }
+            }
+            try {
+                val ops = object : ReconnectOps {
+                    override val protocolVersion = 0
+                    override fun ping() = "pong"
+                }
+                var serverFollower = shutdownManager.follower()
+                val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+                serverFollower.unfollow()
+                val clientFollower = shutdownManager.follower()
+                val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
+                clientFollower.unfollow()
+                assertEquals("pong", client.ping())
+                val background = Executors.newSingleThreadExecutor()
+                (1..trials).forEach {
+                    System.err.println("Start trial $it of $trials.")
+                    serverFollower.shutdown()
+                    serverFollower = shutdownManager.follower()
+                    startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
+                    serverFollower.unfollow()
+                    val stopwatch = Stopwatch.createStarted()
+                    val pingFuture = background.submit(Callable {
+                        client.ping() // Would also hang in foreground, we need it in background so we can timeout.
+                    })
+                    assertEquals("pong", pingFuture.getOrThrow(10.seconds))
+                    System.err.println("Took ${stopwatch.elapsed(TimeUnit.MILLISECONDS)} millis.")
+                }
+                background.shutdown() // No point in the hanging case.
+                clientFollower.shutdown() // Driver would do this after the current server, causing 'legit' failover hang.
+            } finally {
+                with(coreBurner) {
+                    interrupt()
+                    join()
+                }
+            }
         }
     }
 

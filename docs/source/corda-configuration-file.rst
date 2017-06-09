@@ -40,7 +40,7 @@ NetworkMapService plus Simple Notary configuration file.
     p2pAddress : "localhost:12345"
     rpcAddress : "localhost:12346"
     webAddress : "localhost:12347"
-    extraAdvertisedServiceIds : []
+    extraAdvertisedServiceIds : ["corda.notary.simple"]
     useHTTPS : false
     devMode : true
     // Certificate signing service will be hosted by R3 in the near future.
@@ -100,7 +100,7 @@ path to the node's base directory.
 :notaryNodeAddress: The host and port to which to bind the embedded Raft server. Required only when running a distributed
     notary service. A group of Corda nodes can run a distributed notary service by each running an embedded Raft server and
     joining them to the same cluster to replicate the committed state log. Note that the Raft cluster uses a separate transport
-     layer for communication that does not integrate with ArtemisMQ messaging services.
+    layer for communication that does not integrate with ArtemisMQ messaging services.
 
 :notaryClusterAddresses: List of Raft cluster member addresses used to join the cluster. At least one of the specified
     members must be active and be able to communicate with the cluster leader for joining. If empty, a new cluster will be

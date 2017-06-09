@@ -33,11 +33,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
     @Test
     fun `runs IRS demo`() {
-        driver(
-                useTestClock = true,
-                isDebug = true,
-                systemProperties = mapOf("net.corda.node.cordapp.scan.package" to "net.corda.irs"))
-        {
+        driver(useTestClock = true, isDebug = true) {
             val (controller, nodeA, nodeB) = Futures.allAsList(
                     startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type), ServiceInfo(NodeInterestRates.Oracle.type))),
                     startNode(DUMMY_BANK_A.name, rpcUsers = listOf(rpcUser)),

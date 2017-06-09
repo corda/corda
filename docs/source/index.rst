@@ -1,185 +1,49 @@
-Welcome to the Corda documentation!
-===================================
+Welcome to Corda !
+==================
 
-.. warning:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for milestone release M11.1 <https://docs.corda.net/releases/release-M11.1/>`_.
+.. warningX:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
+   current state of the code. `Read the docs for milestone release M12.1 <https://docs.corda.net/releases/release-M12.1/>`_.
 
-`Corda <https://www.corda.net/>`_ is an open-source distributed ledger platform. The latest *milestone* (i.e. stable)
-release is M11.1. The codebase is on `GitHub <https://github.com/corda>`_, and our community can be found on
-`Slack <https://slack.corda.net/>`_ and in our `forum <https://discourse.corda.net/>`_.
+`Corda <https://www.corda.net/>`_ is a blockchain inspired open source distributed ledger platform. If you’d like a
+quick introduction about distributed ledgers and how corda is different, then watch this short video
 
-If you're new to Corda, you should start by learning about its motivating vision and architecture. A good introduction
-is the `Introduction to Corda webinar <https://vimeo.com/192757743/c2ec39c1e1>`_ and the `Introductory white paper`_. As
-you become more familiar with Corda, readers with a technical background will also want to dive into the `Technical white paper`_,
-which describes the platform's envisioned end-state.
+.. raw:: html
 
-.. note:: Corda training is now available in London, New York and Singapore! `Learn more. <https://www.corda.net/corda-training/>`_
+    <embed>
+      <iframe src="https://player.vimeo.com/video/205410473" width="640" height="360" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+    </embed>
 
-Corda is designed so that developers can easily extend its functionality by writing CorDapps
-(**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ). Some example CorDapps are available in the Corda repo's
-`samples <https://github.com/corda/corda/tree/master/samples>`_ directory. To run these yourself, make
-sure you follow the instructions in :doc:`getting-set-up`, then go to
-:doc:`running-the-demos`.
 
-If, after running the demos, you're interested in writing your own CorDapps, you can use the 
-`CorDapp template <https://github.com/corda/cordapp-template>`_ as a base. A simple example CorDapp built upon the template is available `here <https://github.com/corda/cordapp-tutorial>`_, and a video primer on basic CorDapp structure is available `here <https://vimeo.com/192797322/aab499b152>`_.
 
-From there, you'll be in a position to start extending the example CorDapp yourself (e.g. by writing new states, contracts,
-and/or flows). For this, you'll want to refer to this docsite, and to the `tutorials <https://docs.corda.net/tutorial-contract.html>`_
-in particular. If you get stuck, get in touch on `Slack <https://slack.corda.net/>`_ or the `forum <https://discourse.corda.net/>`_.
+Want to see Corda running ?  Download our demonstration application `demobench <https://www.corda.net/downloads/>`_
 
-Once you're familiar with Corda and CorDapp development, we'd encourage you to get involved in the development of the
-platform itself. Find out more about `contributing to Corda <https://github.com/corda/corda/wiki/Corda's-Open-Source-Approach>`_.
+If you want to start getting coding with Corda, then familiarise yourself with the :ref:`key-concepts-label`. For the background behind Corda, read the non technical `Introductory white paper`_ or for more detail, the `Technical white paper`_.
+
+Corda is a distributed ledger platform which runs CorDapps (**Cor**\ da **D**\ istributed **App**\ lication\ **s**\ ) that enables complex interactions (“Smart Contracts”) between parties on a Corda Network. There are several example CorDapps within the main Corda platform code repository under the samples folder, or you can clone and work from a templated CorDapp.
+
+If you have questions or comments, then get in touch with us either on `Slack <https://slack.corda.net/>`_ , `Discourse <https://discourse.corda.net/>`_ , or write a question on `stackoverflow <https://stackoverflow.com/questions/tagged/corda>`_ .
+
+We look forward to seeing what you can do with Corda !
+
 
 .. _`Introductory white paper`: _static/corda-introductory-whitepaper.pdf
 .. _`Technical white paper`: _static/corda-technical-whitepaper.pdf
 
-Documentation Contents:
-=======================
 
 .. toctree::
    :maxdepth: 1
-   :caption: Quickstart
 
-   getting-set-up
-   tutorial-cordapp
-   running-the-demos
-   CLI-vs-IDE
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Key concepts
-
-   key-concepts
-   key-concepts-ecosystem
-   key-concepts-ledger
-   key-concepts-states
-   key-concepts-contracts
-   key-concepts-transactions
-   key-concepts-flows
-   key-concepts-consensus
-   key-concepts-notaries
-   key-concepts-time-windows
-   key-concepts-oracles
-   key-concepts-node
-   key-concepts-tradeoffs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Building a CorDapp
-
-   cordapp-overview
-   writing-cordapps
-   api
-   api-states
-   api-contracts
-   api-transactions
-   api-flows
-   api-core-types
-   cheat-sheet
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Corda nodes
-
-   running-a-node
-   clientrpc
-   shell
-   node-administration
-   corda-configuration-file
-   out-of-process-verification
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Corda networks
-
-   setting-up-a-corda-network
-   permissioning
-   versioning
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tutorials
-
-   tutorial-contract
-   tutorial-contract-clauses
-   tutorial-test-dsl
-   contract-upgrade
-   tutorial-integration-testing
-   tutorial-clientrpc-api
-   tutorial-building-transactions
-   flow-state-machines
-   flow-testing
-   running-a-notary
-   using-a-notary
-   oracles
-   tutorial-attachments
-   event-scheduling
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Tools
-
-   network-simulator
-   demobench
-   node-explorer
-   azure-vm
-   loadtesting
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Node internals
-
-   node-services
-   vault
-   serialization
-   messaging
-   persistence
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Component library
-
-   flow-library
-   contract-catalogue
-   financial-model
-   contract-irs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Release process
-
-   release-process
-   release-notes
-   changelog
-   publishing-corda
-   codestyle
-
-.. toctree::
-   :maxdepth: 1
-   :caption: FAQ
-
-   faq
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Troubleshooting
-
-   troubleshooting
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Other
-
-   clauses
-   merkle-trees
-   json
-   secure-coding-guidelines
-   corda-repo-layout
-   building-the-docs
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Glossary
-
-   glossary
+   quickstart-index.rst
+   key-concepts.rst
+   building-a-cordapp-index.rst
+   corda-nodes-index.rst
+   corda-networks-index.rst
+   tutorials-index.rst
+   tools-index.rst
+   node-internals-index.rst
+   component-library-index.rst
+   release-process-index.rst
+   faq.rst
+   troubleshooting.rst
+   other-index.rst
+   glossary.rst

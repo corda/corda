@@ -24,7 +24,6 @@ import java.nio.file.*
 import java.nio.file.attribute.FileAttribute
 import java.time.Duration
 import java.time.temporal.Temporal
-import java.util.HashMap
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
 import java.util.function.BiConsumer
@@ -33,7 +32,6 @@ import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import kotlin.collections.LinkedHashMap
 import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 
@@ -111,16 +109,6 @@ fun ListenableFuture<*>.andForget(log: Logger) = failure(RunOnCallerThread) { lo
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = mapToArray(transform, iterator(), size)
-inline fun <reified R> IntProgression.mapToArray(transform: (Int) -> R) = mapToArray(transform, iterator(), 1 + (last - first) / step)
-inline fun <T, reified R> mapToArray(transform: (T) -> R, iterator: Iterator<T>, size: Int) = run {
-    var expected = 0
-    Array(size) {
-        expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")
-        transform(iterator.next())
-    }
-}
-
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {
     try {
@@ -142,8 +130,8 @@ fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
 }
 
 /** Allows you to write code like: Paths.get("someDir") / "subdir" / "filename" but using the Paths API to avoid platform separator problems. */
-operator fun Path.div(other: String) = resolve(other)
-operator fun String.div(other: String) = Paths.get(this) / other
+operator fun Path.div(other: String): Path = resolve(other)
+operator fun String.div(other: String): Path = Paths.get(this) / other
 
 fun Path.createDirectory(vararg attrs: FileAttribute<*>): Path = Files.createDirectory(this, *attrs)
 fun Path.createDirectories(vararg attrs: FileAttribute<*>): Path = Files.createDirectories(this, *attrs)

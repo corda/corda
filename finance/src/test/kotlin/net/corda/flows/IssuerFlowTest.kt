@@ -17,9 +17,10 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.BOC
 import net.corda.testing.MEGA_CORP
-import net.corda.testing.ledger
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -32,67 +33,52 @@ class IssuerFlowTest {
     lateinit var bankOfCordaNode: MockNode
     lateinit var bankClientNode: MockNode
 
+    @Before
+    fun start() {
+        mockNet = MockNetwork(threadPerNode = true)
+        notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
+        bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
+        bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
+    }
+
     @Test
     fun `test issuer flow`() {
-        mockNet = MockNetwork(false, true)
-        ledger {
-            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
-            bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+        // using default IssueTo Party Reference
+        val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
+                bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
+        assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
 
-            // using default IssueTo Party Reference
-            val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
-                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
-            assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
-
-            // try to issue an amount of a restricted currency
-            assertFailsWith<FlowException> {
-                runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, currency("BRL")),
-                        bankClientNode.info.legalIdentity, OpaqueBytes.of(123)).issueRequestResult.getOrThrow()
-            }
-
-            bankOfCordaNode.stop()
-            bankClientNode.stop()
+        // try to issue an amount of a restricted currency
+        assertFailsWith<FlowException> {
+            runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, currency("BRL")),
+                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123)).issueRequestResult.getOrThrow()
         }
     }
 
     @Test
     fun `test issue flow to self`() {
-        mockNet = MockNetwork(false, true)
-        ledger {
-            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
-
-            // using default IssueTo Party Reference
-            val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
-                    bankOfCordaNode.info.legalIdentity, OpaqueBytes.of(123))
-            assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
-
-            bankOfCordaNode.stop()
-        }
+        // using default IssueTo Party Reference
+        val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
+                bankOfCordaNode.info.legalIdentity, OpaqueBytes.of(123))
+        assertEquals(issuerResult.get(), issuer.get().resultFuture.get())
     }
 
     @Test
     fun `test concurrent issuer flow`() {
-        mockNet = MockNetwork(false, true)
-        ledger {
-            notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
-            bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
-
-            // this test exercises the Cashflow issue and move subflows to ensure consistent spending of issued states
-            val amount = 10000.DOLLARS
-            val amounts = calculateRandomlySizedAmounts(10000.DOLLARS, 10, 10, Random())
-            val handles = amounts.map { pennies ->
-                runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(pennies, amount.token),
-                        bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
-            }
-            handles.forEach {
-                require(it.issueRequestResult.get() is SignedTransaction)
-            }
-
-            bankOfCordaNode.stop()
-            bankClientNode.stop()
+        // this test exercises the Cashflow issue and move subflows to ensure consistent spending of issued states
+        val amount = 10000.DOLLARS
+        val amounts = calculateRandomlySizedAmounts(10000.DOLLARS, 10, 10, Random())
+        val handles = amounts.map { pennies ->
+            runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(pennies, amount.token),
+                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
+        }
+        handles.forEach {
+            require(it.issueRequestResult.get() is SignedTransaction)
         }
     }
 

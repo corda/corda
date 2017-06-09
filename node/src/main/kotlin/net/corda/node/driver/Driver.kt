@@ -36,7 +36,6 @@ import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.io.File
-import java.io.File.pathSeparator
 import java.net.*
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -668,13 +667,19 @@ class DriverDSL(
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>
         ): ListenableFuture<Process> {
-            return executorService.submit<Process> {
+            // Get the package of the caller of the driver and pass this to the node for CorDapp scanning
+            val callerPackage = Exception()
+                    .stackTrace
+                    .first { it.fileName != "Driver.kt" }
+                    .let { Class.forName(it.className).`package`.name }
+            val processFuture = executorService.submit<Process> {
                 // Write node.conf
                 writeConfig(nodeConf.baseDirectory, "node.conf", config)
 
                 val systemProperties = overriddenSystemProperties + mapOf(
                         "name" to nodeConf.myLegalName,
                         "visualvm.display.name" to "corda-${nodeConf.myLegalName}",
+                        "net.corda.node.cordapp.scan.package" to callerPackage,
                         "java.io.tmpdir" to System.getProperty("java.io.tmpdir") // Inherit from parent process
                 )
                 // TODO Add this once we upgrade to quasar 0.7.8, this causes startup time to halve.
@@ -685,8 +690,6 @@ class DriverDSL(
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-                val pluginsDirectory = nodeConf.baseDirectory / "plugins"
-
                 ProcessUtilities.startJavaProcess(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
@@ -694,14 +697,15 @@ class DriverDSL(
                                 "--logging-level=$loggingLevel",
                                 "--no-local-shell"
                         ),
-                        // Like the capsule, include the node's plugin directory
-                        classpath = "${ProcessUtilities.defaultClassPath}$pathSeparator$pluginsDirectory/*",
                         jdwpPort = debugPort,
                         extraJvmArguments = extraJvmArguments,
                         errorLogPath = nodeConf.baseDirectory / LOGS_DIRECTORY_NAME / "error.log",
                         workingDirectory = nodeConf.baseDirectory
                 )
-            }.flatMap { process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process } }
+            }
+            return processFuture.flatMap {
+                process -> addressMustBeBoundFuture(executorService, nodeConf.p2pAddress, process).map { process }
+            }
         }
 
         private fun startWebserver(

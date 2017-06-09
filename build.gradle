@@ -5,7 +5,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "0.12-SNAPSHOT"
+    ext.corda_release_version = "0.13-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
     ext.corda_platform_version = 1
@@ -22,7 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '2.1.0'
+    ext.artemis_version = '1.5.3'
     ext.jackson_version = '2.8.5'
     ext.jetty_version = '9.3.9.v20160517'
     ext.jersey_version = '2.25'
@@ -254,7 +254,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['jfx', 'mock', 'rpc', 'core', 'corda', 'cordform-common', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

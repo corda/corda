@@ -7,6 +7,9 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+Milestone 12.0 - First Public Beta
+----------------------------------
+
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 
     * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
@@ -15,7 +18,11 @@ UNRELEASED
    * ``CordaPluginRegistry.servicePlugins`` is also no longer used, along with ``PluginServiceHub.registerFlowInitiator``.
      Instead annotate your initiated flows with ``@InitiatedBy``. This annotation takes a single parameter which is the
      initiating flow. This initiating flow further has to be annotated with ``@InitiatingFlow``. For any services you
-     may have, such as oracles, annotate them with ``@CordaService``.
+     may have, such as oracles, annotate them with ``@CordaService``. These annotations will be picked up automatically
+     when the node starts up.
+
+   * Due to these changes, when unit testing flows make sure to use ``AbstractNode.registerInitiatedFlow`` so that the flows
+     are wired up. Likewise for services use ``AbstractNode.installCordaService``.
 
    * Related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
      removed. This was an unfortunate parameter that unnecessarily exposed the inner workings of flow sessions. Now, if
@@ -49,9 +56,6 @@ UNRELEASED
     * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
       name. As a result all node legal names must now be structured as X.500 distinguished names.
 
-* Flows can now accept ``PartyAndCertificate`` instead of ``Party`` in their constructor, which should be the default for
-  new flows. The sample flows have been updated to use ``PartyAndCertificate`` to illustrate this.
-
 * The identity management service takes an optional network trust root which it will validate certificate paths to, if
   provided. A later release will make this a required parameter.
 
@@ -64,9 +68,9 @@ UNRELEASED
        The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
            encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
            and other key management devices.
-     * The ``KeyManagementService`` now provides no mechanism to request the node's ``PrivateKey`` objects directly.
+     * The ``KeyManagementService`` no longer provides any mechanism to request the node's ``PrivateKey`` objects directly.
        Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
-       which of the node's multiple keys to use. This lookup also works for ``CompositeKey`` scenarios
+       which of the node's keypairs to use. This lookup also works for ``CompositeKey`` scenarios
        and the service will search for a leaf key hosted on the node.
      * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
        with the ``PrivateKey`` kept internally to the service.

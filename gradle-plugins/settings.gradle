@@ -3,4 +3,5 @@ include 'publish-utils'
 include 'quasar-utils'
 include 'cordformation'
 include 'cordform-common'
+// TODO: Look into `includeFlat`
 project(':cordform-common').projectDir = new File("$settingsDir/../cordform-common")
