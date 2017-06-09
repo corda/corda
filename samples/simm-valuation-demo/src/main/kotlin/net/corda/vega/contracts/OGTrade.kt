@@ -45,8 +45,8 @@ data class OGTrade(override val legalContractReference: SecureHash = SecureHash.
                 require(inputs.size == 0) { "Inputs must be empty" }
                 require(outputs.size == 1) { "" }
                 require(outputs[0].buyer != outputs[0].seller)
-                require(outputs[0].parties.containsAll(outputs[0].participants))
-                require(outputs[0].parties.containsAll(listOf(outputs[0].buyer, outputs[0].seller)))
+                require(outputs[0].participants.containsAll(outputs[0].participants))
+                require(outputs[0].participants.containsAll(listOf(outputs[0].buyer, outputs[0].seller)))
                 require(outputs[0].swap.startDate.isBefore(outputs[0].swap.endDate))
                 require(outputs[0].swap.notional > BigDecimal(0))
                 require(outputs[0].swap.tradeDate.isBefore(outputs[0].swap.endDate))

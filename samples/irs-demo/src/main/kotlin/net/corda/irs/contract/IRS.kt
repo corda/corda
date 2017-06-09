@@ -667,14 +667,11 @@ class InterestRateSwap : Contract {
         override val ref = common.tradeID
 
         override val participants: List<AbstractParty>
-            get() = parties
+            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
-
-        override val parties: List<AbstractParty>
-            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null

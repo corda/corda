@@ -186,7 +186,7 @@ object TwoPartyDealFlow {
             // And add a request for a time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
             ptx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
-            return Pair(ptx, arrayListOf(deal.parties.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
+            return Pair(ptx, arrayListOf(deal.participants.single { it == serviceHub.myInfo.legalIdentity as AbstractParty }.owningKey))
         }
     }
 }
