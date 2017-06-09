@@ -62,9 +62,7 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
                 .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
-        val wtx = builder.toWireTransaction()
-        signers.forEach{ builder.addSignatureUnchecked(serviceHub.createSignature(wtx, it)) }
-        val tx = builder.toSignedTransaction(false)
+        val tx = serviceHub.signInitialTransaction(builder, signers)
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
