@@ -11,7 +11,6 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import rx.Observable
 import rx.Observer
@@ -109,34 +108,6 @@ fun <T> ListenableFuture<T>.andForget(log: Logger) = failure(RunOnCallerThread) 
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
-
-object ThenContext {
-    private val defaultLog = loggerFor<ThenContext>()
-    internal fun <T> then(log: Logger, futures: Iterable<ListenableFuture<*>>, handler: ThenContext.(ListenableFuture<*>) -> T): ListenableFuture<T> {
-        val g = SettableFuture.create<T>()
-        futures.forEach {
-            it then {
-                ErrorOr.catch { handler(it) }.match({
-                    g.set(it)
-                }) {
-                    if (it != thenAgain && !g.setException(it)) log.error("Short-circuited task failed:", it)
-                }
-            }
-        }
-        return g
-    }
-
-    val thenAgain = Throwable()
-    /**
-     * Each future is passed into the given handler as soon as it becomes done.
-     * Handler invocations may run concurrently, if it has state you will need to make it thread-safe yourself.
-     * The handler should throw [thenAgain] if it does not want to affect the returned future.
-     * Otherwise the result of the handler is copied into the returned future.
-     * If the handler errors and the returned future is already done, the error is logged (unless it's thenAgain).
-     * If the handler returns normally and the returned future is already done, the handler value is silently discarded.
-     */
-    infix fun <T> List<ListenableFuture<*>>.then(handler: ThenContext.(ListenableFuture<*>) -> T) = then(defaultLog, this, handler)
-}
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
 inline fun <T> SettableFuture<T>.catch(block: () -> T) {

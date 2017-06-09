@@ -12,7 +12,6 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.*
-import net.corda.core.ThenContext.then
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
@@ -484,7 +483,11 @@ class DriverDSL(
         val processDeathFuture = poll(executorService, "process death") {
             if (listenProcess.isAlive) null else Unit
         }
-        return listOf(connectionFuture, processDeathFuture) then {
+        return listOf(connectionFuture, processDeathFuture).then {
+            if (isDone()) {
+                it.andForget(log)
+                throw thenAgain
+            }
             if (it == processDeathFuture) {
                 reconnect.set(false)
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
