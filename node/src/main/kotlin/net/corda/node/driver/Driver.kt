@@ -297,33 +297,25 @@ fun <A> poll(
         warnCount: Int = 120,
         check: () -> A?
 ): ListenableFuture<A> {
-    val initialResult = check()
     val resultFuture = SettableFuture.create<A>()
-    if (initialResult != null) {
-        resultFuture.set(initialResult)
-        return resultFuture
-    }
-    var counter = 0
-    fun schedulePoll() {
-        executorService.schedule(task@ {
-            counter++
-            if (counter == warnCount) {
+    val task = object : Runnable {
+        var counter = -1
+        override fun run() {
+            if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
             }
-            val result = try {
-                check()
-            } catch (t: Throwable) {
-                resultFuture.setException(t)
-                return@task
+            ErrorOr.catch(check).match({
+                if (it != null) {
+                    resultFuture.set(it)
+                } else {
+                    executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
+                }
+            }) {
+                resultFuture.setException(it)
             }
-            if (result == null) {
-                schedulePoll()
-            } else {
-                resultFuture.set(result)
-            }
-        }, pollInterval.toMillis(), MILLISECONDS)
+        }
     }
-    schedulePoll()
+    executorService.submit(task)
     return resultFuture
 }
 
