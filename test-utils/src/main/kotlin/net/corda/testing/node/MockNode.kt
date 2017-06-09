@@ -242,7 +242,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         fun manuallyCloseDB() {
-            dbCloser?.run()
+            dbCloser?.invoke()
             dbCloser = null
         }
 

@@ -557,7 +557,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
             val storage = serviceHub.storageService.attachments
             return {
                 val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
-                if (a is AbstractAttachment) a.attachmentData else a.open().use { it.readBytes() }
+                (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
             }
         }
     }

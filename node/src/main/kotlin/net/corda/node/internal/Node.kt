@@ -226,7 +226,7 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
-            runOnStop += Runnable { stop() }
+            runOnStop += this::stop
             start()
         }
 
@@ -248,7 +248,7 @@ class Node(override val configuration: FullNodeConfiguration,
             RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
                 val provider = RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
                 provider.start()
-                runOnStop += Runnable { provider.stop() }
+                runOnStop += provider::stop
                 provider
             }
             else -> PersistentUniquenessProvider()
@@ -277,7 +277,7 @@ class Node(override val configuration: FullNodeConfiguration,
                         "-tcpAllowOthers",
                         "-tcpDaemon",
                         "-key", "node", databaseName)
-                runOnStop += Runnable { server.stop() }
+                runOnStop += server::stop
                 val url = server.start().url
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
