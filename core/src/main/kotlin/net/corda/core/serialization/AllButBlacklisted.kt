@@ -4,17 +4,11 @@ import sun.misc.Unsafe
 import sun.security.util.Password
 import java.io.*
 import java.lang.invoke.*
-import java.lang.reflect.AccessibleObject
-import java.lang.reflect.Modifier
-import java.lang.reflect.Parameter
-import java.lang.reflect.ReflectPermission
-import java.net.DatagramSocket
-import java.net.ServerSocket
-import java.net.Socket
-import java.net.URLConnection
+import java.lang.reflect.*
+import java.net.*
 import java.security.*
-import java.sql.Connection
 import java.util.*
+import java.sql.Connection
 import java.util.logging.Handler
 import java.util.zip.ZipFile
 import kotlin.collections.HashSet
@@ -31,7 +25,7 @@ object AllButBlacklisted : ClassWhitelist {
 
     private val blacklistedClasses = hashSetOf<String>(
 
-            // known blacklisted classes.
+            // Known blacklisted classes.
             Thread::class.java.name,
             HashSet::class.java.name,
             HashMap::class.java.name,
@@ -44,26 +38,24 @@ object AllButBlacklisted : ClassWhitelist {
             SecurityManager::class.java.name,
             Random::class.java.name,
 
-            // known blacklisted interfaces.
+            // Known blacklisted interfaces.
             Connection::class.java.name,
-            AutoCloseable::class.java.name,
+            // TODO: AutoCloseable::class.java.name,
 
             // java.security.
-            PrivateKey::class.java.name,
-            KeyPair::class.java.name,
             KeyStore::class.java.name,
             Password::class.java.name,
             AccessController::class.java.name,
             Permission::class.java.name,
 
-            // java.net classes.
+            // java.net.
             DatagramSocket::class.java.name,
             ServerSocket::class.java.name,
             Socket::class.java.name,
             URLConnection::class.java.name,
             // TODO: add more from java.net.
 
-            // java.io classes.
+            // java.io.
             Console::class.java.name,
             File::class.java.name,
             FileDescriptor::class.java.name,
@@ -84,24 +76,24 @@ object AllButBlacklisted : ClassWhitelist {
             SerializedLambda::class.java.name,
             SwitchPoint::class.java.name,
 
-            // java.lang.invoke package interfaces.
+            // java.lang.invoke interfaces.
             MethodHandleInfo::class.java.name,
 
-            // java.lang.invoke package exceptions.
+            // java.lang.invoke exceptions.
             LambdaConversionException::class.java.name,
             WrongMethodTypeException::class.java.name,
 
-            // java.lang.reflect
-            AccessibleObject::class.java.name, // for Executable, Field, Method, Constructor
+            // java.lang.reflect.
+            AccessibleObject::class.java.name, // For Executable, Field, Method, Constructor.
             Modifier::class.java.name,
             Parameter::class.java.name,
             ReflectPermission::class.java.name
             // TODO: add more from java.lang.reflect.
     )
 
-    // specifically exclude classes from the blacklist,
+    // Specifically exclude classes from the blacklist,
     // even if any of their superclasses and/or implemented interfaces are blacklisted.
-    private val excludedClasses = hashSetOf<String>(
+    private val forciblyAllowedClasses = hashSetOf<String>(
             LinkedHashSet::class.java.name,
             LinkedHashMap::class.java.name,
             InputStream::class.java.name,
@@ -113,18 +105,18 @@ object AllButBlacklisted : ClassWhitelist {
      * This implementation supports inheritance; thus, if a superclass or superinterface is blacklisted, so is the input class.
      */
     override fun hasListed(type: Class<*>): Boolean {
-        // check if excluded.
-        if (type.name in excludedClasses)
-            return true
-        // check if listed.
-        if (type.name in blacklistedClasses)
-            return false
-        // inheritance check.
-        else {
-            val aMatch = blacklistedClasses.firstOrNull { Class.forName(it).isAssignableFrom(type) }
-            if (aMatch != null) {
-                // TODO: blacklistedClasses += type.name // add it, so checking is faster next time we encounter this class.
-                return false
+        // Check if excluded.
+        if (type.name !in forciblyAllowedClasses) {
+            // Check if listed.
+            if (type.name in blacklistedClasses)
+                throw NotSerializableException("Class ${type.name} is blacklisted, so it cannot be used in serialization.")
+            // Inheritance check.
+            else {
+                val aMatch = blacklistedClasses.firstOrNull { Class.forName(it).isAssignableFrom(type) }
+                if (aMatch != null) {
+                    // TODO: blacklistedClasses += type.name // add it, so checking is faster next time we encounter this class.
+                    throw NotSerializableException("A superclass or (super)interface of ${type.name} is blacklisted, so it cannot be used in serialization.")
+                }
             }
         }
         return true
