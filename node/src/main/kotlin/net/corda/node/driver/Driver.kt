@@ -7,7 +7,6 @@ import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCConnection
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
@@ -468,18 +467,16 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
-        val reconnect = AtomicBoolean(true)
-        fun connect(): CordaRPCConnection {
-            val client = CordaRPCClient(nodeAddress, sslConfig)
-            while (true) {
-                try {
-                    return client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-                } catch (e: Exception) {
-                    if (reconnect.get()) log.error("Exception $e, Retrying RPC connection at $nodeAddress") else throw e
-                }
+        val client = CordaRPCClient(nodeAddress, sslConfig)
+        val connectionFuture = poll(executorService, "RPC connection") {
+            try {
+                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+            } catch (e: Exception) {
+                if (!listenProcess.isAlive) throw e
+                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                null
             }
         }
-        val connectionFuture = executorService.submit(::connect)
         val processDeathFuture = poll(executorService, "process death") {
             if (listenProcess.isAlive) null else Unit
         }
@@ -489,7 +486,6 @@ class DriverDSL(
                 throw thenAgain
             }
             if (it == processDeathFuture) {
-                reconnect.set(false)
                 throw ListenProcessDeathException(nodeAddress, listenProcess)
             }
             val connection = connectionFuture.getOrThrow()
