@@ -109,6 +109,7 @@ abstract class RatePaymentEvent(date: LocalDate,
  * Assumes that the rate is valid.
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FixedRatePaymentEvent(date: LocalDate,
                             accrualStartDate: LocalDate,
                             accrualEndDate: LocalDate,
@@ -655,6 +656,7 @@ class InterestRateSwap : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
+    @JsonIgnoreProperties("parties", "participants", ignoreUnknown = true)
     data class State(
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,

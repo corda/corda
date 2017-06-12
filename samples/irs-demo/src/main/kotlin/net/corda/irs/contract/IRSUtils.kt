@@ -1,6 +1,7 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Tenor
 import net.corda.core.serialization.CordaSerializable
@@ -37,6 +38,7 @@ val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 /**
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

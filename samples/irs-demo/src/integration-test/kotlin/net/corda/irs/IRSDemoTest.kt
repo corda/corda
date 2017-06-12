@@ -69,15 +69,18 @@ class IRSDemoTest : IntegrationTestCategory {
 
             assertThat(getTradeCount(nodeAApi)).isEqualTo(numADeals + 1)
             assertThat(getTradeCount(nodeBApi)).isEqualTo(numBDeals + 1)
+            assertThat(getFloatingLegFixCount(nodeAApi) == 0)
 
             // Wait until the initial trade and all scheduled fixings up to the current date have finished
             nextFixingDates.firstWithTimeout(maxWaitTime){ it == null || it > currentDate }
             runDateChange(nodeBApi)
             nextFixingDates.firstWithTimeout(maxWaitTime) { it == null || it > futureDate }
 
-            assertThat(getTrades(nodeAApi)[0])
+            assertThat(getFloatingLegFixCount(nodeAApi) > 0)
         }
     }
+
+    fun getFloatingLegFixCount(nodeApi: HttpApi) = getTrades(nodeApi)[0].calculation.floatingLegPaymentSchedule.count { it.value.rate.ratioUnit != null }
 
     fun getFixingDateObservable(config: FullNodeConfiguration): Observable<LocalDate?> {
         val client = CordaRPCClient(config.rpcAddress!!)

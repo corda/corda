@@ -251,7 +251,6 @@ object JacksonSupport {
 
     object CalendarSerializer : JsonSerializer<BusinessCalendar>() {
         override fun serialize(obj: BusinessCalendar, generator: JsonGenerator, context: SerializerProvider) {
-            println(obj)
             val calendarName = BusinessCalendar.calendars.find { BusinessCalendar.getInstance(it) == obj }
             if(calendarName != null) {
                 generator.writeString(calendarName)
