@@ -457,7 +457,7 @@ class DriverDSL(
         }
     }
 
-    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<*>): ListenableFuture<CordaRPCOps> {
+    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
         val client = CordaRPCClient(nodeAddress, sslConfig)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
@@ -474,7 +474,7 @@ class DriverDSL(
                 throw thenAgain
             }
             if (it == processDeathFuture) {
-                throw it.getException()
+                throw processDeathFuture.getOrThrow()
             }
             val connection = connectionFuture.getOrThrow()
             shutdownManager.registerShutdown(connection::close)
@@ -540,7 +540,7 @@ class DriverDSL(
         registerProcess(processFuture)
         processFuture.flatMap { process ->
             val processDeathFuture = poll(executorService, "process death") {
-                if (process.isAlive) null else throw ListenProcessDeathException(p2pAddress, process)
+                if (process.isAlive) null else ListenProcessDeathException(p2pAddress, process)
             }
             // We continue to use SSL enabled port for RPC when its for node user.
             establishRpc(p2pAddress, configuration, processDeathFuture).flatMap { rpc ->
@@ -554,7 +554,7 @@ class DriverDSL(
                         throw thenAgain
                     }
                     if (it == processDeathFuture) {
-                        throw it.getException()
+                        throw processDeathFuture.getOrThrow()
                     }
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
