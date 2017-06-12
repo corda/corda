@@ -276,21 +276,6 @@ interface DealState : LinearState {
     val ref: String
 
     /**
-     * Exposes the Parties involved in a generic way.
-     *
-     * Appears to duplicate [participants] a property of [ContractState]. However [participants] only holds public keys.
-     * Currently we need to hard code Party objects into [ContractState]s. [Party] objects are a wrapper for public
-     * keys which also contain some identity information about the public key owner. You can keep track of individual
-     * parties by adding a property for each one to the state, or you can append parties to the [parties] list if you
-     * are implementing [DealState]. We need to do this as identity management in Corda is currently incomplete,
-     * therefore the only way to record identity information is in the [ContractState]s themselves. When identity
-     * management is completed, parties to a transaction will only record public keys in the [DealState] and through a
-     * separate process exchange certificates to ascertain identities. Thus decoupling identities from
-     * [ContractState]s.
-     * */
-    val parties: List<AbstractParty>
-
-    /**
      * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
      * deal/agreement flow to generate the necessary transaction for potential implementations.
      *

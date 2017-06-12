@@ -42,7 +42,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
         val (vault, vaultUpdates) = rpc.vaultAndUpdates()
         vaultUpdates.notUsed()
-        return vault.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
+        return vault.filterStatesOfType<T>().filter { it.state.data.participants.any { it == party } }
     }
 
     /**
