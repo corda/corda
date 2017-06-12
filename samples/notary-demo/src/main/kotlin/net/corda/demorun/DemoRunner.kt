@@ -6,8 +6,6 @@ import net.corda.node.driver.driver
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 
-fun CordformDefinition.node(configure: CordformNode.() -> Unit) = addNode { cordformNode -> cordformNode.configure() }
-
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $driverDirectory")
     driverDirectory.toFile().deleteRecursively()

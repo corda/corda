@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.SettableFuture
 import io.netty.handler.ssl.SslHandler
 import net.corda.core.*
 import net.corda.core.crypto.*
-import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_CA
+import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -30,10 +30,7 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyAcceptorFactory
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnection
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnector
-import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
+import org.apache.activemq.artemis.core.remoting.impl.netty.*
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
@@ -46,8 +43,11 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.CertificateCallback
 import org.apache.activemq.artemis.spi.core.security.jaas.RolePrincipal
 import org.apache.activemq.artemis.spi.core.security.jaas.UserPrincipal
+import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
+import sun.security.x509.X509CertImpl
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
@@ -259,9 +259,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     @Throws(IOException::class, KeyStoreException::class)
     private fun createArtemisSecurityManager(): ActiveMQJAASSecurityManager {
-        val keyStore = KeyStoreUtilities.loadKeyStore(config.keyStoreFile, config.keyStorePassword)
+        val keyStore = KeyStoreUtilities.loadKeyStore(config.sslKeystore, config.keyStorePassword)
         val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
-        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_CA)
+        val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
         val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
@@ -423,9 +423,8 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private fun getBridgeName(queueName: String, hostAndPort: HostAndPort): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
-    internal fun hostVerificationFail(peerLegalName: X500Name, expectedLegalName: X500Name) {
-        log.error("Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
-                "misconfiguration by the remote peer or an SSL man-in-the-middle attack!")
+    internal fun hostVerificationFail(expectedLegalName: X500Name, errorMsg: String?) {
+        log.error(errorMsg)
         if (expectedLegalName == config.networkMapService?.legalName) {
             // If the peer that failed host verification was the network map node then we're in big trouble and need to bail!
             _networkMapConnectionFuture!!.setException(IOException("${config.networkMapService} failed host verification check"))
@@ -466,7 +465,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 }
 
 class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
-    override fun createConnector(configuration: MutableMap<String, Any>?,
+    override fun createConnector(configuration: MutableMap<String, Any>,
                                  handler: BufferHandler?,
                                  listener: ClientConnectionLifeCycleListener?,
                                  closeExecutor: Executor?,
@@ -478,7 +477,7 @@ class VerifyingNettyConnectorFactory : NettyConnectorFactory() {
     }
 }
 
-private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
+private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                                       handler: BufferHandler?,
                                       listener: ClientConnectionLifeCycleListener?,
                                       closeExecutor: Executor?,
@@ -486,27 +485,37 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>?,
                                       scheduledThreadPool: ScheduledExecutorService?,
                                       protocolManager: ClientProtocolManager?) :
         NettyConnector(configuration, handler, listener, closeExecutor, threadPool, scheduledThreadPool, protocolManager) {
-    private val server = configuration?.get(ArtemisMessagingServer::class.java.name) as? ArtemisMessagingServer
-    private val expecteLegalName: X500Name? = configuration?.get(ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME) as X500Name?
+    private val server = configuration[ArtemisMessagingServer::class.java.name] as ArtemisMessagingServer
+    private val sslEnabled = ConfigurationHelper.getBooleanProperty(TransportConstants.SSL_ENABLED_PROP_NAME, TransportConstants.DEFAULT_SSL_ENABLED, configuration)
 
     override fun createConnection(): Connection? {
-        val connection = super.createConnection() as NettyConnection?
-        if (connection != null && expecteLegalName != null) {
-            val peerLegalName: X500Name = connection
-                    .channel
-                    .pipeline()
-                    .get(SslHandler::class.java)
-                    .engine()
-                    .session
-                    .peerPrincipal
-                    .name
-                    .let(::X500Name)
-            if (peerLegalName != expecteLegalName) {
+        val connection = super.createConnection() as? NettyConnection
+        if (sslEnabled && connection != null) {
+            val expectedLegalName = configuration[ArtemisTcpTransport.VERIFY_PEER_LEGAL_NAME] as X500Name
+            try {
+                val session = connection.channel
+                        .pipeline()
+                        .get(SslHandler::class.java)
+                        .engine()
+                        .session
+                // Checks the peer name is the one we are expecting.
+                val peerLegalName = session.peerPrincipal.name.let(::X500Name)
+                require(peerLegalName == expectedLegalName) {
+                    "Peer has wrong CN - expected $expectedLegalName but got $peerLegalName. This is either a fatal " +
+                            "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
+                }
+                // Make sure certificate has the same name.
+                val peerCertificate = X509CertificateHolder(session.peerCertificateChain.first().encoded)
+                require(peerCertificate.subject == expectedLegalName) {
+                    "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
+                            "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
+                }
+                X509Utilities.validateCertificateChain(X509CertImpl(session.localCertificates.last().encoded), *session.peerCertificates)
+                server.onTcpConnection(peerLegalName)
+            } catch (e: IllegalArgumentException) {
                 connection.close()
-                server!!.hostVerificationFail(peerLegalName, expecteLegalName)
-                return null  // Artemis will keep trying to reconnect until it's told otherwise
-            } else {
-                server!!.onTcpConnection(peerLegalName)
+                server.hostVerificationFail(expectedLegalName, e.message)
+                return null
             }
         }
         return connection
@@ -547,7 +556,7 @@ sealed class CertificateChainCheckPolicy {
 
     object LeafMustMatch : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
-            val ourPublicKey = keyStore.getCertificate(CORDA_CLIENT_CA).publicKey
+            val ourPublicKey = keyStore.getCertificate(CORDA_CLIENT_TLS).publicKey
             return object : Check {
                 override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
                     val theirLeaf = theirChain.first().publicKey

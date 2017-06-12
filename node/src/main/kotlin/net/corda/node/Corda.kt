@@ -10,10 +10,10 @@ import net.corda.core.crypto.commonName
 import net.corda.core.crypto.orgName
 import net.corda.core.node.VersionInfo
 import net.corda.core.utilities.Emoji
-import net.corda.core.utilities.LogHelper.withLevel
 import net.corda.node.internal.Node
 import net.corda.node.internal.enforceSingleNodeIsRunning
 import net.corda.node.services.config.FullNodeConfiguration
+import net.corda.node.services.transactions.bftSMaRtSerialFilter
 import net.corda.node.shell.InteractiveShell
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NetworkRegistrationHelper
@@ -21,7 +21,6 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.LoggerFactory
 import org.slf4j.bridge.SLF4JBridgeHandler
-import java.io.*
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Paths
@@ -72,8 +71,6 @@ fun main(args: Array<String>) {
     enforceSingleNodeIsRunning(cmdlineOptions.baseDirectory)
 
     initLogging(cmdlineOptions)
-    disableJavaDeserialization() // Should be after initLogging to avoid TMI.
-
     // Manifest properties are only available if running from the corda jar
     fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
@@ -107,7 +104,7 @@ fun main(args: Array<String>) {
         println("Unable to load the configuration file: ${e.rootCause.message}")
         exitProcess(2)
     }
-
+    SerialFilter.install(if (conf.bftReplicaId != null) ::bftSMaRtSerialFilter else ::defaultSerialFilter)
     if (cmdlineOptions.isRegistration) {
         println()
         println("******************************************************************")
@@ -208,27 +205,10 @@ private fun assertCanNormalizeEmptyPath() {
     }
 }
 
-private fun failStartUp(message: String): Nothing {
+internal fun failStartUp(message: String): Nothing {
     println(message)
     println("Corda will now exit...")
     exitProcess(1)
-}
-
-private fun disableJavaDeserialization() {
-    // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports, so we are using the system property interface for portability.
-    // This property has already been set in the Capsule. Anywhere else may be too late, but we'll repeat it here for developers.
-    System.setProperty("jdk.serialFilter", "maxbytes=0")
-    // Attempt at deserialization so that ObjectInputFilter (permanently) inits itself:
-    val data = ByteArrayOutputStream().apply { ObjectOutputStream(this).use { it.writeObject(object : Serializable {}) } }.toByteArray()
-    try {
-        withLevel("java.io.serialization", "WARN") {
-            ObjectInputStream(data.inputStream()).use { it.readObject() } // Logs REJECTED at INFO, which we don't want users to see.
-        }
-        // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
-        failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121 and set system property 'jdk.serialFilter' to 'maxbytes=0' when booting Corda.")
-    } catch (e: InvalidClassException) {
-        // Good, our system property is honoured.
-    }
 }
 
 private fun printPluginsAndServices(node: Node) {

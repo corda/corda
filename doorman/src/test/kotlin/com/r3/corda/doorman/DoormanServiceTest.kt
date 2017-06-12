@@ -5,10 +5,7 @@ import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.CertificationRequestStorage
-import net.corda.core.crypto.CertificateStream
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.*
 import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
@@ -29,12 +26,14 @@ import javax.ws.rs.core.MediaType
 import kotlin.test.assertEquals
 
 class DoormanServiceTest {
-    private val rootCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Root CA,L=London"))
-    private val intermediateCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Intermediate CA,L=London"))
+    private val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    private val rootCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Root CA,L=London"), rootCAKey)
+    private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Intermediate CA,L=London"), intermediateCAKey)
     private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
-        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), intermediateCA, rootCA.certificate, storage)
+        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), CertificateAndKeyPair(intermediateCACert, intermediateCAKey), rootCACert, storage)
         doormanServer.start()
     }
 
@@ -90,8 +89,7 @@ class DoormanServiceTest {
 
         storage.approveRequest(id) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createTlsServerCert(subject, publicKey, intermediateCA,
-                        if (ipAddress == hostName) listOf() else listOf(hostName), listOf(ipAddress))
+                X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey)
             }
         }
 

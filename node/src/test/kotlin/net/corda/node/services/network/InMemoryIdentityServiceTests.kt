@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.IdentityService
@@ -66,13 +65,13 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `assert unknown anonymous key is unrecognised`() {
-        val rootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name)
-        val txCertAndKey = X509Utilities.createIntermediateCert(ALICE.name, rootCertAndKey)
+        val rootKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        val rootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootKey)
+        val txKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val service = InMemoryIdentityService()
-        val rootKey = rootCertAndKey.keyPair
         // TODO: Generate certificate with an EdDSA key rather than ECDSA
-        val identity = Party(rootCertAndKey)
-        val txIdentity = AnonymousParty(txCertAndKey.keyPair.public)
+        val identity = Party(CertificateAndKeyPair(rootCert, rootKey))
+        val txIdentity = AnonymousParty(txKey.public)
 
         assertFailsWith<IdentityService.UnknownAnonymousPartyException> {
             service.assertOwnership(identity, txIdentity)
@@ -85,20 +84,26 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `assert ownership`() {
-        val aliceRootCertAndKey = X509Utilities.createSelfSignedCACert(ALICE.name)
-        val aliceTxCertAndKey = X509Utilities.createIntermediateCert(ALICE.name, aliceRootCertAndKey)
-        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCertAndKey, aliceTxCertAndKey.certificate, false).certPath
-        val bobRootCertAndKey = X509Utilities.createSelfSignedCACert(BOB.name)
-        val bobTxCertAndKey = X509Utilities.createIntermediateCert(BOB.name, bobRootCertAndKey)
-        val bobCertPath = X509Utilities.createCertificatePath(bobRootCertAndKey, bobTxCertAndKey.certificate, false).certPath
-        val service = InMemoryIdentityService()
-        val alice = Party(aliceRootCertAndKey)
-        val anonymousAlice = AnonymousParty(aliceTxCertAndKey.keyPair.public)
-        val bob = Party(bobRootCertAndKey)
-        val anonymousBob = AnonymousParty(bobTxCertAndKey.keyPair.public)
+        val aliceRootKey = Crypto.generateKeyPair()
+        val aliceRootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, aliceRootKey)
+        val aliceTxKey = Crypto.generateKeyPair()
+        val aliceTxCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, aliceRootCert, aliceRootKey, ALICE.name, aliceTxKey.public)
+        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCert, aliceTxCert, revocationEnabled = false)
 
-        service.registerPath(aliceRootCertAndKey.certificate, anonymousAlice, aliceCertPath)
-        service.registerPath(bobRootCertAndKey.certificate, anonymousBob, bobCertPath)
+        val bobRootKey = Crypto.generateKeyPair()
+        val bobRootCert = X509Utilities.createSelfSignedCACertificate(BOB.name, bobRootKey)
+        val bobTxKey = Crypto.generateKeyPair()
+        val bobTxCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
+        val bobCertPath = X509Utilities.createCertificatePath(bobRootCert, bobTxCert, revocationEnabled = false)
+
+        val service = InMemoryIdentityService()
+        val alice = Party(CertificateAndKeyPair(aliceRootCert, aliceRootKey))
+        val anonymousAlice = AnonymousParty(aliceTxKey.public)
+        val bob = Party(CertificateAndKeyPair(bobRootCert, bobRootKey))
+        val anonymousBob = AnonymousParty(bobTxKey.public)
+
+        service.registerPath(aliceRootCert, anonymousAlice, aliceCertPath)
+        service.registerPath(bobRootCert, anonymousBob, bobCertPath)
 
         // Verify that paths are verified
         service.assertOwnership(alice, anonymousAlice)

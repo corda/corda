@@ -62,7 +62,7 @@ data class FullNodeConfiguration(
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: HostAndPort?,
         val extraAdvertisedServiceIds: List<String>,
-        val notaryNodeId: Int?,
+        val bftReplicaId: Int?,
         val notaryNodeAddress: HostAndPort?,
         val notaryClusterAddresses: List<HostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,

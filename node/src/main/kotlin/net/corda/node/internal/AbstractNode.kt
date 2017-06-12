@@ -61,6 +61,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import java.io.IOException
 import java.lang.reflect.Modifier.*
+import java.net.InetAddress
 import java.net.URL
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
@@ -390,7 +391,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun makeServiceEntries(): List<ServiceEntry> {
         return advertisedServices.map {
             val serviceId = it.type.id
-            val serviceName = it.name ?: configuration.myLegalName.replaceCommonName(serviceId)
+            val serviceName = it.name ?: X500Name("${configuration.myLegalName},OU=$serviceId")
             val identity = obtainKeyPair(serviceId, serviceName).first
             ServiceEntry(it, identity)
         }
@@ -400,16 +401,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
     private fun hasSSLCertificates(): Boolean {
-        val keyStore = try {
+        val (sslKeystore, keystore) = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+            Pair(KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword), KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword))
         } catch (e: IOException) {
-            null
+            return false
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
-            null
+            return false
         }
-        return keyStore?.containsAlias(X509Utilities.CORDA_CLIENT_CA) ?: false
+        return sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && keystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
     }
 
     // Specific class so that MockNode can catch it.
@@ -518,10 +519,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timestampChecker, uniquenessProvider as RaftUniquenessProvider)
             BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
-                val nodeId = notaryNodeId ?: throw IllegalArgumentException("notaryNodeId value must be specified in the configuration")
-                val client = BFTSMaRt.Client(nodeId)
-                tokenizableServices += client
-                BFTNonValidatingNotaryService(services, timestampChecker, nodeId, database, client)
+                val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
+                BFTSMaRtConfig(notaryClusterAddresses).use { config ->
+                    val client = BFTSMaRt.Client(config, replicaId).also { tokenizableServices += it } // (Ab)use replicaId for clientId.
+                    BFTNonValidatingNotaryService(config, services, timestampChecker, replicaId, database, client)
+                }
             }
             else -> {
                 throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
@@ -598,12 +600,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
-        val keystore = KeyStoreUtilities.loadKeyStore(configuration.keyStoreFile, configuration.keyStorePassword)
+        val keystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+        val clientCA = keystore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
 
-        val identityAndKey = if (configuration.keyStoreFile.exists() && keystore.containsAlias(privateKeyAlias)) {
+        val identityAndKey = if (configuration.nodeKeystore.exists() && keystore.containsAlias(privateKeyAlias)) {
             // Get keys from keystore.
             val (cert, keyPair) = keystore.getCertificateAndKeyPair(privateKeyAlias, configuration.keyStorePassword)
             val loadedServiceName = X509CertificateHolder(cert.encoded).subject
@@ -624,19 +627,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         "$serviceName vs ${myIdentity.name}")
             // Load the private key.
             val keyPair = privKeyFile.readAll().deserialize<KeyPair>()
-            // TODO: Use a proper certificate chain.
-            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
-            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
-            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
+            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
+            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
+            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
             Pair(myIdentity, keyPair)
         } else {
             // Create new keys and store in keystore.
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
-            val selfSignCert = X509Utilities.createSelfSignedCACert(serviceName, keyPair)
-            keystore.addOrReplaceKey(privateKeyAlias, selfSignCert.keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(selfSignCert.certificate))
-            keystore.save(configuration.keyStoreFile, configuration.keyStorePassword)
-            Pair(Party(serviceName, selfSignCert.keyPair.public), selfSignCert.keyPair)
+            val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
+            keystore.addOrReplaceKey(privateKeyAlias, keyPair.private, configuration.keyStorePassword.toCharArray(), arrayOf(cert, *keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
+            keystore.save(configuration.nodeKeystore, configuration.keyStorePassword)
+            Pair(Party(serviceName, keyPair.public), keyPair)
         }
         partyKeys += identityAndKey.second
         return identityAndKey

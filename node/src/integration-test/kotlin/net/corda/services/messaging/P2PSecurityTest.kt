@@ -2,8 +2,6 @@ package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
-import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -60,7 +58,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun startSimpleNode(legalName: X500Name): SimpleNode {
         val config = TestNodeConfiguration(
-                baseDirectory = tempFolder.root.toPath() / legalName.commonName,
+                baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName,
                 networkMapService = NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name

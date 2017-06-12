@@ -189,7 +189,7 @@ fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): 
             rpcAddress = HostAndPort.fromParts("localhost", basePort + 1),
             messagingServerAddress = null,
             extraAdvertisedServiceIds = emptyList(),
-            notaryNodeId = null,
+            bftReplicaId = null,
             notaryNodeAddress = null,
             notaryClusterAddresses = emptyList(),
             certificateChainCheckPolicies = emptyList(),
@@ -217,7 +217,6 @@ fun getTestX509Name(commonName: String): X500Name {
     val nameBuilder = X500NameBuilder(BCStyle.INSTANCE)
     nameBuilder.addRDN(BCStyle.CN, commonName)
     nameBuilder.addRDN(BCStyle.O, "R3")
-    nameBuilder.addRDN(BCStyle.OU, "Corda QA Department")
     nameBuilder.addRDN(BCStyle.L, "New York")
     nameBuilder.addRDN(BCStyle.C, "US")
     return nameBuilder.build()

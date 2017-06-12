@@ -53,14 +53,14 @@ class ArtemisTcpTransport {
             )
 
             if (config != null && enableSSL) {
-                config.keyStoreFile.expectedOnDefaultFileSystem()
+                config.sslKeystore.expectedOnDefaultFileSystem()
                 config.trustStoreFile.expectedOnDefaultFileSystem()
-                val tlsOptions = mapOf<String, Any?>(
+                val tlsOptions = mapOf(
                         // Enable TLS transport layer with client certs and restrict to at least SHA256 in handshake
                         // and AES encryption
                         TransportConstants.SSL_ENABLED_PROP_NAME to true,
                         TransportConstants.KEYSTORE_PROVIDER_PROP_NAME to "JKS",
-                        TransportConstants.KEYSTORE_PATH_PROP_NAME to config.keyStoreFile,
+                        TransportConstants.KEYSTORE_PATH_PROP_NAME to config.sslKeystore,
                         TransportConstants.KEYSTORE_PASSWORD_PROP_NAME to config.keyStorePassword, // TODO proper management of keystores and password
                         TransportConstants.TRUSTSTORE_PROVIDER_PROP_NAME to "JKS",
                         TransportConstants.TRUSTSTORE_PATH_PROP_NAME to config.trustStoreFile,

@@ -3,6 +3,7 @@ package com.r3.corda.doorman.internal.persistence
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import net.corda.core.crypto.CertificateType
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
@@ -21,7 +22,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DBCertificateRequestStorageTest {
-    private val intermediateCA = X509Utilities.createSelfSignedCACert(X500Name("CN=Corda Node Intermediate CA"))
+    private val intermediateCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+    private val intermediateCACert = X509Utilities.createSelfSignedCACertificate(X500Name("CN=Corda Node Intermediate CA"), intermediateCAKey)
     private var closeDb: Closeable? = null
     private lateinit var storage: DBCertificateRequestStorage
 
@@ -137,12 +139,12 @@ class DBCertificateRequestStorageTest {
     private fun approveRequest(requestId: String) {
         storage.approveRequest(requestId) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createTlsServerCert(
+                X509Utilities.createCertificate(
+                        CertificateType.TLS,
+                        intermediateCACert,
+                        intermediateCAKey,
                         subject,
-                        publicKey,
-                        intermediateCA,
-                        if (ipAddress == hostName) listOf() else listOf(hostName),
-                        listOf(ipAddress))
+                        publicKey)
             }
         }
     }

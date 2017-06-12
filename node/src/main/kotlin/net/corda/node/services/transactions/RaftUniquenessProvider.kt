@@ -127,7 +127,7 @@ class RaftUniquenessProvider(
         return NettyTransport.builder()
                 .withSsl()
                 .withSslProtocol(SslProtocol.TLSv1_2)
-                .withKeyStorePath(config.keyStoreFile.toString())
+                .withKeyStorePath(config.sslKeystore.toString())
                 .withKeyStorePassword(config.keyStorePassword)
                 .withTrustStorePath(config.trustStoreFile.toString())
                 .withTrustStorePassword(config.trustStorePassword)

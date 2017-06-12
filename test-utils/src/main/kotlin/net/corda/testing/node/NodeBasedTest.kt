@@ -4,10 +4,12 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.DUMMY_MAP
+import net.corda.core.utilities.WHITESPACE
 import net.corda.node.driver.addressMustNotBeBound
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
@@ -107,7 +109,7 @@ abstract class NodeBasedTest {
                            clusterSize: Int,
                            serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
-                (0 until clusterSize).map { tempFolder.root.toPath() / "${notaryName.commonName}-$it" },
+                (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
                 serviceType.id,
                 notaryName)
 
@@ -133,12 +135,14 @@ abstract class NodeBasedTest {
         }
     }
 
+    protected fun baseDirectory(legalName: X500Name) = tempFolder.root.toPath() / legalName.commonName.replace(WHITESPACE, "")
+
     private fun startNodeInternal(legalName: X500Name,
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
                                   configOverrides: Map<String, Any>): Node {
-        val baseDirectory = (tempFolder.root.toPath() / legalName.commonName).createDirectories()
+        val baseDirectory = baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,

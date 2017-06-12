@@ -32,7 +32,7 @@ lib/dokka.jar
 .idea/libraries
 .idea/shelf
 .idea/dataSources
-/gradle-plugins/.idea
+/gradle-plugins/.idea/
 
 # Include the -parameters compiler option by default in IntelliJ required for serialization.
 !.idea/compiler.xml
@@ -84,8 +84,10 @@ crashlytics-build.properties
 docs/virtualenv/
 
 # bft-smart
-node/bft-smart-config/currentView
-node/config/currentView
+config/currentView
+
+# vim
+*.swp
 
 # Files you may find useful to have in your working directory.
 PLAN

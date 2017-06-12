@@ -110,8 +110,9 @@ infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): Listenable
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
 
-inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = run {
-    val iterator = iterator()
+inline fun <T, reified R> Collection<T>.mapToArray(transform: (T) -> R) = mapToArray(transform, iterator(), size)
+inline fun <reified R> IntProgression.mapToArray(transform: (Int) -> R) = mapToArray(transform, iterator(), 1 + (last - first) / step)
+inline fun <T, reified R> mapToArray(transform: (T) -> R, iterator: Iterator<T>, size: Int) = run {
     var expected = 0
     Array(size) {
         expected++ == it || throw UnsupportedOperationException("Array constructor is non-sequential!")

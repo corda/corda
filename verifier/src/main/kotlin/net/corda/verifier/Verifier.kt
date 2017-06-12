@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.ErrorOr
+import net.corda.core.internal.addShutdownHook
 import net.corda.core.div
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -51,11 +52,11 @@ class Verifier {
             val session = sessionFactory.createSession(
                     VerifierApi.VERIFIER_USERNAME, VerifierApi.VERIFIER_USERNAME, false, true, true, locator.isPreAcknowledge, locator.ackBatchSize
             )
-            Runtime.getRuntime().addShutdownHook(Thread {
+            addShutdownHook {
                 log.info("Shutting down")
                 session.close()
                 sessionFactory.close()
-            })
+            }
             val consumer = session.createConsumer(VERIFICATION_REQUESTS_QUEUE_NAME)
             val replyProducer = session.createProducer()
             consumer.setMessageHandler {
