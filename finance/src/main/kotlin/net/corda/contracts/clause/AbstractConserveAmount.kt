@@ -26,7 +26,7 @@ abstract class AbstractConserveAmount<S : FungibleAsset<T>, C : CommandData, T :
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not attempt to exit funds held by others.
-     * @return the public keys who must sign the transaction for it to be valid.
+     * @return the public keys which must sign the transaction for it to be valid.
      */
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("OnLedgerAsset.generateExit()"))
     @Throws(InsufficientBalanceException::class)
