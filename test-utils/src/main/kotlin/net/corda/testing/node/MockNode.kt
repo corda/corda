@@ -8,6 +8,7 @@ import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.flows.TxKeyFlow
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -385,7 +386,16 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.
-    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.network.myAddress == address }
+    fun addressToNode(msgRecipient: MessageRecipients): MockNode {
+        return when (msgRecipient) {
+            is SingleMessageRecipient -> nodes.single { it.network.myAddress == msgRecipient }
+            is InMemoryMessagingNetwork.ServiceHandle -> {
+                nodes.filter { it.advertisedServices.any { it == msgRecipient.service.info } }.firstOrNull()
+                        ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
+            }
+            else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")
+        }
+    }
 
     fun startNodes() {
         require(nodes.isNotEmpty())
