@@ -46,7 +46,6 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -297,33 +296,25 @@ fun <A> poll(
         warnCount: Int = 120,
         check: () -> A?
 ): ListenableFuture<A> {
-    val initialResult = check()
     val resultFuture = SettableFuture.create<A>()
-    if (initialResult != null) {
-        resultFuture.set(initialResult)
-        return resultFuture
-    }
-    var counter = 0
-    fun schedulePoll() {
-        executorService.schedule(task@ {
-            counter++
-            if (counter == warnCount) {
+    val task = object : Runnable {
+        var counter = -1
+        override fun run() {
+            if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
             }
-            val result = try {
-                check()
-            } catch (t: Throwable) {
-                resultFuture.setException(t)
-                return@task
+            ErrorOr.catch(check).match({
+                if (it != null) {
+                    resultFuture.set(it)
+                } else {
+                    executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
+                }
+            }) {
+                resultFuture.setException(it)
             }
-            if (result == null) {
-                schedulePoll()
-            } else {
-                resultFuture.set(result)
-            }
-        }, pollInterval.toMillis(), MILLISECONDS)
+        }
     }
-    schedulePoll()
+    executorService.submit(task)
     return resultFuture
 }
 
@@ -466,19 +457,16 @@ class DriverDSL(
         }
     }
 
-    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, listenProcess: Process): ListenableFuture<CordaRPCOps> {
+    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<*>): ListenableFuture<CordaRPCOps> {
         val client = CordaRPCClient(nodeAddress, sslConfig)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
             } catch (e: Exception) {
-                if (!listenProcess.isAlive) throw e
+                if (processDeathFuture.isDone) throw e
                 log.error("Exception $e, Retrying RPC connection at $nodeAddress")
                 null
             }
-        }
-        val processDeathFuture = poll(executorService, "process death") {
-            if (listenProcess.isAlive) null else Unit
         }
         return listOf(connectionFuture, processDeathFuture).then {
             if (isDone()) {
@@ -486,7 +474,7 @@ class DriverDSL(
                 throw thenAgain
             }
             if (it == processDeathFuture) {
-                throw ListenProcessDeathException(nodeAddress, listenProcess)
+                throw it.getException()
             }
             val connection = connectionFuture.getOrThrow()
             shutdownManager.registerShutdown(connection::close)
@@ -551,9 +539,23 @@ class DriverDSL(
         val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
         processFuture.flatMap { process ->
+            val processDeathFuture = poll(executorService, "process death") {
+                if (process.isAlive) null else throw ListenProcessDeathException(p2pAddress, process)
+            }
             // We continue to use SSL enabled port for RPC when its for node user.
-            establishRpc(p2pAddress, configuration, process).flatMap { rpc ->
-                rpc.waitUntilRegisteredWithNetworkMap().map {
+            establishRpc(p2pAddress, configuration, processDeathFuture).flatMap { rpc ->
+                // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
+                val networkMapFuture = executorService.submit(Callable {
+                    rpc.waitUntilRegisteredWithNetworkMap()
+                }).flatMap { it }
+                listOf(processDeathFuture, networkMapFuture).then {
+                    if (isDone()) {
+                        it.andForget(log)
+                        throw thenAgain
+                    }
+                    if (it == processDeathFuture) {
+                        throw it.getException()
+                    }
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }
