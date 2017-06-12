@@ -149,7 +149,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalArgumentException is thrown if any keys are unavailable locally.
      * @return Returns a [SignedTransaction] with the new node signature attached.
      */
-    fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: List<PublicKey>): SignedTransaction {
+    fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: Iterable<PublicKey>): SignedTransaction {
         var stx: SignedTransaction? = null
         for (pubKey in signingPubKeys) {
             stx = if (stx == null) {
