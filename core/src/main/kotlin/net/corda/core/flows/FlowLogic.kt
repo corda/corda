@@ -217,7 +217,7 @@ abstract class FlowLogic<out T> {
     fun track(): Pair<String, Observable<String>>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
-            it.currentStep.toString() to it.changes.map { it.toString() }
+            it.currentStep.label to it.changes.map { it.toString() }
         }
     }
 
