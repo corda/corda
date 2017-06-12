@@ -8,7 +8,6 @@ import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.flows.TxKeyFlow
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
@@ -391,8 +390,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return when (msgRecipient) {
             is SingleMessageRecipient -> nodes.single { it.network.myAddress == msgRecipient }
             is InMemoryMessagingNetwork.ServiceHandle -> {
-                nodes.filter { it.advertisedServices.any { it.name == msgRecipient.service.info.name } }.firstOrNull()
-                        ?: throw IllegalArgumentException("Couldn't find node advertising service with name: ${msgRecipient.service.info.name} ")
+                nodes.filter { it.advertisedServices.any { it == msgRecipient.service.info } }.firstOrNull()
+                        ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
             }
             else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")
         }
