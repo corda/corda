@@ -62,7 +62,7 @@ DemoBench writes a log file to the following location:
 Building the Installers
 -----------------------
 
-There are three scripts in the ``tools/demobench`` directory:
+Gradle defines tasks that build DemoBench installers using JavaPackager. There are three scripts in the ``tools/demobench`` directory to execute these tasks:
 
  #. ``package-demobench-exe.bat`` (Windows)
  #. ``package-demobench-dmg.sh`` (MacOS)
@@ -71,10 +71,35 @@ There are three scripts in the ``tools/demobench`` directory:
 Each script can only be run on its target platform, and each expects the platform's installation tools already to be available.
 
  #. Windows: `Inno Setup 5+ <http://www.jrsoftware.org/isinfo.php>`_
- #. MacOS: The packaging tools should be available automatically. The DMG contents will also be signed if the packager finds a valid ``Developer ID Application`` certificate on the keyring. You can create such a certificate by generating a Certificate Signing Request and then asking your local "Apple team agent" to upload it to the Apple Developer portal. (See `here <https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/MaintainingCertificates/MaintainingCertificates.html>`_.)
- #. Fedora/Linux: ``rpm-build`` packages.
+
+ #. MacOS: The packaging tools should be available automatically. The DMG contents will also be signed if the packager finds a valid ``Developer ID Application`` certificate with a private key on the keyring. (By default, DemoBench's ``build.gradle`` expects the signing key's user name to be "R3CEV".) You can create such a certificate by generating a Certificate Signing Request and then asking your local "Apple team agent" to upload it to the Apple Developer portal. (See `here <https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppDistributionGuide/MaintainingCertificates/MaintainingCertificates.html>`_.) 
+
+.. note::
+
+  - Please ensure that the ``/usr/bin/codesign`` application always has access to your certificate's signing key. You may need to reboot your Mac after making any changes via the MacOS Keychain Access application.
+
+  - You should use JDK >= 8u152 to build DemoBench on MacOS because this version resolves a warning message that is printed to the terminal when starting each Corda node.
+
+  - Ideally, use the :ref:`jetbrains-jdk` to build the DMG.
+
+..
+
+ 3. Fedora/Linux: ``rpm-build`` packages.
 
 You will also need to define the environment variable ``JAVA_HOME`` to point to the same JDK that you use to run Gradle. The installer will be written to the ``tools/demobench/build/javapackage/bundles`` directory, and can be installed like any other application for your platform.
+
+.. _jetbrains-jdk:
+
+JetBrains JDK
+-------------
+
+Mac users should note that the best way to build a DemoBench DMG is with the `JetBrains JDK <https://github.com/JetBrains/jdk8u>`_
+which has `binary downloads available from BinTray <https://bintray.com/jetbrains/intellij-jdk>`_.
+This JDK has some useful GUI fixes, most notably, when built with this JDK the DemoBench terminal will support emoji
+and as such, the nicer coloured ANSI progress renderer. It also resolves some issues with HiDPI rendering on
+Windows.
+
+This JDK does not include JavaPackager, which means that you will still need to copy ``$JAVA_HOME/lib/ant-javafx.jar`` from an Oracle JDK into the corresponding directory within your JetBrains JDK.
 
 Developer Notes
 ---------------
@@ -112,10 +137,4 @@ current working directory of the JVM):
         bank-of-corda.jar
 
 ..
-
-Mac users should note that the best way to build a DemoBench DMG is with the `JetBrains JDK <https://github.com/JetBrains/jdk8u>`_
-which has `binary downloads available from BinTray <https://bintray.com/jetbrains/intellij-jdk>`_.
-This JDK has some useful GUI fixes, most notably, when built with this JDK the DemoBench terminal will support emoji
-and as such, the nicer coloured ANSI progress renderer. It also resolves some issues with hidpi rendering on
-Windows.
 
