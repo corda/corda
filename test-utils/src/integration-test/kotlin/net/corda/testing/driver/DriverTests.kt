@@ -9,7 +9,7 @@ import net.corda.core.readLines
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_REGULATOR
-import net.corda.node.LOGS_DIRECTORY_NAME
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -74,7 +74,7 @@ class DriverTests {
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val baseDirectory = startNode(DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
-            val logFile = (baseDirectory / LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
+            val logFile = (baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME).list { it.sorted().findFirst().get() }
             val debugLinesPresent = logFile.readLines { lines -> lines.anyMatch { line -> line.startsWith("[DEBUG]") } }
             assertThat(debugLinesPresent).isTrue()
         }

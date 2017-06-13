@@ -13,7 +13,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.printBasicNodeInfo
+import net.corda.node.internal.Node
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
@@ -47,7 +47,6 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
-import sun.security.x509.X509CertImpl
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
@@ -156,9 +155,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Listening on port", p2pPort.toString())
+        Node.printBasicNodeInfo("Listening on port", p2pPort.toString())
         if (rpcPort != null) {
-            printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
+            Node.printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
         }
     }
 
