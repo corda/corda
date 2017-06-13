@@ -7,8 +7,8 @@ import java.lang.invoke.*
 import java.lang.reflect.*
 import java.net.*
 import java.security.*
-import java.util.*
 import java.sql.Connection
+import java.util.*
 import java.util.logging.Handler
 import java.util.zip.ZipFile
 import kotlin.collections.HashSet
@@ -109,13 +109,14 @@ object AllButBlacklisted : ClassWhitelist {
         if (type.name !in forciblyAllowedClasses) {
             // Check if listed.
             if (type.name in blacklistedClasses)
-                throw NotSerializableException("Class ${type.name} is blacklisted, so it cannot be used in serialization.")
+                throw IllegalStateException("Class ${type.name} is blacklisted, so it cannot be used in serialization.")
             // Inheritance check.
             else {
                 val aMatch = blacklistedClasses.firstOrNull { Class.forName(it).isAssignableFrom(type) }
                 if (aMatch != null) {
                     // TODO: blacklistedClasses += type.name // add it, so checking is faster next time we encounter this class.
-                    throw NotSerializableException("A superclass or (super)interface of ${type.name} is blacklisted, so it cannot be used in serialization.")
+                    val matchType = if (Class.forName(aMatch).isInterface) "superinterface" else "superclass"
+                    throw IllegalStateException("The $matchType $aMatch of ${type.name} is blacklisted, so it cannot be used in serialization.")
                 }
             }
         }

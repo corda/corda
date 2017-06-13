@@ -11,7 +11,7 @@ import net.corda.testing.node.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
-import java.io.NotSerializableException
+import java.lang.IllegalStateException
 import java.sql.Connection
 import java.util.*
 
@@ -168,11 +168,11 @@ class CordaClassResolverTests {
 
     // Blacklist tests.
     @get:Rule
-    val expectedEx = ExpectedException.none()
+    val expectedEx = ExpectedException.none()!!
 
     @Test
     fun `Check blacklisted class`() {
-        expectedEx.expect(NotSerializableException::class.java)
+        expectedEx.expect(IllegalStateException::class.java)
         expectedEx.expectMessage("Class java.util.HashSet is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // HashSet is blacklisted.
@@ -182,8 +182,8 @@ class CordaClassResolverTests {
     open class SubHashSet<E> : HashSet<E>()
     @Test
     fun `Check blacklisted subclass`() {
-        expectedEx.expect(NotSerializableException::class.java)
-        expectedEx.expectMessage("A superclass or (super)interface of net.corda.core.serialization.CordaClassResolverTests\$SubHashSet is blacklisted, so it cannot be used in serialization.")
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.core.serialization.CordaClassResolverTests\$SubHashSet is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // SubHashSet extends the blacklisted HashSet.
         resolver.getRegistration(SubHashSet::class.java)
@@ -192,8 +192,8 @@ class CordaClassResolverTests {
     class SubSubHashSet<E> : SubHashSet<E>()
     @Test
     fun `Check blacklisted subsubclass`() {
-        expectedEx.expect(NotSerializableException::class.java)
-        expectedEx.expectMessage("A superclass or (super)interface of net.corda.core.serialization.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.")
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.core.serialization.CordaClassResolverTests\$SubSubHashSet is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // SubSubHashSet extends SubHashSet, which extends the blacklisted HashSet.
         resolver.getRegistration(SubSubHashSet::class.java)
@@ -202,8 +202,8 @@ class CordaClassResolverTests {
     class ConnectionImpl(val connection: Connection) : Connection by connection
     @Test
     fun `Check blacklisted interface impl`() {
-        expectedEx.expect(NotSerializableException::class.java)
-        expectedEx.expectMessage("A superclass or (super)interface of net.corda.core.serialization.CordaClassResolverTests\$ConnectionImpl is blacklisted, so it cannot be used in serialization.")
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superinterface java.sql.Connection of net.corda.core.serialization.CordaClassResolverTests\$ConnectionImpl is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // ConnectionImpl implements blacklisted Connection.
         resolver.getRegistration(ConnectionImpl::class.java)
@@ -213,8 +213,8 @@ class CordaClassResolverTests {
     class SubConnectionImpl(val subConnection: SubConnection) : SubConnection by subConnection
     @Test
     fun `Check blacklisted super-interface impl`() {
-        expectedEx.expect(NotSerializableException::class.java)
-        expectedEx.expectMessage("A superclass or (super)interface of net.corda.core.serialization.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.")
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superinterface java.sql.Connection of net.corda.core.serialization.CordaClassResolverTests\$SubConnectionImpl is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // SubConnectionImpl implements SubConnection, which extends the blacklisted Connection.
         resolver.getRegistration(SubConnectionImpl::class.java)
@@ -231,8 +231,8 @@ class CordaClassResolverTests {
     class CordaSerializableHashSet<E> : HashSet<E>()
     @Test
     fun `Check blacklist precedes CordaSerializable`() {
-        expectedEx.expect(NotSerializableException::class.java)
-        expectedEx.expectMessage("A superclass or (super)interface of net.corda.core.serialization.CordaClassResolverTests\$CordaSerializableHashSet is blacklisted, so it cannot be used in serialization.")
+        expectedEx.expect(IllegalStateException::class.java)
+        expectedEx.expectMessage("The superclass java.util.HashSet of net.corda.core.serialization.CordaClassResolverTests\$CordaSerializableHashSet is blacklisted, so it cannot be used in serialization.")
         val resolver = CordaClassResolver(AllButBlacklisted)
         // CordaSerializableHashSet is @CordaSerializable, but extends the blacklisted HashSet.
         resolver.getRegistration(CordaSerializableHashSet::class.java)
