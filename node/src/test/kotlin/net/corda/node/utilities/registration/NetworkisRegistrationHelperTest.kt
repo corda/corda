@@ -10,7 +10,6 @@ import net.corda.core.utilities.ALICE
 import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -31,9 +30,8 @@ class NetworkRegistrationHelperTest {
                 "CORDA_INTERMEDIATE_CA",
                 "CORDA_ROOT_CA")
                 .map { getTestX509Name(it) }
-        val converter = JcaX509CertificateConverter()
         val certs = identities.stream().map { X509Utilities.createSelfSignedCACertificate(it, Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)) }
-                .map(converter::getCertificate).toTypedArray()
+                .map { it.cert }.toTypedArray()
 
         val certService: NetworkRegistrationService = mock {
             on { submitRequest(any()) }.then { id }

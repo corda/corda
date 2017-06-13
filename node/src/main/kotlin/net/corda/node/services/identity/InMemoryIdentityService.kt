@@ -2,6 +2,7 @@ package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.requireThat
+import net.corda.core.crypto.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
@@ -14,7 +15,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
@@ -35,7 +35,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
                               val trustRoot: X509Certificate?) : SingletonSerializeAsToken(), IdentityService {
     constructor(identities: Iterable<PartyAndCertificate> = emptySet(),
                 certPaths: Map<AnonymousParty, CertPath> = emptyMap(),
-                trustRoot: X509CertificateHolder?) : this(identities, certPaths, trustRoot?.let { JcaX509CertificateConverter().getCertificate(it) })
+                trustRoot: X509CertificateHolder?) : this(identities, certPaths, trustRoot?.cert)
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }
@@ -61,8 +61,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         } else {
             // TODO: We should always require a full chain back to a trust anchor, but until we have a network
             // trust anchor everywhere, this will have to do.
-            val converter = JcaX509CertificateConverter()
-            PKIXParameters(setOf(TrustAnchor(converter.getCertificate(party.certificate), null)))
+            PKIXParameters(setOf(TrustAnchor(party.certificate.cert, null)))
         }
         val validator = CertPathValidator.getInstance("PKIX")
         validatorParameters.isRevocationEnabled = false
@@ -142,8 +141,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         } else {
             // TODO: We should always require a full chain back to a trust anchor, but until we have a network
             // trust anchor everywhere, this will have to do.
-            val converter = JcaX509CertificateConverter()
-            PKIXParameters(setOf(TrustAnchor(converter.getCertificate(fullParty.certificate), null)))
+            PKIXParameters(setOf(TrustAnchor(fullParty.certificate.cert, null)))
         }
         validatorParameters.isRevocationEnabled = false
         val result = validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult

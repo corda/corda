@@ -147,9 +147,8 @@ object X509Utilities {
 
     fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {
         require(certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
-        val converter = JcaX509CertificateConverter()
         val certFactory = CertificateFactory.getInstance("X509")
-        val params = PKIXParameters(setOf(TrustAnchor(converter.getCertificate(trustedRoot), null)))
+        val params = PKIXParameters(setOf(TrustAnchor(trustedRoot.cert, null)))
         params.isRevocationEnabled = false
         val certPath = certFactory.generateCertPath(certificates.toList())
         val pathValidator = CertPathValidator.getInstance("PKIX")
@@ -281,6 +280,7 @@ val X500Name.orgName: String? get() = getRDNs(BCStyle.O).firstOrNull()?.first?.v
 val X500Name.location: String get() = getRDNs(BCStyle.L).first().first.value.toString()
 val X500Name.locationOrNull: String? get() = try { location } catch (e: Exception) { null }
 val X509Certificate.subject: X500Name get() = X509CertificateHolder(encoded).subject
+val X509CertificateHolder.cert: X509Certificate get() = JcaX509CertificateConverter().getCertificate(this)
 
 class CertificateStream(val input: InputStream) {
     private val certificateFactory = CertificateFactory.getInstance("X.509")
