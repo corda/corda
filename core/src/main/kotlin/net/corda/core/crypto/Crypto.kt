@@ -532,18 +532,30 @@ object Crypto {
     }
 
     /**
-     * Deterministically generate a [KeyPair] using an existing private key and a seed as inputs.
+     * Deterministically generate/derive a [KeyPair] using an existing private key and a seed as inputs.
      * This operation is currently supported for ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
      *
-     * Similarly to BIP32, the implemented algorithm uses a MAC function based on SHA512 and it is actually
+     * Similarly to BIP32, the implemented algorithm uses an HMAC function based on SHA512 and it is actually
      * a variation of the private-parent-key -> private-child-key hardened key generation of BIP32.
      *
      * Unlike BIP32, where both private and public keys are extended to prevent deterministically
-     * generated child keys from depending solely on the key itself, current method uses normal elliptic curve keys.
+     * generated child keys from depending solely on the key itself, current method uses normal elliptic curve keys
+     * without a chain-code and the generated key relies solely on the security of the private key.
      *
-     * On the other hand and in contrast to BIP32 that uses a 32-byte counter as extra seed to distinguish between generated keys,
-     * it is suggested that [seed] will be a 256bit value, i.e. a random nonce used in transactions could serve this role.
-     * TODO: consider using and always test that a 256bit seed is used.
+     * Although without a chain-code, we lose the aforementioned property of not depending solely on the key,
+     * it should be mentioned that the cryptographic strength of the HMAC depends upon the size of the secret key.
+     * @see <a href="https://en.wikipedia.org/wiki/Hash-based_message_authentication_code#Security">HMAC Security</a>
+     * Thus, as long as the master key is kept secret and has enough entropy (~256 bits for EC-schemes), the system
+     * is considered secure.
+     *
+     * It is also a fact that if HMAC is used as PRF and/or MAC but not as checksum function, the function is still
+     * secure even if the underlying hash function is not collision resistant (e.g. if we used MD5).
+     * In practice, for our DKG purposes (thus PRF), a collision would not necessarily reveal the master HMAC key,
+     * because multiple inputs can produce the same hash output.
+     *
+     * All in all, this algorithm can be used with a counter as seed, however it is suggested that the output does
+     * not solely depend on the key, i.e. a secret salt per user or a random nonce per transaction could serve this role.
+     *
      * @param signatureScheme the [SignatureScheme] of the private key input.
      * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
      * @param seed an extra seed that will be used as value to the underlying HMAC.
@@ -561,7 +573,7 @@ object Crypto {
     }
 
     /**
-     * Deterministically generate a [KeyPair] using an existing private key and a seed as inputs.
+     * Deterministically generate/derive a [KeyPair] using an existing private key and a seed as inputs.
      * Use this method if the [SignatureScheme] of the private key input is not known.
      * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
      * @param seed an extra seed that will be used as value to the underlying HMAC.
