@@ -188,6 +188,9 @@ dependencies {
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
     smokeTestCompile "junit:junit:$junit_version"
+
+    // JMX Http bridge.
+    runtime "org.jolokia:jolokia-jvm:$jolokia_agent_version:agent"
 }
 
 task integrationTest(type: Test) {
