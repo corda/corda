@@ -88,9 +88,11 @@ class TransactionViewer : CordaView("Transactions") {
     }
 
     override fun onUndock() {
-        val isExpanded = expander.getExpandedProperty(transactionViewTable.items[scrollPosition]) // It is evil.
-        if (isExpanded.value) expander.toggleExpanded(scrollPosition)
-        scrollPosition = 0
+        if (scrollPosition != 0) {
+            val isExpanded = expander.getExpandedProperty(transactionViewTable.items[scrollPosition])
+            if (isExpanded.value) expander.toggleExpanded(scrollPosition)
+            scrollPosition = 0
+        }
         txIdToScroll = null
     }
 

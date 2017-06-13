@@ -4,9 +4,8 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
-import net.corda.client.jfx.utils.LeftOuterJoinedMap
 import net.corda.client.jfx.utils.fold
-import net.corda.client.jfx.utils.getObservableValues
+import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.recordAsAssociation
 import net.corda.core.ErrorOr
 import net.corda.core.flows.FlowInitiator
@@ -29,8 +28,8 @@ data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val mess
 data class ProgressStatus(val status: String?)
 
 sealed class StateMachineStatus {
-    data class Added(val stateMachineName: String, val flowInitiator: FlowInitiator) : StateMachineStatus()
-    data class Removed(val result: ErrorOr<*>) : StateMachineStatus()
+    data class Added(val id: StateMachineRunId, val stateMachineName: String, val flowInitiator: FlowInitiator) : StateMachineStatus()
+    data class Removed(val id: StateMachineRunId, val result: ErrorOr<*>) : StateMachineStatus()
 }
 
 data class StateMachineData(
@@ -62,29 +61,34 @@ class StateMachineDataModel {
 
     val counter = Counter()
 
-    private val stateMachineStatus = stateMachineUpdates.fold(FXCollections.observableHashMap<StateMachineRunId, SimpleObjectProperty<StateMachineStatus>>()) { map, update ->
+    private val stateMachineIndexMap = HashMap<StateMachineRunId, Int>()
+    private val stateMachineStatus = stateMachineUpdates.fold(FXCollections.observableArrayList<SimpleObjectProperty<StateMachineStatus>>()) { list, update ->
         when (update) {
             is StateMachineUpdate.Added -> {
                 counter.addSmm()
                 val flowInitiator= update.stateMachineInfo.initiator
                 val added: SimpleObjectProperty<StateMachineStatus> =
-                        SimpleObjectProperty(StateMachineStatus.Added(update.stateMachineInfo.flowLogicClassName, flowInitiator))
-                map[update.id] = added
+                        SimpleObjectProperty(StateMachineStatus.Added(update.id, update.stateMachineInfo.flowLogicClassName, flowInitiator))
+                list.add(added)
+                stateMachineIndexMap[update.id] = list.size - 1
             }
             is StateMachineUpdate.Removed -> {
-                val added = map[update.id]
+                val addedIdx = stateMachineIndexMap[update.id]
+                val added = addedIdx?.let { list.getOrNull(addedIdx) }
                 added ?: throw Exception("State machine removed with unknown id ${update.id}")
                 counter.removeSmm(update.result)
-                added.set(StateMachineStatus.Removed(update.result))
+                list[addedIdx].set(StateMachineStatus.Removed(update.id, update.result))
             }
         }
     }
 
-    private val stateMachineDataList = LeftOuterJoinedMap(stateMachineStatus, progressEvents) { id, status, progress ->
-        val smStatus = status.value as StateMachineStatus.Added
+    private val stateMachineDataList = stateMachineStatus.map {
+        val smStatus = it.value as StateMachineStatus.Added
+        val id = smStatus.id
+        val progress = SimpleObjectProperty(progressEvents.get(id))
         StateMachineData(id, smStatus.stateMachineName, smStatus.flowInitiator,
-                Pair(status, EasyBind.map(progress) { ProgressStatus(it?.message) }))
-    }.getObservableValues()
+                Pair(it, EasyBind.map(progress) { ProgressStatus(it?.message) }))
+    }
 
     val stateMachinesAll = stateMachineDataList
     val error = counter.errored
