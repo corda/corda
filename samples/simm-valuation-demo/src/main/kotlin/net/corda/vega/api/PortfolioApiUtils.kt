@@ -5,9 +5,12 @@ import com.opengamma.strata.product.swap.IborRateCalculation
 import com.opengamma.strata.product.swap.RateCalculationSwapLeg
 import com.opengamma.strata.product.swap.SwapLegType
 import net.corda.core.contracts.hash
+import net.corda.core.crypto.commonName
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.crypto.toBase58String
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.ServiceHub
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
 import net.corda.vega.portfolio.Portfolio
@@ -123,16 +126,18 @@ class PortfolioApiUtils(private val ownParty: Party) {
             val common: Map<String, Any>,
             val ref: String)
 
-    fun createTradeView(state: IRSState): TradeView {
+    fun createTradeView(rpc: CordaRPCOps, state: IRSState): TradeView {
         val trade = if (state.buyer == ownParty as AbstractParty) state.swap.toFloatingLeg() else state.swap.toFloatingLeg()
         val fixedLeg = trade.product.legs.first { it.type == SwapLegType.FIXED } as RateCalculationSwapLeg
         val floatingLeg = trade.product.legs.first { it.type != SwapLegType.FIXED } as RateCalculationSwapLeg
         val fixedRate = fixedLeg.calculation as FixedRateCalculation
         val floatingRate = floatingLeg.calculation as IborRateCalculation
+        val fixedRatePayer: AbstractParty = rpc.partyFromKey(state.buyer.owningKey) ?: state.buyer
+        val floatingRatePayer: AbstractParty = rpc.partyFromKey(state.seller.owningKey) ?: state.seller
 
         return TradeView(
                 fixedLeg = mapOf(
-                        "fixedRatePayer" to state.buyer.owningKey.toBase58String(),
+                        "fixedRatePayer" to (fixedRatePayer.nameOrNull()?.commonName ?: fixedRatePayer.owningKey.toBase58String()),
                         "notional" to mapOf(
                                 "token" to fixedLeg.currency.code,
                                 "quantity" to fixedLeg.notionalSchedule.amount.initialValue
@@ -148,7 +153,7 @@ class PortfolioApiUtils(private val ownParty: Party) {
                         "paymentCalendar" to mapOf<String, Any>() // TODO
                 ),
                 floatingLeg = mapOf(
-                        "floatingRatePayer" to state.seller.owningKey.toBase58String(),
+                        "floatingRatePayer" to (floatingRatePayer.nameOrNull()?.commonName ?: floatingRatePayer.owningKey.toBase58String()),
                         "notional" to mapOf(
                                 "token" to floatingLeg.currency.code,
                                 "quantity" to floatingLeg.notionalSchedule.amount.initialValue
