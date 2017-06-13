@@ -223,15 +223,19 @@ class RPCStabilityTests {
                 override val protocolVersion = 0
                 override fun ping() = "pong"
             }
+            // Need to make sure the server is recreated in the same directory
+            val serverName = "driver-rpc-server-${random63BitValue()}"
             val serverFollower = shutdownManager.follower()
-            val serverPort = startRpcServer<ReconnectOps>(ops = ops).getOrThrow().broker.hostAndPort!!
+            val serverPort = startRpcServer<ReconnectOps>(serverName = serverName, ops = ops).getOrThrow().broker.hostAndPort!!
             serverFollower.unfollow()
+            // Set retry interval to 1s to reduce test duration
+            val clientConfiguration = RPCClientConfiguration.default.copy(connectionRetryInterval = 1.seconds)
             val clientFollower = shutdownManager.follower()
-            val client = startRpcClient<ReconnectOps>(serverPort).getOrThrow()
+            val client = startRpcClient<ReconnectOps>(serverPort, configuration = clientConfiguration).getOrThrow()
             clientFollower.unfollow()
             assertEquals("pong", client.ping())
             serverFollower.shutdown()
-            startRpcServer<ReconnectOps>(ops = ops, customPort = serverPort).getOrThrow()
+            startRpcServer<ReconnectOps>(serverName = serverName, ops = ops, customPort = serverPort).getOrThrow()
             assertEquals("pong", client.ping())
             clientFollower.shutdown() // Driver would do this after the new server, causing hang.
         }

@@ -18,6 +18,7 @@ import net.corda.core.random63BitValue
 import net.corda.core.serialization.KryoPoolWithContext
 import net.corda.core.utilities.*
 import net.corda.nodeapi.*
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -165,11 +166,11 @@ class RPCClientProxyHandler(
                 rpcConfiguration.reapInterval.toMillis(),
                 TimeUnit.MILLISECONDS
         )
-        sessionAndProducerPool.run {
-            it.session.createTemporaryQueue(clientAddress, clientAddress)
-        }
+
         val sessionFactory = serverLocator.createSessionFactory()
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
+        if (!session.queueQuery(clientAddress).isExists)
+            session.createQueue(clientAddress, RoutingType.MULTICAST, clientAddress, true)
         val consumer = session.createConsumer(clientAddress)
         consumer.setMessageHandler(this@RPCClientProxyHandler::artemisMessageHandler)
         sessionAndConsumer = ArtemisConsumer(sessionFactory, session, consumer)
@@ -271,7 +272,11 @@ class RPCClientProxyHandler(
      * Closes the RPC proxy. Reaps all observables, shuts down the reaper, closes all sessions and executors.
      */
     fun close() {
-        sessionAndConsumer?.sessionFactory?.close()
+        sessionAndConsumer?.let {
+            it.consumer.close()
+            it.session.deleteQueue(clientAddress)
+            it.sessionFactory.close()
+        }
         reaperScheduledFuture?.cancel(false)
         observableContext.observableMap.invalidateAll()
         reapObservables()
