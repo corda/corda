@@ -23,7 +23,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
     archiveName "corda-${corda_release_version}.jar"
     applicationSource = files(
-            project(':node').configurations.compile,
+            project(':node').configurations.runtime,
             project(':node').jar,
             '../build/classes/main/CordaCaplet.class',
             '../build/classes/main/CordaCaplet$1.class',
