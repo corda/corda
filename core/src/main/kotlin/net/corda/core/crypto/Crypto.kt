@@ -542,7 +542,7 @@ object Crypto {
      * generated child keys from depending solely on the key itself, current method uses normal elliptic curve keys
      * without a chain-code and the generated key relies solely on the security of the private key.
      *
-     * Although without a chain-code, we lose the aforementioned property of not depending solely on the key,
+     * Although without a chain-code we lose the aforementioned property of not depending solely on the key,
      * it should be mentioned that the cryptographic strength of the HMAC depends upon the size of the secret key.
      * @see <a href="https://en.wikipedia.org/wiki/Hash-based_message_authentication_code#Security">HMAC Security</a>
      * Thus, as long as the master key is kept secret and has enough entropy (~256 bits for EC-schemes), the system
