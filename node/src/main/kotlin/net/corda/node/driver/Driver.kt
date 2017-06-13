@@ -14,7 +14,6 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -123,6 +122,7 @@ interface DriverDSLExposedInterface : CordformContext {
      * @return A future that completes with the non-null value [check] has returned.
      */
     fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = 500.millis, warnCount: Int = 120, check: () -> A?): ListenableFuture<A>
+
     /**
      * Polls the given function until it returns true.
      * @see pollUntilNonNull
@@ -370,6 +370,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
             registeredShutdowns.add(shutdown)
         }
     }
+
     fun registerShutdown(shutdown: () -> Unit) = registerShutdown(Futures.immediateFuture(shutdown))
 
     fun registerProcessShutdown(processFuture: ListenableFuture<Process>) {
@@ -437,12 +438,14 @@ class DriverDSL(
     private val state = ThreadBox(State())
 
     //TODO: remove this once we can bundle quasar properly.
-    private val quasarJarPath: String by lazy {
+    private val quasarJarPath: String by lazy { findFile(".*quasar.*\\.jar$".toRegex()) }
+    private val jolokiaJarPath: String by lazy { findFile(".*jolokia-jvm.*agent.*\\.jar$".toRegex()) }
+
+    private fun findFile(regex: Regex): String {
         val cl = ClassLoader.getSystemClassLoader()
         val urls = (cl as URLClassLoader).urLs
-        val quasarPattern = ".*quasar.*\\.jar$".toRegex()
-        val quasarFileUrl = urls.first { quasarPattern.matches(it.path) }
-        Paths.get(quasarFileUrl.toURI()).toString()
+        val fileUrl = urls.first { regex.matches(it.path) }
+        return Paths.get(fileUrl.toURI()).toString()
     }
 
     fun registerProcess(process: ListenableFuture<Process>) {
@@ -527,7 +530,7 @@ class DriverDSL(
                 allowMissingConfig = true,
                 configOverrides = configOverrides)
         val configuration = config.parseAs<FullNodeConfiguration>()
-        val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
+        val processFuture = startNode(executorService, configuration, config, quasarJarPath, jolokiaJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
         processFuture.flatMap { process ->
             // We continue to use SSL enabled port for RPC when its for node user.
@@ -639,7 +642,7 @@ class DriverDSL(
         )
 
         log.info("Starting network-map-service")
-        val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, debugPort, systemProperties)
+        val startNode = startNode(executorService, config.parseAs<FullNodeConfiguration>(), config, quasarJarPath, jolokiaJarPath, debugPort, systemProperties)
         registerProcess(startNode)
         return startNode.flatMap { addressMustBeBoundFuture(executorService, dedicatedNetworkMapAddress, it) }
     }
@@ -664,6 +667,7 @@ class DriverDSL(
                 nodeConf: FullNodeConfiguration,
                 config: Config,
                 quasarJarPath: String,
+                jolokiaJarPath: String,
                 debugPort: Int?,
                 overriddenSystemProperties: Map<String, String>
         ): ListenableFuture<Process> {
@@ -687,7 +691,8 @@ class DriverDSL(
                 // val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
                 //        "-javaagent:$quasarJarPath=$excludePattern"
                 val extraJvmArguments = systemProperties.map { "-D${it.key}=${it.value}" } +
-                        "-javaagent:$quasarJarPath"
+                        "-javaagent:$quasarJarPath" +
+                        "-javaagent:$jolokiaJarPath=port=0,host=localhost,logHandlerClass=org.jolokia.util.QuietLogHandler"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
                 ProcessUtilities.startJavaProcess(
@@ -720,8 +725,8 @@ class DriverDSL(
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
                         extraJvmArguments = listOf(
-                            "-Dname=node-${handle.configuration.p2pAddress}-webserver",
-                            "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
+                                "-Dname=node-${handle.configuration.p2pAddress}-webserver",
+                                "-Djava.io.tmpdir=${System.getProperty("java.io.tmpdir")}" // Inherit from parent process
                         ),
                         errorLogPath = Paths.get("error.$className.log")
                 )
