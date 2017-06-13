@@ -73,8 +73,6 @@ open class NodeStartup(val args: Array<String>) {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
         val conf = loadConfigFile(cmdlineOptions)
         banJavaSerialisation(conf)
-        // TODO: Move this to EnterpriseNode.Startup
-        conf.relay?.let { connectToRelay(it, conf.p2pAddress.port) }
         preNetworkRegistration(conf)
         maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
         logStartupInfo(versionInfo, cmdlineOptions, conf)
@@ -326,36 +324,5 @@ open class NodeStartup(val args: Array<String>) {
                     newline().
                     reset())
         }
-    }
-
-    private fun connectToRelay(config: RelayConfiguration, localBrokerPort: Int) {
-        with(config) {
-            val jsh = JSch().apply {
-                val noPassphrase = byteArrayOf()
-                addIdentity(privateKeyFile.toString(), publicKeyFile.toString(), noPassphrase)
-            }
-
-            val session = jsh.getSession(username, relayHost, sshPort).apply {
-                // We don't check the host fingerprints because they may change often
-                setConfig("StrictHostKeyChecking", "no")
-            }
-
-            try {
-                logger.info("Connecting to a relay at $relayHost")
-                session.connect()
-            } catch (e: JSchException) {
-                throw IOException("Unable to establish a SSH connection: $username@$relayHost", e)
-            }
-            try {
-                val localhost = "127.0.0.1"
-                logger.info("Forwarding ports: $relayHost:$remoteInboundPort -> $localhost:$localBrokerPort")
-                session.setPortForwardingR(remoteInboundPort, localhost, localBrokerPort)
-            } catch (e: JSchException) {
-                throw IOException("Unable to set up port forwarding - is SSH on the remote host configured correctly? " +
-                        "(port forwarding is not enabled by default)", e)
-            }
-        }
-
-        logger.info("Relay setup successfully!")
     }
 }

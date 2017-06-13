@@ -6,7 +6,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda standalone node'
+description 'Corda Enterprise'
 
 configurations {
     runtimeArtifacts.extendsFrom runtime
@@ -22,7 +22,7 @@ targetCompatibility = 1.6
 
 task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationClass 'net.corda.node.Corda'
-    archiveName "corda-${corda_release_version}.jar"
+    archiveName "corda-enterprise-${corda_release_version}.jar"
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,
@@ -40,7 +40,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // def quasarExcludeExpression = "x(rx**;io**;kotlin**;jdk**;reflectasm**;groovyjarjarasm**;groovy**;joptsimple**;groovyjarjarantlr**;javassist**;com.fasterxml**;com.typesafe**;com.google**;com.zaxxer**;com.jcabi**;com.codahale**;com.esotericsoftware**;de.javakaffee**;org.objectweb**;org.slf4j**;org.w3c**;org.codehaus**;org.h2**;org.crsh**;org.fusesource**;org.hibernate**;org.dom4j**;org.bouncycastle**;org.apache**;org.objenesis**;org.jboss**;org.xml**;org.jcp**;org.jetbrains**;org.yaml**;co.paralleluniverse**;net.i2p**)"
         // javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
-        systemProperties['visualvm.display.name'] = 'Corda'
+        systemProperties['visualvm.display.name'] = 'CordaEnterprise'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']

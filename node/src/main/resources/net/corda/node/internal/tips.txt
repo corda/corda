@@ -1,0 +1,6 @@
+You can issue SQL queries to the database from the Corda shell with the jdbc command
+The config file format supports many useful features: https://github.com/typesafehub/config#using-hocon-the-json-superset
+You can chat to the Corda team using Slack: https://slack.corda.net/
+Administrator users can be granted access to do everything by granting them the ALL permission
+If you don't wish to use the shell it can be disabled with the --no-local-shell flag
+Use the "flow watch" shell command to see what flows your node is running
