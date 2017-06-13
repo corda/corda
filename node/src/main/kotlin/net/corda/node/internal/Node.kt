@@ -5,7 +5,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.core.flatMap
 import net.corda.core.messaging.RPCOps
 import net.corda.core.minutes
@@ -18,7 +17,6 @@ import net.corda.core.seconds
 import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -39,16 +37,19 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
+import kotlin.system.exitProcess
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -59,12 +60,26 @@ import javax.management.ObjectName
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all flows etc.
  */
-class Node(override val configuration: FullNodeConfiguration,
-           advertisedServices: Set<ServiceInfo>,
-           val versionInfo: VersionInfo,
-           clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
+open class Node(override val configuration: FullNodeConfiguration,
+                advertisedServices: Set<ServiceInfo>,
+                val versionInfo: VersionInfo,
+                clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
+        var renderBasicInfoToConsole = true
+
+        /** Used for useful info that we always want to show, even when not logging to the console */
+        fun printBasicNodeInfo(description: String, info: String? = null) {
+            val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+            val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+            LoggerFactory.getLogger(loggerName).info(msg)
+        }
+
+        internal fun failStartUp(message: String): Nothing {
+            println(message)
+            println("Corda will now exit...")
+            exitProcess(1)
+        }
     }
 
     override val log: Logger get() = logger

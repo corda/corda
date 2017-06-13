@@ -14,14 +14,12 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
-import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -93,7 +91,7 @@ object InteractiveShell {
             // to that local copy, as CRaSH is no longer well maintained by the upstream and the SSH plugin
             // that it comes with is based on a very old version of Apache SSHD which can't handle connections
             // from newer SSH clients. It also means hooking things up to the authentication system.
-            printBasicNodeInfo("SSH server access is not fully implemented, sorry.")
+            Node.printBasicNodeInfo("SSH server access is not fully implemented, sorry.")
             runSSH = false
         }
 
