@@ -458,7 +458,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         auditService = DummyAuditService()
 
         info = makeInfo()
-        identity = makeIdentityService()
+        identity = makeIdentityService(keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
+                keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                info.legalIdentityAndCert)
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
@@ -694,10 +696,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
 
-    protected open fun makeIdentityService(): IdentityService {
-        val keyStore = KeyStoreUtilities.loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)
-        val trustRoot = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as? X509Certificate
-        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot)
+    protected open fun makeIdentityService(trustRoot: X509Certificate,
+                                           clientCa: CertificateAndKeyPair?,
+                                           legalIdentity: PartyAndCertificate): IdentityService {
+        val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+                .filterNotNull()
+                .toTypedArray()
+        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
         netMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal

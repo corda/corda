@@ -21,10 +21,10 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
-import org.bouncycastle.cert.X509CertificateHolder
 import org.jetbrains.exposed.sql.Database
 import java.io.Closeable
 import java.security.KeyPair
+import java.security.cert.X509Certificate
 import kotlin.concurrent.thread
 
 /**
@@ -33,14 +33,14 @@ import kotlin.concurrent.thread
  */
 class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeLocalHostAndPort(),
                  rpcAddress: HostAndPort = freeLocalHostAndPort(),
-                 trustRoot: X509CertificateHolder? = null) : AutoCloseable {
+                 trustRoot: X509Certificate) : AutoCloseable {
 
     private val databaseWithCloseable: Pair<Closeable, Database> = configureDatabase(config.dataSourceProperties)
     val database: Database get() = databaseWithCloseable.second
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
-    val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
+    val identityService: IdentityService = InMemoryIdentityService(identities = emptySet(), trustRoot = trustRoot)
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)

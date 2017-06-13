@@ -14,8 +14,9 @@ import java.security.cert.*
  * identities back to the well known identity (i.e. the identity in the network map) of a party.
  */
 interface IdentityService {
-    val trustRoot: X509Certificate?
-    val trustRootHolder: X509CertificateHolder?
+    val trustRoot: X509Certificate
+    val trustRootHolder: X509CertificateHolder
+    val caCertStore: CertStore
 
     /**
      * Verify and then store a well known identity.
