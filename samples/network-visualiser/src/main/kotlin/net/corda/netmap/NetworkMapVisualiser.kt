@@ -12,7 +12,6 @@ import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.serialization.deserialize
 import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
@@ -112,7 +111,7 @@ class NetworkMapVisualiser : Application() {
         // Fire the message bullets between nodes.
         simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
             val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients as SingleMessageRecipient)
+            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
