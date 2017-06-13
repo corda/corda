@@ -31,14 +31,14 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.bouncycastle.operator.ContentSigner
-import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.jce.spec.ECParameterSpec
 import org.bouncycastle.jce.spec.ECPrivateKeySpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.bouncycastle.math.ec.ECConstants
 import org.bouncycastle.math.ec.FixedPointCombMultiplier
 import org.bouncycastle.math.ec.WNafUtil
+import org.bouncycastle.operator.ContentSigner
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
@@ -566,8 +566,8 @@ object Crypto {
     fun deterministicKeyPair(signatureScheme: SignatureScheme, privateKey: PrivateKey, seed: ByteArray): KeyPair {
         require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         when (signatureScheme) {
-            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deterministicKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
-            EDDSA_ED25519_SHA512 -> return deterministicKeyPairEdDSA(privateKey, seed)
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
+            EDDSA_ED25519_SHA512 -> return deriveKeyPairEdDSA(privateKey, seed)
         }
         throw UnsupportedOperationException("Although supported for signing, deterministic key generation is not currently implemented for ${signatureScheme.schemeCodeName}")
     }
@@ -585,8 +585,9 @@ object Crypto {
         return deterministicKeyPair(findSignatureScheme(privateKey), privateKey, seed)
     }
 
-    // Given the domain parameters, this routine generates an ECDSA key pair in accordance with X9.62 section 5.2.1 pages 26, 27.
-    private fun deterministicKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
+    // Given the domain parameters, this routine deterministically generates an ECDSA key pair
+    // in accordance with X9.62 section 5.2.1 pages 26, 27.
+    private fun deriveKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
         // Compute hmac(privateKey, seed).
         val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
         val key = SecretKeySpec((privateKey as BCECPrivateKey).d.toByteArray(), "HmacSHA512")
@@ -616,8 +617,8 @@ object Crypto {
     }
 
     // Deterministically generate an EdDSA key.
-    private fun deterministicKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        // Compute hmac(privateKey, seed).
+    private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        // Compute HMAC(privateKey, seed).
         val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
         val key = SecretKeySpec((privateKey as EdDSAPrivateKey).geta(), "HmacSHA512")
         mac.init(key)
@@ -640,9 +641,9 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
-    fun generateKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+    fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         when (signatureScheme) {
-            EDDSA_ED25519_SHA512 -> return generateEdDSAKeyPairFromEntropy(entropy)
+            EDDSA_ED25519_SHA512 -> return deriveEdDSAKeyPairFromEntropy(entropy)
         }
         throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: ${signatureScheme.schemeCodeName}")
     }
@@ -652,10 +653,10 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
-    fun generateKeyPairFromEntropy(entropy: BigInteger): KeyPair = generateKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
+    fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // custom key pair generator from entropy.
-    private fun generateEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
+    private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
         val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
