@@ -9,12 +9,12 @@ import com.typesafe.config.ConfigRenderOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
+import net.corda.cordform.NodeDefinition
 import net.corda.core.*
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
@@ -29,7 +29,6 @@ import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
-import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -235,19 +234,16 @@ fun <DI : DriverDSLExposedInterface, D : DriverDSLInternalInterface, A> genericD
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    var shutdownHook: ShutdownHook? = null
+    val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
-        shutdownHook = addShutdownHook {
-            driverDsl.shutdown()
-        }
         return dsl(coerce(driverDsl))
     } catch (exception: Throwable) {
         log.error("Driver shutting down because of exception", exception)
         throw exception
     } finally {
         driverDsl.shutdown()
-        shutdownHook?.cancel()
+        shutdownHook.cancel()
     }
 }
 
@@ -255,7 +251,7 @@ fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-class ListenProcessDeathException(message: String) : Exception(message)
+class ListenProcessDeathException(hostAndPort: HostAndPort, listenProcess: Process) : Exception("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
 
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
@@ -267,7 +263,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: H
 fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: HostAndPort, listenProcess: Process): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (!listenProcess.isAlive) {
-            throw ListenProcessDeathException("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+            throw ListenProcessDeathException(hostAndPort, listenProcess)
         }
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -300,33 +296,25 @@ fun <A> poll(
         warnCount: Int = 120,
         check: () -> A?
 ): ListenableFuture<A> {
-    val initialResult = check()
     val resultFuture = SettableFuture.create<A>()
-    if (initialResult != null) {
-        resultFuture.set(initialResult)
-        return resultFuture
-    }
-    var counter = 0
-    fun schedulePoll() {
-        executorService.schedule(task@ {
-            counter++
-            if (counter == warnCount) {
+    val task = object : Runnable {
+        var counter = -1
+        override fun run() {
+            if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
             }
-            val result = try {
-                check()
-            } catch (t: Throwable) {
-                resultFuture.setException(t)
-                return@task
+            ErrorOr.catch(check).match({
+                if (it != null) {
+                    resultFuture.set(it)
+                } else {
+                    executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
+                }
+            }) {
+                resultFuture.setException(it)
             }
-            if (result == null) {
-                schedulePoll()
-            } else {
-                resultFuture.set(result)
-            }
-        }, pollInterval.toMillis(), MILLISECONDS)
+        }
     }
-    schedulePoll()
+    executorService.submit(task)
     return resultFuture
 }
 
@@ -460,24 +448,41 @@ class DriverDSL(
 
     override fun shutdown() {
         _shutdownManager?.shutdown()
-        _executorService?.shutdownNow()
-    }
-
-    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig)
-        return poll(executorService, "for RPC connection") {
-            try {
-                val connection = client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-                shutdownManager.registerShutdown { connection.close() }
-                return@poll connection.proxy
-            } catch(e: Exception) {
-                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
-                null
+        _executorService?.let {
+            val n = it.shutdownNow().size
+            if (n != 0) log.warn("$n task(s) never started.")
+            if (!it.awaitTermination(1, SECONDS)) {
+                log.error("Driver executor still running!")
             }
         }
     }
 
-    private fun networkMapServiceConfigLookup(networkMapCandidates: List<CordformNode>): (X500Name) -> Map<String, String>? {
+    private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
+        val client = CordaRPCClient(nodeAddress, sslConfig)
+        val connectionFuture = poll(executorService, "RPC connection") {
+            try {
+                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
+            } catch (e: Exception) {
+                if (processDeathFuture.isDone) throw e
+                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
+                null
+            }
+        }
+        return listOf(connectionFuture, processDeathFuture).then {
+            if (isDone()) {
+                it.andForget(log)
+                throw thenAgain
+            }
+            if (it == processDeathFuture) {
+                throw processDeathFuture.getOrThrow()
+            }
+            val connection = connectionFuture.getOrThrow()
+            shutdownManager.registerShutdown(connection::close)
+            connection.proxy
+        }
+    }
+
+    private fun networkMapServiceConfigLookup(networkMapCandidates: List<NodeDefinition>): (X500Name) -> Map<String, String>? {
         return networkMapStartStrategy.run {
             when (this) {
                 is NetworkMapStartStrategy.Dedicated -> {
@@ -507,13 +512,17 @@ class DriverDSL(
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
+        val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
+            override fun getName() = name.toString()
+            override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())
+        }))
         return startNode(p2pAddress, webAddress, name, configOf(
                 "myLegalName" to name.toString(),
                 "p2pAddress" to p2pAddress.toString(),
                 "rpcAddress" to rpcAddress.toString(),
                 "webAddress" to webAddress.toString(),
                 "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
-                "networkMapService" to networkMapServiceConfigLookup(emptyList())(name),
+                "networkMapService" to networkMapServiceConfigLookup(name),
                 "useTestClock" to useTestClock,
                 "rpcUsers" to rpcUsers.map { it.toMap() },
                 "verifierType" to verifierType.name
@@ -530,9 +539,23 @@ class DriverDSL(
         val processFuture = startNode(executorService, configuration, config, quasarJarPath, debugPort, systemProperties)
         registerProcess(processFuture)
         processFuture.flatMap { process ->
+            val processDeathFuture = poll(executorService, "process death") {
+                if (process.isAlive) null else ListenProcessDeathException(p2pAddress, process)
+            }
             // We continue to use SSL enabled port for RPC when its for node user.
-            establishRpc(p2pAddress, configuration).flatMap { rpc ->
-                rpc.waitUntilRegisteredWithNetworkMap().map {
+            establishRpc(p2pAddress, configuration, processDeathFuture).flatMap { rpc ->
+                // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
+                val networkMapFuture = executorService.submit(Callable {
+                    rpc.waitUntilRegisteredWithNetworkMap()
+                }).flatMap { it }
+                listOf(processDeathFuture, networkMapFuture).then {
+                    if (isDone()) {
+                        it.andForget(log)
+                        throw thenAgain
+                    }
+                    if (it == processDeathFuture) {
+                        throw processDeathFuture.getOrThrow()
+                    }
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }

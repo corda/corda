@@ -33,6 +33,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.concurrent.withLock
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
@@ -361,7 +362,7 @@ data class ErrorOr<out A> private constructor(val value: A?, val error: Throwabl
 
     companion object {
         /** Runs the given lambda and wraps the result. */
-        inline fun <T : Any> catch(body: () -> T): ErrorOr<T> {
+        inline fun <T> catch(body: () -> T): ErrorOr<T> {
             return try {
                 ErrorOr(body())
             } catch (t: Throwable) {
@@ -471,3 +472,20 @@ fun <T> Class<T>.checkNotUnorderedHashMap() {
 
 fun Class<*>.requireExternal(msg: String = "Internal class")
         = require(!name.startsWith("net.corda.node.") && !name.contains(".internal.")) { "$msg: $name" }
+
+interface DeclaredField<T> {
+    companion object {
+        inline fun <reified T> Any?.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = declaredField(clazz.java, name)
+        inline fun <reified T> Any?.declaredField(clazz: Class<*>, name: String): DeclaredField<T> {
+            val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
+            val receiver = this
+            return object : DeclaredField<T> {
+                override var value
+                    get() = javaField.get(receiver) as T
+                    set(value) = javaField.set(receiver, value)
+            }
+        }
+    }
+
+    var value: T
+}

@@ -6,7 +6,11 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
+import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ALICE
+import net.corda.node.driver.ListenProcessDeathException
+import net.corda.node.driver.NetworkMapStartStrategy
 import net.corda.node.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
@@ -17,6 +21,7 @@ import java.io.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class BootTests {
 
@@ -45,6 +50,15 @@ class BootTests {
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
             val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { it.contains(LOGS_CAN_BE_FOUND_IN_STRING) }.count()
             assertEquals(1, numberOfNodesThatLogged)
+        }
+    }
+
+    @Test
+    fun `node quits on failure to register with network map`() {
+        val tooManyAdvertisedServices = (1..100).map { ServiceInfo(ServiceType.regulator.getSubType("$it")) }.toSet()
+        driver(networkMapStartStrategy = NetworkMapStartStrategy.Nominated(ALICE.name)) {
+            val future = startNode(ALICE.name, advertisedServices = tooManyAdvertisedServices)
+            assertFailsWith(ListenProcessDeathException::class) { future.getOrThrow() }
         }
     }
 }

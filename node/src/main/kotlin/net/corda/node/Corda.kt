@@ -160,9 +160,6 @@ fun main(args: Array<String>) {
                     log.error("Shell failed to start", e)
                 }
             }
-        } failure {
-            log.error("Error during network map registration", it)
-            exitProcess(1)
         }
         node.run()
     } catch (e: Exception) {

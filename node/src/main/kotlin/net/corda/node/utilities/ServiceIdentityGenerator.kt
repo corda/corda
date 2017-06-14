@@ -32,9 +32,8 @@ object ServiceIdentityGenerator {
                        serviceCa: CertificateAndKeyPair,
                        serviceId: String,
                        serviceName: X500Name,
-                       threshold: Int = 1) {
+                       threshold: Int = 1): PartyAndCertificate {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
-
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
         // TODO: This doesn't work until we have composite keys in X.509 certificates, so we make up a certificate that nothing checks
@@ -42,15 +41,16 @@ object ServiceIdentityGenerator {
         //        serviceCa.keyPair, serviceName, notaryKey)
         val notaryCert = X509Utilities.createSelfSignedCACertificate(serviceName, generateKeyPair())
         val notaryCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, notaryCert, revocationEnabled = false)
-        val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath).serialize()
-
+        val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath)
+        val notaryPartyBytes = notaryParty.serialize()
+        val privateKeyFile = "$serviceId-private-key"
+        val publicKeyFile = "$serviceId-public"
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
-            val privateKeyFile = "$serviceId-private-key"
-            val publicKeyFile = "$serviceId-public"
-            notaryParty.writeToFile(dir.resolve(publicKeyFile))
+            notaryPartyBytes.writeToFile(dir.resolve(publicKeyFile))
             // Use storageKryo as our whitelist is not available in the gradle build environment:
             keyPair.serialize(storageKryo()).writeToFile(dir.resolve(privateKeyFile))
         }
+        return notaryParty
     }
 }
