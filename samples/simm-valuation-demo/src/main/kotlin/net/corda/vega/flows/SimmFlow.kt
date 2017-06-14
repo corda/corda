@@ -22,7 +22,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.flows.AbstractStateReplacementFlow.Proposal
 import net.corda.flows.StateReplacementException
 import net.corda.flows.TwoPartyDealFlow
-import net.corda.node.services.messaging.Ack
 import net.corda.vega.analytics.*
 import net.corda.vega.contracts.*
 import net.corda.vega.portfolio.Portfolio
@@ -320,4 +319,6 @@ object SimmFlow {
             })
         }
     }
+
+    private object Ack
 }

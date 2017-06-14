@@ -1,6 +1,9 @@
 package net.corda.irs.utilities
 
-import okhttp3.*
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -24,10 +27,7 @@ fun postJson(url: URL, data: String): Boolean {
 }
 
 fun uploadFile(url: URL, file: String): Boolean {
-    val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("rates", "net/corda/irs/simulation/example.rates.txt", RequestBody.create(MediaType.parse("text/plain"), file))
-            .build()
+    val body = RequestBody.create(MediaType.parse("text/plain; charset=utf-8"), file)
     return makeRequest(Request.Builder().url(url).post(body).build())
 }
 

@@ -9,7 +9,7 @@ import javafx.scene.shape.Line
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.simulation.IRSSimulation
+import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
@@ -50,7 +50,7 @@ class VisualiserViewModel {
     var bankCount: Int = 0
     var serviceCount: Int = 0
 
-    var stepDuration = Duration.millis(500.0)
+    var stepDuration: Duration = Duration.millis(500.0)
     var runningPausedState: NetworkMapVisualiser.RunningPausedState = NetworkMapVisualiser.RunningPausedState.Paused()
 
     var displayStyle: Style = Style.MAP

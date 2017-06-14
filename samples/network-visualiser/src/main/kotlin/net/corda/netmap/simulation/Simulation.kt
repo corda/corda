@@ -1,4 +1,4 @@
-package net.corda.irs.simulation
+package net.corda.netmap.simulation
 
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -133,7 +133,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                     registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
                     javaClass.classLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt").use {
                         database.transaction {
-                            installCordaService(NodeInterestRates.Oracle::class.java).upload(it)
+                            installCordaService(NodeInterestRates.Oracle::class.java).uploadFixes(it.reader().readText())
                         }
                     }
                     return this

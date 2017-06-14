@@ -4,9 +4,8 @@ import net.corda.core.node.services.FileUploader
 
 /**
  * A service that implements AcceptsFileUpload can have new binary data provided to it via an HTTP upload.
- *
- * TODO: In future, also accept uploads over the MQ interface too.
  */
+// TODO This is no longer used and can be removed
 interface AcceptsFileUpload : FileUploader {
     /** A string that prefixes the URLs, e.g. "attachments" or "interest-rates". Should be OK for URLs. */
     val dataTypePrefix: String
