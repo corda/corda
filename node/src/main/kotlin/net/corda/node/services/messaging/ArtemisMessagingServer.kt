@@ -30,12 +30,12 @@ import org.apache.activemq.artemis.core.config.Configuration
 import org.apache.activemq.artemis.core.config.CoreQueueConfiguration
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl
 import org.apache.activemq.artemis.core.config.impl.SecurityConfiguration
+import org.apache.activemq.artemis.core.message.impl.CoreMessage
 import org.apache.activemq.artemis.core.remoting.impl.netty.*
 import org.apache.activemq.artemis.core.security.Role
 import org.apache.activemq.artemis.core.server.ActiveMQServer
 import org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl
 import org.apache.activemq.artemis.core.server.impl.RoutingContextImpl
-import org.apache.activemq.artemis.core.server.impl.ServerMessageImpl
 import org.apache.activemq.artemis.core.settings.impl.AddressFullMessagePolicy
 import org.apache.activemq.artemis.core.settings.impl.AddressSettings
 import org.apache.activemq.artemis.spi.core.remoting.*
@@ -445,7 +445,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         }
 
         fun sendResponse(remoteAddress: String?) {
-            val responseMessage = ServerMessageImpl(random63BitValue(), 0).apply {
+            val responseMessage = CoreMessage(random63BitValue(), 0).apply {
                 putStringProperty(ipDetectResponseProperty, remoteAddress)
             }
             val routingContext = RoutingContextImpl(null)
