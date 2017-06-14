@@ -10,7 +10,7 @@ import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow
-import net.corda.node.driver.poll
+import net.corda.testing.driver.poll
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

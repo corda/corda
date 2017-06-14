@@ -6,7 +6,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

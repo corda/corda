@@ -1,4 +1,4 @@
-package net.corda.node.driver
+package net.corda.testing.driver
 
 import com.google.common.net.HostAndPort
 import net.corda.core.utilities.DUMMY_MAP

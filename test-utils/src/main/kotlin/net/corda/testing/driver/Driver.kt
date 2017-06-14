@@ -1,6 +1,6 @@
 @file:JvmName("Driver")
 
-package net.corda.node.driver
+package net.corda.testing.driver
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*

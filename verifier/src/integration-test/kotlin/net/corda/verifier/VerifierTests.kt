@@ -13,7 +13,7 @@ import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.NetworkMapStartStrategy
+import net.corda.testing.driver.NetworkMapStartStrategy
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.transactions.ValidatingNotaryService
 import org.junit.Test

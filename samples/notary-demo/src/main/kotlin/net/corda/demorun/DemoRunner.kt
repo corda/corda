@@ -1,10 +1,10 @@
 package net.corda.demorun
 
-import net.corda.node.driver.NetworkMapStartStrategy
-import net.corda.node.driver.PortAllocation
-import net.corda.node.driver.driver
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
+import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 
 fun CordformDefinition.clean() {
     System.err.println("Deleting: $driverDirectory")

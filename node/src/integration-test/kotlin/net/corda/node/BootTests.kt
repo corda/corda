@@ -9,11 +9,11 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ALICE
-import net.corda.node.driver.ListenProcessDeathException
-import net.corda.node.driver.NetworkMapStartStrategy
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
+import net.corda.testing.driver.ListenProcessDeathException
+import net.corda.testing.driver.NetworkMapStartStrategy
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
