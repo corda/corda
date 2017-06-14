@@ -1,5 +1,7 @@
 .PHONY: all
-all: build/noop-enclave.so
+all: build/Makefile
+	$(MAKE) -C $(<D) help
+	exit 1
 
 build:
 	mkdir -p build
@@ -7,8 +9,8 @@ build:
 build/Makefile: | build
 	cd build/ && cmake ..
 
-build/noop-enclave.so: build/Makefile
-	$(MAKE) -C $(<D) VERBOSE=1
+%: build/Makefile
+	$(MAKE) -C $(<D) $@
 
 clean:
 	rm -rf build

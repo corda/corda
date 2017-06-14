@@ -4,20 +4,16 @@ The build
 Prerequisites
 -------------
 
-* Install mercurial, gcc/g++, autoconf, automake, libtool, ocaml, protobuf, libprotobuf, libcurl, libopenssl, cmake, zlib headers, libunwind headers, libcurl headers, libprotobuf headers
-* Install proguard and symlink the proguard.jar by `ln -s <LOCATION OF proguard.jar> sgx-jvm/jvm-enclave/proguard.jar`
+* Install mercurial, gcc/g++(6), autoconf, automake, ocaml, opendjk(8), libtool, python(2.7)
+* Make sure JAVA_HOME points to your jdk 8 installation
+* Make sure CXX points to g++ (the project does NOT compile with other compilers like clang!)
 * If your hardware supports SGX and you want to use it directly you need to install and load the sgx kernel module (verify by running `lsmod | grep isgx`) and have the sgx service running (on a systemd setup verify by running `systemctl status aesmd`). Note that this is only required for actually running the binary, the build should work fine without.
 * The SGX SDK has a simulation mode that doesn't require hardware support. To use this edit `sgx-jvm/jvm-enclave/CMakeLists.txt` and change `set(SGX_USE_HARDWARE TRUE)` to `FALSE`
-
-Troubles with libprotobuf
--------------------------
-
-Unless your distro is very old you will possibly encounter protobuf linker errors when building the SGX SDK. The current version assumes libprotobuf.so.8. If your distro supports downgrades try that, the library version of 2.5.0-4 should work. We may have to include the .so in the repo, or potentially create a pre-setup docker image or something to avoid all this fuss.
 
 Toplevel Makefile targets
 -------------------------
 
-* `make` will download all other dependencies and build the sgx\_experiments binary, residing at `sgx-jvm/jvm-enclave/build/sgx\_experiments`.
+* `make` will download all other dependencies and build the sgx\_standalone\_verify binary, residing at `sgx-jvm/jvm-enclave/standalone/build/sgx\_standalone\_verify`, as well as a JNI .so residing at `sgx-jvm/jvm-enclave/jni/build/untrusted_corda_sgx.so`
 * `make clean` will clean all build targets.
 * `make distclean` will clean all build targets and downloaded dependencies. Ordinarily you shouldn't need to run this.
 

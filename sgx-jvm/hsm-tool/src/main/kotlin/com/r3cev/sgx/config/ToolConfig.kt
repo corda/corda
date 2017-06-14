@@ -9,10 +9,16 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
+enum class Mode {
+    GenerateKey,
+    Sign
+}
+
 data class ToolConfig(val config: Config) {
     constructor(args: Array<String>) : this({
         val parser = OptionParser()
-        val sourcePathArg = parser.accepts("source").withRequiredArg().required()
+        val modeArg = parser.accepts("mode").withRequiredArg().defaultsTo(Mode.Sign.name)
+        val sourcePathArg = parser.accepts("source").withRequiredArg()
         val configPathArg = parser.accepts("config").withRequiredArg()
         val profileArg = parser.accepts("profile").withRequiredArg().defaultsTo("dev")
         val publicKeyOutputPathArg = parser.accepts("pubkey").withRequiredArg().defaultsTo("./pubkey.pem")
@@ -21,6 +27,7 @@ data class ToolConfig(val config: Config) {
         val keyNameArg = parser.accepts("keyName").withRequiredArg()
         val keyGroupArg = parser.accepts("keyGroup").withRequiredArg()
         val keySpecifierArg = parser.accepts("keySpecifier").withRequiredArg()
+        val overwriteArg = parser.accepts("overwriteKey").withOptionalArg()
         val options = try {
             parser.parse(*args)
         } catch (e: Exception) {
@@ -29,21 +36,27 @@ data class ToolConfig(val config: Config) {
             exitProcess(1)
         }
 
-        val sourcePath = options.valueOf(sourcePathArg)!!
-        val publicKeyOutputPath = options.valueOf(publicKeyOutputPathArg)!!
-        val signatureOutputPath = options.valueOf(signatureOutputPathArg)!!
+        val sourcePath = options.valueOf(sourcePathArg)
+        val mode = options.valueOf(modeArg)
+        val publicKeyOutputPath = options.valueOf(publicKeyOutputPathArg)
+        val signatureOutputPath = options.valueOf(signatureOutputPathArg)
         val baseConfig = if (options.hasArgument(configPathArg)) {
             val configPath = Paths.get(options.valueOf(configPathArg)!!)
-            require(Files.exists(configPath)) { "Config file $sourcePath not found" }
+            require(Files.exists(configPath)) { "Config file $configPath not found" }
             ConfigFactory.parseFile(configPath.toFile())
         } else {
             ConfigFactory.parseResources(ToolConfig::class.java, "sgxtool.cfg")
         }
 
         val profile = options.valueOf(profileArg)!!.toLowerCase()
-        val overrideMap = mutableMapOf("profile" to profile, "sourcePath" to sourcePath,
-                "publicKeyOutputPath" to publicKeyOutputPath,
-                "signatureOutputPath" to signatureOutputPath)
+        val overrideMap = mutableMapOf(
+                "mode" to mode,
+                "profile" to profile
+        )
+        if (sourcePath != null) overrideMap["sourcePath"] = sourcePath
+        if (publicKeyOutputPath != null) overrideMap["publicKeyOutputPath"] = publicKeyOutputPath
+        if (signatureOutputPath != null) overrideMap["signatureOutputPath"] = signatureOutputPath
+        overrideMap["overwriteKey"] = options.has(overwriteArg).toString()
         if (options.hasArgument(deviceArg)) {
             overrideMap["$profile.device"] = options.valueOf(deviceArg)
         }
@@ -61,18 +74,33 @@ data class ToolConfig(val config: Config) {
         final!!
     }())
 
+    val mode: Mode by config
     val profile: String by config
     val profileConfig: Config get() = config.getConfig(profile)
     val device: String by profileConfig
     val keyName: String by profileConfig
     val keyGroup: String by profileConfig
     val keySpecifier: String by profileConfig
-    val sourcePath: Path by config
-    val publicKeyOutputPath: Path by config
-    val signatureOutputPath: Path by config
+    val sourcePath: Path? by config
+    val publicKeyOutputPath: Path? by config
+    val signatureOutputPath: Path? by config
+    val overwriteKey: Boolean by config
+
+    init {
+        when (mode) {
+            Mode.Sign -> {
+                requireNotNull(sourcePath)
+                requireNotNull(signatureOutputPath)
+                requireNotNull(publicKeyOutputPath)
+            }
+            Mode.GenerateKey -> {
+            }
+        }
+    }
 
     override fun toString(): String {
         val sb = StringBuilder()
+        sb.append("mode: $mode\n")
         sb.append("profile: $profile\n")
         sb.append("device: $device\n")
         sb.append("keyName: $keyName\n")

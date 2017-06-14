@@ -42,7 +42,7 @@ jar {
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF'
 
     manifest {
-        attributes('Main-Class' : 'com.r3cev.sgx.signtool.MainKt')
+        attributes('Main-Class' : 'com.r3cev.sgx.hsmtool.MainKt')
     }
 }
 
@@ -52,6 +52,3 @@ task copyConfig(type: Copy) {
 }
 
 build.dependsOn copyConfig
-
-
-

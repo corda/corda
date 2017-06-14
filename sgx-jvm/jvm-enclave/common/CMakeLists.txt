@@ -13,7 +13,6 @@ set_target_properties(edger8r PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/s
 
 set(GENERATED_EDL_FILES ${GENERATED_RPC_DIR}/java_t.c ${GENERATED_RPC_DIR}/java_t.h ${GENERATED_RPC_DIR}/java_u.c ${GENERATED_RPC_DIR}/java_u.h)
 set(GENERATED_EDL_FILES ${GENERATED_EDL_FILES} PARENT_SCOPE)
-message(STATUS FFS "${GENERATED_EDL_FILES}")
 add_custom_command(
     OUTPUT ${GENERATED_EDL_FILES}
     COMMAND edger8r --search-path ${PROJECT_SOURCE_DIR}/rpc --search-path ${SGX_SDK_INCLUDE} --trusted-dir ${GENERATED_RPC_DIR} --untrusted-dir ${GENERATED_RPC_DIR} java.edl
