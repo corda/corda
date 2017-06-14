@@ -13,7 +13,7 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.postJson
 import net.corda.irs.utilities.putJson
 import net.corda.irs.utilities.uploadFile
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

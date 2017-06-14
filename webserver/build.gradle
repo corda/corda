@@ -33,7 +33,6 @@ dependencies {
     compile project(':finance')
     compile project(':client:rpc')
     compile project(':client:jackson')
-    testCompile project(':node')
 
     // Web stuff: for HTTP[S] servlets
     compile "org.eclipse.jetty:jetty-servlet:$jetty_version"
@@ -58,6 +57,7 @@ dependencies {
     // For rendering the index page.
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
 
+    testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
 }
 

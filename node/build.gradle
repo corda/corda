@@ -183,6 +183,7 @@ dependencies {
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
+    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')

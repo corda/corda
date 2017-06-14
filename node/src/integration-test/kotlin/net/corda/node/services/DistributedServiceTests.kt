@@ -14,8 +14,8 @@ import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.driver
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.expect

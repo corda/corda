@@ -28,11 +28,11 @@ import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.driver
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.driver.driver
 import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.node.DriverBasedTest
@@ -123,14 +123,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates.expectEvents(isStrict = false) {
             sequence(
                     // SNAPSHOT
-                    expect { output: Vault.Update ->
-                        require(output.consumed.isEmpty()) { output.consumed.size }
-                        require(output.produced.isEmpty()) { output.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.isEmpty()) { produced.size }
                     },
                     // ISSUE
-                    expect { output: Vault.Update ->
-                        require(output.consumed.isEmpty()) { output.consumed.size }
-                        require(output.produced.size == 1) { output.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     }
             )
         }
@@ -207,19 +207,19 @@ class NodeMonitorModelTest : DriverBasedTest() {
         vaultUpdates.expectEvents {
             sequence(
                     // SNAPSHOT
-                    expect { output: Vault.Update ->
-                        require(output.consumed.isEmpty()) { output.consumed.size }
-                        require(output.produced.isEmpty()) { output.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.isEmpty()) { produced.size }
                     },
                     // ISSUE
-                    expect { update ->
-                        require(update.consumed.isEmpty()) { update.consumed.size }
-                        require(update.produced.size == 1) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.isEmpty()) { consumed.size }
+                        require(produced.size == 1) { produced.size }
                     },
                     // MOVE
-                    expect { update ->
-                        require(update.consumed.size == 1) { update.consumed.size }
-                        require(update.produced.isEmpty()) { update.produced.size }
+                    expect { (consumed, produced) ->
+                        require(consumed.size == 1) { consumed.size }
+                        require(produced.isEmpty()) { produced.size }
                     }
             )
         }
@@ -227,14 +227,14 @@ class NodeMonitorModelTest : DriverBasedTest() {
         stateMachineTransactionMapping.expectEvents {
             sequence(
                     // ISSUE
-                    expect { mapping ->
-                        require(mapping.stateMachineRunId == issueSmId)
-                        require(mapping.transactionId == issueTx!!.id)
+                    expect { (stateMachineRunId, transactionId) ->
+                        require(stateMachineRunId == issueSmId)
+                        require(transactionId == issueTx!!.id)
                     },
                     // MOVE
-                    expect { mapping ->
-                        require(mapping.stateMachineRunId == moveSmId)
-                        require(mapping.transactionId == moveTx!!.id)
+                    expect { (stateMachineRunId, transactionId) ->
+                        require(stateMachineRunId == moveSmId)
+                        require(transactionId == moveTx!!.id)
                     }
             )
         }

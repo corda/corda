@@ -1,4 +1,4 @@
-package net.corda.node.driver
+package net.corda.testing.driver
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.div

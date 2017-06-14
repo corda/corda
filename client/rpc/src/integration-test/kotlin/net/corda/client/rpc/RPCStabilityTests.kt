@@ -12,7 +12,7 @@ import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.*
 import net.corda.core.messaging.RPCOps
-import net.corda.node.driver.poll
+import net.corda.testing.driver.poll
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo

@@ -2,7 +2,7 @@ package net.corda.testing.node
 
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.getOrThrow
-import net.corda.node.driver.DriverDSLExposedInterface
+import net.corda.testing.driver.DriverDSLExposedInterface
 import org.junit.After
 import org.junit.Before
 import java.util.concurrent.CountDownLatch

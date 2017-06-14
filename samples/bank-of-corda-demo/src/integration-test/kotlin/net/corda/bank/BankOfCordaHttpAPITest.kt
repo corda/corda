@@ -5,7 +5,7 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.BOC
 import org.junit.Test

@@ -11,7 +11,6 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
-import net.corda.node.driver.addressMustNotBeBoundFuture
 import net.corda.node.internal.Node
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
@@ -22,6 +21,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
 import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
 import org.bouncycastle.asn1.x500.X500Name

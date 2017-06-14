@@ -1,6 +1,6 @@
 @file:JvmName("Driver")
 
-package net.corda.node.driver
+package net.corda.testing.driver
 
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
@@ -14,7 +14,6 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo

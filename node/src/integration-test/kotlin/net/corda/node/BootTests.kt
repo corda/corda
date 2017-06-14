@@ -7,7 +7,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.ALICE
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
 import org.assertj.core.api.Assertions.assertThat
