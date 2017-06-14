@@ -3,7 +3,7 @@ package net.corda.loadtest
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.notUsed
 import net.corda.core.crypto.toBase58String
-import net.corda.node.driver.PortAllocation
+import net.corda.testing.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
 import org.slf4j.LoggerFactory
 import java.util.*

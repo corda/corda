@@ -8,7 +8,7 @@ import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.driver.PortAllocation
+import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.Closeable

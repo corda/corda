@@ -11,9 +11,9 @@ import net.corda.core.minutes
 import net.corda.core.seconds
 import net.corda.core.utilities.Rate
 import net.corda.core.utilities.div
-import net.corda.node.driver.ShutdownManager
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.testing.RPCDriverExposedDSLInterface
+import net.corda.testing.driver.ShutdownManager
 import net.corda.testing.measure
 import net.corda.testing.rpcDriver
 import org.junit.Ignore
@@ -83,12 +83,13 @@ class RPCPerformanceTests : AbstractRPCTest() {
             val averageIndividualMs: Double,
             val Mbps: Double
     )
+
     @Test
     fun `measure Megabytes per second for simple RPCs`() {
         warmup()
         val inputOutputSizes = listOf(1024, 4096, 100 * 1024)
         val overallTraffic = 512 * 1024 * 1024L
-        measure(inputOutputSizes, (1..5)) { inputOutputSize, N ->
+        measure(inputOutputSizes, (1..5)) { inputOutputSize, _ ->
             rpcDriver {
                 val proxy = testProxy(
                         RPCClientConfiguration.default.copy(

@@ -10,6 +10,8 @@ UNRELEASED
 * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
   an unambiguous identity by searching the network map.
 
+* The node driver has moved to net.corda.testing.driver in the test-utils module
+
 Milestone 12
 ------------
 

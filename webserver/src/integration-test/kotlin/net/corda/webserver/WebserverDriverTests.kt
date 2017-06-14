@@ -3,16 +3,17 @@ package net.corda.webserver
 import com.google.common.net.HostAndPort
 import net.corda.core.getOrThrow
 import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.node.driver.WebserverHandle
-import net.corda.node.driver.addressMustBeBound
-import net.corda.node.driver.addressMustNotBeBound
-import net.corda.node.driver.driver
+import net.corda.testing.driver.WebserverHandle
+import net.corda.testing.driver.addressMustBeBound
+import net.corda.testing.driver.addressMustNotBeBound
+import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 class DriverTests {
     companion object {
-        val executorService = Executors.newScheduledThreadPool(2)
+        val executorService: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
 
         fun webserverMustBeUp(webserverHandle: WebserverHandle) {
             addressMustBeBound(executorService, webserverHandle.listenAddress, webserverHandle.process)
