@@ -29,7 +29,7 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
     applicationClass 'net.corda.explorer.Main'
     archiveName "node-explorer-${corda_release_version}.jar"
     applicationSource = files(
-        project(':tools:explorer').configurations.compile,
+        project(':tools:explorer').configurations.runtime,
         project(':tools:explorer').jar,
         '../build/classes/main/ExplorerCaplet.class'
     )

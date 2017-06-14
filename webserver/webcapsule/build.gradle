@@ -23,7 +23,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
     applicationClass 'net.corda.webserver.WebServer'
     archiveName "corda-webserver-${corda_release_version}.jar"
     applicationSource = files(
-            project(':webserver').configurations.compile,
+            project(':webserver').configurations.runtime,
             project(':webserver').jar,
             new File(project(':node').buildDir, 'classes/main/CordaCaplet.class'),
             new File(project(':node').buildDir, 'classes/main/CordaCaplet$1.class'),
