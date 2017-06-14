@@ -2,22 +2,26 @@ package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.requireThat
+import net.corda.core.crypto.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
-import net.corda.core.identity.*
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.annotation.concurrent.ThreadSafe
+import kotlin.collections.ArrayList
 
 /**
  * Simple identity service which caches parties and provides functionality for efficient lookup.
@@ -31,7 +35,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
                               val trustRoot: X509Certificate?) : SingletonSerializeAsToken(), IdentityService {
     constructor(identities: Iterable<PartyAndCertificate> = emptySet(),
                 certPaths: Map<AnonymousParty, CertPath> = emptyMap(),
-                trustRoot: X509CertificateHolder?) : this(identities, certPaths, trustRoot?.let { JcaX509CertificateConverter().getCertificate(it) })
+                trustRoot: X509CertificateHolder?) : this(identities, certPaths, trustRoot?.cert)
     companion object {
         private val log = loggerFor<InMemoryIdentityService>()
     }
@@ -57,8 +61,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         } else {
             // TODO: We should always require a full chain back to a trust anchor, but until we have a network
             // trust anchor everywhere, this will have to do.
-            val converter = JcaX509CertificateConverter()
-            PKIXParameters(setOf(TrustAnchor(converter.getCertificate(party.certificate), null)))
+            PKIXParameters(setOf(TrustAnchor(party.certificate.cert, null)))
         }
         val validator = CertPathValidator.getInstance("PKIX")
         validatorParameters.isRevocationEnabled = false
@@ -83,16 +86,33 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     @Deprecated("Use partyFromX500Name")
     override fun partyFromName(name: String): Party? = principalToParties[X500Name(name)]?.party
     override fun partyFromX500Name(principal: X500Name): Party? = principalToParties[principal]?.party
-    override fun partyFromAnonymous(party: AbstractParty): Party? {
-        return if (party is Party) {
-            party
-        } else {
-            partyFromKey(party.owningKey)
-        }
-    }
+    override fun partyFromAnonymous(party: AbstractParty) = party as? Party ?: partyFromKey(party.owningKey)
     override fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
     override fun requirePartyFromAnonymous(party: AbstractParty): Party {
         return partyFromAnonymous(party) ?: throw IllegalStateException("Could not deanonymise party ${party.owningKey.toStringShort()}")
+    }
+
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
+        val results = HashSet<Party>()
+        for ((x500name, partyAndCertificate) in principalToParties) {
+            val party = partyAndCertificate.party
+            for (rdn in x500name.rdNs) {
+                val component = rdn.first.value.toString()
+                if (exactMatch && component == query) {
+                    results += party
+                } else if (!exactMatch) {
+                    // We can imagine this being a query over a lucene index in future.
+                    //
+                    // Kostas says: We can easily use the Jaro-Winkler distance metric as it is best suited for short
+                    // strings such as entity/company names, and to detect small typos. We can also apply it for city
+                    // or any keyword related search in lists of records (not raw text - for raw text we need indexing)
+                    // and we can return results in hierarchical order (based on normalised String similarity 0.0-1.0).
+                    if (component.contains(query, ignoreCase = true))
+                        results += party
+                }
+            }
+        }
+        return results
     }
 
     @Throws(IdentityService.UnknownAnonymousPartyException::class)
@@ -121,8 +141,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         } else {
             // TODO: We should always require a full chain back to a trust anchor, but until we have a network
             // trust anchor everywhere, this will have to do.
-            val converter = JcaX509CertificateConverter()
-            PKIXParameters(setOf(TrustAnchor(converter.getCertificate(fullParty.certificate), null)))
+            PKIXParameters(setOf(TrustAnchor(fullParty.certificate.cert, null)))
         }
         validatorParameters.isRevocationEnabled = false
         val result = validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult

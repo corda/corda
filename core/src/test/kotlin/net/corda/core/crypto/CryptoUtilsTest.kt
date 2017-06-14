@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import com.google.common.collect.Sets
 import net.i2p.crypto.eddsa.EdDSAKey
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -9,6 +10,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
@@ -640,9 +642,9 @@ class CryptoUtilsTest {
         val keyPairEdDSA = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
         val pubEdDSA = keyPairEdDSA.public
         assertTrue(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, pubEdDSA))
-        // use R1 curve for check.
+        // Use R1 curve for check.
         assertFalse(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, pubEdDSA))
-        // check for point at infinity.
+        // Check for point at infinity.
         val pubKeySpec = EdDSAPublicKeySpec((Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec).curve.getZero(GroupElement.Representation.P3), Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec)
         assertFalse(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, EdDSAPublicKey(pubKeySpec)))
     }
@@ -652,8 +654,131 @@ class CryptoUtilsTest {
         val keyGen = KeyPairGenerator.getInstance("EC") // sun.security.ec.ECPublicKeyImpl
         keyGen.initialize(256, newSecureRandom())
         val pairSun = keyGen.generateKeyPair()
-        val pubSun = pairSun.getPublic()
-        // should fail as pubSun is not a BCECPublicKey.
+        val pubSun = pairSun.public
+        // Should fail as pubSun is not a BCECPublicKey.
         Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, pubSun)
+    }
+
+    @Test
+    fun `ECDSA secp256R1 deterministic key generation`() {
+        val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+
+        // Check scheme.
+        assertEquals(priv.algorithm, dpriv.algorithm)
+        assertEquals(pub.algorithm, dpub.algorithm)
+        assertTrue(dpriv is BCECPrivateKey)
+        assertTrue(dpub is BCECPublicKey)
+        assertEquals((dpriv as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
+        assertEquals((dpub as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256r1"))
+        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.ECDSA_SECP256R1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.ECDSA_SECP256R1_SHA256)
+
+        // Validate public key.
+        assertTrue(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256R1_SHA256, dpub))
+
+        // Try to sign/verify.
+        val signedData = Crypto.doSign(dpriv, testBytes)
+        val verification = Crypto.doVerify(dpub, signedData, testBytes)
+        assertTrue(verification)
+
+        // Check it is a new keyPair.
+        assertNotEquals(priv, dpriv)
+        assertNotEquals(pub, dpub)
+
+        // A new keyPair is always generated per different seed.
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertNotEquals(dpriv, dpriv2)
+        assertNotEquals(dpub, dpub2)
+
+        // Check if the same input always produces the same output (i.e. deterministically generated).
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+        assertEquals(dpriv, dpriv_1)
+        assertEquals(dpub, dpub_1)
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertEquals(dpriv2, dpriv_2)
+        assertEquals(dpub2, dpub_2)
+    }
+
+    @Test
+    fun `ECDSA secp256K1 deterministic key generation`() {
+        val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+
+        // Check scheme.
+        assertEquals(priv.algorithm, dpriv.algorithm)
+        assertEquals(pub.algorithm, dpub.algorithm)
+        assertTrue(dpriv is BCECPrivateKey)
+        assertTrue(dpub is BCECPublicKey)
+        assertEquals((dpriv as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
+        assertEquals((dpub as ECKey).parameters, ECNamedCurveTable.getParameterSpec("secp256k1"))
+        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.ECDSA_SECP256K1_SHA256)
+        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.ECDSA_SECP256K1_SHA256)
+
+        // Validate public key.
+        assertTrue(Crypto.publicKeyOnCurve(Crypto.ECDSA_SECP256K1_SHA256, dpub))
+
+        // Try to sign/verify.
+        val signedData = Crypto.doSign(dpriv, testBytes)
+        val verification = Crypto.doVerify(dpub, signedData, testBytes)
+        assertTrue(verification)
+
+        // check it is a new keyPair.
+        assertNotEquals(priv, dpriv)
+        assertNotEquals(pub, dpub)
+
+        // A new keyPair is always generated per different seed.
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertNotEquals(dpriv, dpriv2)
+        assertNotEquals(dpub, dpub2)
+
+        // Check if the same input always produces the same output (i.e. deterministically generated).
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+        assertEquals(dpriv, dpriv_1)
+        assertEquals(dpub, dpub_1)
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertEquals(dpriv2, dpriv_2)
+        assertEquals(dpub2, dpub_2)
+    }
+
+    @Test
+    fun `EdDSA ed25519 deterministic key generation`() {
+        val (priv, pub) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+
+        // Check scheme.
+        assertEquals(priv.algorithm, dpriv.algorithm)
+        assertEquals(pub.algorithm, dpub.algorithm)
+        assertTrue(dpriv is EdDSAPrivateKey)
+        assertTrue(dpub is EdDSAPublicKey)
+        assertEquals((dpriv as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals((dpub as EdDSAKey).params, EdDSANamedCurveTable.getByName("ED25519"))
+        assertEquals(Crypto.findSignatureScheme(dpriv), Crypto.EDDSA_ED25519_SHA512)
+        assertEquals(Crypto.findSignatureScheme(dpub), Crypto.EDDSA_ED25519_SHA512)
+
+        // Validate public key.
+        assertTrue(Crypto.publicKeyOnCurve(Crypto.EDDSA_ED25519_SHA512, dpub))
+
+        // Try to sign/verify.
+        val signedData = Crypto.doSign(dpriv, testBytes)
+        val verification = Crypto.doVerify(dpub, signedData, testBytes)
+        assertTrue(verification)
+
+        // Check it is a new keyPair.
+        assertNotEquals(priv, dpriv)
+        assertNotEquals(pub, dpub)
+
+        // A new keyPair is always generated per different seed.
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertNotEquals(dpriv, dpriv2)
+        assertNotEquals(dpub, dpub2)
+
+        // Check if the same input always produces the same output (i.e. deterministically generated).
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
+        assertEquals(dpriv, dpriv_1)
+        assertEquals(dpub, dpub_1)
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
+        assertEquals(dpriv2, dpriv_2)
+        assertEquals(dpub2, dpub_2)
     }
 }

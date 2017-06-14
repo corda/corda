@@ -184,7 +184,7 @@ object InteractiveShell {
     private val yamlInputMapper: ObjectMapper by lazy {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
-        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory()).apply {
+        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
             registerModule(rpcModule)
