@@ -7,8 +7,11 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-Milestone 12.0 - First Public Beta
-----------------------------------
+* A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
+  an unambiguous identity by searching the network map.
+
+Milestone 12
+------------
 
 * Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
 
@@ -97,6 +100,7 @@ Milestone 12.0 - First Public Beta
 * The certificate hierarchy has been changed in order to allow corda node to sign keys with proper certificate chain.
      * The corda node will now be issued a restricted client CA for identity/transaction key signing.
      * TLS certificate are now stored in `sslkeystore.jks` and identity keys are stored in `nodekeystore.jks`
+
 .. warning:: The old keystore will need to be removed when upgrading to this version.
 
 Milestone 11.1

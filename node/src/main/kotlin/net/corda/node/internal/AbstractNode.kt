@@ -58,7 +58,6 @@ import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
@@ -826,9 +825,8 @@ private class KeyStoreWrapper(private val storePath: Path, private val storePass
     }
 
     fun save(serviceName: X500Name, privateKeyAlias: String, keyPair: KeyPair) {
-        val converter = JcaX509CertificateConverter()
         val clientCA = keyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, storePassword)
-        val cert = converter.getCertificate(X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public))
+        val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public).cert
         keyStore.addOrReplaceKey(privateKeyAlias, keyPair.private, storePassword.toCharArray(), arrayOf(cert, *keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)))
         keyStore.save(storePath, storePassword)
     }

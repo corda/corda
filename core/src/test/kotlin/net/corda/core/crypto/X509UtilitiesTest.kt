@@ -12,7 +12,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.junit.Rule
 import org.junit.Test
@@ -84,7 +83,6 @@ class X509UtilitiesTest {
     fun `storing EdDSA key in java keystore`() {
         val tmpKeyStore = tempFile("keystore.jks")
 
-        val converter = JcaX509CertificateConverter()
         val keyPair = generateKeyPair(EDDSA_ED25519_SHA512)
         val selfSignCert = createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
 
@@ -93,7 +91,7 @@ class X509UtilitiesTest {
         // Save the EdDSA private key with self sign cert in the keystore.
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", keyPair.private, "password".toCharArray(),
-                Stream.of(selfSignCert).map(converter::getCertificate).toTypedArray())
+                Stream.of(selfSignCert).map { it.cert }.toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
@@ -116,10 +114,9 @@ class X509UtilitiesTest {
         val edDSACert = X509Utilities.createCertificate(CertificateType.TLS, ecDSACert, ecDSAKey, X500Name("CN=TestEdDSA"), edDSAKeypair.public)
 
         // Save the EdDSA private key with cert chains.
-        val converter = JcaX509CertificateConverter()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", edDSAKeypair.private, "password".toCharArray(),
-                Stream.of(ecDSACert, edDSACert).map(converter::getCertificate).toTypedArray())
+                Stream.of(ecDSACert, edDSACert).map { it.cert }.toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
@@ -344,7 +341,6 @@ class X509UtilitiesTest {
                                               trustStoreFilePath: Path,
                                               trustStorePassword: String
     ): KeyStore {
-        val converter = JcaX509CertificateConverter()
         val rootCAKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = createSelfSignedCACertificate(X509Utilities.getDevX509Name("Corda Node Root CA"), rootCAKey)
 
@@ -354,19 +350,19 @@ class X509UtilitiesTest {
         val keyPass = keyPassword.toCharArray()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
-        keyStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, rootCAKey.private, keyPass, arrayOf(converter.getCertificate(rootCACert) as Certificate))
+        keyStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, rootCAKey.private, keyPass, arrayOf<Certificate>(rootCACert.cert))
 
         keyStore.addOrReplaceKey(X509Utilities.CORDA_INTERMEDIATE_CA,
                 intermediateCAKeyPair.private,
                 keyPass,
-                Stream.of(intermediateCACert, rootCACert).map(converter::getCertificate).toTypedArray<Certificate>())
+                Stream.of(intermediateCACert, rootCACert).map { it.cert }.toTypedArray<Certificate>())
 
         keyStore.save(keyStoreFilePath, storePassword)
 
         val trustStore = KeyStoreUtilities.loadOrCreateKeyStore(trustStoreFilePath, trustStorePassword)
 
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, converter.getCertificate(rootCACert))
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, converter.getCertificate(intermediateCACert))
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert.cert)
 
         trustStore.save(trustStoreFilePath, trustStorePassword)
 
@@ -375,11 +371,10 @@ class X509UtilitiesTest {
 
     @Test
     fun `Get correct private key type from Keystore`() {
-        val converter = JcaX509CertificateConverter()
         val keyPair = generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val selfSignCert = createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
-        keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(converter.getCertificate(selfSignCert)))
+        keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(selfSignCert.cert))
 
         val keyFromKeystore = keyStore.getKey("Key", "keypassword".toCharArray())
         val keyFromKeystoreCasted = keyStore.getSupportedKey("Key", "keypassword")

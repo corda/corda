@@ -40,20 +40,23 @@ object JacksonSupport {
         fun partyFromName(partyName: String): Party?
         fun partyFromX500Name(name: X500Name): Party?
         fun partyFromKey(owningKey: PublicKey): Party?
+        fun partiesFromName(query: String): Set<Party>
     }
 
-    class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+    class RpcObjectMapper(val rpc: CordaRPCOps, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = rpc.partyFromName(partyName)
         override fun partyFromX500Name(name: X500Name): Party? = rpc.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
+        override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
     }
 
-    class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
+    class IdentityObjectMapper(val identityService: IdentityService, factory: JsonFactory, val fuzzyIdentityMatch: Boolean) : PartyObjectMapper, ObjectMapper(factory) {
         @Suppress("OverridingDeprecatedMember", "DEPRECATION")
         override fun partyFromName(partyName: String): Party? = identityService.partyFromName(partyName)
         override fun partyFromX500Name(name: X500Name): Party? = identityService.partyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = identityService.partyFromKey(owningKey)
+        override fun partiesFromName(query: String) = identityService.partiesFromName(query, fuzzyIdentityMatch)
     }
 
     class NoPartyObjectMapper(factory: JsonFactory) : PartyObjectMapper, ObjectMapper(factory) {
@@ -61,6 +64,7 @@ object JacksonSupport {
         override fun partyFromName(partyName: String): Party? = throw UnsupportedOperationException()
         override fun partyFromX500Name(name: X500Name): Party? = throw UnsupportedOperationException()
         override fun partyFromKey(owningKey: PublicKey): Party? = throw UnsupportedOperationException()
+        override fun partiesFromName(query: String) = throw UnsupportedOperationException()
     }
 
     val cordaModule: Module by lazy {
@@ -105,17 +109,31 @@ object JacksonSupport {
         }
     }
 
-    /** Mapper requiring RPC support to deserialise parties from names */
+    /**
+     * Creates a Jackson ObjectMapper that uses RPC to deserialise parties from string names.
+     *
+     * If [fuzzyIdentityMatch] is false, fields mapped to [Party] objects must be in X.500 name form and precisely
+     * match an identity known from the network map. If true, the name is matched more leniently but if the match
+     * is ambiguous a [JsonParseException] is thrown.
+     */
     @JvmStatic @JvmOverloads
-    fun createDefaultMapper(rpc: CordaRPCOps, factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(RpcObjectMapper(rpc, factory))
+    fun createDefaultMapper(rpc: CordaRPCOps, factory: JsonFactory = JsonFactory(),
+                            fuzzyIdentityMatch: Boolean = false): ObjectMapper = configureMapper(RpcObjectMapper(rpc, factory, fuzzyIdentityMatch))
 
     /** For testing or situations where deserialising parties is not required */
     @JvmStatic @JvmOverloads
     fun createNonRpcMapper(factory: JsonFactory = JsonFactory()): ObjectMapper = configureMapper(NoPartyObjectMapper(factory))
 
-    /** For testing with an in memory identity service */
+    /**
+     * Creates a Jackson ObjectMapper that uses an [IdentityService] directly inside the node to deserialise parties from string names.
+     *
+     * If [fuzzyIdentityMatch] is false, fields mapped to [Party] objects must be in X.500 name form and precisely
+     * match an identity known from the network map. If true, the name is matched more leniently but if the match
+     * is ambiguous a [JsonParseException] is thrown.
+     */
     @JvmStatic @JvmOverloads
-    fun createInMemoryMapper(identityService: IdentityService, factory: JsonFactory = JsonFactory()) = configureMapper(IdentityObjectMapper(identityService, factory))
+    fun createInMemoryMapper(identityService: IdentityService, factory: JsonFactory = JsonFactory(),
+                             fuzzyIdentityMatch: Boolean = false) = configureMapper(IdentityObjectMapper(identityService, factory, fuzzyIdentityMatch))
 
     private fun configureMapper(mapper: ObjectMapper): ObjectMapper = mapper.apply {
         enable(SerializationFeature.INDENT_OUTPUT)
@@ -169,14 +187,21 @@ object JacksonSupport {
             // how to parse the content
             return if (parser.text.contains("=")) {
                 val principal = X500Name(parser.text)
-                mapper.partyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name ${principal}")
+                mapper.partyFromX500Name(principal) ?: throw JsonParseException(parser, "Could not find a Party with name $principal")
             } else {
-                val key = try {
-                    parsePublicKeyBase58(parser.text)
-                } catch (e: Exception) {
-                    throw JsonParseException(parser, "Could not interpret ${parser.text} as a base58 encoded public key")
+                val nameMatches = mapper.partiesFromName(parser.text)
+                if (nameMatches.isEmpty()) {
+                    val key = try {
+                        parsePublicKeyBase58(parser.text)
+                    } catch (e: Exception) {
+                        throw JsonParseException(parser, "Could not find a matching party for '${parser.text}' and is not a base58 encoded public key")
+                    }
+                    mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${key.toStringShort()}")
+                } else if (nameMatches.size == 1) {
+                    nameMatches.first()
+                } else {
+                    throw JsonParseException(parser, "Ambiguous name match '${parser.text}': could be any of " + nameMatches.map { it.name }.joinToString(" ... or ..."))
                 }
-                mapper.partyFromKey(key) ?: throw JsonParseException(parser, "Could not find a Party with key ${key.toStringShort()}")
             }
         }
     }
