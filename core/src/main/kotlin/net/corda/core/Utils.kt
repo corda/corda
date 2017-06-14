@@ -476,6 +476,7 @@ fun Class<*>.requireExternal(msg: String = "Internal class")
 interface DeclaredField<T> {
     companion object {
         inline fun <reified T> Any?.declaredField(clazz: KClass<*>, name: String): DeclaredField<T> = declaredField(clazz.java, name)
+        inline fun <reified T> Any.declaredField(name: String): DeclaredField<T> = declaredField(javaClass, name)
         inline fun <reified T> Any?.declaredField(clazz: Class<*>, name: String): DeclaredField<T> {
             val javaField = clazz.getDeclaredField(name).apply { isAccessible = true }
             val receiver = this

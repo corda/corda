@@ -1,6 +1,8 @@
 package net.corda.node.services.transactions
 
 import bftsmart.communication.ServerCommunicationSystem
+import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
+import bftsmart.communication.client.netty.NettyClientServerSession
 import bftsmart.tom.MessageContext
 import bftsmart.tom.ServiceProxy
 import bftsmart.tom.ServiceReplica
@@ -71,16 +73,13 @@ object BFTSMaRt {
     }
 
     class Client(config: BFTSMaRtConfig, private val clientId: Int) : SingletonSerializeAsToken() {
-        private val configHandle = config.handle()
-
         companion object {
             private val log = loggerFor<Client>()
         }
 
         /** A proxy for communicating with the BFT cluster */
-        private val proxy: ServiceProxy by lazy {
-            configHandle.use { buildProxy(it.path) }
-        }
+        private val proxy = ServiceProxy(clientId, config.path.toString(), buildResponseComparator(), buildExtractor())
+        private val sessionTable = (proxy.communicationSystem as NettyClientServerCommunicationSystemClientSide).declaredField<Map<Int, NettyClientServerSession>>("sessionTable").value
 
         fun dispose() {
             proxy.close() // XXX: Does this do enough?
@@ -92,16 +91,13 @@ object BFTSMaRt {
          */
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
-            val request = CommitRequest(transaction, otherSide)
-            val responseBytes: ByteArray? = proxy.invokeOrdered(request.serialize().bytes)
-            val response = responseBytes!!.deserialize<ClusterResponse>()
-            return response
-        }
-
-        private fun buildProxy(configHome: Path): ServiceProxy {
-            val comparator = buildResponseComparator()
-            val extractor = buildExtractor()
-            return ServiceProxy(clientId, configHome.toString(), comparator, extractor)
+            while (true) {
+                val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
+                if (inactive.isEmpty()) break
+                log.info("Client-replica channels not yet active: $clientId to $inactive")
+                Thread.sleep((inactive.size * 100).toLong())
+            }
+            return proxy.invokeOrdered(CommitRequest(transaction, otherSide).serialize().bytes).deserialize<ClusterResponse>()
         }
 
         /** A comparator to check if replies from two replicas are the same. */
