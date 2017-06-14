@@ -12,7 +12,7 @@ import java.nio.file.Files
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager(Files.createTempDirectory("bft-smart-config")) {
+class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }

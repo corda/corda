@@ -8,9 +8,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PathManagerTests {
+    private class MyPathManager : PathManager<MyPathManager>(Files.createTempFile(MyPathManager::class.simpleName, null))
+
     @Test
     fun `path deleted when manager closed`() {
-        val manager = PathManager(Files.createTempFile(javaClass.simpleName, null))
+        val manager = MyPathManager()
         val leakedPath = manager.use {
             it.path.also { assertTrue(it.exists()) }
         }
@@ -20,7 +22,7 @@ class PathManagerTests {
 
     @Test
     fun `path deleted when handle closed`() {
-        val handle = PathManager(Files.createTempFile(javaClass.simpleName, null)).use {
+        val handle = MyPathManager().use {
             it.handle()
         }
         val leakedPath = handle.use {

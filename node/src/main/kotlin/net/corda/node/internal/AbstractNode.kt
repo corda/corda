@@ -171,9 +171,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var scheduler: NodeSchedulerService
     lateinit var schemas: SchemaService
     lateinit var auditService: AuditService
-    protected val runOnStop: ArrayList<Runnable> = ArrayList()
+    protected val runOnStop = ArrayList<() -> Any?>()
     lateinit var database: Database
-    protected var dbCloser: Runnable? = null
+    protected var dbCloser: (() -> Any?)? = null
     private lateinit var rpcFlows: List<Class<out FlowLogic<*>>>
 
     var isPreviousCheckpointsPresent = false
@@ -225,7 +225,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             smm.tokenizableServices.addAll(tokenizableServices)
 
             if (serverThread is ExecutorService) {
-                runOnStop += Runnable {
+                runOnStop += {
                     // We wait here, even though any in-flight messages should have been drained away because the
                     // server thread can potentially have other non-messaging tasks scheduled onto it. The timeout value is
                     // arbitrary and might be inappropriate.
@@ -256,11 +256,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
             initUploaders()
 
-            runOnStop += Runnable { network.stop() }
+            runOnStop += network::stop
             _networkMapRegistrationFuture.setFuture(registerWithNetworkMapIfConfigured())
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
-            runOnStop += Runnable { smm.stop(acceptableLiveFiberCountOnStop()) }
+            runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
             scheduler.start()
         }
         started = true
@@ -573,8 +573,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             this.database = database
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
             log.info("Connected to ${database.vendor} database.")
-            dbCloser = Runnable { toClose.close() }
-            runOnStop += dbCloser!!
+            toClose::close.let {
+                dbCloser = it
+                runOnStop += it
+            }
             database.transaction {
                 insideTransaction()
             }
@@ -711,7 +713,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Run shutdown hooks in opposite order to starting
         for (toRun in runOnStop.reversed()) {
-            toRun.run()
+            toRun()
         }
         runOnStop.clear()
     }
