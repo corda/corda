@@ -13,7 +13,7 @@ import org.slf4j.Logger
  * If the handler errors and the returned future is already done, the error is logged (unless it's thenAgain).
  * If the handler returns normally and the returned future is already done, the handler value is silently discarded.
  */
-fun <T> List<ListenableFuture<*>>.then(lock: Any? = Any(), handler: ThenContext.(ListenableFuture<*>) -> T): ListenableFuture<T> {
+fun <T> Iterable<ListenableFuture<*>>.then(lock: Any? = Any(), handler: ThenContext.(ListenableFuture<*>) -> T): ListenableFuture<T> {
     return ThenContextImpl(this, handler = if (lock != null) { f -> synchronized(lock) { handler(f) } } else handler)
 }
 
