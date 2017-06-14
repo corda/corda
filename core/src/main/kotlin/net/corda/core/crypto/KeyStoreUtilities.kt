@@ -4,16 +4,13 @@ import net.corda.core.exists
 import net.corda.core.read
 import net.corda.core.write
 import org.bouncycastle.cert.X509CertificateHolder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.path.CertPath
-import org.bouncycastle.crypto.util.PublicKeyFactory
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Path
 import java.security.*
 import java.security.cert.Certificate
-import java.security.cert.X509Certificate
 
 object KeyStoreUtilities {
     val KEYSTORE_TYPE = "JKS"
@@ -80,8 +77,7 @@ object KeyStoreUtilities {
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
 fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: CertPath) {
-    val converter = JcaX509CertificateConverter()
-    addOrReplaceKey(alias, key, password, chain.certificates.map { it -> converter.getCertificate(it) }.toTypedArray<Certificate>())
+    addOrReplaceKey(alias, key, password, chain.certificates.map { it.cert }.toTypedArray<Certificate>())
 }
 
 /**

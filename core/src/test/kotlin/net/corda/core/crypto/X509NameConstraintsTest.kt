@@ -5,7 +5,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.junit.Test
 import java.security.KeyStore
@@ -17,7 +16,6 @@ import kotlin.test.assertTrue
 class X509NameConstraintsTest {
 
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<KeyStore, KeyStore> {
-        val converter = JcaX509CertificateConverter()
         val rootKeys = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(X509Utilities.getDevX509Name("Corda Root CA"), rootKeys)
 
@@ -30,7 +28,7 @@ class X509NameConstraintsTest {
         val keyPass = "password"
         val trustStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
         trustStore.load(null, keyPass.toCharArray())
-        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, converter.getCertificate(rootCACert))
+        trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
 
         val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientCAKeyPair, subjectName, tlsKey.public)
@@ -38,7 +36,7 @@ class X509NameConstraintsTest {
         val keyStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
         keyStore.load(null, keyPass.toCharArray())
         keyStore.addOrReplaceKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, keyPass.toCharArray(),
-                Stream.of(tlsCert, clientCACert, intermediateCACert, rootCACert).map(converter::getCertificate).toTypedArray<Certificate>())
+                Stream.of(tlsCert, clientCACert, intermediateCACert, rootCACert).map { it.cert }.toTypedArray<Certificate>())
         return Pair(keyStore, trustStore)
     }
 

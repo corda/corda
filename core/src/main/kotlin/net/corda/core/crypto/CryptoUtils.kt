@@ -144,7 +144,7 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * you want hard-coded private keys.
  * This currently works for the default signature scheme EdDSA ed25519 only.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.generateKeyPairFromEntropy(entropy)
+fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**
  * Helper function for signing.

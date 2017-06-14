@@ -11,6 +11,8 @@ import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.BOB_PUBKEY
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
+import java.security.KeyPair
+import java.security.cert.CertPath
 import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -54,6 +56,18 @@ class InMemoryIdentityServiceTests {
     }
 
     @Test
+    fun `get identity by substring match`() {
+        val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
+        service.registerIdentity(ALICE_IDENTITY)
+        service.registerIdentity(BOB_IDENTITY)
+        val (_, _, alicente) = createParty(X500Name("O=Alicente Worldwide,L=London,C=UK"))
+        service.registerIdentity(alicente)
+        assertEquals(setOf(ALICE, alicente.party), service.partiesFromName("Alice", false))
+        assertEquals(setOf(ALICE), service.partiesFromName("Alice Corp", true))
+        assertEquals(setOf(BOB), service.partiesFromName("Bob Plc", true))
+    }
+
+    @Test
     fun `get identity by name`() {
         val service = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val identities = listOf("Node A", "Node B", "Node C")
@@ -87,12 +101,7 @@ class InMemoryIdentityServiceTests {
      */
     @Test
     fun `assert ownership`() {
-        val aliceRootKey = Crypto.generateKeyPair()
-        val aliceRootCert = X509Utilities.createSelfSignedCACertificate(ALICE.name, aliceRootKey)
-        val aliceTxKey = Crypto.generateKeyPair()
-        val aliceTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, aliceRootCert, aliceRootKey, ALICE.name, aliceTxKey.public)
-        val aliceCertPath = X509Utilities.createCertificatePath(aliceRootCert, aliceTxCert, revocationEnabled = false)
-        val alice = PartyAndCertificate(ALICE.name, aliceRootKey.public, aliceRootCert, aliceCertPath)
+        val (aliceTxKey, aliceCertPath, alice) = createParty(ALICE.name)
 
         val bobRootKey = Crypto.generateKeyPair()
         val bobRootCert = X509Utilities.createSelfSignedCACertificate(BOB.name, bobRootKey)
@@ -118,6 +127,15 @@ class InMemoryIdentityServiceTests {
         assertFailsWith<IllegalArgumentException> {
             service.assertOwnership(bob.party, anonymousAlice)
         }
+    }
+
+    private fun createParty(x500Name: X500Name): Triple<KeyPair, CertPath, PartyAndCertificate> {
+        val rootKey = Crypto.generateKeyPair()
+        val rootCert = X509Utilities.createSelfSignedCACertificate(x500Name, rootKey)
+        val txKey = Crypto.generateKeyPair()
+        val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, rootCert, rootKey, x500Name, txKey.public)
+        val certPath = X509Utilities.createCertificatePath(rootCert, txCert, revocationEnabled = false)
+        return Triple(txKey, certPath, PartyAndCertificate(x500Name, rootKey.public, rootCert, certPath))
     }
 
     /**
