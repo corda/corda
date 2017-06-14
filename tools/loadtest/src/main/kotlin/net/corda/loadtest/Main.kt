@@ -2,8 +2,10 @@ package net.corda.loadtest
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
+import net.corda.loadtest.tests.StabilityTest
 import net.corda.loadtest.tests.crossCashTest
 import net.corda.loadtest.tests.selfIssueTest
+import net.corda.nodeapi.config.parseAs
 import java.io.File
 
 /**
@@ -33,6 +35,11 @@ import java.io.File
  *   disruption is basically an infinite loop of wait->mess something up->repeat. Invariants should hold under these
  *   conditions as well.
  *
+ * Configuration:
+ *   The load test will look for configuration in location provided by the program argument, or the configuration can be
+ *   provided via system properties using vm arguments, e.g. -Dloadtest.nodeHosts.0="host" see [LoadTestConfiguration] for
+ *   list of configurable properties.
+ *
  * Diagnostic:
  *   TODO currently the diagnostic is quite poor, all we can say is that the predicted state is different from the real
  *   one, or that some piece of work failed to execute in some state. Logs need to be checked manually.
@@ -43,26 +50,33 @@ import java.io.File
  */
 
 fun main(args: Array<String>) {
-    if (args.isEmpty()) {
-        throw IllegalArgumentException("Usage: <binary> PATH_TO_CONFIG")
+    val customConfig = if (args.isNotEmpty()) {
+        ConfigFactory.parseFile(File(args[0]), ConfigParseOptions.defaults().setAllowMissing(false))
+    } else {
+        // This allow us to provide some configurations via teamcity.
+        ConfigFactory.parseProperties(System.getProperties()).getConfig("loadtest")
     }
     val defaultConfig = ConfigFactory.parseResources("loadtest-reference.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-    val defaultSshUserConfig = ConfigFactory.parseMap(
-            if (defaultConfig.hasPath("sshUser")) emptyMap() else mapOf("sshUser" to System.getProperty("user.name"))
-    )
-    val customConfig = ConfigFactory.parseFile(File(args[0]), ConfigParseOptions.defaults().setAllowMissing(false))
-    val resolvedConfig = customConfig.withFallback(defaultConfig).withFallback(defaultSshUserConfig).resolve()
-    val loadTestConfiguration = LoadTestConfiguration(resolvedConfig)
+    val resolvedConfig = customConfig.withFallback(defaultConfig).resolve()
+    val loadTestConfiguration = resolvedConfig.parseAs<LoadTestConfiguration>()
 
     if (loadTestConfiguration.nodeHosts.isEmpty()) {
         throw IllegalArgumentException("Please specify at least one node host")
     }
 
+    when (loadTestConfiguration.mode) {
+        TestMode.LOAD_TEST -> runLoadTest(loadTestConfiguration)
+        TestMode.STABILITY_TEST -> runStabilityTest(loadTestConfiguration)
+    }
+}
+
+private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
     runLoadTests(loadTestConfiguration, listOf(
             selfIssueTest to LoadTest.RunParameters(
                     parallelism = 100,
                     generateCount = 10000,
                     clearDatabaseBeforeRun = false,
+                    executionFrequency = 1000,
                     gatherFrequency = 1000,
                     disruptionPatterns = listOf(
                             listOf(), // no disruptions
@@ -91,6 +105,7 @@ fun main(args: Array<String>) {
                     parallelism = 4,
                     generateCount = 2000,
                     clearDatabaseBeforeRun = false,
+                    executionFrequency = 1000,
                     gatherFrequency = 10,
                     disruptionPatterns = listOf(
                             listOf(),
@@ -112,6 +127,27 @@ fun main(args: Array<String>) {
                                     )
                             )
                     )
+            )
+    ))
+}
+
+private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
+    runLoadTests(loadTestConfiguration, listOf(
+            StabilityTest.selfIssueTest to LoadTest.RunParameters(
+                    parallelism = loadTestConfiguration.parallelism,
+                    generateCount = loadTestConfiguration.generateCount,
+                    clearDatabaseBeforeRun = false,
+                    executionFrequency = loadTestConfiguration.executionFrequency,
+                    gatherFrequency = 100,
+                    disruptionPatterns = listOf(listOf()) // no disruptions
+            ),
+            StabilityTest.crossCashTest to LoadTest.RunParameters(
+                    parallelism = loadTestConfiguration.parallelism,
+                    generateCount = loadTestConfiguration.generateCount,
+                    clearDatabaseBeforeRun = false,
+                    executionFrequency = loadTestConfiguration.executionFrequency,
+                    gatherFrequency = 100,
+                    disruptionPatterns = listOf(listOf())
             )
     ))
 }
