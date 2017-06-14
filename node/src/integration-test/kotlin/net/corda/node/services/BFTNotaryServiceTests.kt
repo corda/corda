@@ -36,7 +36,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
     }
 
     private fun bftNotaryCluster(clusterSize: Int): ListenableFuture<Party> {
-        Files.delete("config" / "currentView") // XXX: Make config object warn if this exists?
+        Files.deleteIfExists("config" / "currentView") // XXX: Make config object warn if this exists?
         val replicaIds = (0 until clusterSize)
         val replicaNames = replicaIds.map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val party = ServiceIdentityGenerator.generateToDisk(
