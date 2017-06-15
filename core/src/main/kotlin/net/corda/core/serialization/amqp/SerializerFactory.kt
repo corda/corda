@@ -12,6 +12,12 @@ import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
+import java.lang.Float
+import java.lang.Long
+import java.lang.Short
+import java.lang.Double
+import java.lang.Character
+//import java.lang.Boolean
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -269,6 +275,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
 
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
+                Character::class.java to "char",
                 Boolean::class.java to "boolean",
                 Byte::class.java to "byte",
                 UnsignedByte::class.java to "ubyte",

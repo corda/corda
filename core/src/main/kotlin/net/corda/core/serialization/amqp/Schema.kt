@@ -168,6 +168,25 @@ data class Field(val name: String, val type: String, val requires: List<String>,
         sb.append("/>")
         return sb.toString()
     }
+
+    fun getPrimType() = when (type) {
+        "int"     -> Int::class.javaPrimitiveType!!
+        "string"  -> String::class.java
+        "short"   -> Short::class.javaPrimitiveType!!
+        "long"    -> Long::class.javaPrimitiveType!!
+        "char"    -> Char::class.javaPrimitiveType!!
+        "boolean" -> Boolean::class.javaPrimitiveType!!
+        "double"  -> Double::class.javaPrimitiveType!!
+        "float"   -> Double::class.javaPrimitiveType!!
+        else      -> {
+            try {
+                ClassLoader.getSystemClassLoader().loadClass(type)
+            }
+            catch (e: ClassNotFoundException) {
+                throw IllegalArgumentException ("pants")
+            }
+        }
+    }
 }
 
 sealed class TypeNotation : DescribedType {
@@ -232,6 +251,14 @@ data class CompositeType(override val name: String, override val label: String?,
         }
         sb.append("</type>")
         return sb.toString()
+    }
+
+    fun carpenterSchema() : Map<String, Class<out Any?>> {
+        var m : MutableMap<String, Class<out Any?>> = mutableMapOf()
+
+        fields.forEach { m[it.name] = it.getPrimType() }
+
+        return m
     }
 }
 
