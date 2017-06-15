@@ -91,7 +91,12 @@ fun connectAndAuthenticate(config: ToolConfig, block: (CryptoServerProvider) -> 
         }
         block(provider)
     } finally {
-        provider.logoff()
+        try {
+            provider.logoff()
+        } catch (throwable: Throwable) {
+            println("WARNING Exception while logging off")
+            throwable.printStackTrace(System.out)
+        }
     }
 }
 
@@ -133,8 +138,8 @@ private fun createProvider(device: String, keyGroup: String, keySpecifier: Strin
     val cfgBuffer = ByteArrayOutputStream()
     val writer = cfgBuffer.writer(Charsets.UTF_8)
     writer.write("Device = $device\n")
-    writer.write("ConnectionTimeout = 3000\n")
-    writer.write("Timeout = 30000\n")
+    writer.write("ConnectionTimeout = 30000\n")
+    writer.write("Timeout = 60000\n")
     writer.write("EndSessionOnShutdown = 1\n")
     writer.write("KeepSessionAlive = 0\n")
     writer.write("KeyGroup = $keyGroup\n")

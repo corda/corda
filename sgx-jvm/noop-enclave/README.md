@@ -1,12 +1,12 @@
 What is this?
-=============
+===
 
 This project contains a noop enclave with a single ECALL that does
 nothing. Its purpose is to demonstrate our ability to create a signed
 enclave and to test the signature process through an HSM.
 
 How to run
-==========
+===
 
 The following Makefile targets execute different steps in the signing process and output into build/
 
@@ -35,3 +35,7 @@ The following targets use the HSM. They require an extra `PROFILE=[dev|prod]` ar
   `./build/noop_test ./build/noop_enclave.signed.openssl.so`
 
   will run the noop ECALL using the openssl signed enclave.
+
+
+See IntelWhitelistFormInstructions.md for details on how to use this
+project to fill the enclave specific parts of Intel's whitelisting form.
