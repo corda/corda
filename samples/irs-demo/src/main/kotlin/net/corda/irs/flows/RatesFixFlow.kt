@@ -13,7 +13,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
-import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
+import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeFrame
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
@@ -98,7 +98,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
-            val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name.toString(), fixOf.forDay).end
+            val deadline = suggestInterestRateAnnouncementTimeFrame(fixOf.name, oracle.name.toString(), fixOf.forDay).end
             // TODO: add deadline to receive
             val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf), deadline))
 

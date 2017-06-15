@@ -6,7 +6,7 @@ import java.time.Instant
 /**
  * A class representing a window in time from a particular instant, lasting a specified duration.
  */
-data class TimeWindow(val start: Instant, val duration: Duration) {
+data class TimeFrame(val start: Instant, val duration: Duration) {
     val end: Instant
         get() = start + duration
 }

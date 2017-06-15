@@ -77,7 +77,7 @@ Let's take an example of the interest rate swap fixings for our scheduled events
                                            flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
-            val (instant, duration) = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name,
+            val (instant, duration) = suggestInterestRateAnnouncementTimeFrame(index = nextFixingOf.name,
                                                                                 source = floatingLeg.indexSource,
                                                                                 date = nextFixingOf.forDay)
             return ScheduledActivity(flowLogicRefFactory.create(TwoPartyDealFlow.FixingRoleDecider::class.java,
