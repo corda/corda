@@ -19,6 +19,8 @@ set(PUBLIC_KEY_NAME_OPENSSL selfsigning.public.pem)
 set(PUBLIC_KEY_NAME_HSM hsm.public.pem)
 set(SIGN_HELPER ${PROJECT_SOURCE_DIR}/sign_helper/sign_helper)
 set(HSM_SGX_TOOL ${PROJECT_SOURCE_DIR}/../hsm-tool/build/libs/sgx-jvm/hsm-tool-1.0-SNAPSHOT.jar)
+set(DEPENDENCIES_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../dependencies/root)
+set(DEPENDENCIES_LIBRARY_PATH ${DEPENDENCIES_ROOT_DIR}/usr/lib/x86_64-linux-gnu CACHE STRING "")
 
 set(NOOP_ENCLAVE noop_enclave_objects)
 set(SGX_SDK_INCLUDE ${SGX_SDK}/common/inc)
@@ -45,7 +47,7 @@ target_compile_options(${NOOP_ENCLAVE} PUBLIC -nostdinc)
 add_executable(edger8r IMPORTED)
 set_target_properties(edger8r PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/sgx_edger8r)
 
-set(SGX_USE_HARDWARE FALSE)
+set(SGX_USE_HARDWARE TRUE)
 
 if(SGX_USE_HARDWARE)
     set(URTS_LIB "sgx_urts")
@@ -167,7 +169,12 @@ add_custom_command(
     COMMAND ${SIGN_HELPER} get-css -in ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGNED_HSM} -out ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_HSM}
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGNED_HSM}
 )
-add_custom_target(sigstruct-hsm DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_HSM})
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_PRETTY_HSM}
+    COMMAND ${SIGN_HELPER} print-css -in ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_HSM} > ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_PRETTY_HSM}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_HSM}
+)
+add_custom_target(sigstruct-hsm DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_HSM} ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGSTRUCT_PRETTY_HSM})
 # /HSM SIGSTRUCT
 
 # test
@@ -177,6 +184,7 @@ set_target_properties(urtslib PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/l
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+link_directories(${DEPENDENCIES_LIBRARY_PATH})
 add_executable(noop_test src/test.cpp ${GENERATED_RPC_DIR}/empty_u.c)
 target_include_directories(noop_test PUBLIC ${SGX_SDK_INCLUDE} ${GENERATED_RPC_DIR})
 target_link_libraries(noop_test urtslib Threads::Threads)
