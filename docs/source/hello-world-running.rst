@@ -108,10 +108,10 @@ Let's start the nodes by running the following commands from the root of the pro
 .. code:: python
 
     // On Windows for a Java CorDapp
-    call java-source/build/nodes/runnodes.bat
+    java-source/build/nodes/runnodes.bat
 
     // On Windows for a Kotlin CorDapp
-    call kotlin-source/build/nodes/runnodes.bat
+    kotlin-source/build/nodes/runnodes.bat
 
     // On Mac for a Java CorDapp
     java-source/build/nodes/runnodes

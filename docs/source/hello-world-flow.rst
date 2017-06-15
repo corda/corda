@@ -266,7 +266,7 @@ We create these components as follows:
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
         }
@@ -315,7 +315,7 @@ Finally, we add the items to the transaction using the ``TransactionBuilder.with
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
 
@@ -371,7 +371,7 @@ proposal by verifying the transaction, which will execute each of the transactio
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
 
@@ -437,7 +437,7 @@ transaction immutable.
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
 
@@ -514,7 +514,7 @@ discussed, we can automate this process by invoking the built-in ``CollectSignat
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
 
@@ -595,7 +595,7 @@ of handling this process manually, we'll use a built-in flow called ``FinalityFl
 
             // We create the transaction's components.
             final Party ourIdentity = getServiceHub().getMyInfo().getLegalIdentity();
-            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty, new IOUContract());
+            final IOUState iou = new IOUState(iouValue, ourIdentity, otherParty);
             final List<PublicKey> signers = ImmutableList.of(ourIdentity.getOwningKey(), otherParty.getOwningKey());
             final Command txCommand = new Command(new IOUContract.Create(), signers);
 

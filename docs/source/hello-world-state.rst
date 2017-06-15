@@ -20,10 +20,10 @@ defined as follows:
     .. code-block:: kotlin
 
         interface ContractState {
-            // The contract controlling transactions involving this state
+            // The contract that imposes constraints on how this state can evolve over time.
             val contract: Contract
 
-            // The list of entities considered to have a stake in this state
+            // The list of entities considered to have a stake in this state.
             val participants: List<AbstractParty>
         }
 
@@ -51,6 +51,9 @@ We can see that the ``ContractState`` interface declares two properties:
 
 Beyond this, our state is free to define any properties, methods, helpers or inner classes it requires to accurately
 represent a given class of shared facts on the ledger.
+
+``ContractState`` also has several child interfaces that you may wish to implement depending on your state, such as
+``LinearState`` and ``OwnableState``.
 
 Modelling IOUs
 --------------
@@ -99,20 +102,20 @@ Let's open TemplateState.java (for Java) or TemplateState.kt (for Kotlin) and up
         import java.util.List;
 
         public class IOUState implements ContractState {
-            private final Integer value;
+            private final int value;
             private final Party sender;
             private final Party recipient;
             // TODO: Once we've defined IOUContract, come back and update this.
             private final TemplateContract contract;
 
-            public IOUState(Integer value, Party sender, Party recipient, IOUContract contract) {
+            public IOUState(int value, Party sender, Party recipient, IOUContract contract) {
                 this.value = value;
                 this.sender = sender;
                 this.recipient = recipient;
                 this.contract = contract;
             }
 
-            public Integer getValue() {
+            public int getValue() {
                 return value;
             }
 
@@ -141,7 +144,7 @@ We've made the following changes:
 * We've renamed ``TemplateState`` to ``IOUState``
 * We've added properties for ``value``, ``sender`` and ``recipient`` (along with any getters and setters in Java)
 
-  * ``value`` is just a standard Integer (in Java)/Int (in Kotlin), but ``sender`` and ``recipient`` are of type
+  * ``value`` is just a standard int (in Java)/Int (in Kotlin), but ``sender`` and ``recipient`` are of type
     ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
 
 * We've overridden ``participants`` to return a list of the ``sender`` and ``recipient``

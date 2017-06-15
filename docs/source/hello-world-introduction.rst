@@ -13,14 +13,15 @@ Our use-case
 ------------
 Our CorDapp will seek to model IOUs on ledger. An IOU – short for “I Owe yoU” – records the fact that one person owes
 another a given amount of money. We can imagine that this is potentially sensitive information that we'd only want to
-communicate on a need-to-know basis. This is one of the areas where Corda excels - allowing a small set of parties
-want to agree on a fact without having to share this fact with everyone else on the network.
+communicate on a need-to-know basis. This is one of the areas where Corda excels - allowing a small set of parties to
+agree on a fact without needing to share this fact with everyone else on the network, as you do with most other
+blockchain platforms.
 
-At a minimum, a CorDapp has three core elements:
+To serve any useful function, a CorDapp needs three core elements:
 
-* **1+ states** – the shared facts that will be agreed upon and stored on the ledger
-* **1+ contracts** – the rules governing how these states can evolve over time
-* **1+ flows** – the step-by-step process for carrying out a ledger update
+* **One or more states** – the shared facts that will be agreed upon and stored on the ledger
+* **One or more contracts** – the rules governing how these states can evolve over time
+* **One or more flows** – the step-by-step process for carrying out a ledger update
 
 Our IOU CorDapp is no exception. It will have the following elements:
 
@@ -39,7 +40,7 @@ Our contract will be the IOUContract, imposing rules on the evolution of IOUs ov
     * Only the creation of new IOUs will be allowed
     * Transferring existing IOUs or paying off an IOU with cash will not be allowed
 
-We can easily extend our CorDapp to handle additional use-cases later on.
+However, we can easily extend our CorDapp to handle additional use-cases later on.
 
 Flow
 ^^^^
@@ -52,7 +53,7 @@ following steps:
 
 In traditional distributed ledger systems, where all data is broadcast to every network participant, you don’t even
 think about this step – you simply package up your ledger update and send it out into the world. But in Corda, where
-privacy is a code focus, flows are used to carefully control who sees what during the process of agreeing a
+privacy is a core focus, flows are used to carefully control who sees what during the process of agreeing a
 ledger update.
 
 Progress so far
