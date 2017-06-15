@@ -142,7 +142,7 @@ add_custom_target(signed-hsm DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ENCLAVE_SIGNE
 # HSM KEY
 add_custom_command(
     OUTPUT __generate-key-hsm-dummy__
-    COMMAND java -jar ${HSM_SGX_TOOL} --mode=GenerateKey --profile=\${PROFILE} \$\(shell bash -c '[[ \${OVERWRITE} = "true" ]] && echo "--overwriteKey"' \)
+    COMMAND java -jar ${HSM_SGX_TOOL} --mode=GenerateSgxKey --profile=\${PROFILE} \$\(shell bash -c '[[ \${OVERWRITE} = "true" ]] && echo "--overwriteKey"' \)
 )
 add_custom_target(generate-key-hsm DEPENDS __generate-key-hsm-dummy__)
 # /HSM KEY

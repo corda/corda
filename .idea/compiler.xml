@@ -75,6 +75,8 @@
       <module name="samples_test" target="1.8" />
       <module name="sandbox_main" target="1.8" />
       <module name="sandbox_test" target="1.8" />
+      <module name="sgx-jvm_hsm-tool_main" target="1.8" />
+      <module name="sgx-jvm_hsm-tool_test" target="1.8" />
       <module name="sgx-jvm_main" target="1.8" />
       <module name="sgx-jvm_sgx-signtool_main" target="1.8" />
       <module name="sgx-jvm_sgx-signtool_test" target="1.8" />

@@ -10,7 +10,7 @@ import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 enum class Mode {
-    GenerateKey,
+    GenerateSgxKey,
     Sign
 }
 
@@ -33,6 +33,7 @@ data class ToolConfig(val config: Config) {
         } catch (e: Exception) {
             println(e.message)
             parser.printHelpOn(System.out)
+            printModeHelp()
             exitProcess(1)
         }
 
@@ -93,7 +94,10 @@ data class ToolConfig(val config: Config) {
                 requireNotNull(signatureOutputPath)
                 requireNotNull(publicKeyOutputPath)
             }
-            Mode.GenerateKey -> {
+            Mode.GenerateSgxKey -> {
+                require(sourcePath == null)
+                require(signatureOutputPath == null)
+                require(publicKeyOutputPath == null)
             }
         }
     }
@@ -112,4 +116,14 @@ data class ToolConfig(val config: Config) {
         return sb.toString()
     }
 
+}
+
+fun printModeHelp() {
+    val message = listOf(
+            "This tool may be run in two modes, --mode=GenerateSgxKey and --mode=Sign.",
+            "Both may take --profile as an argument to indicate what HSM profile to use (see sgxtool.cfg)",
+            "--mode=Sign expects --sourcePath={path to blob to sign}, --signatureOutputPath={path to result signature} and --publicKeyOutputPath={path to output public key}.",
+            "Providing any of these arguments in --mode=GenerateSgxKey results in an error."
+    )
+    println(message.joinToString("\n"))
 }

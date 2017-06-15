@@ -47,7 +47,7 @@ fun sign(config: ToolConfig) {
     }
 }
 
-fun generateKey(config: ToolConfig) {
+fun generateSgxKey(config: ToolConfig) {
     val generateFlag = if (config.overwriteKey) {
         println("!!! WARNING: OVERWRITING KEY NAMED ${config.keyName} !!!")
         CryptoServerCXI.FLAG_OVERWRITE
@@ -102,7 +102,7 @@ fun main(args: Array<String>) {
     try {
         when (config.mode) {
             Mode.Sign -> sign(config)
-            Mode.GenerateKey -> generateKey(config)
+            Mode.GenerateSgxKey -> generateSgxKey(config)
         }
         println("Done!")
     } catch (exception: Throwable) {
