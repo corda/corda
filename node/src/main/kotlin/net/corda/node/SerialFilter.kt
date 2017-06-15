@@ -2,6 +2,7 @@ package net.corda.node
 
 import net.corda.core.DeclaredField
 import net.corda.core.DeclaredField.Companion.declaredField
+import net.corda.node.internal.Node
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 
@@ -25,7 +26,7 @@ internal object SerialFilter {
         // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
         filterInterface = getFilterInterface("java.io")
                 ?: getFilterInterface("sun.misc")
-                ?: failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121.")
+                ?: Node.failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121.")
         serialClassGetter = Class.forName("${filterInterface.name}\$FilterInfo").getMethod("serialClass")
         val statusEnum = Class.forName("${filterInterface.name}\$Status")
         undecided = statusEnum.getField("UNDECIDED").get(null)

@@ -1,14 +1,10 @@
 package net.corda.node.services.config
 
 import com.google.common.net.HostAndPort
-import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.node.internal.NetworkMapInfo
-import net.corda.node.internal.Node
-import net.corda.node.serialization.NodeClock
 import net.corda.node.services.messaging.CertificateChainCheckPolicy
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.utilities.TestClock
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.OldConfig
@@ -78,14 +74,13 @@ data class FullNodeConfiguration(
         }
     }
 
-    fun createNode(versionInfo: VersionInfo): Node {
+    fun calculateServices(): Set<ServiceInfo> {
         val advertisedServices = extraAdvertisedServiceIds
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
         if (networkMapService == null) advertisedServices += ServiceInfo(NetworkMapService.type)
-
-        return Node(this, advertisedServices, versionInfo, if (useTestClock) TestClock() else NodeClock())
+        return advertisedServices
     }
 }
 

@@ -13,6 +13,7 @@ import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
 import net.corda.node.internal.Node
+import net.corda.node.serialization.NodeClock
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.configOf
@@ -159,7 +160,9 @@ abstract class NodeBasedTest {
                 ) + configOverrides
         )
 
-        val node = config.parseAs<FullNodeConfiguration>().createNode(MOCK_VERSION_INFO.copy(platformVersion = platformVersion))
+        val parsedConfig = config.parseAs<FullNodeConfiguration>()
+        val node = Node(parsedConfig, parsedConfig.calculateServices(), MOCK_VERSION_INFO.copy(platformVersion = platformVersion),
+                if (parsedConfig.useTestClock) TestClock() else NodeClock())
         node.start()
         nodes += node
         thread(name = legalName.commonName) {
