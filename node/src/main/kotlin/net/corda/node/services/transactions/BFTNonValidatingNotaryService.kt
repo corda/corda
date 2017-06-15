@@ -53,7 +53,6 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
     }
 
     override val serviceFlowFactory: (Party, Int) -> FlowLogic<Void?> = { otherParty, _ ->
-        replicaHolder.getOrThrow() // Don't touch the client before the replica (and thus cluster) is up. Not sure if really necessary.
         ServiceFlow(otherParty, client)
     }
 

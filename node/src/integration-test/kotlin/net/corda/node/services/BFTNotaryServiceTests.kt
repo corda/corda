@@ -23,7 +23,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import java.util.Collections.singleton
@@ -60,7 +59,6 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         detectDoubleSpend(1)
     }
 
-    @Ignore("Cluster fails to reach a stable initial state, suspect BFT SMaRt assumes replica lifecycle should match that of the JVM.")
     @Test
     fun `detect double spend 2 faulty`() {
         detectDoubleSpend(2)
