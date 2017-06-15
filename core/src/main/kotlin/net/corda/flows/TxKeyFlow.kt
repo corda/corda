@@ -84,6 +84,6 @@ object TxKeyFlow {
             val identity: AnonymousParty) {
         constructor(myIdentity: Pair<X509CertificateHolder, CertPath>) : this(myIdentity.second,
                 myIdentity.first,
-                AnonymousParty(myIdentity.second.certificates.last().publicKey))
+                AnonymousParty(myIdentity.second.certificates.first().publicKey))
     }
 }

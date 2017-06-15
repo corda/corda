@@ -16,8 +16,7 @@ import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.security.cert.CertPath
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -152,10 +151,11 @@ class KryoTests {
 
     @Test
     fun `serialize - deserialize X509CertPath`() {
+        val certFactory = CertificateFactory.getInstance("X509")
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
-        val expected = X509Utilities.createCertificatePath(rootCACert, certificate, revocationEnabled = false)
+        val expected = certFactory.generateCertPath(listOf(rootCACert.cert, certificate.cert))
         val serialized = expected.serialize(kryo).bytes
         val actual: CertPath = serialized.deserialize(kryo)
         assertEquals(expected, actual)

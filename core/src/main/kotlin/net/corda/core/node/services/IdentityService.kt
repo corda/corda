@@ -4,11 +4,10 @@ import net.corda.core.contracts.PartyAndReference
 import net.corda.core.identity.*
 import net.corda.core.node.NodeInfo
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
-import java.security.cert.CertPath
-import java.security.cert.CertificateExpiredException
-import java.security.cert.CertificateNotYetValidException
+import java.security.cert.*
 
 /**
  * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
@@ -16,15 +15,18 @@ import java.security.cert.CertificateNotYetValidException
  * identities back to the well known identity (i.e. the identity in the network map) of a party.
  */
 interface IdentityService {
+    val trustRoot: X509Certificate?
+    val trustRootHolder: X509CertificateHolder?
+
     /**
      * Verify and then store a well known identity.
      *
-     * @param party a party representing a legal entity.
+     * @param partyAndCertificate a party representing a legal entity.
      * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
      * certificate chain for the anonymous party.
      */
     @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
-    fun registerIdentity(party: PartyAndCertificate)
+    fun registerIdentity(partyAndCertificate: PartyAndCertificate)
 
     /**
      * Verify and then store an identity.
