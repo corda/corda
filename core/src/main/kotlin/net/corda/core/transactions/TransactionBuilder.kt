@@ -97,6 +97,7 @@ open class TransactionBuilder(
     /** The signatures that have been collected so far - might be incomplete! */
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
