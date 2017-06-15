@@ -10,6 +10,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.ALICE
 import net.corda.testing.driver.driver
+import net.corda.node.internal.NodeStartup
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
 import net.corda.testing.driver.ListenProcessDeathException
@@ -48,7 +49,7 @@ class BootTests {
                 startNode(ALICE.name).getOrThrow()
             }
             // We count the number of nodes that wrote into the logfile by counting "Logs can be found in"
-            val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { it.contains(LOGS_CAN_BE_FOUND_IN_STRING) }.count()
+            val numberOfNodesThatLogged = Files.lines(logFile.toPath()).filter { NodeStartup.LOGS_CAN_BE_FOUND_IN_STRING in it }.count()
             assertEquals(1, numberOfNodesThatLogged)
         }
     }
