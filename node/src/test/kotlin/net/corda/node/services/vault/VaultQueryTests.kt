@@ -207,7 +207,7 @@ class VaultQueryTests {
         database.transaction {
 
             services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"), participants = listOf(MEGA_CORP, MINI_CORP))
-            services.fillWithSomeTestDeals(listOf("456"), 3, participants = listOf(MEGA_CORP, BIG_CORP))
+            services.fillWithSomeTestDeals(listOf("456"), participants = listOf(MEGA_CORP, BIG_CORP))
             services.fillWithSomeTestDeals(listOf("123", "789"), participants = listOf(BIG_CORP, MINI_CORP))
 
             // DOCSTART VaultQueryExample5
@@ -533,7 +533,7 @@ class VaultQueryTests {
         database.transaction {
 
             services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"))
-            services.fillWithSomeTestDeals(listOf("456"), 3)        // create 3 revisions with same ID
+            services.fillWithSomeTestDeals(listOf("456"))        // create 3 revisions with same ID
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
             val criteria = LinearStateQueryCriteria(dealRef = listOf("456"), latestOnly = true)
@@ -547,7 +547,7 @@ class VaultQueryTests {
         database.transaction {
 
             services.fillWithSomeTestLinearStates(2, UniqueIdentifier("TEST"))
-            services.fillWithSomeTestDeals(listOf("456"), 3)        // specify party
+            services.fillWithSomeTestDeals(listOf("456"))        // specify party
             services.fillWithSomeTestDeals(listOf("123", "789"))
 
             // DOCSTART VaultQueryExample11
