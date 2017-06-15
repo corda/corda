@@ -309,7 +309,6 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
     fun memberInterface2() {
         val testI     = 25
         val testIIII  = 50
-
         class A(override val i: Int) : I
         class B(override val i : I, override val iiii : Int) : IIII
 

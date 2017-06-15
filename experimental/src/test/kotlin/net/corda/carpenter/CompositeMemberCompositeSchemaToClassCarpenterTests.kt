@@ -44,6 +44,9 @@ class CompositeMembers : AmqpCarpenterBase() {
         assert(obj.second.schema.types[0] is CompositeType)
         assert(obj.second.schema.types[1] is CompositeType)
 
+        println (obj.second.schema.types[0] as CompositeType)
+        println (obj.second.schema.types[1] as CompositeType)
+
         var amqpSchemaA : CompositeType? = null
         var amqpSchemaB : CompositeType? = null
 
@@ -64,6 +67,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assertEquals(1,     amqpSchemaA?.fields?.size)
         assertEquals("a",   amqpSchemaA!!.fields[0].name)
         assertEquals("int", amqpSchemaA.fields[0].type)
+
 
         assertEquals(2,     amqpSchemaB?.fields?.size)
         assertEquals("a",   amqpSchemaB!!.fields[0].name)
