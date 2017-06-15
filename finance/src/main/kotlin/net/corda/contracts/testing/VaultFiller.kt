@@ -2,6 +2,7 @@
 
 package net.corda.contracts.testing
 
+import net.corda.contracts.DealState
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY

@@ -1,5 +1,7 @@
 package net.corda.contracts.asset
 
+import net.corda.contracts.Commodity
+import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NULL_PARTY
@@ -503,7 +505,7 @@ class ObligationTests {
 
     @Test
     fun `commodity settlement`() {
-        val defaultFcoj = FCOJ `issued by` defaultIssuer
+        val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(nonEmptySetOf(CommodityContract().legalContractReference), nonEmptySetOf(defaultFcoj), TEST_TX_TIME)
         val oneUnitFcojObligation = Obligation.State(Obligation.Lifecycle.NORMAL, ALICE,

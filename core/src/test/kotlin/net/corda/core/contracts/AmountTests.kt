@@ -21,6 +21,12 @@ class AmountTests {
     }
 
     @Test
+    fun `make sure Amount has decimal places`() {
+        val x = Amount(1, Currency.getInstance("USD"))
+        assertTrue("0.01" in x.toString())
+    }
+
+    @Test
     fun decimalConversion() {
         val quantity = 1234L
         val amountGBP = Amount(quantity, GBP)

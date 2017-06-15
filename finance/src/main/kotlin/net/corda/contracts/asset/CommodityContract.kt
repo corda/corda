@@ -1,5 +1,6 @@
 package net.corda.contracts.asset
 
+import net.corda.contracts.Commodity
 import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.contracts.clause.AbstractIssue
 import net.corda.contracts.clause.NoZeroSizedOutputs

@@ -1,7 +1,7 @@
 package net.corda.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.DealState
+import net.corda.contracts.DealState
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic

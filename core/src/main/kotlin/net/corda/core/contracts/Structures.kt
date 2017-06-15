@@ -6,9 +6,7 @@ import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.*
-import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -22,37 +20,6 @@ import java.util.jar.JarInputStream
 interface NamedByHash {
     val id: SecureHash
 }
-
-/**
- * Interface for state objects that support being netted with other state objects.
- */
-interface BilateralNettableState<N : BilateralNettableState<N>> {
-    /**
-     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
-     * equal objects, they can be close out netted together.
-     */
-    val bilateralNetState: Any
-
-    /**
-     * Perform bilateral netting of this state with another state. The two states must be compatible (as in
-     * bilateralNetState objects are equal).
-     */
-    fun net(other: N): N
-}
-
-/**
- * Interface for state objects that support being netted with other state objects.
- */
-interface MultilateralNettableState<out T : Any> {
-    /**
-     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
-     * equal objects, they can be close out netted together.
-     */
-    val multilateralNetState: T
-}
-
-interface NettableState<N : BilateralNettableState<N>, out T : Any> : BilateralNettableState<N>,
-        MultilateralNettableState<T>
 
 // DOCSTART 1
 /**
@@ -267,49 +234,6 @@ interface SchedulableState : ContractState {
     fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity?
 }
 
-/**
- * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
- * implementation of general flows that manipulate many agreement types.
- */
-interface DealState : LinearState {
-    /** Human readable well known reference (e.g. trade reference) */
-    val ref: String
-
-    /**
-     * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
-     * deal/agreement flow to generate the necessary transaction for potential implementations.
-     *
-     * TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref
-     *
-     * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
-     * Contract instance from a ContractState are imminent, at which point we can move this out of here.
-     */
-    fun generateAgreement(notary: Party): TransactionBuilder
-}
-
-/**
- * Interface adding fixing specific methods.
- */
-interface FixableDealState : DealState {
-    /**
-     * When is the next fixing and what is the fixing for?
-     */
-    fun nextFixingOf(): FixOf?
-
-    /**
-     * What oracle service to use for the fixing
-     */
-    val oracleType: ServiceType
-
-    /**
-     * Generate a fixing command for this deal and fix.
-     *
-     * TODO: This would also likely move to methods on the Contract once the changes to reference
-     * the Contract from the ContractState are in.
-     */
-    fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix)
-}
-
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
 
@@ -383,12 +307,6 @@ interface MoveCommand : CommandData {
      */
     // TODO: Replace SecureHash here with a general contract constraints object
     val contractHash: SecureHash?
-}
-
-/** A common netting command for contracts whose states can be netted. */
-interface NetCommand : CommandData {
-    /** The type of netting to apply, see [NetType] for options. */
-    val type: NetType
 }
 
 /** Indicates that this transaction replaces the inputs contract state to another contract state */

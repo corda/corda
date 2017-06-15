@@ -1,6 +1,6 @@
 package net.corda.contracts.universal
 
-import net.corda.core.contracts.Frequency
+import net.corda.contracts.Frequency
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
