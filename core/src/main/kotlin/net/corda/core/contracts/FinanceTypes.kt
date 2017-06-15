@@ -633,7 +633,7 @@ fun LocalDate.isWorkingDay(accordingToCalendar: BusinessCalendar): Boolean = acc
  * no staff are around to handle problems.
  */
 @CordaSerializable
-open class BusinessCalendar private constructor(val holidayDates: List<LocalDate>) {
+open class BusinessCalendar(val holidayDates: List<LocalDate>) {
     @CordaSerializable
     class UnknownCalendar(name: String) : Exception("$name not found")
 
