@@ -282,6 +282,12 @@ data class RPCDriverDSL(
                         address = notificationAddress
                         filterString = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION
                         isDurable = false
+                    },
+                    CoreQueueConfiguration().apply {
+                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS
+                        address = notificationAddress
+                        filterString = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION
+                        isDurable = false
                     }
             )
             addressesSettings = mapOf(

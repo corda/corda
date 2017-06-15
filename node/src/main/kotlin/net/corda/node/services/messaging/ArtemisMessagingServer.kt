@@ -47,7 +47,6 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
-import sun.security.x509.X509CertImpl
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
@@ -200,6 +199,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                         name = RPCApi.RPC_CLIENT_BINDING_REMOVALS,
                         address = NOTIFICATIONS_ADDRESS,
                         filter = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION,
+                        durable = false
+                ),
+                queueConfig(
+                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS,
+                        address = NOTIFICATIONS_ADDRESS,
+                        filter = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION,
                         durable = false
                 )
         )
