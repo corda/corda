@@ -436,12 +436,16 @@ class TimeWindow private constructor(
             return TimeWindow(fromTime, untilTime)
         }
 
+        /** Use when we have a start time and a period of validity. */
+        @JvmStatic
+        fun fromStartAndDuration(fromTime: Instant, duration: Duration): TimeWindow = between(fromTime, fromTime + duration)
+
         /**
          * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
          * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
          */
         @JvmStatic
-        fun withTolerance(time: Instant, tolerance: Duration) = TimeWindow(time - tolerance, time + tolerance)
+        fun withTolerance(time: Instant, tolerance: Duration) = between(time - tolerance, time + tolerance)
     }
 
     /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
