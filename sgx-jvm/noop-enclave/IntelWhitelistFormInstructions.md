@@ -23,7 +23,8 @@ will fail if there is already an existing production key in the HSM.
 To generate a production enclave signature
 ===
 
-This may be done from a dev machine with an SGX device.
+This may be done from a dev machine with an SGX device. This step requires
+the outer sgx-jvm to be built.
 
 To generate the signature and related files:
 
