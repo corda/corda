@@ -69,9 +69,9 @@ val ALICE_PUBKEY: PublicKey get() = ALICE_KEY.public
 val BOB_PUBKEY: PublicKey get() = BOB_KEY.public
 val CHARLIE_PUBKEY: PublicKey get() = CHARLIE_KEY.public
 
-val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MegaCorp"), MEGA_CORP_PUBKEY)
+val MEGA_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MegaCorp","London","demo@r3.com",null), MEGA_CORP_PUBKEY)
 val MEGA_CORP: Party get() = MEGA_CORP_IDENTITY.party
-val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("MiniCorp"), MINI_CORP_PUBKEY)
+val MINI_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("MiniCorp","London","demo@r3.com",null), MINI_CORP_PUBKEY)
 val MINI_CORP: Party get() = MINI_CORP_IDENTITY.party
 
 val BOC_KEY: KeyPair by lazy { generateKeyPair() }
@@ -82,7 +82,7 @@ val BOC_PARTY_REF = BOC.ref(OpaqueBytes.of(1)).reference
 
 val BIG_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val BIG_CORP_PUBKEY: PublicKey get() = BIG_CORP_KEY.public
-val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getDevX509Name("BigCorporation"), BIG_CORP_PUBKEY)
+val BIG_CORP_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X509Utilities.getX509Name("BigCorporation","London","demo@r3.com",null), BIG_CORP_PUBKEY)
 val BIG_CORP: Party get() = BIG_CORP_IDENTITY.party
 val BIG_CORP_PARTY_REF = BIG_CORP.ref(OpaqueBytes.of(1)).reference
 

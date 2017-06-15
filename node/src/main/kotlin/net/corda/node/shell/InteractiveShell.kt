@@ -40,7 +40,6 @@ import org.crsh.shell.ShellFactory
 import org.crsh.shell.impl.command.ExternalResolver
 import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
-import org.crsh.text.ui.TableElement
 import org.crsh.util.InterruptHandler
 import org.crsh.util.Utils
 import org.crsh.vfs.FS
@@ -307,7 +306,7 @@ object InteractiveShell {
 
     // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
     @JvmStatic
-    fun runStateMachinesView(out: RenderPrintWriter, context: InvocationContext<TableElement>): Any? {
+    fun runStateMachinesView(out: RenderPrintWriter): Any? {
         val proxy = node.rpcOps
         val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }

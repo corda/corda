@@ -32,7 +32,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
     @Command
     @Usage("watch information about state machines running on the node with result information")
     public void watch(InvocationContext<TableElement> context) throws Exception {
-        runStateMachinesView(out, context);
+        runStateMachinesView(out);
     }
 
     static void startFlow(@Usage("The class name of the flow to run, or an unambiguous substring") @Argument String name,

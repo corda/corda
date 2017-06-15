@@ -63,7 +63,6 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
             // trust anchor everywhere, this will have to do.
             PKIXParameters(setOf(TrustAnchor(party.certificate.cert, null)))
         }
-        val validator = CertPathValidator.getInstance("PKIX")
         validatorParameters.isRevocationEnabled = false
         // TODO: val result = validator.validate(party.certPath, validatorParameters) as PKIXCertPathValidatorResult
         // require(trustAnchor == null || result.trustAnchor == trustAnchor)

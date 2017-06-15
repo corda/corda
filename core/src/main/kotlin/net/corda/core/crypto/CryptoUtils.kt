@@ -149,7 +149,7 @@ fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEnt
 /**
  * Helper function for signing.
  * @param metaData tha attached MetaData object.
- * @return a [TransactionSignature] object.
+ * @return a [TransactionSignature ] object.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.
