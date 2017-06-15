@@ -13,19 +13,23 @@ We'll have to define two flows to issue an ``IOUState`` onto the ledger:
 * One to be run by the node initiating the creation of the IOU
 * One to be run by the node responding to an IOU creation request
 
+Let's start writing our flows. We'll do this by modifying either TemplateFlow.java or
+TemplateFlow.kt.
+
 FlowLogic
 ---------
 Each flow is implemented as a ``FlowLogic`` subclass. You define the steps taken by the flow by overriding
 ``FlowLogic.call``.
 
 We will define two ``FlowLogic`` instances communicating as a pair. The first will be called ``Initiator``, and will
-be run by the sender of the IOU. The other will be called ``Acceptor``, and will be run by the recipient:
+be run by the sender of the IOU. The other will be called ``Acceptor``, and will be run by the recipient. Overwrite
+the existing template code with the following:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
+        package com.template
 
         import co.paralleluniverse.fibers.Suspendable
         import net.corda.core.flows.FlowLogic
@@ -60,7 +64,7 @@ be run by the sender of the IOU. The other will be called ``Acceptor``, and will
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template;
 
         import co.paralleluniverse.fibers.Suspendable;
         import net.corda.core.flows.*;
@@ -704,9 +708,276 @@ valid. The purpose of ``SignTransactionFlow.checkTransaction`` is to define any 
 transaction that we wish to perform before we sign it. For example, we may not wish to sign an IOU if its value is
 too high.
 
+Flow tests
+----------
+As with contracts, deploying nodes to manually test flows is not feasible. Instead, we can use Corda's flow-test
+DSL to quickly test our flows. The flow-test DSL works by creating a network of lightweight, "mock" node
+implementations on which we run our flows.
 
-// TODO: Talk about flow tests
+The first thing we need to do is create this mock network. Open either test/kotlin/com/template/flow/FlowTests.kt or
+test/java/com/template/contract/ContractTests.java, and overwrite the existing code with:
 
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        package com.template
+
+        import net.corda.core.contracts.TransactionVerificationException
+        import net.corda.core.getOrThrow
+        import net.corda.testing.node.MockNetwork
+        import net.corda.testing.node.MockNetwork.MockNode
+        import org.junit.After
+        import org.junit.Before
+        import org.junit.Test
+        import kotlin.test.assertEquals
+        import kotlin.test.assertFailsWith
+
+        class IOUFlowTests {
+            lateinit var net: MockNetwork
+            lateinit var a: MockNode
+            lateinit var b: MockNode
+            lateinit var c: MockNode
+
+            @Before
+            fun setup() {
+                net = MockNetwork()
+                val nodes = net.createSomeNodes(2)
+                a = nodes.partyNodes[0]
+                b = nodes.partyNodes[1]
+                b.registerInitiatedFlow(IOUFlow.Acceptor::class.java)
+                net.runNetwork()
+            }
+
+            @After
+            fun tearDown() {
+                net.stopNodes()
+            }
+        }
+
+    .. code-block:: java
+
+        package com.template;
+
+        import com.google.common.collect.ImmutableList;
+        import com.google.common.util.concurrent.ListenableFuture;
+        import net.corda.core.contracts.ContractState;
+        import net.corda.core.contracts.TransactionState;
+        import net.corda.core.contracts.TransactionVerificationException;
+        import net.corda.core.transactions.SignedTransaction;
+        import net.corda.testing.node.MockNetwork;
+        import net.corda.testing.node.MockNetwork.BasketOfNodes;
+        import net.corda.testing.node.MockNetwork.MockNode;
+        import org.junit.After;
+        import org.junit.Before;
+        import org.junit.Rule;
+        import org.junit.Test;
+        import org.junit.rules.ExpectedException;
+
+        import java.util.List;
+
+        import static org.hamcrest.CoreMatchers.instanceOf;
+        import static org.junit.Assert.assertEquals;
+
+        public class IOUFlowTests {
+            private MockNetwork net;
+            private MockNode a;
+            private MockNode b;
+
+            @Before
+            public void setup() {
+                net = new MockNetwork();
+                BasketOfNodes nodes = net.createSomeNodes(2);
+                a = nodes.getPartyNodes().get(0);
+                b = nodes.getPartyNodes().get(1);
+                b.registerInitiatedFlow(IOUFlow.Acceptor.class);
+                net.runNetwork();
+            }
+
+            @After
+            public void tearDown() {
+                net.stopNodes();
+            }
+
+            @Rule
+            public final ExpectedException exception = ExpectedException.none();
+        }
+
+This creates a network of two nodes, plus network map and notary nodes. We register any responder flows (in our case,
+``IOUFlow.Acceptor``) on our nodes as well.
+
+Our first test will be to check that the flow rejects invalid IOUs:
+
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @Test
+        fun `flow rejects invalid IOUs`() {
+            val flow = IOUFlow.Initiator(-1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+
+            // The IOUContract specifies that IOUs cannot have negative values.
+            assertFailsWith<TransactionVerificationException> {future.getOrThrow()}
+        }
+
+    .. code-block:: java
+
+        @Test
+        public void flowRejectsInvalidIOUs() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(-1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+
+            exception.expectCause(instanceOf(TransactionVerificationException.class));
+            future.get();
+        }
+
+This code causes node A to run the ``IOUFlow.Initiator`` flow. The call to ``MockNetwork.runNetwork`` is required to
+simulate the running of a real network.
+
+We then assert that because we passed in a negative IOU value to the flow's constructor, the flow should fail with a
+``TransactionVerificationException``. In other words, we are asserting that at some point in flow, the transaction is
+verified (remember that ``IOUContract`` forbids negative value IOUs), causing the flow to fail.
+
+Because flows need to be instrumented by a library called `Quasar <http://docs.paralleluniverse.co/quasar/>`_ that
+allows the flows to be checkpointed and serialized to disk, you need to run these tests using the provided
+``Run Flow Tests - Java`` or ``Run Flow Tests - Kotlin`` run-configurations.
+
+Here is the full suite of tests we'll use for the ``IOUFlow``:
+
+.. container:: codeset
+
+    .. code-block:: kotlin
+
+        @Test
+        fun `flow rejects invalid IOUs`() {
+            val flow = IOUFlow.Initiator(-1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+
+            // The IOUContract specifies that IOUs cannot have negative values.
+            assertFailsWith<TransactionVerificationException> {future.getOrThrow()}
+        }
+
+        @Test
+        fun `SignedTransaction returned by the flow is signed by the initiator`() {
+            val flow = IOUFlow.Initiator(1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+
+            val signedTx = future.getOrThrow()
+            signedTx.verifySignatures(b.services.legalIdentityKey)
+        }
+
+        @Test
+        fun `SignedTransaction returned by the flow is signed by the acceptor`() {
+            val flow = IOUFlow.Initiator(1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+
+            val signedTx = future.getOrThrow()
+            signedTx.verifySignatures(a.services.legalIdentityKey)
+        }
+
+        @Test
+        fun `flow records a transaction in both parties' vaults`() {
+            val flow = IOUFlow.Initiator(1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+            val signedTx = future.getOrThrow()
+
+            // We check the recorded transaction in both vaults.
+            for (node in listOf(a, b)) {
+                assertEquals(signedTx, node.storage.validatedTransactions.getTransaction(signedTx.id))
+            }
+        }
+
+        @Test
+        fun `recorded transaction has no inputs and a single output, the input IOU`() {
+            val flow = IOUFlow.Initiator(1, b.info.legalIdentity)
+            val future = a.services.startFlow(flow).resultFuture
+            net.runNetwork()
+            val signedTx = future.getOrThrow()
+
+            // We check the recorded transaction in both vaults.
+            for (node in listOf(a, b)) {
+                val recordedTx = node.storage.validatedTransactions.getTransaction(signedTx.id)
+                val txOutputs = recordedTx!!.tx.outputs
+                assert(txOutputs.size == 1)
+
+                val recordedState = txOutputs[0].data as IOUState
+                assertEquals(recordedState.value, 1)
+                assertEquals(recordedState.sender, a.info.legalIdentity)
+                assertEquals(recordedState.recipient, b.info.legalIdentity)
+            }
+        }
+
+    .. code-block:: java
+
+        @Test
+        public void flowRejectsInvalidIOUs() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(-1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+
+            exception.expectCause(instanceOf(TransactionVerificationException.class));
+            future.get();
+        }
+
+        @Test
+        public void signedTransactionReturnedByTheFlowIsSignedByTheInitiator() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+
+            SignedTransaction signedTx = future.get();
+            signedTx.verifySignatures(b.getServices().getLegalIdentityKey());
+        }
+
+        @Test
+        public void signedTransactionReturnedByTheFlowIsSignedByTheAcceptor() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+
+            SignedTransaction signedTx = future.get();
+            signedTx.verifySignatures(a.getServices().getLegalIdentityKey());
+        }
+
+        @Test
+        public void flowRecordsATransactionInBothPartiesVaults() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+            SignedTransaction signedTx = future.get();
+
+            for (MockNode node : ImmutableList.of(a, b)) {
+                assertEquals(signedTx, node.storage.getValidatedTransactions().getTransaction(signedTx.getId()));
+            }
+        }
+
+        @Test
+        public void recordedTransactionHasNoInputsAndASingleOutputTheInputIOU() throws Exception {
+            IOUFlow.Initiator flow = new IOUFlow.Initiator(1, b.info.getLegalIdentity());
+            ListenableFuture<SignedTransaction> future = a.getServices().startFlow(flow).getResultFuture();
+            net.runNetwork();
+            SignedTransaction signedTx = future.get();
+
+            for (MockNode node : ImmutableList.of(a, b)) {
+                SignedTransaction recordedTx = node.storage.getValidatedTransactions().getTransaction(signedTx.getId());
+                List<TransactionState<ContractState>> txOutputs = recordedTx.getTx().getOutputs();
+                assert(txOutputs.size() == 1);
+
+                IOUState recordedState = (IOUState) txOutputs.get(0).getData();
+                assert(recordedState.getValue() == 1);
+                assertEquals(recordedState.getSender(), a.info.getLegalIdentity());
+                assertEquals(recordedState.getRecipient(), b.info.getLegalIdentity());
+            }
+        }
+
+Run these tests and make sure they all pass. If they do, its very likely that we have a working CorDapp.
 
 Progress so far
 ---------------

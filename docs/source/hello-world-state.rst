@@ -73,7 +73,7 @@ Let's open TemplateState.java (for Java) or TemplateState.kt (for Kotlin) and up
 
     .. code-block:: kotlin
 
-        package com.iou
+        package com.template
 
         import net.corda.core.contracts.ContractState
         import net.corda.core.identity.Party
@@ -89,7 +89,7 @@ Let's open TemplateState.java (for Java) or TemplateState.kt (for Kotlin) and up
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template;
 
         import com.google.common.collect.ImmutableList;
         import net.corda.core.contracts.ContractState;

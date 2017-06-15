@@ -25,7 +25,6 @@ input and output state in the transaction.
 
 The Contract interface
 ----------------------
-
 Just as every Corda state must implement the ``ContractState`` interface, every contract must implement the
 ``Contract`` interface:
 
@@ -72,7 +71,8 @@ transfer them or redeem them for cash. One way to enforce this behaviour would b
   * Its sender and its recipient cannot be the same entity
   * All the participants (i.e. both the sender and the recipient) must sign the transaction
 
-Let's write a contract that enforces these constraints.
+Let's write a contract that enforces these constraints. We'll do this by modifying either TemplateContract.java or
+TemplateContract.kt and updating ``TemplateContract`` to define an ``IOUContract``.
 
 Defining IOUContract
 --------------------
@@ -98,7 +98,7 @@ Let's update the definition of ``TemplateContract`` (in TemplateContract.java/Te
 
     .. code-block:: kotlin
 
-        package com.iou
+        package com.template
 
         import net.corda.core.contracts.*
         import net.corda.core.crypto.SecureHash
@@ -117,7 +117,7 @@ Let's update the definition of ``TemplateContract`` (in TemplateContract.java/Te
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template;
 
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
@@ -436,14 +436,14 @@ slow process, and would take on the order of minutes to test each change.
 Instead, we can test our contract logic using Corda's ``ledgerDSL`` transaction-testing framework. This will allow us
 to test our contract without the overhead of spinning up a set of nodes.
 
-Open either test/kotlin/com/template/contract/ContractTests.kt or test/java/com/template/contract/ContractTests.java
-(depending on which language you're developing in), and add the following as our first test:
+Open either test/kotlin/com/template/contract/ContractTests.kt or test/java/com/template/contract/ContractTests.java,
+and add the following as our first test:
 
 .. container:: codeset
 
     .. code-block:: kotlin
 
-        package com.iou
+        package com.template
 
         import net.corda.testing.*
         import org.junit.Test
@@ -464,7 +464,7 @@ Open either test/kotlin/com/template/contract/ContractTests.kt or test/java/com/
 
     .. code-block:: java
 
-        package com.iou;
+        package com.template;
 
         import net.corda.core.identity.Party;
         import org.junit.Test;
