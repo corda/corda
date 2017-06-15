@@ -58,18 +58,3 @@ The above should return cleanly.
 Intel's whitelisting form requires the MRSIGNER value in hexadecimal
 from `noop_enclave.sigstruct-pretty.hsm.txt`, furthermore we need to attach
 `noop_enclave.sigstruct.hsm.bin`.
-
-
-
-To overwrite the production key
-===
-
-*WARNING* THIS STEP SHOULD NOT BE INVOKED, UNLESS YOU KNOW EXACTLY WHAT YOU'RE DOING
----
-
-SECOND WARNING: Even in the case of disaster recovery consider
-resetting the HSM completely instead!
-
-To overwrite the production key:
-
-`java -jar hsm-tool.jar --mode=GenerateKey --profile=prod --overwriteKey # God help you`
