@@ -25,7 +25,6 @@ import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
 import java.nio.file.Files
-import java.util.Collections.singleton
 import kotlin.test.*
 
 class BFTNotaryServiceTests : NodeBasedTest() {
@@ -73,7 +72,7 @@ class BFTNotaryServiceTests : NodeBasedTest() {
                 addOutputState(DummyContract.SingleOwnerState(owner = info.legalIdentity))
             }
             database.transaction {
-                services.recordTransactions(singleton(issueTx))
+                services.recordTransactions(issueTx)
             }
             val spendTxs = (1..10).map {
                 signInitialTransaction(notary, true) {
@@ -81,29 +80,30 @@ class BFTNotaryServiceTests : NodeBasedTest() {
                 }
             }
             assertEquals(spendTxs.size, spendTxs.map { it.id }.distinct().size)
-            val results = spendTxs.map { NotaryFlow.Client(it) }.map { services.startFlow(it) }.map { ErrorOr.catch { it.resultFuture.getOrThrow() } }
+            val flows = spendTxs.map { NotaryFlow.Client(it) }
+            val stateMachines = flows.map { services.startFlow(it) }
+            val results = stateMachines.map { ErrorOr.catch { it.resultFuture.getOrThrow() } }
             val successfulIndex = results.mapIndexedNotNull { index, result ->
-                if (result.error != null) null else {
+                if (result.error == null) {
                     val signers = result.getOrThrow().map { it.by }
                     assertEquals(minCorrectReplicas(clusterSize), signers.size)
                     signers.forEach {
                         assertTrue(it in (notary.owningKey as CompositeKey).leafKeys)
                     }
                     index
+                } else {
+                    null
                 }
             }.single()
             spendTxs.zip(results).forEach { (tx, result) ->
                 if (result.error != null) {
                     val error = (result.error as NotaryException).error as NotaryError.Conflict
                     assertEquals(tx.id, error.txId)
-                    error.conflict.verified().stateHistory.entries.iterator().let {
-                        val (stateRef, consumingTx) = it.next()
-                        assertEquals(StateRef(issueTx.id, 0), stateRef)
-                        assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
-                        assertEquals(0, consumingTx.inputIndex)
-                        assertEquals(info.legalIdentity, consumingTx.requestingParty)
-                        assertFalse(it.hasNext())
-                    }
+                    val (stateRef, consumingTx) = error.conflict.verified().stateHistory.entries.single()
+                    assertEquals(StateRef(issueTx.id, 0), stateRef)
+                    assertEquals(spendTxs[successfulIndex].id, consumingTx.id)
+                    assertEquals(0, consumingTx.inputIndex)
+                    assertEquals(info.legalIdentity, consumingTx.requestingParty)
                 }
             }
         }

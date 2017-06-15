@@ -97,7 +97,9 @@ object BFTSMaRt {
                 log.info("Client-replica channels not yet active: $clientId to $inactive")
                 Thread.sleep((inactive.size * 100).toLong())
             }
-            return proxy.invokeOrdered(CommitRequest(transaction, otherSide).serialize().bytes).deserialize<ClusterResponse>()
+            val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
+            val responseBytes = proxy.invokeOrdered(requestBytes)
+            return responseBytes.deserialize<ClusterResponse>()
         }
 
         /** A comparator to check if replies from two replicas are the same. */
@@ -139,6 +141,7 @@ object BFTSMaRt {
         }
     }
 
+    /** ServiceReplica doesn't have any kind of shutdown method, so we add one in this subclass. */
     private class CordaServiceReplica(replicaId: Int, configHome: Path, owner: DefaultRecoverable) : ServiceReplica(replicaId, configHome.toString(), owner, owner, null, DefaultReplier()) {
         private val tomLayerField = declaredField<TOMLayer>(ServiceReplica::class, "tomLayer")
         private val csField = declaredField<ServerCommunicationSystem>(ServiceReplica::class, "cs")
