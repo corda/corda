@@ -133,6 +133,7 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
 
 private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
     runLoadTests(loadTestConfiguration, listOf(
+            // Self issue cash.
             StabilityTest.selfIssueTest to LoadTest.RunParameters(
                     parallelism = loadTestConfiguration.parallelism,
                     generateCount = loadTestConfiguration.generateCount,
@@ -141,6 +142,7 @@ private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
                     gatherFrequency = 100,
                     disruptionPatterns = listOf(listOf()) // no disruptions
             ),
+            // Send cash to a random party or exit cash, commands are generated randomly.
             StabilityTest.crossCashTest to LoadTest.RunParameters(
                     parallelism = loadTestConfiguration.parallelism,
                     generateCount = loadTestConfiguration.generateCount,

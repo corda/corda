@@ -25,4 +25,8 @@ run {
     if (project.hasProperty('loadtest-config')) {
         args project["loadtest-config"]
     }
+    System.getProperties().forEach { k, v ->
+        if (k.toString().startsWith("loadtest."))
+            systemProperty k, v
+    }
 }

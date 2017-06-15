@@ -1,16 +1,16 @@
 package net.corda.loadtest
 
+import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
 import net.corda.client.rpc.notUsed
 import net.corda.core.crypto.toBase58String
-import net.corda.testing.driver.PortAllocation
 import net.corda.node.services.network.NetworkMapService
+import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 private val log = LoggerFactory.getLogger(LoadTest::class.java)
 
@@ -63,7 +63,7 @@ data class LoadTest<T, S>(
             val parallelism: Int,
             val generateCount: Int,
             val clearDatabaseBeforeRun: Boolean,
-            val executionFrequency: Int,
+            val executionFrequency: Int?,
             val gatherFrequency: Int,
             val disruptionPatterns: List<List<DisruptionSpec>>
     )
@@ -80,12 +80,19 @@ data class LoadTest<T, S>(
             }
         }
 
+        val rateLimiter = parameters.executionFrequency?.let {
+            log.info("Execution rate limited to $it per second.")
+            RateLimiter.create(it.toDouble())
+        }
+        val executor = Executors.newFixedThreadPool(parameters.parallelism)
+
         parameters.disruptionPatterns.forEach { disruptions ->
             log.info("Running test '$testName' with disruptions ${disruptions.map { it.disruption.name }}")
             nodes.withDisruptions(disruptions, random) {
                 var state = nodes.gatherRemoteState(null)
                 var count = parameters.generateCount
                 var countSinceLastCheck = 0
+
                 while (count > 0) {
                     log.info("$count remaining commands, state:\n$state")
                     // Generate commands
@@ -95,27 +102,21 @@ data class LoadTest<T, S>(
                     // Interpret commands
                     val newState = commands.fold(state, interpret)
                     // Execute commands
-                    val queue = ConcurrentLinkedQueue(commands)
-
-                    val executor = Executors.newScheduledThreadPool(parameters.parallelism)
-                    executor.scheduleAtFixedRate({
-                        queue.poll()?.let {
-                            log.info("Executing $it")
-                            try {
-                                nodes.execute(it)
-                            } catch (exception: Throwable) {
-                                val diagnostic = executeDiagnostic(state, newState, it, exception)
-                                log.error(diagnostic)
-                                throw Exception(diagnostic)
+                    executor.invokeAll(
+                            commands.map {
+                                Callable<Unit> {
+                                    rateLimiter?.acquire()
+                                    log.info("Executing $it")
+                                    try {
+                                        nodes.execute(it)
+                                    } catch (exception: Throwable) {
+                                        val diagnostic = executeDiagnostic(state, newState, it, exception)
+                                        log.error(diagnostic)
+                                        throw Exception(diagnostic)
+                                    }
+                                }
                             }
-                        }
-                    }, 0, 1000 / parameters.executionFrequency.toLong(), TimeUnit.MILLISECONDS)
-
-                    poll { queue.isEmpty() }
-
-                    executor.shutdown()
-                    executor.awaitTermination(1, TimeUnit.HOURS)
-
+                    )
                     countSinceLastCheck += commands.size
                     if (countSinceLastCheck >= parameters.gatherFrequency) {
                         log.info("Checking consistency...")
@@ -138,7 +139,7 @@ data class LoadTest<T, S>(
                 log.info("'$testName' done!")
             }
         }
-
+        executor.shutdown()
     }
 
     companion object {
