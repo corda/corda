@@ -18,7 +18,7 @@
                      fileName="${sys:log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%d{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout pattern="%d{ISO8601}{GMT+0} [%-5level] %c{1} - %msg%n"/>
+            <PatternLayout pattern="%d{ISO8601}{UTC}Z [%-5level] %c{1} - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>

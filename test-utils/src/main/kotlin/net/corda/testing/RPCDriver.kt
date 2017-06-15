@@ -12,7 +12,6 @@ import net.corda.core.div
 import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
-import net.corda.core.utilities.ProcessUtilities
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer

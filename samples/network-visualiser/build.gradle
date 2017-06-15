@@ -41,6 +41,7 @@ task deployVisualiser(type: FatCapsule) {
     applicationClass 'net.corda.netmap.NetworkMapVisualiser'
     reallyExecutable
     capsuleManifest {
+        systemProperties['log4j.configurationFile'] = 'classpath:log4j2-corda.xml'
         minJavaVersion = '1.8.0'
         javaAgents = [configurations.quasar.singleFile.name]
     }

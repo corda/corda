@@ -25,9 +25,9 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
     applicationSource = files(
             project(':node').configurations.runtime,
             project(':node').jar,
+            '../build/classes/main/AbstractCordaCaplet.class',
             '../build/classes/main/CordaCaplet.class',
-            '../build/classes/main/CordaCaplet$1.class',
-            "$rootDir/config/dev/log4j2.xml"
+            "$rootDir/config/dev/log4j2-corda.xml"
     )
     from 'NOTICE' // Copy CDDL notice
 
@@ -40,6 +40,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').compileJava) {
         // javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda'
+        systemProperties['log4j.configurationFile'] = 'classpath:log4j2-corda.xml'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']

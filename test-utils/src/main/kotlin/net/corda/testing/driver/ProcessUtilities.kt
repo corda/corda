@@ -1,8 +1,8 @@
-package net.corda.core.utilities
+package net.corda.testing.driver
 
+import net.corda.core.div
 import java.nio.file.Path
 
-// TODO This doesn't belong in core and can be moved into node
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
             arguments: List<String>,
@@ -26,20 +26,18 @@ object ProcessUtilities {
             errorLogPath: Path? = null,
             workingDirectory: Path? = null
     ): Process {
-        val separator = System.getProperty("file.separator")
-        val javaPath = System.getProperty("java.home") + separator + "bin" + separator + "java"
-        val debugPortArgument = if (jdwpPort != null) {
-            listOf("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
-        } else {
-            emptyList()
+        val allArguments = mutableListOf<String>().apply {
+            add((System.getProperty("java.home") / "bin" / "java").toString())
+            if (jdwpPort != null) add("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=$jdwpPort")
+            add("-Xmx200m")
+            add("-XX:+UseG1GC")
+            addAll(extraJvmArguments)
+            add("-Dlog4j.configurationFile=classpath:log4j2-corda.xml")
+            add("-cp")
+            add(classpath)
+            add(className)
+            addAll(arguments)
         }
-
-        val allArguments = listOf(javaPath) +
-                debugPortArgument +
-                listOf("-Xmx200m", "-XX:+UseG1GC") +
-                extraJvmArguments +
-                listOf("-cp", classpath, className) +
-                arguments.toList()
         return ProcessBuilder(allArguments).apply {
             if (errorLogPath != null) redirectError(errorLogPath.toFile())
             if (inheritIO) inheritIO()

@@ -23,7 +23,7 @@ sourceSets {
 // Use manual resource copying of log4j2.xml rather than source sets.
 // This prevents problems in IntelliJ with regard to duplicate source roots.
 processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
+    from file("$rootDir/config/dev/log4j2-corda.xml")
 }
 
 dependencies {

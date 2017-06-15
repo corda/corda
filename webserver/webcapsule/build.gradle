@@ -25,9 +25,9 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
     applicationSource = files(
             project(':webserver').configurations.runtime,
             project(':webserver').jar,
+            new File(project(':node').buildDir, 'classes/main/AbstractCordaCaplet.class'),
             new File(project(':node').buildDir, 'classes/main/CordaCaplet.class'),
-            new File(project(':node').buildDir, 'classes/main/CordaCaplet$1.class'),
-            "$rootDir/config/dev/log4j2.xml"
+            "$rootDir/config/dev/log4j2-corda.xml"
     )
     from 'NOTICE' // Copy CDDL notice
 
@@ -35,6 +35,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').compileJava
         applicationVersion = corda_release_version
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar"]
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
+        systemProperties['log4j.configurationFile'] = 'classpath:log4j2-corda.xml'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['CordaCaplet']
