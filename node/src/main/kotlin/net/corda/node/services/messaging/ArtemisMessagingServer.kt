@@ -200,6 +200,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
                         address = NOTIFICATIONS_ADDRESS,
                         filter = RPCApi.RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION,
                         durable = false
+                ),
+                queueConfig(
+                        name = RPCApi.RPC_CLIENT_BINDING_ADDITIONS,
+                        address = NOTIFICATIONS_ADDRESS,
+                        filter = RPCApi.RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION,
+                        durable = false
                 )
         )
         addressesSettings = mapOf(
