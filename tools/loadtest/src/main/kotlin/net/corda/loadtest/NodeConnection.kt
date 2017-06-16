@@ -20,6 +20,7 @@ import java.io.OutputStream
  * The RPC Client start/stop must be controlled externally with [startClient] and [doWhileClientStopped]. For example
  * if we want to do some action on the node that requires bringing down of the node we should nest it in a
  * [doWhileClientStopped], otherwise the RPC link will be broken.
+ * TODO: Auto reconnect has been enable for RPC connection, investigate if we still need [doWhileClientStopped].
  */
 class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Session, private val localTunnelAddress: HostAndPort) : Closeable {
     companion object {

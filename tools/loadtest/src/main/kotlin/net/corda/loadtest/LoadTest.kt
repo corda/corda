@@ -181,14 +181,14 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
             log.info("Getting node info of ${connection.remoteNode.hostname}")
             val info = connection.info
             log.info("Got node info of ${connection.remoteNode.hostname}: $info!")
-            val (otherinfos, infoUpdates) = connection.proxy.networkMapUpdates()
+            val (otherInfo, infoUpdates) = connection.proxy.networkMapUpdates()
             infoUpdates.notUsed()
-            val pubkeysString = otherinfos.map {
+            val pubKeysString = otherInfo.map {
                 "    ${it.legalIdentity.name}: ${it.legalIdentity.owningKey.toBase58String()}"
             }.joinToString("\n")
             log.info("${connection.remoteNode.hostname} waiting for network map")
             connection.proxy.waitUntilRegisteredWithNetworkMap().get()
-            log.info("${connection.remoteNode.hostname} sees\n$pubkeysString")
+            log.info("${connection.remoteNode.hostname} sees\n$pubKeysString")
             hostNodeMap.put(connection.remoteNode.hostname, connection)
         }
 

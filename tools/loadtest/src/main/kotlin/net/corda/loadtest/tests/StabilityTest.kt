@@ -39,7 +39,6 @@ object StabilityTest {
     )
 
     val selfIssueTest = LoadTest<SelfIssueCommand, Unit>(
-            // DOCS END 1
             "Self issuing cash randomly",
             generate = { _, parallelism ->
                 val generateIssue = Generator.pickOne(simpleNodes).bind { node ->
