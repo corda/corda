@@ -220,7 +220,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val tokenizableServices = makeServices()
+            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val tokenizableServices = makeServices(keyStoreWrapper)
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -443,7 +444,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(): MutableList<Any> {
+    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
+        val keyStore = keyStoreWrapper.keyStore
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
