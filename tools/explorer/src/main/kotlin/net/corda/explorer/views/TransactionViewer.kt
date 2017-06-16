@@ -53,7 +53,11 @@ class TransactionViewer : CordaView("Transactions") {
     private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
-    override val widgets = listOf(CordaWidget(title, TransactionWidget())).observable()
+    override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
+
+    private var scrollPosition: Int = 0
+    private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
+    var txIdToScroll: SecureHash? = null // Passed as param.
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
@@ -71,6 +75,26 @@ class TransactionViewer : CordaView("Transactions") {
     )
 
     data class Inputs(val resolved: ObservableList<StateAndRef<ContractState>>, val unresolved: ObservableList<StateRef>)
+
+    override fun onDock() {
+        txIdToScroll?.let {
+            scrollPosition = transactionViewTable.items.indexOfFirst { it.id == txIdToScroll }
+            if (scrollPosition > 0) {
+                expander.toggleExpanded(scrollPosition)
+                val tx = transactionViewTable.items[scrollPosition]
+                transactionViewTable.scrollTo(tx)
+            }
+        }
+    }
+
+    override fun onUndock() {
+        if (scrollPosition != 0) {
+            val isExpanded = expander.getExpandedProperty(transactionViewTable.items[scrollPosition])
+            if (isExpanded.value) expander.toggleExpanded(scrollPosition)
+            scrollPosition = 0
+        }
+        txIdToScroll = null
+    }
 
     /**
      * We map the gathered data about transactions almost one-to-one to the nodes.
@@ -117,7 +141,10 @@ class TransactionViewer : CordaView("Transactions") {
         // Transaction table
         transactionViewTable.apply {
             items = searchField.filteredData
-            column("Transaction ID", Transaction::id) { maxWidth = 200.0 }.setCustomCellFactory {
+            column("Transaction ID", Transaction::id) {
+                minWidth = 20.0
+                maxWidth = 200.0
+            }.setCustomCellFactory {
                 label("$it") {
                     graphic = identicon(it, 15.0)
                     tooltip = identiconToolTip(it)
@@ -155,14 +182,15 @@ class TransactionViewer : CordaView("Transactions") {
                 titleProperty.bind(reportingCurrency.map { "Total value ($it equiv)" })
             }
 
-            rowExpander {
+            expander = rowExpander {
                 add(ContractStatesView(it).root)
                 prefHeight = 400.0
             }.apply {
-                prefWidth = 26.0
-                isResizable = false
+                // Column stays the same size, but we don't violate column restricted resize policy for the whole table view.
+                // It removes that irritating column at the end of table that does nothing.
+                minWidth = 26.0
+                maxWidth = 26.0
             }
-            setColumnResizePolicy { true }
         }
         matchingTransactionsLabel.textProperty().bind(Bindings.size(transactionViewTable.items).map {
             "$it matching transaction${if (it == 1) "" else "s"}"
@@ -186,6 +214,8 @@ class TransactionViewer : CordaView("Transactions") {
         init {
             right {
                 label {
+                    val hash = SecureHash.randomSHA256()
+                    graphic = identicon(hash, 30.0)
                     textProperty().bind(Bindings.size(partiallyResolvedTransactions).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }

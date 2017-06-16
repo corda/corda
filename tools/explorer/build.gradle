@@ -68,3 +68,9 @@ task(runSimulationNodes, dependsOn: 'classes', type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     args '-S'
 }
+
+task(runFlowTriageNodes, dependsOn: 'classes', type: JavaExec) {
+    main = 'net.corda.explorer.MainKt'
+    classpath = sourceSets.main.runtimeClasspath
+    args '-F'
+}

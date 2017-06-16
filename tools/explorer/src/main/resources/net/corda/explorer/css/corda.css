@@ -111,6 +111,7 @@
     -fx-cursor: hand;
     -fx-background-color: -color-1;
     -fx-border-color: transparent;
+    -fx-border-radius: 2;
 }
 
 .tile .title .text, .tile:expanded .title .text {
@@ -123,14 +124,15 @@
     -fx-background-repeat: no-repeat;
     -fx-background-position: center center;
     -fx-cursor: hand;
-    -fx-padding: 0px;
+    -fx-padding: 5px;
     -fx-alignment: bottom-right;
     -fx-border-color: transparent; /*t r b l */
+    -fx-border-radius: 2;
 }
 
 .tile .label {
-    -fx-font-size: 2.4em;
-    -fx-padding: 20px;
+    -fx-font-size: 2.0em;
+    -fx-padding: 10px;
     -fx-text-fill: -color-0;
     -fx-font-weight: normal;
     -fx-text-alignment: right;
@@ -269,4 +271,24 @@
 
 .connection-bank-to-regulator {
     -fx-stroke: red;
+}
+
+/* Other */
+.identicon {
+    -fx-border-radius: 2;
+}
+
+.flow-expanded {
+    -fx-background-color: rgba(255, 255, 255);
+    -fx-background-size: Auto 90%;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center center;
+    -fx-border-color: transparent;
+    -fx-border-radius: 2;
+}
+
+.flow-expanded:hover {
+    -fx-border-color: -color-3;
+    -fx-border-width: 2;
+    -fx-border-radius: 2;
 }

@@ -4,9 +4,7 @@ import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
@@ -15,17 +13,6 @@ import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
-
-data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
-    companion object {
-        fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
-            return stateMachine.progressTrackerStepAndUpdates?.let { pair ->
-                val (current, future) = pair
-                future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
-            }
-        }
-    }
-}
 
 /**
  * This model exposes raw event streams to and from the node.
@@ -75,7 +62,9 @@ class NodeMonitorModel {
                 Observable.empty<ProgressTrackingEvent>()
             }
         }
-        futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.subscribe(progressTrackingSubject)
+
+        // We need to retry, because when flow errors, we unsubscribe from progressTrackingSubject. So we end up with stream of state machine updates and no progress trackers.
+        futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.retry().subscribe(progressTrackingSubject)
 
         // Now the state machines
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
