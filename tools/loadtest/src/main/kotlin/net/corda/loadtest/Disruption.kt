@@ -16,11 +16,11 @@ private val log = LoggerFactory.getLogger(Disruption::class.java)
 // DOCS START 1
 data class Disruption(
         val name: String,
-        val disrupt: (NodeHandle, SplittableRandom) -> Unit
+        val disrupt: (NodeConnection, SplittableRandom) -> Unit
 )
 
 data class DisruptionSpec(
-        val nodeFilter: (NodeHandle) -> Boolean,
+        val nodeFilter: (NodeConnection) -> Boolean,
         val disruption: Disruption,
         val noDisruptionWindowMs: LongRange
 )
@@ -43,8 +43,8 @@ data class DisruptionSpec(
  *     * Randomly duplicate messages, perhaps to other queues even.
  */
 
-val isNetworkMap = { node: NodeHandle -> node.info.advertisedServices.any { it.info.type == NetworkMapService.type } }
-val isNotary = { node: NodeHandle -> node.info.advertisedServices.any { it.info.type.isNotary() } }
+val isNetworkMap = { node: NodeConnection -> node.info.advertisedServices.any { it.info.type == NetworkMapService.type } }
+val isNotary = { node: NodeConnection -> node.info.advertisedServices.any { it.info.type.isNotary() } }
 fun <A> ((A) -> Boolean).or(other: (A) -> Boolean): (A) -> Boolean = { this(it) || other(it) }
 
 fun hang(hangIntervalRange: LongRange) = Disruption("Hang randomly") { node, random ->
@@ -52,21 +52,21 @@ fun hang(hangIntervalRange: LongRange) = Disruption("Hang randomly") { node, ran
     node.doWhileSigStopped { Thread.sleep(hangIntervalMs) }
 }
 
-val restart = Disruption("Restart randomly") { (configuration, connection), _ ->
-    connection.runShellCommandGetOutput("sudo systemctl restart ${configuration.remoteSystemdServiceName}").getResultOrThrow()
+val restart = Disruption("Restart randomly") { connection, _ ->
+    connection.restartNode()
+    connection.waitUntilUp()
 }
 
 val kill = Disruption("Kill randomly") { node, _ ->
-    val pid = node.getNodePid()
-    node.connection.runShellCommandGetOutput("sudo kill $pid")
+    node.kill()
 }
 
-val deleteDb = Disruption("Delete persistence database without restart") { (configuration, connection), _ ->
-    connection.runShellCommandGetOutput("sudo rm ${configuration.remoteNodeDirectory}/persistence.mv.db").getResultOrThrow()
+val deleteDb = Disruption("Delete persistence database without restart") { connection, _ ->
+    connection.runShellCommandGetOutput("sudo rm ${connection.remoteNode.nodeDirectory}/persistence.mv.db").getResultOrThrow()
 }
 
 // DOCS START 2
-fun strainCpu(parallelism: Int, durationSeconds: Int) = Disruption("Put strain on cpu") { (_, connection), _ ->
+fun strainCpu(parallelism: Int, durationSeconds: Int) = Disruption("Put strain on cpu") { connection, _ ->
     val shell = "for c in {1..$parallelism} ; do openssl enc -aes-128-cbc -in /dev/urandom -pass pass: -e > /dev/null & done && JOBS=\$(jobs -p) && (sleep $durationSeconds && kill \$JOBS) & wait"
     connection.runShellCommandGetOutput(shell).getResultOrThrow()
 }
@@ -90,7 +90,7 @@ fun <A> Nodes.withDisruptions(disruptions: List<DisruptionSpec>, mainRandom: Spl
                 executor.invokeAll(nodes.map { node ->
                     val nodeRandom = random.split()
                     Callable {
-                        log.info("Disrupting ${node.connection.hostName} with '${disruption.disruption.name}'")
+                        log.info("Disrupting ${node.remoteNode.hostname} with '${disruption.disruption.name}'")
                         disruption.disruption.disrupt(node, nodeRandom)
                     }
                 })
