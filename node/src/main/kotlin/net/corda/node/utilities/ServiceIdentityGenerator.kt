@@ -1,9 +1,6 @@
 package net.corda.node.utilities
 
-import net.corda.core.crypto.CertificateAndKeyPair
-import net.corda.core.crypto.CompositeKey
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.serialize
 import net.corda.core.serialization.storageKryo
@@ -12,6 +9,7 @@ import net.corda.core.utilities.trace
 import org.bouncycastle.asn1.x500.X500Name
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.cert.CertificateFactory
 
 object ServiceIdentityGenerator {
     private val log = loggerFor<ServiceIdentityGenerator>()
@@ -40,8 +38,9 @@ object ServiceIdentityGenerator {
         // TODO: This doesn't work until we have composite keys in X.509 certificates, so we make up a certificate that nothing checks
         // val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
         //        serviceCa.keyPair, serviceName, notaryKey)
+        val certFactory = CertificateFactory.getInstance("X509")
         val notaryCert = X509Utilities.createSelfSignedCACertificate(serviceName, generateKeyPair())
-        val notaryCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, notaryCert, revocationEnabled = false)
+        val notaryCertPath = certFactory.generateCertPath(listOf(serviceCa.certificate.cert, notaryCert.cert))
         val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath).serialize()
 
         keyPairs.zip(dirs) { keyPair, dir ->
