@@ -1,6 +1,9 @@
 package net.corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.contracts.NetCommand
+import net.corda.contracts.NetType
+import net.corda.contracts.NettableState
 import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.contracts.clause.*
 import net.corda.core.contracts.*

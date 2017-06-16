@@ -1,5 +1,7 @@
 package net.corda.contracts.universal
 
+import net.corda.contracts.BusinessCalendar
+import net.corda.contracts.FixOf
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -18,7 +20,7 @@ class UniversalContract : Contract {
 
     interface Commands : CommandData {
 
-        data class Fix(val fixes: List<net.corda.core.contracts.Fix>) : Commands
+        data class Fix(val fixes: List<net.corda.contracts.Fix>) : Commands
 
         // transition according to business rules defined in contract
         data class Action(val name: String) : Commands

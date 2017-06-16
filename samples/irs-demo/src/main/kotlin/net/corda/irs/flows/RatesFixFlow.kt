@@ -1,12 +1,12 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Fix
-import net.corda.core.contracts.FixOf
+import net.corda.contracts.Fix
+import net.corda.contracts.FixOf
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder

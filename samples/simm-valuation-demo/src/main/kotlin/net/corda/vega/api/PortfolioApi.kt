@@ -2,7 +2,7 @@ package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import net.corda.client.rpc.notUsed
-import net.corda.core.contracts.DealState
+import net.corda.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.parsePublicKeyBase58

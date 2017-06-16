@@ -1,5 +1,7 @@
 package net.corda.irs.testing
 
+import net.corda.contracts.Fix
+import net.corda.contracts.FixOf
 import net.corda.contracts.asset.CASH
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.`issued by`
