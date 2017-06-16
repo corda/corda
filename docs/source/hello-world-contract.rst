@@ -76,7 +76,7 @@ transfer them or redeem them for cash. One way to enforce this behaviour would b
 We can picture this transaction as follows:
 
   .. image:: resources/tutorial-transaction.png
-     :scale: 25%
+:scale: 15%
      :align: center
 
 Let's write a contract that enforces these constraints. We'll do this by modifying either ``TemplateContract.java`` or

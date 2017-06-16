@@ -230,7 +230,7 @@ Now that we have our ``TransactionBuilder``, we need to create its components. R
 the following transaction:
 
   .. image:: resources/tutorial-transaction.png
-     :scale: 25%
+:scale: 15%
      :align: center
 
 So we'll need the following:

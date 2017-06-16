@@ -142,14 +142,14 @@ define an ``IOUState``:
 We've made the following changes:
 
 * We've renamed ``TemplateState`` to ``IOUState``
-* We've added properties for ``value``, ``sender`` and ``recipient`` (along with any getters and setters in Java)
+* We've added properties for ``value``, ``sender`` and ``recipient`` (along with any getters and setters in Java):
 
   * ``value`` is just a standard int (in Java)/Int (in Kotlin), but ``sender`` and ``recipient`` are of type
     ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
 
 * We've overridden ``participants`` to return a list of the ``sender`` and ``recipient``
-  * This means that actions such as changing the state's contract or its notary will require approval from both the
-    ``sender`` and the ``recipient``
+* This means that actions such as changing the state's contract or its notary will require approval from both the
+  ``sender`` and the ``recipient``
 
 We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
 ``IOUContract``.
