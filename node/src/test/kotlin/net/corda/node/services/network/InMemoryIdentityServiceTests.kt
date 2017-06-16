@@ -12,8 +12,7 @@ import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.BOB_PUBKEY
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Test
-import java.security.KeyPair
-import java.security.cert.*
+import java.security.cert.CertificateFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -103,15 +102,16 @@ class InMemoryIdentityServiceTests {
     @Test
     fun `assert ownership`() {
         val trustRoot = DUMMY_CA
-        val (alice, aliceTxIdentity) = createParty(ALICE.name)
+        val (alice, aliceTxIdentity) = createParty(ALICE.name, trustRoot)
 
         val certFactory = CertificateFactory.getInstance("X509")
         val bobRootKey = Crypto.generateKeyPair()
         val bobRoot = getTestPartyAndCertificate(BOB.name, bobRootKey.public)
+        val bobRootCert = bobRoot.certificate
         val bobTxKey = Crypto.generateKeyPair()
-        val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRoot.certificate, bobRootKey, BOB.name, bobTxKey.public)
-        val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRoot.certificate.cert))
-        val bob = PartyAndCertificate(BOB.name, bobRootKey.public, bobRoot.certificate, bobCertPath)
+        val bobTxCert = X509Utilities.createCertificate(CertificateType.IDENTITY, bobRootCert, bobRootKey, BOB.name, bobTxKey.public)
+        val bobCertPath = certFactory.generateCertPath(listOf(bobTxCert.cert, bobRootCert.cert))
+        val bob = PartyAndCertificate(BOB.name, bobRootKey.public, bobRootCert, bobCertPath)
 
         // Now we have identities, construct the service and let it know about both
         val service = InMemoryIdentityService(setOf(alice, bob), emptyMap(), trustRoot.certificate.cert)
@@ -131,10 +131,10 @@ class InMemoryIdentityServiceTests {
         }
     }
 
-    private fun createParty(x500Name: X500Name): Pair<PartyAndCertificate, TxKeyFlow.AnonymousIdentity> {
+    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, TxKeyFlow.AnonymousIdentity> {
         val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
-        val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public)
+        val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
