@@ -45,7 +45,7 @@ buildscript {
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
     ext.requery_version = '1.2.1'
-    ext.dokka_version = '0.9.13'
+    ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
