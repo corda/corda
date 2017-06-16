@@ -40,7 +40,7 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
-    val identityService: IdentityService = InMemoryIdentityService(identities = emptySet(), trustRoot = trustRoot)
+    val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
     val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)
