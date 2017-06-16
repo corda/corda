@@ -14,6 +14,9 @@ your CorDapp onto a local test network of dummy nodes to evaluate its functional
 Note that there's no need to download and install Corda itself. As long as you're working from a stable Milestone
 branch, the required libraries will be downloaded automatically from an online repository.
 
+If you do wish to work from the latest snapshot, please follow the instructions
+`here <https://docs.corda.net/tutorial-cordapp.html#using-a-snapshot-release>`_.
+
 Downloading the template
 ------------------------
 Open a terminal window in the directory where you want to download the CorDapp template, and run the following commands:

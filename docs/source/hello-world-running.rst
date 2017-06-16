@@ -86,22 +86,16 @@ If we navigate to one of these folders, we'll see four node folder. Each node fo
     .. code:: python
 
         .
-        |____artemis
-        |____attachments
-        |____certificates
         // The runnable node
         |____corda.jar
         // The node's webserver
         |____corda-webserver.jar
         |____dependencies
-        |____logs
         // The node's configuration file
         |____node.conf
-        |____persistence.mv.db
         |____plugins
-        // Our IOU CorDapp
-        | |____java/kotlin-source-0.1.jar
-        |____shell-commands
+          // Our IOU CorDapp
+          |____java/kotlin-source-0.1.jar
 
 Let's start the nodes by running the following commands from the root of the project:
 

@@ -69,8 +69,8 @@ you wish to add them later, its as simple as adding an additional property to yo
 
 Defining IOUState
 -----------------
-Let's open TemplateState.java (for Java) or TemplateState.kt (for Kotlin) and update ``TemplateState`` to define an
-``IOUState``:
+Let's open ``TemplateState.java`` (for Java) or ``TemplateState.kt`` (for Kotlin) and update ``TemplateState`` to
+define an ``IOUState``:
 
 .. container:: codeset
 

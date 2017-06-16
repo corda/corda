@@ -79,8 +79,8 @@ We can picture this transaction as follows:
      :scale: 25%
      :align: center
 
-Let's write a contract that enforces these constraints. We'll do this by modifying either TemplateContract.java or
-TemplateContract.kt and updating ``TemplateContract`` to define an ``IOUContract``.
+Let's write a contract that enforces these constraints. We'll do this by modifying either ``TemplateContract.java`` or
+``TemplateContract.kt`` and updating ``TemplateContract`` to define an ``IOUContract``.
 
 Defining IOUContract
 --------------------
@@ -99,8 +99,8 @@ The first thing our contract needs is a *command*. Commands serve two purposes:
   * For example, IOU creation might require signatures from both the sender and the recipient, whereas the transfer
     of an IOU might only require a signature from the IOUs current holder
 
-Let's update the definition of ``TemplateContract`` (in TemplateContract.java/TemplateContract.kt) to define an
-``IOUContract`` with a ``Create`` command:
+Let's update the definition of ``TemplateContract`` (in ``TemplateContract.java`` or ``TemplateContract.kt``) to
+define an ``IOUContract`` with a ``Create`` command:
 
 .. container:: codeset
 
@@ -446,8 +446,8 @@ slow process, and would take on the order of minutes to test each change.
 Instead, we can test our contract logic using Corda's ``ledgerDSL`` transaction-testing framework. This will allow us
 to test our contract without the overhead of spinning up a set of nodes.
 
-Open either test/kotlin/com/template/contract/ContractTests.kt or test/java/com/template/contract/ContractTests.java,
-and add the following as our first test:
+Open either ``test/kotlin/com/template/contract/ContractTests.kt`` or
+``test/java/com/template/contract/ContractTests.java``, and add the following as our first test:
 
 .. container:: codeset
 
