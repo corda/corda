@@ -38,6 +38,7 @@ open class TransactionBuilder(
         protected val commands: MutableList<Command> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
         protected var timeWindow: TimeWindow? = null) {
+    constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     val time: TimeWindow? get() = timeWindow // TODO: rename using a more descriptive name (i.e. timeWindowGetter) or remove if unused.
 
