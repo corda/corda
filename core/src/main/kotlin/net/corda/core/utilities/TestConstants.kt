@@ -9,6 +9,10 @@ import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.CertStore
+import java.security.cert.CertificateFactory
+import java.security.cert.CollectionCertStoreParameters
+import java.security.cert.X509Certificate
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -70,7 +74,8 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
 fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, ca: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
-    val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca.certificate, ca.keyPair, name, publicKey)
-    val certPath = X509Utilities.createCertificatePath(ca.certificate, cert, revocationEnabled = false)
-    return PartyAndCertificate(name, publicKey, cert, certPath)
+    val certFactory = CertificateFactory.getInstance("X509")
+    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, ca.certificate, ca.keyPair, name, publicKey)
+    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, ca.certificate.cert))
+    return PartyAndCertificate(name, publicKey, certHolder, certPath)
 }
