@@ -117,14 +117,12 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     @Throws(IdentityService.UnknownAnonymousPartyException::class)
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) {
         val path = partyToPath[anonymousParty] ?: throw IdentityService.UnknownAnonymousPartyException("Unknown anonymous party ${anonymousParty.owningKey.toStringShort()}")
-        val target = path.certificates.last() as X509Certificate
-        requireThat {
-            "Certificate path ends with \"${target.issuerX500Principal}\" expected \"${party.name}\"" using (X500Name(target.subjectX500Principal.name) == party.name)
-            "Certificate path ends with correct public key" using (target.publicKey == anonymousParty.owningKey)
-        }
+        val root: X509Certificate = path.certificates
+                .filterIsInstance<X509Certificate>()
+                .lastOrNull { it.publicKey == party.owningKey } ?: throw IllegalArgumentException("Certificate path must include a certificate for the party public key.")
         // Verify there's a previous certificate in the path, which matches
-        val root = path.certificates.first() as X509Certificate
-        require(X500Name(root.issuerX500Principal.name) == party.name) { "Certificate path starts with \"${root.issuerX500Principal}\" expected \"${party.name}\"" }
+        val target = path.certificates.first() as X509Certificate
+        require(target.publicKey == anonymousParty.owningKey) { "Certificate path starts with a certificate for the anonymous party" }
     }
 
     override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = partyToPath[anonymousParty]
