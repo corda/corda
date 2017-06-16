@@ -1,7 +1,6 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
@@ -56,17 +55,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
     override fun registerIdentity(party: PartyAndCertificate) {
         require(party.certPath.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
-        val validatorParameters = if (trustAnchor != null) {
-            PKIXParameters(setOf(trustAnchor))
-        } else {
-            // TODO: We should always require a full chain back to a trust anchor, but until we have a network
-            // trust anchor everywhere, this will have to do.
-            PKIXParameters(setOf(TrustAnchor(party.certificate.cert, null)))
-        }
-        validatorParameters.isRevocationEnabled = false
-        // TODO: val result = validator.validate(party.certPath, validatorParameters) as PKIXCertPathValidatorResult
-        // require(trustAnchor == null || result.trustAnchor == trustAnchor)
-        // require(result.publicKey == party.owningKey) { "Certificate path validation must end at transaction key ${anonymousParty.owningKey.toStringShort()}, found ${result.publicKey.toStringShort()}" }
+        if (trustRoot != null) validateCertificatePath(party.party, party.certPath)
 
         log.trace { "Registering identity $party" }
         require(Arrays.equals(party.certificate.subjectPublicKeyInfo.encoded, party.owningKey.encoded)) { "Party certificate must end with party's public key" }
@@ -132,19 +121,8 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         val fullParty = certificateFromParty(party) ?: throw IllegalArgumentException("Unknown identity ${party.name}")
         require(path.certificates.isNotEmpty()) { "Certificate path must contain at least one certificate" }
         // Validate the chain first, before we do anything clever with it
-        val validator = CertPathValidator.getInstance("PKIX")
-        val validatorParameters = if (trustAnchor != null) {
-            PKIXParameters(setOf(trustAnchor))
-        } else {
-            // TODO: We should always require a full chain back to a trust anchor, but until we have a network
-            // trust anchor everywhere, this will have to do.
-            PKIXParameters(setOf(TrustAnchor(fullParty.certificate.cert, null)))
-        }
-        validatorParameters.isRevocationEnabled = false
-        val result = validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult
+        if (trustRoot != null) validateCertificatePath(anonymousParty, path)
         val subjectCertificate = path.certificates.first()
-        require(trustAnchor == null || result.trustAnchor == trustAnchor)
-        require(result.publicKey == anonymousParty.owningKey) { "Certificate path validation must end at transaction key ${anonymousParty.owningKey.toStringShort()}, found ${result.publicKey.toStringShort()}" }
         require(subjectCertificate is X509Certificate && subjectCertificate.subject == fullParty.name) { "Subject of the transaction certificate must match the well known identity" }
 
         log.trace { "Registering identity $fullParty" }
@@ -152,5 +130,18 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         partyToPath[anonymousParty] = path
         keyToParties[anonymousParty.owningKey] = fullParty
         principalToParties[fullParty.name] = fullParty
+    }
+
+    /**
+     * Verify that the given certificate path is valid and leads to the owning key of the party.
+     */
+    private fun validateCertificatePath(party: AbstractParty, path: CertPath): PKIXCertPathValidatorResult {
+        val validatorParameters = PKIXParameters(setOf(trustAnchor))
+        val validator = CertPathValidator.getInstance("PKIX")
+        validatorParameters.isRevocationEnabled = false
+        val result = validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult
+        require(result.trustAnchor == null || result.trustAnchor == trustAnchor)
+        require(result.publicKey == party.owningKey) { "Certificate path validation must end at owning key ${party.owningKey.toStringShort()}, found ${result.publicKey.toStringShort()}" }
+        return result
     }
 }
