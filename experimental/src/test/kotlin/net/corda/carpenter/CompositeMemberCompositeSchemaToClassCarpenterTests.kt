@@ -2,10 +2,11 @@ package net.corda.carpenter
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
+import net.corda.core.serialization.ClassCarpenterSchema
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class CompositeMemberCompositeSchemaToClassCarpenterTests {
+class Inheritance {
     private var factory = SerializerFactory()
 
     fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
@@ -35,6 +36,9 @@ class CompositeMemberCompositeSchemaToClassCarpenterTests {
         assert(obj.second.schema.types[0] is CompositeType)
         assert(obj.second.schema.types[1] is CompositeType)
 
+        println (obj.second.schema.types[0] as CompositeType)
+        println (obj.second.schema.types[1] as CompositeType)
+
         var amqpSchemaA : CompositeType? = null
         var amqpSchemaB : CompositeType? = null
 
@@ -52,15 +56,15 @@ class CompositeMemberCompositeSchemaToClassCarpenterTests {
         assertEquals("a",   amqpSchemaA!!.fields[0].name)
         assertEquals("int", amqpSchemaA!!.fields[0].type)
 
+
         assertEquals(2,     amqpSchemaB?.fields?.size)
         assertEquals("a",   amqpSchemaB!!.fields[0].name)
-        assertEquals("net.corda.carpenter.CompositeMemberCompositeSchemaToClassCarpenterTests\$nestedInts\$A",
-                amqpSchemaB!!.fields[0].type)
+        assertEquals("${this.javaClass.name}\$nestedInts\$A", amqpSchemaB!!.fields[0].type)
         assertEquals("b",   amqpSchemaB!!.fields[1].name)
         assertEquals("int", amqpSchemaB!!.fields[1].type)
 
-        var ccA = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchemaA.name, amqpSchemaA.carpenterSchema()))
-        var ccB = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchemaB.name, amqpSchemaB.carpenterSchema()))
+        var ccA = ClassCarpenter().build(amqpSchemaA.carpenterSchema())
+        var ccB = ClassCarpenter().build(amqpSchemaB.carpenterSchema())
 
         /*
          * Since A is known to the JVM we can't constuct B with and instance of the carpented A but
@@ -72,7 +76,7 @@ class CompositeMemberCompositeSchemaToClassCarpenterTests {
         assertEquals (ccA.getMethod("getA").invoke(instanceA), amqpObj.a.a)
         assertEquals ((ccB.getMethod("getA").invoke(instanceB) as A).a, amqpObj.a.a)
         assertEquals (ccB.getMethod("getB").invoke(instanceB), amqpObj.b)
-    }
 
+    }
 }
 

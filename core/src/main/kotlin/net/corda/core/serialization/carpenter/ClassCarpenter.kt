@@ -159,58 +159,18 @@ class ClassCarpenter {
         }
     }
 
-    /**
-     * A Schema represents a desired class.
-     */
-    abstract class Schema(
-            val name: String,
-            fields: Map<String, Field>,
-            val superclass: Schema? = null,
-            val interfaces: List<Class<*>> = emptyList())
-    {
-        private fun Map<String, ClassCarpenter.Field>.descriptors() =
-                LinkedHashMap(this.mapValues { it.value.descriptor })
-
-        /* Fix the order up front if the user didn't, inject the name into the field as it's
-           neater when iterating */
-        val fields = LinkedHashMap(fields.mapValues { it.value.copy(it.key, it.value.field) })
-
-        fun fieldsIncludingSuperclasses(): Map<String, Field> =
-                (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
-
-        fun descriptorsIncludingSuperclasses(): Map<String, String> =
-                (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + fields.descriptors()
-
-        val jvmName: String
-            get() = name.replace(".", "/")
-    }
-
-    private val String.jvm: String get() = replace(".", "/")
-
-    class ClassSchema(
-            name: String,
-            fields: Map<String, Field>,
-            superclass: Schema? = null,
-            interfaces: List<Class<*>> = emptyList()
-    ) : Schema(name, fields, superclass, interfaces)
-
-    class InterfaceSchema(
-            name: String,
-            fields: Map<String, Field>,
-            superclass: Schema? = null,
-            interfaces: List<Class<*>> = emptyList()
-    ) : Schema(name, fields, superclass, interfaces)
-
     private class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
         fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
     }
 
     private val classloader = CarpenterClassLoader()
 
+    fun classLoader() = classloader as ClassLoader
+
     private val _loaded = HashMap<String, Class<*>>()
 
     /** Returns a snapshot of the currently loaded classes as a map of full class name (package names+dots) -> class object */
-    val loaded: Map<String, Class<*>> = HashMap(_loaded)
+    fun loaded() : Map<String, Class<*>> = HashMap(_loaded)
 
     /**
      * Generate bytecode for the given schema and load into the JVM. The returned class object can be used to
@@ -218,18 +178,17 @@ class ClassCarpenter {
      *
      * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a new ClassCarpenter if you're OK with ambiguous names)
      */
-    fun build(schema: Schema): Class<*> {
+    fun build(schema: ClassCarpenterSchema): Class<*> {
         validateSchema(schema)
         // Walk up the inheritance hierarchy and then start walking back down once we either hit the top, or
         // find a class we haven't generated yet.
-        val hierarchy = ArrayList<Schema>()
+        val hierarchy = ArrayList<ClassCarpenterSchema>()
         hierarchy += schema
         var cursor = schema.superclass
         while (cursor != null && cursor.name !in _loaded) {
             hierarchy += cursor
             cursor = cursor.superclass
         }
-
         hierarchy.reversed().forEach {
             when (it) {
                 is InterfaceSchema -> generateInterface(it)
@@ -346,6 +305,7 @@ class ClassCarpenter {
                 visitEnd()
             }
         }
+
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
@@ -374,14 +334,16 @@ class ClassCarpenter {
             // Calculate the super call.
             val superclassFields = schema.superclass?.fieldsIncludingSuperclasses() ?: emptyMap()
             visitVarInsn(ALOAD, 0)
-            if (schema.superclass == null) {
+            val sc = schema.superclass
+            if (sc == null) {
                 visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
             } else {
                 var slot = 1
                 for (fieldType in superclassFields.values)
                     slot += load(slot, fieldType)
-                val superDesc = schema.superclass.descriptorsIncludingSuperclasses().values.joinToString("")
-                visitMethodInsn(INVOKESPECIAL, schema.superclass.name.jvm, "<init>", "($superDesc)V", false)
+                //val superDesc = schema.superclass.descriptorsIncludingSuperclasses().values.joinToString("")
+                val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
+                visitMethodInsn(INVOKESPECIAL, sc.name.jvm, "<init>", "($superDesc)V", false)
             }
 
             // Assign the fields from parameters.

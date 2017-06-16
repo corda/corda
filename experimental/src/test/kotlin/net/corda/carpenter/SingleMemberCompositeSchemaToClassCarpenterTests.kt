@@ -1,6 +1,7 @@
 package net.corda.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.ClassCarpenterSchema
 import net.corda.core.serialization.amqp.*
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -17,8 +18,8 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
 
         @CordaSerializable
         data class A(val a : Int)
-        var a = A (test)
 
+        val a   = A (test)
         val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise (a))
 
         assert (obj.first is A)
@@ -28,13 +29,13 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals (1, obj.second.schema.types.size)
         assert (obj.second.schema.types[0] is CompositeType)
 
-        var amqpSchema = obj.second.schema.types[0] as CompositeType
+        val amqpSchema = obj.second.schema.types[0] as CompositeType
 
         assertEquals (1,     amqpSchema.fields.size)
         assertEquals ("a",   amqpSchema.fields[0].name)
         assertEquals ("int", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        val pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 
@@ -64,7 +65,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals ("a",      amqpSchema.fields[0].name)
         assertEquals ("string", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 
@@ -128,7 +129,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals ("a",    amqpSchema.fields[0].name)
         assertEquals ("long", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 
@@ -159,7 +160,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals ("a",     amqpSchema.fields[0].name)
         assertEquals ("short", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 
@@ -223,7 +224,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals ("a",      amqpSchema.fields[0].name)
         assertEquals ("double", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 
@@ -254,7 +255,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests {
         assertEquals ("a",     amqpSchema.fields[0].name)
         assertEquals ("float", amqpSchema.fields[0].type)
 
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio   = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance (test)
 

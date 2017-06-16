@@ -38,7 +38,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         assertEquals("b",   amqpSchema.fields[1].name)
         assertEquals("int", amqpSchema.fields[1].type)
 
-        var pinochio = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
@@ -74,7 +74,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         assertEquals("b",      amqpSchema.fields[1].name)
         assertEquals("string", amqpSchema.fields[1].type)
 
-        var pinochio = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
+        var pinochio = ClassCarpenter().build(amqpSchema.carpenterSchema())
 
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
