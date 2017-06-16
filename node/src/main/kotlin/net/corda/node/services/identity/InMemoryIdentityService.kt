@@ -109,6 +109,7 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
         val root: X509Certificate = path.certificates
                 .filterIsInstance<X509Certificate>()
                 .lastOrNull { it.publicKey == party.owningKey } ?: throw IllegalArgumentException("Certificate path must include a certificate for the party public key.")
+        // TODO: We should only let the immediately preeceeding certificate be the owner
         // Verify there's a previous certificate in the path, which matches
         val target = path.certificates.first() as X509Certificate
         require(target.publicKey == anonymousParty.owningKey) { "Certificate path starts with a certificate for the anonymous party" }
