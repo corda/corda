@@ -15,15 +15,20 @@ import net.corda.core.serialization.SerializationCustomization
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.api.PortfolioApi
+import net.corda.webserver.services.WebServerPluginRegistry
 import java.util.function.Function
 
 /**
- * [SimmService] is the object that makes available the flows and services for the Simm agreement / evaluation flow
- * It is loaded via discovery - see [CordaPluginRegistry]
+ * [SimmService] is the object that makes available the flows and services for the Simm agreement / evaluation flow.
+ * It is loaded via discovery - see [CordaPluginRegistry].
+ * It is also the object that enables a human usable web service for demo purpose
+ * It is loaded via discovery see [WebServerPluginRegistry].
  */
 object SimmService {
-    class Plugin : CordaPluginRegistry() {
-         override fun customizeSerialization(custom: SerializationCustomization): Boolean {
+    class Plugin : CordaPluginRegistry(), WebServerPluginRegistry {
+        override val webApis = listOf(Function(::PortfolioApi))
+        override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
+        override fun customizeSerialization(custom: SerializationCustomization): Boolean {
             custom.apply {
                 // OpenGamma classes.
                 addToWhitelist(MultiCurrencyAmount::class.java)

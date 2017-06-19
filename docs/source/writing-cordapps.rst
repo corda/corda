@@ -72,9 +72,8 @@ The fully-qualified class path of each ``CordaPluginRegistry`` subclass must be 
 ``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
 can register multiple plugins in a single ``net.corda.core.node.CordaPluginRegistry`` file.
 
-
-You can specify the web APIs and static web content for your CorDapp by subclassing
-``net.corda.webserver.services.WebServerPluginRegistry``:
+You can specify the web APIs and static web content for your CorDapp by implementing
+``net.corda.webserver.services.WebServerPluginRegistry`` interface:
 
 * The ``webApis`` property is a list of JAX-RS annotated REST access classes. These classes will be constructed by
   the bundled web server and must have a single argument constructor taking a ``CordaRPCOps`` object. This will
@@ -86,7 +85,7 @@ You can specify the web APIs and static web content for your CorDapp by subclass
   is not started.
   * The static web content itself should be placed inside the ``src/main/resources`` directory
 
-The fully-qualified class path of each ``WebServerPluginRegistry`` subclass must be added to the
+The fully-qualified class path of each ``WebServerPluginRegistry`` class must be added to the
 ``net.corda.webserver.services.WebServerPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
 can register multiple plugins in a single ``net.corda.webserver.services.WebServerPluginRegistry`` file.
 
