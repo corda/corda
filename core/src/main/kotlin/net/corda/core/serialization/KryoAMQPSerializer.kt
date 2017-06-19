@@ -8,7 +8,14 @@ import net.corda.core.serialization.amqp.DeserializationInput
 import net.corda.core.serialization.amqp.SerializationOutput
 import net.corda.core.serialization.amqp.SerializerFactory
 
-// TODO: Consider setting the immutable flag
+/**
+ * This [Kryo] custom [Serializer] switches the object graph of anything annotated with `@CordaSerializable`
+ * to using the AMQP serialization wire format, and simply writes that out as bytes to the wire.
+ *
+ * Currently this writes a variable length integer to the stream indicating how many bytes of AMQP encoded bytes follow
+ * and then that many raw bytes.
+ */
+// TODO: Consider setting the immutable flag on the `Serializer` if we make all AMQP types immutable.
 object KryoAMQPSerializer : Serializer<Any>() {
     internal fun registerCustomSerializers(factory: SerializerFactory) {
         factory.apply {
@@ -28,12 +35,15 @@ object KryoAMQPSerializer : Serializer<Any>() {
 
     override fun write(kryo: Kryo, output: Output, `object`: Any) {
         val amqpOutput = SerializationOutput(serializerFactory)
-        kryo.writeObject(output, amqpOutput.serialize(`object`))
+        val bytes = amqpOutput.serialize(`object`).bytes
+        output.writeVarInt(bytes.size, true)
+        output.write(bytes)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any {
         val amqpInput = DeserializationInput(serializerFactory)
         @Suppress("UNCHECKED_CAST")
-        return amqpInput.deserialize(kryo.readObject(input, SerializedBytes::class.java) as SerializedBytes<Any>, type)
+        val size = input.readVarInt(true)
+        return amqpInput.deserialize(SerializedBytes<Any>(input.readBytes(size)), type)
     }
 }

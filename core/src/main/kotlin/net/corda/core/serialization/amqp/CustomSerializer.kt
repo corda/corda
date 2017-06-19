@@ -15,7 +15,12 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
      */
     abstract val additionalSerializers: Iterable<CustomSerializer<out Any>>
 
+    /**
+     * This method should return true if the custom serializer can serialize and instance of the class passed as
+     * parameter.
+     */
     abstract fun isSerializerFor(clazz: Class<*>): Boolean
+
     protected abstract val descriptor: Descriptor
     /**
      * This exists purely for documentation and cross-platform purposes. It is not used by our serialization / deserialization
@@ -32,6 +37,11 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
     abstract fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput)
 
+    /**
+     * This custom serializer represents a sort of symbolic link from a subclass to a super class, where the super
+     * class custom serializer is responsible for the "on the wire" format but we want to create a reference to the
+     * subclass in the schema, so that we can distinguish between subclasses.
+     */
     // TODO: should this be a custom serializer at all, or should it just be a plain AMQPSerializer?
     class SubClass<T>(protected val clazz: Class<*>, protected val superClassSerializer: CustomSerializer<T>) : CustomSerializer<T>() {
         override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
@@ -58,7 +68,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     }
 
     /**
-     * Additional base features for a custom serializer that is a particular class.
+     * Additional base features for a custom serializer for a particular class, but not subclasses etc.
      */
     abstract class Is<T>(protected val clazz: Class<T>) : CustomSerializer<T>() {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
@@ -80,7 +90,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     }
 
     /**
-     * Addition base features over and above [Implements] or [Is] custom serializer for when the serialize form should be
+     * Additional base features over and above [Implements] or [Is] custom serializer for when the serialized form should be
      * the serialized form of a proxy class, and the object can be re-created from that proxy on deserialization.
      *
      * The proxy class must use only types which are either native AMQP or other types for which there are pre-registered
@@ -129,6 +139,17 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
         }
     }
 
+    /**
+     * A custom serializer where the on-wire representation is a string.  For example, a [Currency] might be represented
+     * as a 3 character currency code, and converted to and from that string.  By default, it is assumed that the
+     * [toString] method will generate the string representation and that there is a constructor that takes such a
+     * string as argument to reconstruct.
+     *
+     * @param clazz The type to be marshalled
+     * @param withInheritance Whether subclasses of the class can also be marshalled.
+     * @param make A lambda for constructing an instance, that defaults to calling a constructor that expects a string.
+     * @param unmake A lambda that extracts the string value an instance, that defaults to the [toString] method.
+     */
     abstract class ToString<T>(clazz: Class<T>, withInheritance: Boolean = false,
                                private val maker: (String) -> T = clazz.getConstructor(String::class.java).let { `constructor` -> { string -> `constructor`.newInstance(string) } },
                                private val unmaker: (T) -> String = { obj -> obj.toString() }) : Proxy<T, String>(clazz, String::class.java, /* Unused */ SerializerFactory(), withInheritance) {

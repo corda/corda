@@ -54,7 +54,6 @@ sealed class PropertySerializer(val name: String, val readMethod: Method, val re
 
     companion object {
         fun make(name: String, readMethod: Method, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
-            //val type = readMethod.genericReturnType
             if (SerializerFactory.isPrimitive(resolvedType)) {
                 // This is a little inefficient for performance since it does a runtime check of type.  We could do build time check with lots of subclasses here.
                 return AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)

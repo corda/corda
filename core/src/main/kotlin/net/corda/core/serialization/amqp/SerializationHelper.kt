@@ -158,28 +158,6 @@ fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     }
 }
 
-fun checkTypeIsResolved(type: Type) {
-    if (type !is Class<*>) {
-        if (type is ParameterizedType) {
-            // Check the raw type and the arguments
-            if (type.rawType !is Class<*>) throw NotSerializableException("ParameterizedType $type has non-Class raw type.")
-            for (paramType in type.actualTypeArguments) {
-                checkTypeIsResolved(paramType)
-            }
-        } else if (type is TypeVariable<*>) {
-            throw NotSerializableException("Found unbound generic type variable $type")
-        } else if (type is WildcardType) {
-            if (type != SerializerFactory.AnyType) {
-                TODO("Wildcards")
-            }
-        } else if (type is GenericArrayType) {
-            checkTypeIsResolved(type.genericComponentType)
-        }
-    } else if (!type.typeParameters.isEmpty()) {
-        //throw NotSerializableException("Generic class with no type variable bound.")
-    }
-}
-
 fun Type.asClass(): Class<*>? {
     return if (this is Class<*>) {
         this
