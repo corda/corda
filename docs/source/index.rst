@@ -15,7 +15,7 @@ quick introduction to distributed ledgers and how Corda is different, then watch
 
 Want to see Corda running? Download our demonstration application `DemoBench <https://www.corda.net/downloads/>`_ or follow our :doc:`quickstart guide </quickstart-index>`.
 
-If you want to start getting coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read our :doc:`Hello, World! tutorial </hello-world-index>`. For the background behind Corda, read the non-technical `introductory white paper`_ or for more detail, the `technical white paper`_.
+If you want to start coding on Corda, then familiarise yourself with the :doc:`key concepts </key-concepts>`, then read our :doc:`Hello, World! tutorial </hello-world-index>`. For the background behind Corda, read the non-technical `introductory white paper`_ or for more detail, the `technical white paper`_.
 
 If you have questions or comments, then get in touch with us either on `Slack <https://slack.corda.net/>`_, `Discourse <https://discourse.corda.net/>`_, or write a question on `stackoverflow <https://stackoverflow.com/questions/tagged/corda>`_ .
 
