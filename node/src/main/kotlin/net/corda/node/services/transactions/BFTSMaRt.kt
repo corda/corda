@@ -85,19 +85,23 @@ object BFTSMaRt {
             proxy.close() // XXX: Does this do enough?
         }
 
-        /**
-         * Sends a transaction commit request to the BFT cluster. The [proxy] will deliver the request to every
-         * replica, and block until a sufficient number of replies are received.
-         */
-        fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
-            require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
-            // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this loop can be moved to some startup code.
+        private fun awaitClientConnectionToCluster() {
+            // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
                 if (inactive.isEmpty()) break
                 log.info("Client-replica channels not yet active: $clientId to $inactive")
                 Thread.sleep((inactive.size * 100).toLong())
             }
+        }
+
+        /**
+         * Sends a transaction commit request to the BFT cluster. The [proxy] will deliver the request to every
+         * replica, and block until a sufficient number of replies are received.
+         */
+        fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
+            require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
+            awaitClientConnectionToCluster()
             val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
             val responseBytes = proxy.invokeOrdered(requestBytes)
             return responseBytes.deserialize<ClusterResponse>()
