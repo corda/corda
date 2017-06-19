@@ -14,7 +14,7 @@ plugins {
 apply plugin: 'kotlin'
 
 intellij {
-    version 'IU-2017.1'
+    version 'IC-2017.1'
     //IntelliJ IDEA 2016.3 dependency; for a full list of IntelliJ IDEA releases please see https://www.jetbrains.com/intellij-repository/releases
     plugins = ['Kotlin', 'devkit', 'gradle'] //Bundled plugin dependencies
     pluginName "$project.name"
