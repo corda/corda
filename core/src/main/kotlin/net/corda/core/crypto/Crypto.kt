@@ -626,7 +626,10 @@ object Crypto {
         val privateKeyD = BCECPrivateKey(privateKey.algorithm, privateKeySpec, BouncyCastleProvider.CONFIGURATION)
 
         // Compute the public key by scalar multiplication.
-        // Note that in BIP32
+        // Note that BIP32 uses masterKey + mac_derived_key as the final private key and it consequently
+        // requires an extra point addition: master_public + mac_derived_public for the public part.
+        // In our model, the mac_derived_output, deterministicD, is not currently added to the masterKey and it
+        // it forms, by its own, the new private key, which in turn used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
         if (pointQ.isInfinity)
