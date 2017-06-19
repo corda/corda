@@ -131,7 +131,7 @@ class InMemoryIdentityServiceTests {
         }
 
         assertFailsWith<IllegalArgumentException> {
-            val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.parsePublicKey().encoded)
+            val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
             service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.identity)
         }
     }
