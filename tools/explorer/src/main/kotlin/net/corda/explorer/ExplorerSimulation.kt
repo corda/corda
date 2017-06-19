@@ -26,9 +26,9 @@ import net.corda.flows.CashFlowCommand
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.PortAllocation
-import net.corda.node.driver.driver
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User

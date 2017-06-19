@@ -13,7 +13,7 @@ import java.util.*
  * Especially at the beginning of simulation there might be few insufficient spend errors.
  */
 
-open class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, val notary: Party) {
+class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, val notary: Party) {
     protected val partyGenerator = Generator.pickOne(parties)
     protected val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes(ByteArray(1, { number.toByte() })) }
     protected val amountGenerator = Generator.longRange(10000, 1000000)
@@ -34,11 +34,11 @@ open class EventGenerator(val parties: List<Party>, val currencies: List<Currenc
         CashFlowCommand.ExitCash(Amount(amount, ccy), issueRef)
     }
 
-    open val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
+    val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
         CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient)
     }
 
-    open val issuerGenerator = Generator.frequency(listOf(
+    val issuerGenerator = Generator.frequency(listOf(
             0.1 to exitCashGenerator,
             0.9 to issueCashGenerator
     ))
