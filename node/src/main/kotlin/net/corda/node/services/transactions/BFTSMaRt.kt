@@ -91,6 +91,7 @@ object BFTSMaRt {
          */
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
+            // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this loop can be moved to some startup code.
             while (true) {
                 val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
                 if (inactive.isEmpty()) break
