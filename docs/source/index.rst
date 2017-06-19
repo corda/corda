@@ -2,7 +2,7 @@ Welcome to Corda !
 ==================
 
 .. warningX:: This build of the docs is from the "|version|" branch, not a milestone release. It may not reflect the
-   current state of the code. `Read the docs for milestone release M12.1 <https://docs.corda.net/releases/release-M12.1/>`_.
+current state of the code. `Read the docs for milestone release M12.1 <https://docs.corda.net/releases/release-M12.1/>`_.
 
 `Corda <https://www.corda.net/>`_ is a blockchain-inspired open source distributed ledger platform. If you’d like a
 quick introduction to distributed ledgers and how Corda is different, then watch this short video:
@@ -25,19 +25,19 @@ We look forward to seeing what you can do with Corda!
 .. _`technical white paper`: _static/corda-technical-whitepaper.pdf
 
 .. toctree::
-   :maxdepth: 1
+:maxdepth: 1
 
-   quickstart-index.rst
-   key-concepts.rst
-   building-a-cordapp-index.rst
-   corda-nodes-index.rst
-   corda-networks-index.rst
-   tutorials-index.rst
-   tools-index.rst
-   node-internals-index.rst
-   component-library-index.rst
-   release-process-index.rst
-   faq.rst
-   troubleshooting.rst
-   other-index.rst
-   glossary.rst
+       quickstart-index.rst
+       key-concepts.rst
+       building-a-cordapp-index.rst
+       corda-nodes-index.rst
+       corda-networks-index.rst
+       tutorials-index.rst
+       tools-index.rst
+       node-internals-index.rst
+       component-library-index.rst
+       release-process-index.rst
+       faq.rst
+       troubleshooting.rst
+       other-index.rst
+       glossary.rst
