@@ -19,14 +19,11 @@ import java.util.function.Function
 
 /**
  * [SimmService] is the object that makes available the flows and services for the Simm agreement / evaluation flow
- * It also enables a human usable web service for demo purposes - if available.
  * It is loaded via discovery - see [CordaPluginRegistry]
  */
 object SimmService {
     class Plugin : CordaPluginRegistry() {
-        override val webApis = listOf(Function(::PortfolioApi))
-        override val staticServeDirs: Map<String, String> = mapOf("simmvaluationdemo" to javaClass.classLoader.getResource("simmvaluationweb").toExternalForm())
-        override fun customizeSerialization(custom: SerializationCustomization): Boolean {
+         override fun customizeSerialization(custom: SerializationCustomization): Boolean {
             custom.apply {
                 // OpenGamma classes.
                 addToWhitelist(MultiCurrencyAmount::class.java)

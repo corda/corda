@@ -1,6 +1,5 @@
 package net.corda.core.node
 
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomization
 import java.util.function.Function
 
@@ -9,18 +8,6 @@ import java.util.function.Function
  * to extend a Corda node with additional application services.
  */
 abstract class CordaPluginRegistry {
-    /**
-     * List of lambdas returning JAX-RS objects. They may only depend on the RPC interface, as the webserver should
-     * potentially be able to live in a process separate from the node itself.
-     */
-    open val webApis: List<Function<CordaRPCOps, out Any>> get() = emptyList()
-
-    /**
-     * Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
-     * Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
-     *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
-     */
-    open val staticServeDirs: Map<String, String> get() = emptyMap()
 
     @Suppress("unused")
     @Deprecated("This is no longer needed. Instead annotate any flows that need to be invoked via RPC with " +
