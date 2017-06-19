@@ -469,10 +469,6 @@ class DriverDSL(
             }
         }
         return listOf(connectionFuture, processDeathFuture).then {
-            if (isDone()) {
-                it.andForget(log)
-                throw thenAgain
-            }
             if (it == processDeathFuture) {
                 throw processDeathFuture.getOrThrow()
             }
@@ -549,10 +545,6 @@ class DriverDSL(
                     rpc.waitUntilRegisteredWithNetworkMap()
                 }).flatMap { it }
                 listOf(processDeathFuture, networkMapFuture).then {
-                    if (isDone()) {
-                        it.andForget(log)
-                        throw thenAgain
-                    }
                     if (it == processDeathFuture) {
                         throw processDeathFuture.getOrThrow()
                     }
