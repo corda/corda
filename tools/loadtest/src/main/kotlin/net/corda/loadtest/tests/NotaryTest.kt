@@ -13,17 +13,17 @@ import net.corda.core.success
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest
-import net.corda.loadtest.NodeHandle
+import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("NotaryTest")
 
-data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTransaction, val node: NodeHandle)
+data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTransaction, val node: NodeConnection)
 
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
-            val generateTx = Generator.pickOne(simpleNodes).bind { node: NodeHandle ->
+            val generateTx = Generator.pickOne(simpleNodes).bind { node ->
                 Generator.int().map {
                     val issueTx = DummyContract.generateInitial(it, notary.info.notaryIdentity, DUMMY_CASH_ISSUER).apply {
                         signWith(DUMMY_CASH_ISSUER_KEY)
@@ -40,7 +40,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         interpret = { _, _ -> },
         execute = { (issueTx, moveTx, node) ->
             try {
-                val proxy = node.connection.proxy
+                val proxy = node.proxy
                 val issueFlow = proxy.startFlow(::FinalityFlow, issueTx)
                 issueFlow.returnValue.success {
                     val moveFlow = proxy.startFlow(::FinalityFlow, moveTx)

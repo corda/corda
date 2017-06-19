@@ -135,7 +135,7 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
     /**
      * Append something that looks a bit like a proper noun to the string builder.
      */
-    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness, status: GenerationStatus) : StringBuilder {
+    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness) : StringBuilder {
         val length = random.nextByte(1, 8)
         val encoded = ByteBuffer.allocate(length.toInt())
         encoded.put((random.nextByte(0, 25) + asciiA).toByte())
@@ -149,7 +149,7 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
         val wordCount = random.nextByte(1, 3)
         val cn = StringBuilder()
         for (word in 0..wordCount) {
-            appendProperNoun(cn, random, status).append(" ")
+            appendProperNoun(cn, random).append(" ")
         }
         return getTestX509Name(cn.trim().toString())
     }

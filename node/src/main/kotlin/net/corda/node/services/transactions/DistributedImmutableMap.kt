@@ -68,7 +68,7 @@ class DistributedImmutableMap<K : Any, V : Any>(val db: Database, tableName: Str
     }
 
     fun size(commit: Commit<Commands.Size>): Int {
-        commit.use { commit ->
+        commit.use { _ ->
             return db.transaction { map.size }
         }
     }

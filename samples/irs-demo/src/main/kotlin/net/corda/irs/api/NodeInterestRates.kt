@@ -1,17 +1,21 @@
 package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.BusinessCalendar
+import net.corda.contracts.Fix
+import net.corda.contracts.FixOf
+import net.corda.contracts.Tenor
 import net.corda.core.RetryableException
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTreeException
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
-import net.corda.core.math.CubicSplineInterpolator
-import net.corda.core.math.Interpolator
-import net.corda.core.math.InterpolatorFactory
+import net.corda.contracts.math.CubicSplineInterpolator
+import net.corda.contracts.math.Interpolator
+import net.corda.contracts.math.InterpolatorFactory
 import net.corda.core.node.PluginServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService

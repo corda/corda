@@ -342,10 +342,10 @@ class X509UtilitiesTest {
                                               trustStorePassword: String
     ): KeyStore {
         val rootCAKey = generateKeyPair(DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = createSelfSignedCACertificate(X509Utilities.getDevX509Name("Corda Node Root CA"), rootCAKey)
+        val rootCACert = createSelfSignedCACertificate(X509Utilities.getX509Name("Corda Node Root CA","London","demo@r3.com",null), rootCAKey)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X509Utilities.getDevX509Name("Corda Node Intermediate CA"), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X509Utilities.getX509Name("Corda Node Intermediate CA","London","demo@r3.com",null), intermediateCAKeyPair.public)
 
         val keyPass = keyPassword.toCharArray()
         val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)

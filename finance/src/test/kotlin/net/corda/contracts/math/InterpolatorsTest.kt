@@ -1,4 +1,4 @@
-package net.corda.core.math
+package net.corda.contracts.math
 
 import org.junit.Assert
 import org.junit.Test

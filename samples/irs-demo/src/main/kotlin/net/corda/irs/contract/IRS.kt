@@ -1,5 +1,9 @@
 package net.corda.irs.contract
 
+import net.corda.contracts.*
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
@@ -106,6 +110,7 @@ abstract class RatePaymentEvent(date: LocalDate,
  * Assumes that the rate is valid.
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FixedRatePaymentEvent(date: LocalDate,
                             accrualStartDate: LocalDate,
                             accrualEndDate: LocalDate,
@@ -129,6 +134,7 @@ class FixedRatePaymentEvent(date: LocalDate,
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FloatingRatePaymentEvent(date: LocalDate,
                                accrualStartDate: LocalDate,
                                accrualEndDate: LocalDate,
@@ -651,6 +657,7 @@ class InterestRateSwap : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
+    @JsonIgnoreProperties("parties", "participants", ignoreUnknown = true)
     data class State(
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
@@ -677,7 +684,7 @@ class InterestRateSwap : Contract {
             val nextFixingOf = nextFixingOf() ?: return null
 
             // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
-            val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).start
+            val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).fromTime!!
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 

@@ -1,35 +1,45 @@
 package net.corda.loadtest
 
-import com.typesafe.config.Config
-import net.corda.nodeapi.config.getValue
+import net.corda.nodeapi.User
 import java.nio.file.Path
+import java.util.concurrent.ForkJoinPool
 
 /**
  * @param sshUser The UNIX username to use for SSH auth.
- * @param localCertificatesBaseDirectory The base directory to put node certificates in.
  * @param localTunnelStartingPort The local starting port to allocate tunneling ports from.
  * @param nodeHosts The nodes' resolvable addresses.
- * @param rpcUsername The RPC user's name to establish the RPC connection as.
- * @param rpcPassword The RPC user's password.
+ * @param rpcUser The RPC user's name and passward to establish the RPC connection.
  * @param remoteNodeDirectory The remote node directory.
- * @param remoteMessagingPort The remote Artemis messaging port.
+ * @param rpcPort The remote Artemis messaging port for RPC.
  * @param remoteSystemdServiceName The name of the node's systemd service
  * @param seed An optional starting seed for the [SplittableRandom] RNG. Note that specifying the seed may not be enough
  *     to make a load test reproducible due to unpredictable node behaviour, but it should make the local number
  *     generation deterministic as long as [SplittableRandom.split] is used as required. This RNG is also used as input
  *     for disruptions.
+ * @param mode Indicates the type of test.
+ * @param executionFrequency Indicates how many commands we should execute per second.
+ * @param generateCount Number of total commands to generate. Note that the actual number of generated commands may
+ *     exceed this, it is used just for cutoff.
+ * @param parallelism Number of concurrent threads to use to run commands. Note that the actual parallelism may be
+ *     further limited by the batches that [generate] returns.
  */
 data class LoadTestConfiguration(
-        val config: Config
-) {
-    val sshUser: String by config
-    val localCertificatesBaseDirectory: Path by config
-    val localTunnelStartingPort: Int by config
-    val nodeHosts: List<String> = config.getStringList("nodeHosts")
-    val rpcUsername: String by config
-    val rpcPassword: String by config
-    val remoteNodeDirectory: Path by config
-    val remoteMessagingPort: Int by config
-    val remoteSystemdServiceName: String by config
-    val seed: Long? by config
+        val sshUser: String = System.getProperty("user.name"),
+        val localTunnelStartingPort: Int,
+        val nodeHosts: List<String>,
+        val rpcUser: User,
+        val remoteNodeDirectory: Path,
+        val rpcPort: Int,
+        val remoteSystemdServiceName: String,
+        val seed: Long?,
+        val mode: TestMode = TestMode.LOAD_TEST,
+        val executionFrequency: Int = 20,
+        val generateCount: Int = 10000,
+        val parallelism: Int = ForkJoinPool.getCommonPoolParallelism())
+
+data class RemoteNode(val hostname: String, val systemdServiceName: String, val sshUserName: String, val rpcUser: User, val rpcPort: Int, val nodeDirectory: Path)
+
+enum class TestMode {
+    LOAD_TEST,
+    STABILITY_TEST
 }

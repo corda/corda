@@ -2,6 +2,7 @@
 
 package net.corda.contracts.testing
 
+import net.corda.contracts.DealState
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
@@ -21,7 +22,6 @@ import java.util.*
 
 @JvmOverloads
 fun ServiceHub.fillWithSomeTestDeals(dealIds: List<String>,
-                                     revisions: Int? = 0,
                                      participants: List<AbstractParty> = emptyList()) : Vault<DealState> {
     val freshKey = keyManagementService.freshKey()
     val recipient = AnonymousParty(freshKey)

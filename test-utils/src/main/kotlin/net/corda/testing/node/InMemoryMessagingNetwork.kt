@@ -130,7 +130,7 @@ class InMemoryMessagingNetwork(
             description: X500Name? = null,
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getDevX509Name("In memory node $id")), advertisedServices.map(::ServiceHandle), executor, database = database)
+        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null)), advertisedServices.map(::ServiceHandle), executor, database = database)
     }
 
     interface LatencyCalculator {

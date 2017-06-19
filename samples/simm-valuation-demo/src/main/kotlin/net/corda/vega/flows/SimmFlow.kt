@@ -8,6 +8,7 @@ import com.opengamma.strata.pricer.curve.CalibrationMeasures
 import com.opengamma.strata.pricer.curve.CurveCalibrator
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider
 import com.opengamma.strata.pricer.swap.DiscountingSwapProductPricer
+import net.corda.contracts.dealsWith
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
@@ -15,7 +16,6 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.node.services.dealsWith
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap

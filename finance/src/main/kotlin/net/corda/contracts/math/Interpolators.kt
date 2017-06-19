@@ -1,4 +1,4 @@
-package net.corda.core.math
+package net.corda.contracts.math
 
 import java.util.*
 
@@ -37,7 +37,9 @@ class LinearInterpolator(private val xs: DoubleArray, private val ys: DoubleArra
     }
 
     private fun interpolateBetween(x: Double, x1: Double, x2: Double, y1: Double, y2: Double): Double {
-        return y1 + (y2 - y1) * (x - x1) / (x2 - x1)
+        // N.B. The classic y1 + (y2 - y1) * (x - x1) / (x2 - x1) is numerically unstable!!
+        val deltaX = (x - x1) / (x2 - x1)
+        return y1 * (1.0 - deltaX) + y2 * deltaX
     }
 }
 

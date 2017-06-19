@@ -1,12 +1,10 @@
 'use strict';
 
-define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, nodeApi) => {
-    angular.module('irsViewer').controller('HomeController', function HomeController($http, $scope, nodeService) {
+define(['angular', 'utils/semantic', 'services/NodeApi', 'services/HttpErrorHandler'], (angular, semantic) => {
+    angular.module('irsViewer').controller('HomeController', function HomeController($http, $scope, nodeService, httpErrorHandler) {
         semantic.addLoadingModal($scope, nodeService.isLoading);
 
-        let handleHttpFail = (resp) => {
-            $scope.httpError = resp.data
-        };
+        let handleHttpFail = httpErrorHandler.createErrorHandler($scope);
 
         $scope.infoMsg = "";
         $scope.errorText = "";
@@ -28,7 +26,7 @@ define(['angular', 'utils/semantic', 'services/NodeApi'], (angular, semantic, no
             return name;
         };
 
-        nodeService.getDate().then((date) => $scope.date = date);
-        nodeService.getDeals().then((deals) => $scope.deals = deals);
+        nodeService.getDate().then((date) => $scope.date = date, handleHttpFail);
+        nodeService.getDeals().then((deals) => $scope.deals = deals, handleHttpFail);
     });
 });

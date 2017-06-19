@@ -1,6 +1,8 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.contracts.Fix
+import net.corda.contracts.FixableDealState
 import net.corda.core.TransientProperty
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String

@@ -1,5 +1,6 @@
 package net.corda.irs.testing
 
+import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction

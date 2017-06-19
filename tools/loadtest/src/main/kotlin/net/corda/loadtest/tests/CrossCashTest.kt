@@ -7,13 +7,13 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
-import net.corda.core.identity.AbstractParty
 import net.corda.core.failure
+import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
-import net.corda.loadtest.NodeHandle
+import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -27,7 +27,7 @@ private val log = LoggerFactory.getLogger("CrossCash")
 
 data class CrossCashCommand(
         val command: CashFlowCommand,
-        val node: NodeHandle
+        val node: NodeConnection
 ) {
     override fun toString(): String {
         return when (command) {
@@ -115,12 +115,12 @@ data class CrossCashState(
 val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         "Creating Cash transactions randomly",
 
-        generate = { state, parallelism ->
+        generate = { (nodeVaults), parallelism ->
             val nodeMap = simpleNodes.associateBy { it.info.legalIdentity }
             Generator.pickN(parallelism, simpleNodes).bind { nodes ->
                 Generator.sequence(
                         nodes.map { node ->
-                            val quantities = state.nodeVaults[node.info.legalIdentity] ?: mapOf()
+                            val quantities = nodeVaults[node.info.legalIdentity] ?: mapOf()
                             val possibleRecipients = nodeMap.keys.toList()
                             val moves = quantities.map {
                                 it.value.toDouble() / 1000 to generateMove(it.value, USD, node.info.legalIdentity, possibleRecipients)
@@ -205,7 +205,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         },
 
         execute = { command ->
-            val result = command.command.startFlow(command.node.connection.proxy).returnValue
+            val result = command.command.startFlow(command.node.proxy).returnValue
             result.failure {
                 log.error("Failure[$command]", it)
             }
@@ -219,7 +219,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
             val currentNodeVaults = HashMap<AbstractParty, HashMap<AbstractParty, Long>>()
             simpleNodes.forEach {
                 val quantities = HashMap<AbstractParty, Long>()
-                val (vault, vaultUpdates) = it.connection.proxy.vaultAndUpdates()
+                val (vault, vaultUpdates) = it.proxy.vaultAndUpdates()
                 vaultUpdates.notUsed()
                 vault.forEach {
                     val state = it.state.data
@@ -313,10 +313,10 @@ private fun <A> searchForState(
             consumedTxs[originator] = 0
             searchForStateHelper(state, diffIx + 1, consumedTxs, matched)
             var currentState = state
-            queue.forEachIndexed { index, pair ->
+            queue.forEachIndexed { index, (issuer, quantity) ->
                 consumedTxs[originator] = index + 1
                 // Prune search if we exceeded the searched quantity anyway
-                currentState = applyDiff(pair.first, pair.second, currentState, searchedState) ?: return
+                currentState = applyDiff(issuer, quantity, currentState, searchedState) ?: return
                 searchForStateHelper(currentState, diffIx + 1, consumedTxs, matched)
             }
         }
