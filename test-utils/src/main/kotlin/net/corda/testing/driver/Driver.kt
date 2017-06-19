@@ -314,7 +314,7 @@ fun <A> poll(
             }
         }
     }
-    executorService.submit(task)
+    executorService.submit(task) // The check may be expensive, so always run it in the background even the first time.
     return resultFuture
 }
 
