@@ -47,6 +47,8 @@ Running the above will produce the following files in `build/`:
 
 * `noop_enclave.sigstruct-pretty.hsm.txt`: The pretty printed SIGSTRUCT.
 
+* `hsm.public.pem`: The public key corresponding to the signature of the HSM.
+
 To sanity check the signed enclave:
 
 ```
