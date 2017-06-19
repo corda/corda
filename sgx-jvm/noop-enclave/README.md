@@ -11,7 +11,7 @@ How to run
 The following Makefile targets execute different steps in the signing process and output into build/
 
 
-* `make unsigned` will build the unsigned enclave (noop\_enclave.unsigned.so).
+* `make unsigned` will build the unsigned enclave and extract the unsigned SIGSTRUCT blob to sign (noop\_enclave.unsigned.so, noop\_enclave\_blob\_to\_sign.bin).
 
 
 The following targets use OpenSSL instead of the HSM:
