@@ -511,7 +511,7 @@ class DriverDSL(
         val rpcAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName ?: X509Utilities.getDevX509Name("${oneOf(names).commonName}-${p2pAddress.port}")
+        val name = providedName ?: X509Utilities.getX509Name("${oneOf(names).commonName}-${p2pAddress.port}","London","demo@r3.com",null)
         val networkMapServiceConfigLookup = networkMapServiceConfigLookup(listOf(object : NodeDefinition {
             override fun getName() = name.toString()
             override fun getConfig() = configOf("p2pAddress" to p2pAddress.toString())

@@ -2,7 +2,7 @@ package net.corda.contracts.universal
 
 import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Sets
-import net.corda.core.contracts.Frequency
+import net.corda.contracts.Frequency
 import net.corda.core.identity.Party
 import java.security.PublicKey
 import java.time.Instant

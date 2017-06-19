@@ -1,5 +1,6 @@
 package net.corda.vega.contracts
 
+import net.corda.contracts.DealState
 import net.corda.core.contracts.*
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogicRefFactory

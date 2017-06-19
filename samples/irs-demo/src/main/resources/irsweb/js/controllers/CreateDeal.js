@@ -6,10 +6,12 @@ define([
     'utils/semantic',
     'utils/dayCountBasisLookup',
     'services/NodeApi',
-    'Deal'
+    'Deal',
+    'services/HttpErrorHandler'
 ], (angular, maskedInput, semantic, dayCountBasisLookup, nodeApi, Deal) => {
-    angular.module('irsViewer').controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService) {
+    angular.module('irsViewer').controller('CreateDealController', function CreateDealController($http, $scope, $location, nodeService, httpErrorHandler) {
         semantic.init($scope, nodeService.isLoading);
+        let handleHttpFail = httpErrorHandler.createErrorHandler($scope);
 
         $scope.dayCountBasisLookup = dayCountBasisLookup;
         $scope.deal = nodeService.newDeal();
@@ -17,7 +19,7 @@ define([
             nodeService.createDeal(new Deal($scope.deal))
             .then((tradeId) => $location.path('#/deal/' + tradeId), (resp) => {
                 $scope.formError = resp.data;
-            });
+            }, handleHttpFail);
         };
         $('input.percent').mask("9.999999%", {placeholder: "", autoclear: false});
         $('#swapirscolumns').click(() => {

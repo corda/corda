@@ -1,6 +1,5 @@
 package net.corda.core.node.services.vault
 
-import net.corda.core.contracts.Commodity
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier

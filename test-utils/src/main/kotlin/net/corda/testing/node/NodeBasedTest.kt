@@ -120,13 +120,13 @@ abstract class NodeBasedTest {
         val nodeAddresses = getFreeLocalPorts("localhost", clusterSize).map { it.toString() }
 
         val masterNodeFuture = startNode(
-                X509Utilities.getDevX509Name("${notaryName.commonName}-0"),
+                X509Utilities.getX509Name("${notaryName.commonName}-0","London","demo@r3.com",null),
                 advertisedServices = setOf(serviceInfo),
                 configOverrides = mapOf("notaryNodeAddress" to nodeAddresses[0]))
 
         val remainingNodesFutures = (1 until clusterSize).map {
             startNode(
-                    X509Utilities.getDevX509Name("${notaryName.commonName}-$it"),
+                    X509Utilities.getX509Name("${notaryName.commonName}-$it","London","demo@r3.com",null),
                     advertisedServices = setOf(serviceInfo),
                     configOverrides = mapOf(
                             "notaryNodeAddress" to nodeAddresses[it],

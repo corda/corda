@@ -1,7 +1,7 @@
 package net.corda.vega.contracts
 
+import net.corda.contracts.DealState
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.keys

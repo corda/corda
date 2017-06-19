@@ -7,12 +7,12 @@ import net.corda.client.mock.replicatePoisson
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.USD
-import net.corda.core.identity.AbstractParty
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
+import net.corda.core.identity.AbstractParty
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
-import net.corda.loadtest.NodeHandle
+import net.corda.loadtest.NodeConnection
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -21,7 +21,7 @@ private val log = LoggerFactory.getLogger("SelfIssue")
 // DOCS START 1
 data class SelfIssueCommand(
         val command: CashFlowCommand.IssueCash,
-        val node: NodeHandle
+        val node: NodeConnection
 )
 
 data class SelfIssueState(
@@ -37,7 +37,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         "Self issuing cash randomly",
 
         generate = { _, parallelism ->
-            val generateIssue = Generator.pickOne(simpleNodes).bind { node: NodeHandle ->
+            val generateIssue = Generator.pickOne(simpleNodes).bind { node ->
                 generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity)).map {
                     SelfIssueCommand(it, node)
                 }
@@ -61,7 +61,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         execute = { command ->
             try {
-                val result = command.command.startFlow(command.node.connection.proxy).returnValue.getOrThrow()
+                val result = command.command.startFlow(command.node.proxy).returnValue.getOrThrow()
                 log.info("Success: $result")
             } catch (e: FlowException) {
                 log.error("Failure", e)
@@ -70,14 +70,14 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         gatherRemoteState = { previousState ->
             val selfIssueVaults = HashMap<AbstractParty, Long>()
-            simpleNodes.forEach { (_, connection, info) ->
+            simpleNodes.forEach { connection ->
                 val (vault, vaultUpdates) = connection.proxy.vaultAndUpdates()
                 vaultUpdates.notUsed()
                 vault.forEach {
                     val state = it.state.data
                     if (state is Cash.State) {
                         val issuer = state.amount.token.issuer.party
-                        if (issuer == info.legalIdentity as AbstractParty) {
+                        if (issuer == connection.info.legalIdentity as AbstractParty) {
                             selfIssueVaults.put(issuer, (selfIssueVaults[issuer] ?: 0L) + state.amount.quantity)
                         }
                     }

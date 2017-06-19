@@ -31,9 +31,13 @@ In order to run the loadtests you need to have an active SSH-agent running with 
 
 You can use either IntelliJ or the gradle command line to start the tests.
 
-To use gradle: ``./gradlew tools:loadtest:run -Ploadtest-config=PATH_TO_LOADTEST_CONF``
+To use gradle with configuration file: ``./gradlew tools:loadtest:run -Ploadtest-config=PATH_TO_LOADTEST_CONF``
 
-To use IntelliJ simply run Main.kt with the config path supplied as an argument.
+To use gradle with system properties: ``./gradlew tools:loadtest:run -Dloadtest.mode=LOAD_TEST -Dloadtest.nodeHosts.0=node0.myhost.com``
+
+.. note:: You can provide or override any configuration using the system properties, all properties will need to be prefixed with ``loadtest.``.
+
+To use IntelliJ simply run Main.kt with the config path supplied as an argument or system properties as vm options.
 
 Configuration of individual load tests
 --------------------------------------
@@ -112,3 +116,12 @@ The ``gatherRemoteState`` function should check the actual remote nodes' states 
 The reason it gets the previous state boils down to allowing non-deterministic predictions about the nodes' remote states. Say some piece of work triggers an asynchronous notification of a node. We need to account both for the case when the node hasn't received the notification and for the case when it has. In these cases ``S`` should somehow represent a collection of possible states, and ``gatherRemoteState`` should "collapse" the collection based on the observations it makes. Of course we don't need this for the simple case of the Self Issue test.
 
 The last parameter ``isConsistent`` is used to poll for eventual consistency at the end of a load test. This is not needed for self-issuance.
+
+Stability Test
+--------------
+
+Stability test is one variation of the load test, instead of flooding the nodes with request, the stability test uses execution frequency limit to achieve a constant execution rate.
+
+To run the stability test, set the load test mode to STABILITY_TEST (``mode=STABILITY_TEST`` in config file or ``-Dloadtest.mode=STABILITY_TEST`` in system properties).
+
+The stability test will first self issue cash using ``StabilityTest.selfIssueTest`` and after that it will randomly pay and exit cash using ``StabilityTest.crossCashTest`` for P2P testing, unlike the load test, the stability test will run without any disruption.

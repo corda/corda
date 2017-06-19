@@ -17,13 +17,13 @@ class X509NameConstraintsTest {
 
     private fun makeKeyStores(subjectName: X500Name, nameConstraints: NameConstraints): Pair<KeyStore, KeyStore> {
         val rootKeys = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val rootCACert = X509Utilities.createSelfSignedCACertificate(X509Utilities.getDevX509Name("Corda Root CA"), rootKeys)
+        val rootCACert = X509Utilities.createSelfSignedCACertificate(X509Utilities.getX509Name("Corda Root CA","London","demo@r3.com",null), rootKeys)
 
         val intermediateCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootKeys, X509Utilities.getDevX509Name("Corda Intermediate CA"), intermediateCAKeyPair.public)
+        val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootKeys, X509Utilities.getX509Name("Corda Intermediate CA","London","demo@r3.com",null), intermediateCAKeyPair.public)
 
         val clientCAKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, X509Utilities.getDevX509Name("Corda Client CA"), clientCAKeyPair.public, nameConstraints = nameConstraints)
+        val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, X509Utilities.getX509Name("Corda Client CA","London","demo@r3.com",null), clientCAKeyPair.public, nameConstraints = nameConstraints)
 
         val keyPass = "password"
         val trustStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)

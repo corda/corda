@@ -69,8 +69,8 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey): PartyAndCertificate {
-    val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, DUMMY_CA.certificate, DUMMY_CA.keyPair, name, publicKey)
-    val certPath = X509Utilities.createCertificatePath(DUMMY_CA.certificate, cert, revocationEnabled = false)
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, ca: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+    val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, ca.certificate, ca.keyPair, name, publicKey)
+    val certPath = X509Utilities.createCertificatePath(ca.certificate, cert, revocationEnabled = false)
     return PartyAndCertificate(name, publicKey, cert, certPath)
 }
