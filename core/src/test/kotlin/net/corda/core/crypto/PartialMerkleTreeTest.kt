@@ -15,6 +15,7 @@ import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
+import java.util.function.Predicate
 import kotlin.test.*
 
 class PartialMerkleTreeTest {
@@ -104,7 +105,7 @@ class PartialMerkleTreeTest {
             }
         }
 
-        val mt = testTx.buildFilteredTransaction(::filtering)
+        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
         val leaves = mt.filteredLeaves
         val d = WireTransaction.deserialize(testTx.serialized)
         assertEquals(testTx.id, d.id)
@@ -128,7 +129,7 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `nothing filtered`() {
-        val mt = testTx.buildFilteredTransaction({ false })
+        val mt = testTx.buildFilteredTransaction(Predicate { false })
         assertTrue(mt.filteredLeaves.attachments.isEmpty())
         assertTrue(mt.filteredLeaves.commands.isEmpty())
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
