@@ -4,6 +4,9 @@ import com.google.common.util.concurrent.AbstractFuture
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
+import java.util.*
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * As soon as a given future becomes done, the handler is invoked with that future as its argument.
@@ -22,17 +25,25 @@ internal class ThenContextImpl<T>(futures: Iterable<ListenableFuture<*>>, privat
     }
 
     init {
-        val lock = Any()
+        val lock = ReentrantLock()
+        val queue = LinkedList<ListenableFuture<*>>()
         futures.forEach {
             it.then {
-                synchronized(lock) {
-                    if (isDone) {
-                        it.failure { log.error(shortCircuitedTaskFailedMessage, it) }
-                    } else {
-                        ErrorOr.catch { handler(it) }.match({
-                            set(it)
-                        }) {
-                            setException(it)
+                val drain = !lock.isHeldByCurrentThread
+                lock.withLock {
+                    queue.add(it)
+                    if (drain) {
+                        while (!queue.isEmpty()) { // The handler may add to the queue.
+                            val doneFuture = queue.removeFirst()
+                            if (isDone) {
+                                if (!doneFuture.isCancelled) doneFuture.failure { log.error(shortCircuitedTaskFailedMessage, it) }
+                            } else {
+                                ErrorOr.catch { handler(doneFuture) }.match({
+                                    set(it)
+                                }) {
+                                    setException(it)
+                                }
+                            }
                         }
                     }
                 }

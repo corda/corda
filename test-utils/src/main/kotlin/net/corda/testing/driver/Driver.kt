@@ -303,15 +303,15 @@ fun <A> poll(
             if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
             }
-            ErrorOr.catch(check).match({
+            ErrorOr.catch(check).match(onValue = {
                 if (it != null) {
                     resultFuture.set(it)
                 } else {
                     executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
                 }
-            }) {
+            }, onError = {
                 resultFuture.setException(it)
-            }
+            })
         }
     }
     executorService.submit(task) // The check may be expensive, so always run it in the background even the first time.
@@ -451,8 +451,8 @@ class DriverDSL(
         _executorService?.let {
             val n = it.shutdownNow().size
             if (n != 0) log.warn("$n task(s) never started.")
-            if (!it.awaitTermination(1, SECONDS)) {
-                log.error("Driver executor still running!")
+            if (!it.awaitTermination(5, SECONDS)) {
+                throw TimeoutException("Driver executor still running, likely due to a hanging task.")
             }
         }
     }
@@ -548,6 +548,7 @@ class DriverDSL(
                     if (it == processDeathFuture) {
                         throw processDeathFuture.getOrThrow()
                     }
+                    processDeathFuture.cancel(false)
                     NodeHandle(rpc.nodeIdentity(), rpc, configuration, webAddress, process)
                 }
             }
