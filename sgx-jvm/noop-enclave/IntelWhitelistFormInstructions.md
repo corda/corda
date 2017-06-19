@@ -13,7 +13,7 @@ this way the only dependency is a working JDK.
 
 To generate the key:
 
-`java -jar hsm-tool.jar --mode=GenerateKey --profile=prod`
+`java -jar hsm-tool.jar --mode=GenerateSgxKey --profile=prod`
 
 
 This will require two separate smartcard authentications. The generation
