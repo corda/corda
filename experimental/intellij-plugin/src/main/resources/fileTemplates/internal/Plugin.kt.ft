@@ -1,0 +1,30 @@
+package ${PACKAGE_NAME}.plugin
+
+import ${PACKAGE_NAME}.api.${PROJECT_NAME}Api
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.node.CordaPluginRegistry
+import net.corda.core.serialization.SerializationCustomization
+import java.util.function.Function
+
+class ${PROJECT_NAME}Plugin : CordaPluginRegistry() {
+    /**
+     * A list of classes that expose web APIs.
+     */
+    override val webApis: List<Function<CordaRPCOps, out Any>> = listOf(Function(::${PROJECT_NAME}Api))
+
+    /**
+     * A list of directories in the resources directory that will be served by Jetty under /web.
+     * The template's web frontend is accessible at /web/template.
+     */
+    override val staticServeDirs: Map<String, String> = mapOf(
+            // This will serve the ${PROJECT_NAME_DECAPITALIZE}Web directory in resources to /web/${PROJECT_NAME_DECAPITALIZE}
+            "${PROJECT_NAME_DECAPITALIZE}" to javaClass.classLoader.getResource("${PROJECT_NAME_DECAPITALIZE}Web").toExternalForm()
+    )
+
+    /**
+     * Whitelisting the required types for serialisation by the Corda node.
+     */
+    override fun customizeSerialization(custom: SerializationCustomization): Boolean {
+        return true
+    }
+}
