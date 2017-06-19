@@ -563,8 +563,22 @@ object Crypto {
      * <li>salt values should not be chosen by an attacker.
      * </ul></p>
      *
+     * Regarding the last requirement, according to Krawczyk's HKDF scheme: <i>While there is no need to keep the salt secret,
+     * it is assumed that salt values are independent of the input keying material</i>.
+     * @see <a href="http://eprint.iacr.org/2010/264.pdf">Cryptographic Extraction and Key Derivation - The HKDF Scheme</a>.
+     *
+     * There are also protocols that require an authenticated nonce (e.g. when a DH derived key is used as a seed) and thus
+     * we need to make sure that nonces come from legitimate parties rather than selected by an attacker.
+     * Similarly, in DLT systems, proper handling is required if users should agree on a common value as a seed,
+     * e.g. a transaction's nonce or hash.
+     *
+     * Moreover if a unique key per transaction is prerequisite, an attacker should never force a party to reuse a
+     * previously used key, due to privacy and forward secrecy reasons.
+     *
      * All in all, this algorithm can be used with a counter as seed, however it is suggested that the output does
      * not solely depend on the key, i.e. a secret salt per user or a random nonce per transaction could serve this role.
+     * In case where a non-random seed policy is selected, such as the BIP32 counter logic, one needs to carefully keep state
+     * so that the same salt is used only once.
      *
      * @param signatureScheme the [SignatureScheme] of the private key input.
      * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
@@ -629,7 +643,7 @@ object Crypto {
         // Note that BIP32 uses masterKey + mac_derived_key as the final private key and it consequently
         // requires an extra point addition: master_public + mac_derived_public for the public part.
         // In our model, the mac_derived_output, deterministicD, is not currently added to the masterKey and it
-        // it forms, by its own, the new private key, which in turn used to compute the new public key.
+        // it forms, by itself, the new private key, which in turn is used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
         if (pointQ.isInfinity)
