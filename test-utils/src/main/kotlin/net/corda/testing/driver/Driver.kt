@@ -224,6 +224,8 @@ sealed class PortAllocation {
  *
  * @param isDebug Indicates whether the spawned nodes should start in jdwt debug mode and have debug level logging.
  * @param driverDirectory The base directory node directories go into, defaults to "build/<timestamp>/". The node
+ *   directories themselves are "<baseDirectory>/<legalName>/", where legalName defaults to "<randomName>-<messagingPort>"
+ *   and may be specified in [DriverDSL.startNode].
  * @param portAllocation The port allocation strategy to use for the messaging and the web server addresses. Defaults to incremental.
  * @param debugPortAllocation The port allocation strategy to use for jvm debugging. Defaults to incremental.
  * @param systemProperties A Map of extra system properties which will be given to each new node. Defaults to empty.
@@ -481,7 +483,7 @@ class DriverDSL(
     val executorService get() = _executorService!!
     private var _shutdownManager: ShutdownManager? = null
     override val shutdownManager get() = _shutdownManager!!
-    private var callerPackage: String? = null
+    private val callerPackage = getCallerPackage()
 
     class State {
         val processes = ArrayList<ListenableFuture<Process>>()
@@ -668,10 +670,6 @@ class DriverDSL(
                 Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         )
         _shutdownManager = ShutdownManager(executorService)
-        callerPackage = Exception()
-                .stackTrace
-                .first { it.fileName != "Driver.kt" }
-                .let { Class.forName(it.className).`package`.name }
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
         System.setProperty("net.corda.node.cordapp.scan.package", callerPackage)
         if (networkMapStartStrategy.startDedicated) {
@@ -701,7 +699,6 @@ class DriverDSL(
 
     private fun startNodeInternal(config: Config, webAddress: HostAndPort, startInProcess: Boolean?): ListenableFuture<out NodeHandle> {
         val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
-        // Get the package of the caller of the driver and pass this to the node for CorDapp scanning
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)
             shutdownManager.registerShutdown(
@@ -719,7 +716,7 @@ class DriverDSL(
             }
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, callerPackage!!)
+            val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, callerPackage)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
                 // We continue to use SSL enabled port for RPC when its for node user.
@@ -831,6 +828,13 @@ class DriverDSL(
                         errorLogPath = Paths.get("error.$className.log")
                 )
             }.flatMap { process -> addressMustBeBoundFuture(executorService, handle.webAddress, process).map { process } }
+        }
+
+        private fun getCallerPackage(): String {
+            return Exception()
+                    .stackTrace
+                    .first { it.fileName != "Driver.kt" }
+                    .let { Class.forName(it.className).`package`.name }
         }
     }
 }
