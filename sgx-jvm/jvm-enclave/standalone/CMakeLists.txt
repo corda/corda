@@ -33,6 +33,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
 
 set(SOURCE_FILES main.cpp)
 set_source_files_properties(${GENERATED_RPC_DIR}/java_u.c PROPERTIES GENERATED TRUE)
+link_directories(${DEPENDENCIES_LIBRARY_PATH})
 add_executable(standalone_sgx_verify ${SOURCE_FILES} $<TARGET_OBJECTS:common>)
 target_include_directories(standalone_sgx_verify PUBLIC ${SGX_SDK_INCLUDE})
 target_link_libraries(standalone_sgx_verify urtslib Threads::Threads)

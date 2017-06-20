@@ -6,14 +6,15 @@ set(SGX_SDK ${CMAKE_CURRENT_SOURCE_DIR}/../../linux-sgx CACHE STRING "")
 set(SGX_LIBRARY_PATH ${SGX_SDK}/build/linux CACHE STRING "")
 set(SGX_SDK_INCLUDE ${SGX_SDK}/common/inc CACHE STRING "")
 set(GENERATED_RPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/rpc CACHE STRING "")
-set(PROGUARD_JAR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/root/usr/share/java/proguard.jar CACHE STRING "")
+set(DEPENDENCIES_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/root)
+set(PROGUARD_JAR_PATH ${DEPENDENCIES_ROOT_DIR}/usr/share/java/proguard.jar CACHE STRING "")
+set(DEPENDENCIES_LIBRARY_PATH ${DEPENDENCIES_ROOT_DIR}/usr/lib/x86_64-linux-gnu CACHE STRING "")
 
 add_executable(edger8r IMPORTED)
 set_target_properties(edger8r PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/sgx_edger8r)
 
 set(GENERATED_EDL_FILES ${GENERATED_RPC_DIR}/java_t.c ${GENERATED_RPC_DIR}/java_t.h ${GENERATED_RPC_DIR}/java_u.c ${GENERATED_RPC_DIR}/java_u.h)
 set(GENERATED_EDL_FILES ${GENERATED_EDL_FILES} PARENT_SCOPE)
-message(STATUS FFS "${GENERATED_EDL_FILES}")
 add_custom_command(
     OUTPUT ${GENERATED_EDL_FILES}
     COMMAND edger8r --search-path ${PROJECT_SOURCE_DIR}/rpc --search-path ${SGX_SDK_INCLUDE} --trusted-dir ${GENERATED_RPC_DIR} --untrusted-dir ${GENERATED_RPC_DIR} java.edl

@@ -11,12 +11,13 @@
 /usr/include/google
 /usr/include/openssl
 /usr/include/x86_64-linux-gnu/openssl
-/usr/include/x86_64-linux-gnu/zconf.h
+/usr/include/zconf.h
 /usr/include/zlib.h
 /usr/lib/x86_64-linux-gnu/libasn1.so.8
 /usr/lib/x86_64-linux-gnu/libasn1.so.8.0.0
 /usr/lib/x86_64-linux-gnu/libcrypto.so
 /usr/lib/x86_64-linux-gnu/libcurl.so
+/usr/lib/x86_64-linux-gnu/libcurl.so.4
 /usr/lib/x86_64-linux-gnu/libcurl.so.4.4.0
 /usr/lib/x86_64-linux-gnu/libffi.so.6
 /usr/lib/x86_64-linux-gnu/libgmp.so.10
