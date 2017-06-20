@@ -1,7 +1,9 @@
 package net.corda.core.crypto
 
+import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.serialize
+import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.PublicKey
 
 /**
@@ -35,20 +37,24 @@ class CompositeKey private constructor (val threshold: Int,
      * Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
      */
     @CordaSerializable
-    data class NodeAndWeight(val node: PublicKey, val weight: Int): Comparable<NodeAndWeight> {
+    data class NodeAndWeight(val node: PublicKey, val weight: Int): Comparable<NodeAndWeight>, ASN1Object() {
         override fun compareTo(other: NodeAndWeight): Int {
             if (weight == other.weight) {
                 return node.hashCode().compareTo(other.node.hashCode())
             }
             else return weight.compareTo(other.weight)
         }
+
+        override fun toASN1Primitive(): ASN1Primitive {
+            val vector = ASN1EncodableVector()
+            vector.add(DERBitString(node.encoded))
+            vector.add(ASN1Integer(weight.toLong()))
+            return DERSequence(vector)
+        }
     }
 
     companion object {
-        // TODO: Get the design standardised and from there define a recognised name
-        val ALGORITHM = "X-Corda-CompositeKey"
-        // TODO: We should be using a well defined format.
-        val FORMAT = "X-Corda-Kryo"
+        val ALGORITHM = CompositeSignature.ALGORITHM_IDENTIFIER.algorithm.toString()
     }
 
     /**
@@ -57,8 +63,17 @@ class CompositeKey private constructor (val threshold: Int,
     fun isFulfilledBy(key: PublicKey) = isFulfilledBy(setOf(key))
 
     override fun getAlgorithm() = ALGORITHM
-    override fun getEncoded(): ByteArray = this.serialize().bytes
-    override fun getFormat() = FORMAT
+    override fun getEncoded(): ByteArray {
+        val keyVector = ASN1EncodableVector()
+        val childrenVector = ASN1EncodableVector()
+        children.forEach {
+            childrenVector.add(it.toASN1Primitive())
+        }
+        keyVector.add(ASN1Integer(threshold.toLong()))
+        keyVector.add(DERSequence(childrenVector))
+        return SubjectPublicKeyInfo(CompositeSignature.ALGORITHM_IDENTIFIER, DERSequence(keyVector)).encoded
+    }
+    override fun getFormat() = ASN1Encoding.DER
 
     /**
      * Function checks if the public keys corresponding to the signatures are matched against the leaves of the composite
