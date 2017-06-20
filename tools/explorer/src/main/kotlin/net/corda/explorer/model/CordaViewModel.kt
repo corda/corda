@@ -31,4 +31,4 @@ abstract class CordaView(title: String? = null) : View(title) {
     }
 }
 
-data class CordaWidget(val name: String, val node: Node)
+data class CordaWidget(val name: String, val node: Node, val icon: FontAwesomeIcon? = null)

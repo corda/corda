@@ -46,7 +46,7 @@ class CashViewer : CordaView("Cash") {
     override val root: BorderPane by fxml()
     override val icon: FontAwesomeIcon = FontAwesomeIcon.MONEY
     // View's widget.
-    override val widgets = listOf(CordaWidget("Treasury", CashWidget())).observable()
+    override val widgets = listOf(CordaWidget("Treasury", CashWidget(), icon)).observable()
     // Left pane
     private val leftPane: VBox by fxid()
     private val splitPane: SplitPane by fxid()

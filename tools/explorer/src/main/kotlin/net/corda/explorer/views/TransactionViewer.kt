@@ -53,7 +53,7 @@ class TransactionViewer : CordaView("Transactions") {
     private val reportingCurrency by observableValue(ReportingCurrencyModel::reportingCurrency)
     private val myIdentity by observableValue(NetworkIdentityModel::myIdentity)
 
-    override val widgets = listOf(CordaWidget(title, TransactionWidget())).observable()
+    override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
 
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
@@ -117,7 +117,10 @@ class TransactionViewer : CordaView("Transactions") {
         // Transaction table
         transactionViewTable.apply {
             items = searchField.filteredData
-            column("Transaction ID", Transaction::id) { maxWidth = 200.0 }.setCustomCellFactory {
+            column("Transaction ID", Transaction::id) {
+                minWidth = 20.0
+                maxWidth = 200.0
+            }.setCustomCellFactory {
                 label("$it") {
                     graphic = identicon(it, 15.0)
                     tooltip = identiconToolTip(it)
@@ -159,10 +162,11 @@ class TransactionViewer : CordaView("Transactions") {
                 add(ContractStatesView(it).root)
                 prefHeight = 400.0
             }.apply {
-                prefWidth = 26.0
-                isResizable = false
+                // Column stays the same size, but we don't violate column restricted resize policy for the whole table view.
+                // It removes that irritating column at the end of table that does nothing.
+                minWidth = 26.0
+                maxWidth = 26.0
             }
-            setColumnResizePolicy { true }
         }
         matchingTransactionsLabel.textProperty().bind(Bindings.size(transactionViewTable.items).map {
             "$it matching transaction${if (it == 1) "" else "s"}"
@@ -186,6 +190,8 @@ class TransactionViewer : CordaView("Transactions") {
         init {
             right {
                 label {
+                    val hash = SecureHash.randomSHA256()
+                    graphic = identicon(hash, 30.0)
                     textProperty().bind(Bindings.size(partiallyResolvedTransactions).map(Number::toString))
                     BorderPane.setAlignment(this, Pos.BOTTOM_RIGHT)
                 }
