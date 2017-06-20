@@ -17,6 +17,7 @@ import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.*
+import java.util.function.Predicate
 
 // This code is unit tested in NodeInterestRates.kt
 
@@ -62,7 +63,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val mtx = tx.toWireTransaction().buildFilteredTransaction({ filtering(it) })
+        val mtx = tx.toWireTransaction().buildFilteredTransaction(Predicate { filtering(it) })
         val signature = subFlow(FixSignFlow(tx, oracle, mtx))
         tx.addSignatureUnchecked(signature)
     }

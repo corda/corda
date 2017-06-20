@@ -536,7 +536,9 @@ object Crypto {
      * This operation is currently supported for ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
      *
      * Similarly to BIP32, the implemented algorithm uses an HMAC function based on SHA512 and it is actually
-     * a variation of the private-parent-key -> private-child-key hardened key generation of BIP32.
+     * an implementation the HKDF rfc - Step 1: Extract function,
+     * @see <a href="https://tools.ietf.org/html/rfc5869">HKDF</a>
+     * which is practically a variation of the private-parent-key -> private-child-key hardened key generation of BIP32.
      *
      * Unlike BIP32, where both private and public keys are extended to prevent deterministically
      * generated child keys from depending solely on the key itself, current method uses normal elliptic curve keys
@@ -553,8 +555,30 @@ object Crypto {
      * In practice, for our DKG purposes (thus PRF), a collision would not necessarily reveal the master HMAC key,
      * because multiple inputs can produce the same hash output.
      *
+     * Also according to the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) rfc5869:
+     * <p><ul>
+     * <li>a chain-code (aka the salt) is recommended, but not required.
+     * <li>the salt can be public, but a hidden one provides stronger security guarantee.
+     * <li>even a simple counter can work as a salt, but ideally it should be random.
+     * <li>salt values should not be chosen by an attacker.
+     * </ul></p>
+     *
+     * Regarding the last requirement, according to Krawczyk's HKDF scheme: <i>While there is no need to keep the salt secret,
+     * it is assumed that salt values are independent of the input keying material</i>.
+     * @see <a href="http://eprint.iacr.org/2010/264.pdf">Cryptographic Extraction and Key Derivation - The HKDF Scheme</a>.
+     *
+     * There are also protocols that require an authenticated nonce (e.g. when a DH derived key is used as a seed) and thus
+     * we need to make sure that nonces come from legitimate parties rather than selected by an attacker.
+     * Similarly, in DLT systems, proper handling is required if users should agree on a common value as a seed,
+     * e.g. a transaction's nonce or hash.
+     *
+     * Moreover if a unique key per transaction is prerequisite, an attacker should never force a party to reuse a
+     * previously used key, due to privacy and forward secrecy reasons.
+     *
      * All in all, this algorithm can be used with a counter as seed, however it is suggested that the output does
      * not solely depend on the key, i.e. a secret salt per user or a random nonce per transaction could serve this role.
+     * In case where a non-random seed policy is selected, such as the BIP32 counter logic, one needs to carefully keep state
+     * so that the same salt is used only once.
      *
      * @param signatureScheme the [SignatureScheme] of the private key input.
      * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
@@ -569,7 +593,7 @@ object Crypto {
             ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
             EDDSA_ED25519_SHA512 -> return deriveKeyPairEdDSA(privateKey, seed)
         }
-        throw UnsupportedOperationException("Although supported for signing, deterministic key generation is not currently implemented for ${signatureScheme.schemeCodeName}")
+        throw UnsupportedOperationException("Although supported for signing, deterministic key derivation is not currently implemented for ${signatureScheme.schemeCodeName}")
     }
 
     /**
@@ -588,28 +612,43 @@ object Crypto {
     // Given the domain parameters, this routine deterministically generates an ECDSA key pair
     // in accordance with X9.62 section 5.2.1 pages 26, 27.
     private fun deriveKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        // Compute hmac(privateKey, seed).
-        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
-        val key = SecretKeySpec((privateKey as BCECPrivateKey).d.toByteArray(), "HmacSHA512")
-        mac.init(key)
-        val macBytes = mac.doFinal(seed)
+        // Compute HMAC(privateKey, seed).
+        val macBytes = deriveHMAC(privateKey, seed)
+        // Get the first EC curve fieldSized-bytes from macBytes.
+        // According to recommendations from the deterministic ECDSA rfc, see https://tools.ietf.org/html/rfc6979
+        // performing a simple modular reduction would induce biases that would be detrimental to security.
+        // Thus, the result is not reduced modulo q and similarly to BIP32, EC curve fieldSized-bytes are utilised.
+        val fieldSizeMacBytes = macBytes.copyOf(parameterSpec.curve.fieldSize / 8)
 
         // Calculate value d for private key.
-        val deterministicD = BigInteger(1, macBytes).mod(parameterSpec.n)
+        val deterministicD = BigInteger(1, fieldSizeMacBytes)
+
         // Key generation checks follow the BC logic found in
         // https://github.com/bcgit/bc-java/blob/master/core/src/main/java/org/bouncycastle/crypto/generators/ECKeyPairGenerator.java
+        // There is also an extra check to align with the BIP32 protocol, according to which
+        // if deterministicD >= order_of_the_curve the resulted key is invalid and we should proceed with another seed.
+        // TODO: We currently use SHA256(seed) when retrying, but BIP32 just skips a counter (i) that results to an invalid key.
+        //       Although our hashing approach seems reasonable, we should check if there are alternatives,
+        //       especially if we use counters as well.
         if (deterministicD < ECConstants.TWO
-                || WNafUtil.getNafWeight(deterministicD) < parameterSpec.n.bitLength().ushr(2)) {
-            throw InvalidKeyException("Cannot generate key for this seed, please use another seed value")
+                || WNafUtil.getNafWeight(deterministicD) < parameterSpec.n.bitLength().ushr(2)
+                || deterministicD >= parameterSpec.n) {
+            // Instead of throwing an exception, we retry with SHA256(seed).
+            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
         }
         val privateKeySpec = ECPrivateKeySpec(deterministicD, parameterSpec)
         val privateKeyD = BCECPrivateKey(privateKey.algorithm, privateKeySpec, BouncyCastleProvider.CONFIGURATION)
 
         // Compute the public key by scalar multiplication.
+        // Note that BIP32 uses masterKey + mac_derived_key as the final private key and it consequently
+        // requires an extra point addition: master_public + mac_derived_public for the public part.
+        // In our model, the mac_derived_output, deterministicD, is not currently added to the masterKey and it
+        // it forms, by itself, the new private key, which in turn is used to compute the new public key.
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
         if (pointQ.isInfinity)
-            throw InvalidKeyException("Cannot generate key for this seed, please use another seed value")
+            // Instead of throwing an exception, we retry with SHA256(seed).
+            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
 
@@ -619,10 +658,7 @@ object Crypto {
     // Deterministically generate an EdDSA key.
     private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
         // Compute HMAC(privateKey, seed).
-        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
-        val key = SecretKeySpec((privateKey as EdDSAPrivateKey).geta(), "HmacSHA512")
-        mac.init(key)
-        val macBytes = mac.doFinal(seed)
+        val macBytes = deriveHMAC(privateKey, seed)
 
         // Calculate key pair.
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
@@ -662,6 +698,20 @@ object Crypto {
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
+    }
+
+    // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
+    private fun deriveHMAC(privateKey: PrivateKey, seed: ByteArray): ByteArray {
+        // Compute hmac(privateKey, seed).
+        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
+        val keyData = when (privateKey) {
+            is BCECPrivateKey -> privateKey.d.toByteArray()
+            is EdDSAPrivateKey -> privateKey.geta()
+            else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
+        }
+        val key = SecretKeySpec(keyData, "HmacSHA512")
+        mac.init(key)
+        return mac.doFinal(seed)
     }
 
     /**
