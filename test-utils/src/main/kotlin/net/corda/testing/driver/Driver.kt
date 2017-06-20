@@ -2,6 +2,7 @@
 
 package net.corda.testing.driver
 
+import com.google.common.base.Stopwatch
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
@@ -451,8 +452,14 @@ class DriverDSL(
         _executorService?.let {
             val n = it.shutdownNow().size
             if (n != 0) log.warn("$n task(s) never started.")
-            if (!it.awaitTermination(5, SECONDS)) {
-                throw TimeoutException("Driver executor still running, likely due to a hanging task.")
+            val stopwatch = Stopwatch.createStarted()
+            val tolerance = 5.seconds
+            if (!it.awaitTermination(tolerance.toMillis(), MILLISECONDS)) {
+                throw TimeoutException("Driver executor still running $tolerance after shutdown, likely due to a hanging task.")
+            }
+            val elapsed = Duration.ofMillis(stopwatch.elapsed(MILLISECONDS))
+            if (elapsed >= 500.millis) {
+                log.warn("Driver executor shutdown took a while: $elapsed")
             }
         }
     }
