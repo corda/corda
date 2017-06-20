@@ -65,12 +65,23 @@ class CompositeKeyTests {
     }
 
     @Test
-    fun `encoded tree decodes correctly`() {
+    fun `kryo encoded tree decodes correctly`() {
         val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
         val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
 
         val encoded = aliceAndBobOrCharlie.toBase58String()
         val decoded = parsePublicKeyBase58(encoded)
+
+        assertEquals(decoded, aliceAndBobOrCharlie)
+    }
+
+    @Test
+    fun `der encoded tree decodes correctly`() {
+        val aliceAndBob = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+        val aliceAndBobOrCharlie = CompositeKey.Builder().addKeys(aliceAndBob, charliePublicKey).build(threshold = 1)
+
+        val encoded = aliceAndBobOrCharlie.encoded
+        val decoded = CompositeKey.getInstance(encoded)
 
         assertEquals(decoded, aliceAndBobOrCharlie)
     }

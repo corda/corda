@@ -4,6 +4,7 @@ import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import java.security.KeyFactory
 import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.util.*
@@ -131,6 +132,30 @@ class CompositeKey private constructor (val threshold: Int,
 
     companion object {
         val ALGORITHM = CompositeSignature.ALGORITHM_IDENTIFIER.algorithm.toString()
+
+        /**
+         * Build a composite key from a DER encoded form.
+         */
+        fun getInstance(encoded: ByteArray) = getInstance(ASN1Primitive.fromByteArray(encoded))
+
+        fun getInstance(asn1: ASN1Primitive): PublicKey {
+            val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
+            require (keyInfo.algorithm.algorithm.toString() == ALGORITHM)
+            val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
+            val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
+            val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
+            val builder = Builder()
+            val listOfChildren = sequenceOfChildren.objects.toList()
+            listOfChildren.forEach { childAsn1 ->
+                require(childAsn1 is ASN1Sequence)
+                val childSeq = childAsn1 as ASN1Sequence
+                val key = Crypto.decodePublicKey((childSeq.getObjectAt(0) as DERBitString).bytes)
+                val weight = ASN1Integer.getInstance(childSeq.getObjectAt(1))
+                builder.addKey(key, weight.positiveValue.toInt())
+            }
+
+            return builder.build(threshold)
+        }
     }
 
     /**
