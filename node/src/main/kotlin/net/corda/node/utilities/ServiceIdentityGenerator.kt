@@ -32,6 +32,7 @@ object ServiceIdentityGenerator {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
+        // Avoid adding complexity! This class is a hack that needs to stay runnable in the gradle environment.
         val notaryParty = Party(serviceName, notaryKey)
         val notaryPartyBytes = notaryParty.serialize()
         val privateKeyFile = "$serviceId-private-key"
