@@ -25,6 +25,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
@@ -785,15 +786,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
-            val serviceCa = DUMMY_CA
-            val serviceCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate, serviceCa.keyPair, serviceName, myIdentity.owningKey)
-            val serviceCertPath = certFactory.generateCertPath(listOf(serviceCert.cert, serviceCa.certificate.cert))
+            val partyAndCertificate = getTestPartyAndCertificate(myIdentity)
             // Sanity check the certificate and path
-            val validatorParameters = PKIXParameters(setOf(TrustAnchor(serviceCa.certificate.cert, null)))
+            val validatorParameters = PKIXParameters(setOf(TrustAnchor(DUMMY_CA.certificate.cert, null)))
             val validator = CertPathValidator.getInstance("PKIX")
             validatorParameters.isRevocationEnabled = false
-            validator.validate(serviceCertPath, validatorParameters) as PKIXCertPathValidatorResult
-            Pair(PartyAndCertificate(myIdentity, serviceCert, serviceCertPath), keyPair)
+            validator.validate(partyAndCertificate.certPath, validatorParameters) as PKIXCertPathValidatorResult
+            Pair(partyAndCertificate, keyPair)
         } else {
             val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!

@@ -72,7 +72,7 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
  */
 fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA) = getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 
-private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
     val certFactory = CertificateFactory.getInstance("X509")
     val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
     val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
