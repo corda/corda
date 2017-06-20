@@ -6,6 +6,10 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
+Certificate checks have been enabled for much of the identity service, with additional checks coming targetted at M13.
+These are part of the confidential identities work, and ensure that parties are actually who they claim to be by checking
+their certificate path back to the network trust root (certificate authority).
+
 Milestone 12 - First Public Beta
 --------------------------------
 

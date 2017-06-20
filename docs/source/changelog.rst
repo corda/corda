@@ -12,6 +12,13 @@ UNRELEASED
 
 * The node driver has moved to net.corda.testing.driver in the test-utils module
 
+* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone)
+
+* Added DER encoded format for CompositeKey so they can be used in X.509 certificates
+
+* Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential identities
+  are used
+
 Milestone 13
 ------------
 
