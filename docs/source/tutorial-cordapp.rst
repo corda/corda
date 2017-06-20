@@ -623,7 +623,8 @@ The example CorDapp has the following directory structure:
     │       │   └── resources
     │       │       ├── META-INF
     │       │       │   └── services
-    │       │       │       └── net.corda.core.node.CordaPluginRegistry
+    │       │       │       ├── net.corda.core.node.CordaPluginRegistry
+    │       │       │       └── net.corda.webserver.services.WebServerPluginRegistry
     │       │       ├── certificates
     │       │       │   ├── readme.txt
     │       │       │   ├── sslkeystore.jks
@@ -665,7 +666,8 @@ The example CorDapp has the following directory structure:
             │   └── resources
             │       ├── META-INF
             │       │   └── services
-            │       │       └── net.corda.core.node.CordaPluginRegistry
+            │       │       ├── net.corda.core.node.CordaPluginRegistry
+            │       │       └── net.corda.webserver.services.WebServerPluginRegistry
             │       ├── certificates
             │       │   ├── readme.txt
             │       │   ├── sslkeystore.jks
@@ -808,7 +810,8 @@ Service Provider Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you are building a CorDapp from scratch or adding a new CorDapp to the cordapp-tutorial project then you must provide
-a reference to your sub-class of ``CordaPluginRegistry`` in the provider-configuration file in located in the ``resources/META-INF/services`` directory.
+a reference to your sub-class of ``CordaPluginRegistry`` or ``WebServerPluginRegistry`` (for Wep API) in the provider-configuration file
+located in the ``resources/META-INF/services`` directory.
 
 Re-Deploying Your Nodes Locally
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

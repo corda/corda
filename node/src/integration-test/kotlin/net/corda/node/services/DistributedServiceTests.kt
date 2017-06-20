@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 
 class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
-    lateinit var notaries: List<NodeHandle>
+    lateinit var notaries: List<NodeHandle.OutOfProcess>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
@@ -52,7 +52,7 @@ class DistributedServiceTests : DriverBasedTest() {
         alice = aliceFuture.get()
         val (notaryIdentity, notaryNodes) = notariesFuture.get()
         raftNotaryIdentity = notaryIdentity
-        notaries = notaryNodes
+        notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
         assertEquals(notaries.size, clusterSize)
         assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)

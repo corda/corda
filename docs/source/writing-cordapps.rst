@@ -43,7 +43,8 @@ structure:
     │   └── resources
     │       ├── META-INF
     │       │   └── services
-    │       │       └── net.corda.core.node.CordaPluginRegistry
+    │       │       ├── net.corda.core.node.CordaPluginRegistry
+    │       │       └── net.corda.webserver.services.WebServerPluginRegistry
     │       ├── certificates
     │       │   ├── sslkeystore.jks
     │       │   └── truststore.jks
@@ -60,8 +61,19 @@ structure:
 
 Defining a plugin
 -----------------
-You can specify the web APIs and static web content for your CorDapp by subclassing
+You can specify the transport options (between nodes and between Web Client and a node) for your CorDapp by subclassing
 ``net.corda.core.node.CordaPluginRegistry``:
+
+* The ``customizeSerialization`` function allows classes to be whitelisted for object serialisation, over and
+  above those tagged with the ``@CordaSerializable`` annotation. For instance, new state types will need to be
+  explicitly registered. In general, the annotation should be preferred. See :doc:`serialization`.
+
+The fully-qualified class path of each ``CordaPluginRegistry`` subclass must be added to the
+``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
+can register multiple plugins in a single ``net.corda.core.node.CordaPluginRegistry`` file.
+
+You can specify the web APIs and static web content for your CorDapp by implementing
+``net.corda.webserver.services.WebServerPluginRegistry`` interface:
 
 * The ``webApis`` property is a list of JAX-RS annotated REST access classes. These classes will be constructed by
   the bundled web server and must have a single argument constructor taking a ``CordaRPCOps`` object. This will
@@ -73,13 +85,9 @@ You can specify the web APIs and static web content for your CorDapp by subclass
   is not started.
   * The static web content itself should be placed inside the ``src/main/resources`` directory
 
-* The ``customizeSerialization`` function allows classes to be whitelisted for object serialisation, over and
-  above those tagged with the ``@CordaSerializable`` annotation. For instance, new state types will need to be
-  explicitly registered. In general, the annotation should be preferred. See :doc:`serialization`.
-
-The fully-qualified class path of each ``CordaPluginRegistry`` subclass must be added to the
-``net.corda.core.node.CordaPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
-can register multiple plugins in a single ``net.corda.core.node.CordaPluginRegistry`` file.
+The fully-qualified class path of each ``WebServerPluginRegistry`` class must be added to the
+``net.corda.webserver.services.WebServerPluginRegistry`` file in the CorDapp's ``resources/META-INF/services`` folder. A CorDapp
+can register multiple plugins in a single ``net.corda.webserver.services.WebServerPluginRegistry`` file.
 
 Installing CorDapps
 -------------------

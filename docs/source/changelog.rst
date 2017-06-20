@@ -12,6 +12,14 @@ UNRELEASED
 
 * The node driver has moved to net.corda.testing.driver in the test-utils module
 
+Milestone 13
+------------
+
+    * Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
+    ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
+    Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
+    and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
+
 Milestone 12
 ------------
 
