@@ -215,8 +215,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
-            val tokenizableServices = makeServices(keyStoreWrapper)
+            val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -439,7 +438,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
+    private fun makeServices(): MutableList<Any> {
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -789,6 +788,11 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             val serviceCa = DUMMY_CA
             val serviceCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate, serviceCa.keyPair, serviceName, myIdentity.owningKey)
             val serviceCertPath = certFactory.generateCertPath(listOf(serviceCert.cert, serviceCa.certificate.cert))
+            // Sanity check the certificate and path
+            val validatorParameters = PKIXParameters(setOf(TrustAnchor(serviceCa.certificate.cert, null)))
+            val validator = CertPathValidator.getInstance("PKIX")
+            validatorParameters.isRevocationEnabled = false
+            validator.validate(serviceCertPath, validatorParameters) as PKIXCertPathValidatorResult
             Pair(PartyAndCertificate(myIdentity, serviceCert, serviceCertPath), keyPair)
         } else {
             val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)

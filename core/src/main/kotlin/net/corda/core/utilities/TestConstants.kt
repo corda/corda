@@ -70,7 +70,7 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, ca: CertificateAndKeyPair = DUMMY_CA) = getTestPartyAndCertificate(Party(name, publicKey), ca)
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA) = getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 
 private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
     val certFactory = CertificateFactory.getInstance("X509")
