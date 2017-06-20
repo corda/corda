@@ -129,6 +129,11 @@ class InMemoryIdentityServiceTests {
         assertFailsWith<IllegalArgumentException> {
             service.assertOwnership(bob.party, aliceTxIdentity.identity)
         }
+
+        assertFailsWith<IllegalArgumentException> {
+            val owningKey = Crypto.decodePublicKey(trustRoot.certificate.subjectPublicKeyInfo.encoded)
+            service.assertOwnership(Party(trustRoot.certificate.subject, owningKey), aliceTxIdentity.identity)
+        }
     }
 
     private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, TxKeyFlow.AnonymousIdentity> {
