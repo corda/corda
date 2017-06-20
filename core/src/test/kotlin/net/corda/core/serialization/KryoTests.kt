@@ -155,7 +155,7 @@ class KryoTests {
         val rootCAKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val rootCACert = X509Utilities.createSelfSignedCACertificate(ALICE.name, rootCAKey)
         val certificate = X509Utilities.createCertificate(CertificateType.TLS, rootCACert, rootCAKey, BOB.name, BOB_PUBKEY)
-        val expected = certFactory.generateCertPath(listOf(rootCACert.cert, certificate.cert))
+        val expected = certFactory.generateCertPath(listOf(certificate.cert, rootCACert.cert))
         val serialized = expected.serialize(kryo).bytes
         val actual: CertPath = serialized.deserialize(kryo)
         assertEquals(expected, actual)

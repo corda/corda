@@ -35,7 +35,7 @@ object ServiceIdentityGenerator {
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
         val certFactory = CertificateFactory.getInstance("X509")
-        val notaryCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, serviceCa.certificate,
+        val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
             serviceCa.keyPair, serviceName, notaryKey)
         val notaryCertPath = certFactory.generateCertPath(listOf(serviceCa.certificate.cert, notaryCert.cert))
         val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath)
