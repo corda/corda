@@ -29,6 +29,10 @@ fun makeAllButBlacklistedClassResolver(): ClassResolver {
     return CordaClassResolver(AllButBlacklisted)
 }
 
+/**
+ * @param amqpEnabled Setting this to true turns on experimental AMQP serialization for any class annotated with
+ * [CordaSerializable].
+ */
 class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean = false) : DefaultClassResolver() {
     /** Returns the registration for the specified class, or null if the class is not registered.  */
     override fun getRegistration(type: Class<*>): Registration? {

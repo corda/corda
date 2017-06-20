@@ -6,6 +6,9 @@ import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.x500.X500Name
 import java.lang.reflect.Type
 
+/**
+ * Custom serializer for X500 names that utilizes their ASN.1 encoding on the wire.
+ */
 object X500NameSerializer : CustomSerializer.Implements<X500Name>(X500Name::class.java) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()
 

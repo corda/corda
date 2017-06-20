@@ -6,6 +6,8 @@ import java.lang.reflect.Type
 
 /**
  * Serializer / deserializer for native AMQP types (Int, Float, String etc).
+ *
+ * [ByteArray] is automatically marshalled to/from the Proton-J wrapper, [Binary].
  */
 class AMQPPrimitiveSerializer(clazz: Class<*>) : AMQPSerializer<Any> {
     override val typeDescriptor: String = SerializerFactory.primitiveTypeName(clazz)!!

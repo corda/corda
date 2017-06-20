@@ -73,6 +73,11 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
+
+    /**
+     * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
+     * type.
+     */
     // TODO: test GenericArrayType
     private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: Type): Type? {
         if (declaredType is ParameterizedType) {
@@ -86,6 +91,10 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         } else return null
     }
 
+    /**
+     * Try and infer concrete types for any generics type variables for the actual class encountered, based on the declared
+     * type, which must be a [ParameterizedType].
+     */
     private fun inferTypeVariables(actualClass: Class<*>?, declaredClass: Class<*>, declaredType: ParameterizedType): Type? {
         if (actualClass == null || declaredClass == actualClass) {
             return null
@@ -146,7 +155,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     }
 
     /**
-     * TODO: Add docs
+     * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
+     * that expects to find getters and a constructor with a parameter for each property.
      */
     fun register(customSerializer: CustomSerializer<out Any>) {
         if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
@@ -239,7 +249,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
     // Recursively check the class, interfaces and superclasses for our annotation.
     internal fun hasAnnotationInHierarchy(type: Class<*>): Boolean {
         return type.isAnnotationPresent(CordaSerializable::class.java) ||
-                type.interfaces.any { it.isAnnotationPresent(CordaSerializable::class.java) || hasAnnotationInHierarchy(it) }
+                type.interfaces.any { hasAnnotationInHierarchy(it) }
                 || (type.superclass != null && hasAnnotationInHierarchy(type.superclass))
     }
 
