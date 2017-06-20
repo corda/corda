@@ -71,7 +71,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -784,11 +784,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
             val serviceCa = DUMMY_CA
-            // TODO: This doesn't work until we have composite keys in X.509 certificates, so we make up a certificate that nothing checks
-            // val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
-            //        serviceCa.keyPair, serviceName, notaryKey)
-            val serviceCert = X509Utilities.createSelfSignedCACertificate(serviceName, generateKeyPair())
+            val serviceCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, serviceCa.certificate, serviceCa.keyPair, serviceName, myIdentity.owningKey)
             val serviceCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, serviceCert, revocationEnabled = false)
+            // Sanity check the certificate and path
+            val validatorParameters = PKIXParameters(setOf(TrustAnchor(serviceCa.certificate.cert, null)))
+            val validator = CertPathValidator.getInstance("PKIX")
+            validatorParameters.isRevocationEnabled = false
+            validator.validate(serviceCertPath, validatorParameters) as PKIXCertPathValidatorResult
             Pair(PartyAndCertificate(myIdentity, serviceCert, serviceCertPath), keyPair)
         } else {
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
