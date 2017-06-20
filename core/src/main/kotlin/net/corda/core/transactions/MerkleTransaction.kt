@@ -11,6 +11,7 @@ import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.serialization.withoutReferences
 import java.security.PublicKey
+import java.util.function.Predicate
 
 fun <T : Any> serializedHash(x: T): SecureHash {
     return p2PKryo().run { kryo -> kryo.withoutReferences { x.serialize(kryo).hash } }
@@ -116,8 +117,9 @@ class FilteredTransaction private constructor(
          * @param wtx WireTransaction to be filtered.
          * @param filtering filtering over the whole WireTransaction
          */
+        @JvmStatic
         fun buildMerkleTransaction(wtx: WireTransaction,
-                                   filtering: (Any) -> Boolean
+                                   filtering: Predicate<Any>
         ): FilteredTransaction {
             val filteredLeaves = wtx.filterWithFun(filtering)
             val merkleTree = wtx.merkleTree

@@ -19,6 +19,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
+import java.util.function.Predicate
 
 object NotaryFlow {
     /**
@@ -63,7 +64,7 @@ object NotaryFlow {
             val payload: Any = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                 stx
             } else {
-                wtx.buildFilteredTransaction { it is StateRef || it is TimeWindow }
+                wtx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow })
             }
 
             val response = try {

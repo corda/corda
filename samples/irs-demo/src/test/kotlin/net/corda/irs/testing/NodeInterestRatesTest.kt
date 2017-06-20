@@ -36,6 +36,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
 import java.math.BigDecimal
+import java.util.function.Predicate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -142,11 +143,11 @@ class NodeInterestRatesTest {
                 }
             }
 
-            val ftx1 = wtx1.buildFilteredTransaction(::filterAllOutputs)
+            val ftx1 = wtx1.buildFilteredTransaction(Predicate(::filterAllOutputs))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx1) }
             tx.addCommand(Cash.Commands.Move(), ALICE_PUBKEY)
             val wtx2 = tx.toWireTransaction()
-            val ftx2 = wtx2.buildFilteredTransaction { x -> filterCmds(x) }
+            val ftx2 = wtx2.buildFilteredTransaction(Predicate { x -> filterCmds(x) })
             assertFalse(wtx1.id == wtx2.id)
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx2) }
         }
@@ -160,7 +161,7 @@ class NodeInterestRatesTest {
             tx.addCommand(fix, oracle.identity.owningKey)
             // Sign successfully.
             val wtx = tx.toWireTransaction()
-            val ftx = wtx.buildFilteredTransaction { x -> fixCmdFilter(x) }
+            val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
             val signature = oracle.sign(ftx)
             tx.checkAndAddSignature(signature)
         }
@@ -174,7 +175,7 @@ class NodeInterestRatesTest {
             val badFix = Fix(fixOf, "0.6789".bd)
             tx.addCommand(badFix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
-            val ftx = wtx.buildFilteredTransaction { x -> fixCmdFilter(x) }
+            val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
             val e1 = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.sign(ftx) }
             assertEquals(fixOf, e1.fix)
         }
@@ -194,7 +195,7 @@ class NodeInterestRatesTest {
             }
             tx.addCommand(fix, oracle.identity.owningKey)
             val wtx = tx.toWireTransaction()
-            val ftx = wtx.buildFilteredTransaction(::filtering)
+            val ftx = wtx.buildFilteredTransaction(Predicate(::filtering))
             assertFailsWith<IllegalArgumentException> { oracle.sign(ftx) }
         }
     }
@@ -203,7 +204,7 @@ class NodeInterestRatesTest {
     fun `empty partial transaction to sign`() {
         val tx = makeTX()
         val wtx = tx.toWireTransaction()
-        val ftx = wtx.buildFilteredTransaction({ false })
+        val ftx = wtx.buildFilteredTransaction(Predicate { false })
         assertFailsWith<MerkleTreeException> { oracle.sign(ftx) }
     }
 
