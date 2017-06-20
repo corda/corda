@@ -23,7 +23,7 @@ import java.time.Instant
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
-object MyFlowPair {
+object FlowCookbook {
     // ``InitiatorFlow`` is our first flow, and will communicate with
     // ``ResponderFlow``, below.
     // We mark ``InitiatorFlow`` as an ``InitiatingFlow``, allowing it to be
@@ -86,9 +86,9 @@ object MyFlowPair {
 
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
-            val namedCounterparty = serviceHub.networkMapCache.getNodeByLegalName(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"))
-            val keyedCounterparty = serviceHub.networkMapCache.getNodeByLegalIdentityKey(DUMMY_PUBKEY_1)
-            val firstCounterparty = serviceHub.networkMapCache.partyNodes[0]
+            val namedCounterparty = serviceHub.networkMapCache.getNodeByLegalName(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"))?.legalIdentity
+            val keyedCounterparty = serviceHub.networkMapCache.getNodeByLegalIdentityKey(DUMMY_PUBKEY_1)?.legalIdentity
+            val firstCounterparty = serviceHub.networkMapCache.partyNodes[0].legalIdentity
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
@@ -255,11 +255,11 @@ object MyFlowPair {
 
             // We notarise the transaction and get it recorded in the vault of
             // all the participants of all the transaction's states.
-            val notarisedTx1 = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
+            val notarisedTx1 = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             val additionalParties = setOf(DUMMY_REGULATOR, DUMMY_BANK_A)
-            val notarisedTx2 = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker()))
+            val notarisedTx2 = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
         }
     }
 
