@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomization
 import java.util.function.Function
 
@@ -8,6 +9,17 @@ import java.util.function.Function
  * to extend a Corda node with additional application services.
  */
 abstract class CordaPluginRegistry {
+
+    @Suppress("unused")
+    @Deprecated("This is no longer in use, moved to WebServerPluginRegistry class in webserver module",
+            level = DeprecationLevel.ERROR, replaceWith = ReplaceWith("net.corda.webserver.services.WebServerPluginRegistry"))
+    open val webApis: List<Function<CordaRPCOps, out Any>> get() = emptyList()
+
+
+    @Suppress("unused")
+    @Deprecated("This is no longer in use, moved to WebServerPluginRegistry class in webserver module",
+            level = DeprecationLevel.ERROR, replaceWith = ReplaceWith("net.corda.webserver.services.WebServerPluginRegistry"))
+    open val staticServeDirs: Map<String, String> get() = emptyMap()
 
     @Suppress("unused")
     @Deprecated("This is no longer needed. Instead annotate any flows that need to be invoked via RPC with " +
