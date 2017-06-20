@@ -1,4 +1,4 @@
-package net.corda.irs.api
+package net.corda.irs
 
 import com.google.common.net.HostAndPort
 import net.corda.irs.utilities.uploadFile
@@ -25,7 +25,7 @@ class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
     // TODO: Add uploading of files to the HTTP API
     fun runUploadRates() {
         val fileContents = IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name())
-        val url = URL("http://$hostAndPort/upload/interest-rates")
+        val url = URL("http://$hostAndPort/api/irs/fixes")
         check(uploadFile(url, fileContents))
         println("Rates successfully uploaded!")
     }

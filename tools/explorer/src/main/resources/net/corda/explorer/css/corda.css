@@ -311,8 +311,8 @@
 .scroll-bar:vertical {
     -fx-background-color: transparent;
 }
-+/* Other */
 
+/* Other */
 .identicon {
     -fx-border-radius: 2;
 }

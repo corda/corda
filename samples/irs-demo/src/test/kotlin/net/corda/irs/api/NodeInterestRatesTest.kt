@@ -1,4 +1,4 @@
-package net.corda.irs.testing
+package net.corda.irs.api
 
 import net.corda.contracts.Fix
 import net.corda.contracts.FixOf
@@ -18,7 +18,6 @@ import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
@@ -54,8 +53,6 @@ class NodeInterestRatesTest {
     val DUMMY_CASH_ISSUER_KEY = generateKeyPair()
     val DUMMY_CASH_ISSUER = Party(X500Name("CN=Cash issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_CASH_ISSUER_KEY.public)
 
-    val dummyServices = MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
-    val clock get() = dummyServices.clock
     lateinit var oracle: NodeInterestRates.Oracle
     lateinit var dataSource: Closeable
     lateinit var database: Database
@@ -75,7 +72,11 @@ class NodeInterestRatesTest {
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         database.transaction {
-            oracle = NodeInterestRates.Oracle(MEGA_CORP, MEGA_CORP_KEY.public, dummyServices).apply { knownFixes = TEST_DATA }
+            oracle = NodeInterestRates.Oracle(
+                    MEGA_CORP,
+                    MEGA_CORP_KEY.public,
+                    MockServices(DUMMY_CASH_ISSUER_KEY, MEGA_CORP_KEY)
+            ).apply { knownFixes = TEST_DATA }
         }
     }
 
@@ -88,7 +89,7 @@ class NodeInterestRatesTest {
     fun `query successfully`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
-            val res = oracle.query(listOf(q), clock.instant())
+            val res = oracle.query(listOf(q))
             assertEquals(1, res.size)
             assertEquals("0.678".bd, res[0].value)
             assertEquals(q, res[0].of)
@@ -100,7 +101,7 @@ class NodeInterestRatesTest {
         database.transaction {
             val q1 = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")
             val q2 = NodeInterestRates.parseFixOf("LIBOR 2016-03-15 1M")
-            val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2), clock.instant()) }
+            val e = assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q1, q2)) }
             assertEquals(e.fix, q2)
         }
     }
@@ -109,7 +110,7 @@ class NodeInterestRatesTest {
     fun `query successfully with interpolated rate`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("LIBOR 2016-03-16 5M")
-            val res = oracle.query(listOf(q), clock.instant())
+            val res = oracle.query(listOf(q))
             assertEquals(1, res.size)
             Assert.assertEquals(0.7316228, res[0].value.toDouble(), 0.0000001)
             assertEquals(q, res[0].of)
@@ -120,14 +121,14 @@ class NodeInterestRatesTest {
     fun `rate missing and unable to interpolate`() {
         database.transaction {
             val q = NodeInterestRates.parseFixOf("EURIBOR 2016-03-15 3M")
-            assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q), clock.instant()) }
+            assertFailsWith<NodeInterestRates.UnknownFix> { oracle.query(listOf(q)) }
         }
     }
 
     @Test
     fun `empty query`() {
         database.transaction {
-            assertFailsWith<IllegalArgumentException> { oracle.query(emptyList(), clock.instant()) }
+            assertFailsWith<IllegalArgumentException> { oracle.query(emptyList()) }
         }
     }
 
@@ -157,7 +158,7 @@ class NodeInterestRatesTest {
     fun `sign successfully`() {
         database.transaction {
             val tx = makeTX()
-            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
+            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             tx.addCommand(fix, oracle.identity.owningKey)
             // Sign successfully.
             val wtx = tx.toWireTransaction()
@@ -185,7 +186,7 @@ class NodeInterestRatesTest {
     fun `do not sign too many leaves`() {
         database.transaction {
             val tx = makeTX()
-            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M")), clock.instant()).first()
+            val fix = oracle.query(listOf(NodeInterestRates.parseFixOf("LIBOR 2016-03-16 1M"))).first()
             fun filtering(elem: Any): Boolean {
                 return when (elem) {
                     is Command -> oracle.identity.owningKey in elem.signers && elem.value is Fix

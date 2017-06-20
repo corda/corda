@@ -19,8 +19,7 @@ import rx.subjects.PublishSubject
 data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
     companion object {
         fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
-            return stateMachine.progressTrackerStepAndUpdates?.let { pair ->
-                val (current, future) = pair
+            return stateMachine.progressTrackerStepAndUpdates?.let { (current, future) ->
                 future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
             }
         }
@@ -75,6 +74,7 @@ class NodeMonitorModel {
                 Observable.empty<ProgressTrackingEvent>()
             }
         }
+
         // We need to retry, because when flow errors, we unsubscribe from progressTrackingSubject. So we end up with stream of state machine updates and no progress trackers.
         futureProgressTrackerUpdates.startWith(currentProgressTrackerUpdates).flatMap { it }.retry().subscribe(progressTrackingSubject)
 

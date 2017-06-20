@@ -409,10 +409,10 @@ interface KeyManagementService {
     fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey
 }
 
-// TODO: Move to a more appropriate location
 /**
  * An interface that denotes a service that can accept file uploads.
  */
+// TODO This is no longer used and can be removed
 interface FileUploader {
     /**
      * Accepts the data in the given input stream, and returns some sort of useful return message that will be sent

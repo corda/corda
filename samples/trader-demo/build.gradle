@@ -23,15 +23,12 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
     compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
-    compile project(':test-utils')
 
     // Corda Plugins: dependent flows and services
     compile project(':samples:bank-of-corda-demo')
@@ -44,6 +41,10 @@ dependencies {
     compile("org.graphstream:gs-ui:1.3") {
         exclude group: "bouncycastle"
     }
+
+    testCompile project(':test-utils')
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps

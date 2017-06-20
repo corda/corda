@@ -1,4 +1,4 @@
-package net.corda.irs.simulation
+package net.corda.netmap.simulation
 
 import co.paralleluniverse.fibers.Suspendable
 import com.fasterxml.jackson.databind.ObjectMapper

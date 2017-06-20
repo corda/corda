@@ -4,7 +4,6 @@ package net.corda.irs
 
 import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
-import net.corda.irs.api.IRSDemoClientApi
 import kotlin.system.exitProcess
 
 enum class Role {

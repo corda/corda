@@ -55,6 +55,10 @@ class TransactionViewer : CordaView("Transactions") {
 
     override val widgets = listOf(CordaWidget(title, TransactionWidget(), icon)).observable()
 
+    private var scrollPosition: Int = 0
+    private lateinit var expander: ExpanderColumn<TransactionViewer.Transaction>
+    var txIdToScroll: SecureHash? = null // Passed as param.
+
     /**
      * This is what holds data for a single transaction node. Note how a lot of these are nullable as we often simply don't
      * have the data.
@@ -71,6 +75,26 @@ class TransactionViewer : CordaView("Transactions") {
     )
 
     data class Inputs(val resolved: ObservableList<StateAndRef<ContractState>>, val unresolved: ObservableList<StateRef>)
+
+    override fun onDock() {
+        txIdToScroll?.let {
+            scrollPosition = transactionViewTable.items.indexOfFirst { it.id == txIdToScroll }
+            if (scrollPosition > 0) {
+                expander.toggleExpanded(scrollPosition)
+                val tx = transactionViewTable.items[scrollPosition]
+                transactionViewTable.scrollTo(tx)
+            }
+        }
+    }
+
+    override fun onUndock() {
+        if (scrollPosition != 0) {
+            val isExpanded = expander.getExpandedProperty(transactionViewTable.items[scrollPosition])
+            if (isExpanded.value) expander.toggleExpanded(scrollPosition)
+            scrollPosition = 0
+        }
+        txIdToScroll = null
+    }
 
     /**
      * We map the gathered data about transactions almost one-to-one to the nodes.
@@ -158,7 +182,7 @@ class TransactionViewer : CordaView("Transactions") {
                 titleProperty.bind(reportingCurrency.map { "Total value ($it equiv)" })
             }
 
-            rowExpander {
+            expander = rowExpander {
                 add(ContractStatesView(it).root)
                 prefHeight = 400.0
             }.apply {

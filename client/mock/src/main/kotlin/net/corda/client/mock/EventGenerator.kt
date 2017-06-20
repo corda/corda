@@ -13,7 +13,7 @@ import java.util.*
  * Especially at the beginning of simulation there might be few insufficient spend errors.
  */
 
-class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, val notary: Party) {
+open class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, val notary: Party) {
     protected val partyGenerator = Generator.pickOne(parties)
     protected val issueRefGenerator = Generator.intRange(0, 1).map { number -> OpaqueBytes(ByteArray(1, { number.toByte() })) }
     protected val amountGenerator = Generator.longRange(10000, 1000000)
@@ -34,12 +34,57 @@ class EventGenerator(val parties: List<Party>, val currencies: List<Currency>, v
         CashFlowCommand.ExitCash(Amount(amount, ccy), issueRef)
     }
 
-    val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
+    open val moveCashGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
         CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient)
     }
 
-    val issuerGenerator = Generator.frequency(listOf(
+    open val issuerGenerator = Generator.frequency(listOf(
             0.1 to exitCashGenerator,
             0.9 to issueCashGenerator
+    ))
+}
+
+/**
+ * [Generator]s for incoming/outgoing events of starting different cash flows. It invokes flows that throw exceptions
+ * for use in explorer flow triage. Exceptions are of kind spending/exiting too much cash.
+ */
+class ErrorFlowsEventGenerator(parties: List<Party>, currencies: List<Currency>, notary: Party): EventGenerator(parties, currencies, notary) {
+    enum class IssuerEvents {
+        NORMAL_EXIT,
+        EXIT_ERROR
+    }
+
+    val errorGenerator = Generator.pickOne(IssuerEvents.values().toList())
+
+    val errorExitCashGenerator = amountGenerator.combine(issueRefGenerator, currencyGenerator, errorGenerator) { amount, issueRef, ccy, errorType ->
+        when (errorType) {
+            IssuerEvents.NORMAL_EXIT -> {
+                println("Normal exit")
+                if (currencyMap[ccy]!! <=  amount) addToMap(ccy, -amount)
+                CashFlowCommand.ExitCash(Amount(amount, ccy), issueRef) // It may fail at the beginning, but we don't care.
+            }
+            IssuerEvents.EXIT_ERROR -> {
+                println("Exit error")
+                CashFlowCommand.ExitCash(Amount(currencyMap[ccy]!! * 2, ccy), issueRef)
+            }
+        }
+    }
+
+    val normalMoveGenerator = amountGenerator.combine(partyGenerator, currencyGenerator) { amountIssued, recipient, currency ->
+        CashFlowCommand.PayCash(Amount(amountIssued, currency), recipient)
+    }
+
+    val errorMoveGenerator = partyGenerator.combine(currencyGenerator) { recipient, currency ->
+        CashFlowCommand.PayCash(Amount(currencyMap[currency]!! * 2, currency), recipient)
+    }
+
+    override val moveCashGenerator = Generator.frequency(listOf(
+            0.2 to errorMoveGenerator,
+            0.8 to normalMoveGenerator
+    ))
+
+    override val issuerGenerator = Generator.frequency(listOf(
+            0.3 to errorExitCashGenerator,
+            0.7 to issueCashGenerator
     ))
 }
