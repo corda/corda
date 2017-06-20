@@ -25,8 +25,13 @@ run {
     if (project.hasProperty('loadtest-config')) {
         args project["loadtest-config"]
     }
-    System.getProperties().forEach { k, v ->
+    System.properties.forEach { k, v ->
         if (k.toString().startsWith("loadtest."))
             systemProperty k, v
+    }
+    if (System.properties.getProperty('consoleLogLevel') != null) {
+        logging.captureStandardOutput(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        logging.captureStandardError(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        systemProperty "consoleLogLevel", System.properties.getProperty('consoleLogLevel')
     }
 }
