@@ -10,7 +10,6 @@ import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import org.bouncycastle.util.io.pem.PemReader
-import java.io.ByteArrayInputStream
 import java.io.FileReader
 import java.io.FileWriter
 import java.io.InputStream
@@ -127,22 +126,6 @@ object X509Utilities {
                           nameConstraints: NameConstraints? = null): X509CertificateHolder {
         val window = getCertificateValidityWindow(validityWindow.first, validityWindow.second, issuerCertificate)
         return Crypto.createCertificate(certificateType, issuerCertificate.subject, issuerKeyPair, subject, subjectPublicKey, window, nameConstraints)
-    }
-
-    /**
-     * Build a certificate path from a trusted root certificate to a target certificate. This will always return a path
-     * directly from the target to the root.
-     *
-     * @param trustedRoot trusted root certificate that will be the start of the path.
-     * @param certificates certificates in the path.
-     * @param revocationEnabled whether revocation of certificates in the path should be checked.
-     */
-    fun createCertificatePath(trustedRoot: X509CertificateHolder, vararg certificates: X509CertificateHolder, revocationEnabled: Boolean): CertPath {
-        val certFactory = CertificateFactory.getInstance("X509")
-        val trustedRootX509 = certFactory.generateCertificate(ByteArrayInputStream(trustedRoot.encoded)) as X509Certificate
-        val params = PKIXParameters(setOf(TrustAnchor(trustedRootX509, null)))
-        params.isRevocationEnabled = revocationEnabled
-        return certFactory.generateCertPath(certificates.map { certFactory.generateCertificate(ByteArrayInputStream(it.encoded)) }.toList())
     }
 
     fun validateCertificateChain(trustedRoot: X509CertificateHolder, vararg certificates: Certificate) {

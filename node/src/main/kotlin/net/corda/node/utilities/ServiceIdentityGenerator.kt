@@ -34,9 +34,10 @@ object ServiceIdentityGenerator {
         log.trace { "Generating a group identity \"serviceName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
         val notaryKey = CompositeKey.Builder().addKeys(keyPairs.map { it.public }).build(threshold)
-        val notaryCert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, serviceCa.certificate,
+        val certFactory = CertificateFactory.getInstance("X509")
+        val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
             serviceCa.keyPair, serviceName, notaryKey)
-        val notaryCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, notaryCert, revocationEnabled = false)
+        val notaryCertPath = certFactory.generateCertPath(listOf(notaryCert.cert, serviceCa.certificate.cert))
         val notaryParty = PartyAndCertificate(serviceName, notaryKey, notaryCert, notaryCertPath)
         val notaryPartyBytes = notaryParty.serialize()
         val privateKeyFile = "$serviceId-private-key"

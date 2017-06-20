@@ -69,8 +69,9 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
+import java.security.KeyStore
 import java.security.KeyStoreException
-import java.security.cert.X509Certificate
+import java.security.cert.*
 import java.time.Clock
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -214,7 +215,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val tokenizableServices = makeServices()
+            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val tokenizableServices = makeServices(keyStoreWrapper)
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -437,7 +439,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(): MutableList<Any> {
+    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
+        val keyStore = keyStoreWrapper.keyStore
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -752,20 +755,22 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         // the legal name is actually validated in some way.
 
         // TODO: Integrate with Key management service?
+        val certFactory = CertificateFactory.getInstance("X509")
         val keyStore = KeyStoreWrapper(configuration.nodeKeystore, configuration.keyStorePassword)
         val privateKeyAlias = "$serviceId-private-key"
         val privKeyFile = configuration.baseDirectory / privateKeyAlias
         val pubIdentityFile = configuration.baseDirectory / "$serviceId-public"
         val certificateAndKeyPair = keyStore.certificateAndKeyPair(privateKeyAlias)
         val identityCertPathAndKey: Pair<PartyAndCertificate, KeyPair> = if (certificateAndKeyPair != null) {
+            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             val (cert, keyPair) = certificateAndKeyPair
             // Get keys from keystore.
-            val loadedServiceName = X509CertificateHolder(cert.encoded).subject
+            val loadedServiceName = cert.subject
             if (loadedServiceName != serviceName) {
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity keystore:" +
                         "$serviceName vs $loadedServiceName")
             }
-            val certPath = X509Utilities.createCertificatePath(cert, cert, revocationEnabled = false)
+            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
             Pair(PartyAndCertificate(loadedServiceName, keyPair.public, cert, certPath), keyPair)
         } else if (privKeyFile.exists()) {
             // Get keys from key file.
@@ -784,12 +789,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
             Pair(myIdentity, keyPair)
         } else {
+            val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
             // Create new keys and store in keystore.
             log.info("Identity key not found, generating fresh key!")
             val keyPair: KeyPair = generateKeyPair()
             val cert = X509Utilities.createCertificate(CertificateType.IDENTITY, clientCA.certificate, clientCA.keyPair, serviceName, keyPair.public)
-            val certPath = X509Utilities.createCertificatePath(cert, cert, revocationEnabled = false)
+            val certPath = certFactory.generateCertPath(listOf(cert.cert) + clientCertPath)
             keyStore.save(serviceName, privateKeyAlias, keyPair)
             require(certPath.certificates.isNotEmpty()) { "Certificate path cannot be empty" }
             Pair(PartyAndCertificate(serviceName, keyPair.public, cert, certPath), keyPair)
@@ -814,8 +820,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 }
 
-private class KeyStoreWrapper(private val storePath: Path, private val storePassword: String) {
-    private val keyStore = KeyStoreUtilities.loadKeyStore(storePath, storePassword)
+private class KeyStoreWrapper(val keyStore: KeyStore, val storePath: Path, private val storePassword: String) {
+    constructor(storePath: Path, storePassword: String) : this(KeyStoreUtilities.loadKeyStore(storePath, storePassword), storePath, storePassword)
 
     fun certificateAndKeyPair(alias: String): CertificateAndKeyPair? {
         return if (keyStore.containsAlias(alias)) keyStore.getCertificateAndKeyPair(alias, storePassword) else null
