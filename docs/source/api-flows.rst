@@ -155,7 +155,7 @@ We use the network map to retrieve information about other nodes on the network:
         val allNotaryNodes = networkMap.notaryNodes
         val randomNotaryNode = networkMap.getAnyNotary()
 
-        val alice = networkMap.getNodeByLegalName(X500Name("CN=Alice,O=Alice,L=London,C=UK"))
+        val alice = networkMap.getNodeByLegalName(X500Name("CN=Alice,O=Alice,L=London,C=GB"))
         val bob = networkMap.getNodeByLegalIdentityKey(bobsKey)
 
    .. sourcecode:: java
@@ -166,7 +166,7 @@ We use the network map to retrieve information about other nodes on the network:
         final List<NodeInfo> allNotaryNodes = networkMap.getNotaryNodes();
         final Party randomNotaryNode = networkMap.getAnyNotary(null);
 
-        final NodeInfo alice = networkMap.getNodeByLegalName(new X500Name("CN=Alice,O=Alice,L=London,C=UK"));
+        final NodeInfo alice = networkMap.getNodeByLegalName(new X500Name("CN=Alice,O=Alice,L=London,C=GB"));
         final NodeInfo bob = networkMap.getNodeByLegalIdentityKey(bobsKey);
 
 Communication between parties

@@ -49,7 +49,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             throw IllegalArgumentException("The latency injector is only useful when using manual pumping.")
     }
 
-    val bankLocations = listOf(Pair("London", "UK"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
+    val bankLocations = listOf(Pair("London", "GB"), Pair("Frankfurt", "DE"), Pair("Rome", "IT"))
 
     // This puts together a mock network of SimulatedNodes.
 

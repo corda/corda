@@ -58,15 +58,15 @@ dependencies {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"
     node {
-        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
     }
     node {
-        name "CN=Bank A,O=Bank A,L=London,C=UK"
+        name "CN=Bank A,O=Bank A,L=London,C=GB"
         advertisedServices = []
         p2pPort 10004
         webPort 10005

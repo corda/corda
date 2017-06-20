@@ -15,7 +15,7 @@ import java.security.PublicKey
  * cryptographic public key primitives into a tree structure.
  *
  * For example: Alice has two key pairs (pub1/priv1 and pub2/priv2), and wants to be able to sign transactions with either of them.
- * Her advertised [Party] then has a legal X.500 [name] "CN=Alice Corp,O=Alice Corp,L=London,C=UK" and an [owningKey]
+ * Her advertised [Party] then has a legal X.500 [name] "CN=Alice Corp,O=Alice Corp,L=London,C=GB" and an [owningKey]
  * "pub1 or pub2".
  *
  * [Party] is also used for service identities. E.g. Alice may also be running an interest rate oracle on her Corda node,

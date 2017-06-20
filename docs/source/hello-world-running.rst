@@ -21,9 +21,9 @@ nodes - the Controller, and NodeA, NodeB and NodeC:
 
         task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['build']) {
             directory "./build/nodes"
-            networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+            networkMap "CN=Controller,O=R3,OU=corda,L=London,C=GB"
             node {
-                name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+                name "CN=Controller,O=R3,OU=corda,L=London,C=GB"
                 advertisedServices = ["corda.notary.validating"]
                 p2pPort 10002
                 rpcPort 10003
@@ -31,7 +31,7 @@ nodes - the Controller, and NodeA, NodeB and NodeC:
                 cordapps = []
             }
             node {
-                name "CN=NodeA,O=NodeA,L=London,C=UK"
+                name "CN=NodeA,O=NodeA,L=London,C=GB"
                 advertisedServices = []
                 p2pPort 10005
                 rpcPort 10006
@@ -162,14 +162,14 @@ The vaults of Node A and Node B should both display the following output:
     - state:
         data:
           value: 99
-          sender: "CN=NodeA,O=NodeA,L=London,C=UK"
+          sender: "CN=NodeA,O=NodeA,L=London,C=GB"
           recipient: "CN=NodeB,O=NodeB,L=New York,C=US"
           contract:
             legalContractReference: "559322B95BCF7913E3113962DC3F3CBD71C818C66977721580C045DC41C813A5"
           participants:
-          - "CN=NodeA,O=NodeA,L=London,C=UK"
+          - "CN=NodeA,O=NodeA,L=London,C=GB"
           - "CN=NodeB,O=NodeB,L=New York,C=US"
-        notary: "CN=Controller,O=R3,OU=corda,L=London,C=UK,OU=corda.notary.validating"
+        notary: "CN=Controller,O=R3,OU=corda,L=London,C=GB,OU=corda.notary.validating"
         encumbrance: null
       ref:
         txhash: "656A1BF64D5AEEC6F6C944E287F34EF133336F5FC2C5BFB9A0BFAE25E826125F"
