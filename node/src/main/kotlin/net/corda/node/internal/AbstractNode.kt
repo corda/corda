@@ -23,6 +23,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.debug
 import net.corda.flows.*
 import net.corda.node.services.*
@@ -773,7 +774,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
-            val myIdentity = pubIdentityFile.readAll().deserialize<PartyAndCertificate>()
+            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
             if (myIdentity.name != serviceName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
                         "$serviceName vs ${myIdentity.name}")
@@ -782,7 +783,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
-            Pair(myIdentity, keyPair)
+            val serviceCa = DUMMY_CA
+            // TODO: This doesn't work until we have composite keys in X.509 certificates, so we make up a certificate that nothing checks
+            // val notaryCert = X509Utilities.createCertificate(CertificateType.IDENTITY, serviceCa.certificate,
+            //        serviceCa.keyPair, serviceName, notaryKey)
+            val serviceCert = X509Utilities.createSelfSignedCACertificate(serviceName, generateKeyPair())
+            val serviceCertPath = X509Utilities.createCertificatePath(serviceCa.certificate, serviceCert, revocationEnabled = false)
+            Pair(PartyAndCertificate(myIdentity, serviceCert, serviceCertPath), keyPair)
         } else {
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!
             // Create new keys and store in keystore.

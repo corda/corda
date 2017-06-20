@@ -6,7 +6,6 @@ import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.demorun.util.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
@@ -66,6 +65,6 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
     }
 
     override fun setup(context: CordformContext) {
-        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, DUMMY_CA, advertisedService.type.id, clusterName)
+        ServiceIdentityGenerator.generateToDisk(notaryNames.map { context.baseDirectory(it) }, advertisedService.type.id, clusterName)
     }
 }

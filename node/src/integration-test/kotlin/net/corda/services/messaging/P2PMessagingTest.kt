@@ -64,7 +64,6 @@ class P2PMessagingTest : NodeBasedTest() {
     fun `communicating with a distributed service which the network map node is part of`() {
         ServiceIdentityGenerator.generateToDisk(
                 listOf(DUMMY_MAP.name, SERVICE_2_NAME).map { baseDirectory(it) },
-                DUMMY_CA,
                 RaftValidatingNotaryService.type.id,
                 DISTRIBUTED_SERVICE_NAME)
 

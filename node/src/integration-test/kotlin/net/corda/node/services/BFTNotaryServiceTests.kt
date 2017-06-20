@@ -10,7 +10,6 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
@@ -39,9 +38,8 @@ class BFTNotaryServiceTests : NodeBasedTest() {
         val replicaNames = replicaIds.map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val party = ServiceIdentityGenerator.generateToDisk(
                 replicaNames.map { baseDirectory(it) },
-                DUMMY_CA,
                 serviceType.id,
-                clusterName).party
+                clusterName)
         val advertisedServices = setOf(ServiceInfo(serviceType, clusterName))
         val config = mapOf("notaryClusterAddresses" to replicaIds.map { "localhost:${11000 + it * 10}" })
         return Futures.allAsList(replicaIds.map {
