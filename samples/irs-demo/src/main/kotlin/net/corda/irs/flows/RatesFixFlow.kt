@@ -13,9 +13,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
-import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
-import java.time.Instant
 import java.util.*
 import java.util.function.Predicate
 
@@ -48,7 +46,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
 
     @CordaSerializable
-    data class QueryRequest(val queries: List<FixOf>, val deadline: Instant)
+    data class QueryRequest(val queries: List<FixOf>)
 
     @CordaSerializable
     data class SignRequest(val ftx: FilteredTransaction)
@@ -99,9 +97,8 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
-            val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name.toString(), fixOf.forDay).untilTime!!
             // TODO: add deadline to receive
-            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf), deadline))
+            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf)))
 
             return resp.unwrap {
                 val fix = it.first()

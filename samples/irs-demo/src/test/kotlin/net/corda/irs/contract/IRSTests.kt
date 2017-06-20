@@ -1,4 +1,4 @@
-package net.corda.irs.testing
+package net.corda.irs.contract
 
 import net.corda.contracts.*
 import net.corda.core.contracts.*
@@ -7,7 +7,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.TEST_TX_TIME
-import net.corda.irs.contract.*
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test

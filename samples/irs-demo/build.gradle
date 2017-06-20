@@ -26,8 +26,6 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
 
     // Corda integration dependencies
     compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -35,7 +33,6 @@ dependencies {
     compile project(':core')
     compile project(':finance')
     compile project(':webserver')
-    compile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
@@ -43,6 +40,10 @@ dependencies {
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+
+    testCompile project(':test-utils')
+    testCompile "junit:junit:$junit_version"
+    testCompile "org.assertj:assertj-core:${assertj_version}"
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

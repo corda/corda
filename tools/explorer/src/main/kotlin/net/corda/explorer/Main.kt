@@ -18,7 +18,9 @@ import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
-import tornadofx.*
+import tornadofx.App
+import tornadofx.addStageIcon
+import tornadofx.find
 
 /**
  * Main class for Explorer, you will need Tornado FX to run the explorer.
@@ -123,7 +125,7 @@ class Main : App(MainView::class) {
  * On each iteration, the issuers will execute a Cash Issue or Cash Exit flow (at a 9:1 ratio) and a random party will execute a move of cash to another random party.
  */
 fun main(args: Array<String>) {
-    val parser = OptionParser("S")
+    val parser = OptionParser("SF")
     val options = parser.parse(*args)
     ExplorerSimulation(options)
 }

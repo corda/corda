@@ -7,6 +7,7 @@ apply plugin: 'us.kirchmeier.capsule'
 
 dependencies {
     compile project(':samples:irs-demo')
+    compile project(':test-utils')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "junit:junit:$junit_version"
@@ -16,7 +17,6 @@ dependencies {
     compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':finance')
-    testCompile project(':test-utils')
 
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"

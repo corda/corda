@@ -4,7 +4,6 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.getOrThrow
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
 import net.corda.core.utilities.DUMMY_BANK_A
@@ -12,20 +11,17 @@ import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
-import net.corda.irs.utilities.postJson
-import net.corda.irs.utilities.putJson
 import net.corda.irs.utilities.uploadFile
-import net.corda.testing.driver.driver
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.IntegrationTestCategory
+import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import rx.Observable
-import rx.observables.BlockingObservable
 import java.net.URL
 import java.time.Duration
 import java.time.LocalDate
@@ -56,7 +52,7 @@ class IRSDemoTest : IntegrationTestCategory {
 
             println("All webservers started")
 
-            val (controllerApi, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
+            val (_, nodeAApi, nodeBApi) = listOf(controller, nodeA, nodeB).zip(listOf(controllerAddr, nodeAAddr, nodeBAddr)).map {
                 val mapper = net.corda.jackson.JacksonSupport.createDefaultMapper(it.first.rpc)
                 HttpApi.fromHostAndPort(it.second, "api/irs", mapper = mapper)
             }
@@ -108,7 +104,7 @@ class IRSDemoTest : IntegrationTestCategory {
     private fun runUploadRates(host: HostAndPort) {
         println("Running upload rates against $host")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
-        val url = URL("http://$host/upload/interest-rates")
+        val url = URL("http://$host/api/irs/fixes")
         assertThat(uploadFile(url, fileContents)).isTrue()
     }
 

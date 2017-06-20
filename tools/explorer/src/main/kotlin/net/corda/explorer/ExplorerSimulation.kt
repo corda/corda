@@ -1,6 +1,7 @@
 package net.corda.explorer
 
 import joptsimple.OptionSet
+import net.corda.client.mock.ErrorFlowsEventGenerator
 import net.corda.client.mock.EventGenerator
 import net.corda.client.mock.Generator
 import net.corda.client.mock.pickOne
@@ -99,6 +100,7 @@ class ExplorerSimulation(val options: OptionSet) {
 
             when {
                 options.has("S") -> startNormalSimulation()
+                options.has("F") -> startErrorFlowsSimulation()
             }
 
             waitForAllNodesToFinish()
@@ -185,6 +187,19 @@ class ExplorerSimulation(val options: OptionSet) {
                 }
             }
         }
+        startSimulation(eventGenerator, maxIterations)
+        onEnd()
+    }
+
+    private fun startErrorFlowsSimulation() {
+        println("Running flows with errors simulation mode ...")
+        setUpRPC()
+        val eventGenerator = ErrorFlowsEventGenerator(
+                parties = parties.map { it.first },
+                notary = notaryNode.nodeInfo.notaryIdentity,
+                currencies = listOf(GBP, USD)
+        )
+        val maxIterations = 10_000
         startSimulation(eventGenerator, maxIterations)
         onEnd()
     }

@@ -11,7 +11,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.node.utilities.TestClock
-import net.corda.testing.node.MockNetworkMapCache
 import java.time.LocalDate
 
 /**
@@ -19,8 +18,6 @@ import java.time.LocalDate
  */
 object UpdateBusinessDayFlow {
 
-    // This is not really a HandshakeMessage but needs to be so that the send uses the default session ID. This will
-    // resolve itself when the flow session stuff is done.
     @CordaSerializable
     data class UpdateBusinessDayMessage(val date: LocalDate)
 
@@ -31,7 +28,6 @@ object UpdateBusinessDayFlow {
             (serviceHub.clock as TestClock).updateDate(message.date)
         }
     }
-
 
     @InitiatingFlow
     @StartableByRPC
@@ -65,12 +61,7 @@ object UpdateBusinessDayFlow {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo) {
-            if (recipient.address is MockNetworkMapCache.MockAddress) {
-                // Ignore
-            } else {
-                send(recipient.legalIdentity, UpdateBusinessDayMessage(date))
-            }
+            send(recipient.legalIdentity, UpdateBusinessDayMessage(date))
         }
     }
-
 }
