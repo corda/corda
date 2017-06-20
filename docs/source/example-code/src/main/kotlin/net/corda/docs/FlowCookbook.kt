@@ -10,18 +10,22 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
 import net.corda.core.utilities.ProgressTracker.Step
 import net.corda.flows.CollectSignaturesFlow
 import net.corda.flows.FinalityFlow
+import net.corda.flows.ResolveTransactionsFlow
+import net.corda.flows.SignTransactionFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
 object MyFlowPair {
-    // ``InitiatorFlow`` is our first flow.
+    // ``InitiatorFlow`` is our first flow, and will communicate with
+    // ``ResponderFlow``, below.
     // We mark ``InitiatorFlow`` as an ``InitiatingFlow``, allowing it to be
     // started directly by the node.
     @InitiatingFlow
@@ -37,7 +41,9 @@ object MyFlowPair {
         ---------------------------------**/
         companion object {
             object ID_OTHER_NODES : Step("Identifying other nodes on the network.")
-            object TX_COMPONENTS : Step("Gathering a transaction's components.")
+            object SENDING_AND_RECEIVING_DATA : Step("Sending data between parties.")
+            object EXTRACTING_VAULT_STATES : Step("Extracting states from the vault.")
+            object OTHER_TX_COMPONENTS : Step("Gathering a transaction's other components.")
             object TX_BUILDING : Step("Building a transaction.")
             object TX_SIGNING : Step("Signing a transaction.")
             object TX_VERIFICATION : Step("Verifying a transaction.")
@@ -50,7 +56,9 @@ object MyFlowPair {
 
             fun tracker() = ProgressTracker(
                     ID_OTHER_NODES,
-                    TX_COMPONENTS,
+                    SENDING_AND_RECEIVING_DATA,
+                    EXTRACTING_VAULT_STATES,
+                    OTHER_TX_COMPONENTS,
                     TX_BUILDING,
                     TX_SIGNING,
                     TX_VERIFICATION,
@@ -67,6 +75,7 @@ object MyFlowPair {
              * IDENTIFYING OTHER NODES *
             --------------------------**/
             progressTracker.currentStep = ID_OTHER_NODES
+
             // A transaction generally needs a notary:
             //   - To prevent double-spends if the transaction has inputs
             //   - To serve as a timestamping authority if the transaction has a time-window
@@ -81,29 +90,75 @@ object MyFlowPair {
             val keyedCounterparty = serviceHub.networkMapCache.getNodeByLegalIdentityKey(DUMMY_PUBKEY_1)
             val firstCounterparty = serviceHub.networkMapCache.partyNodes[0]
 
-            /**-----------------------------------
-             * GATHERING TRANSACTION COMPONENTS *
-            -----------------------------------**/
-            progressTracker.currentStep = TX_COMPONENTS
-            // Output states are constructed from scratch.
-            val DUMMY_OUTPUT = DummyState()
+            /**-----------------------------
+             * SENDING AND RECEIVING DATA *
+            -----------------------------**/
+            progressTracker.currentStep = SENDING_AND_RECEIVING_DATA
 
-            // Commands are the pairing of a ``CommandData`` type, and the list of signers.
-            val DUMMY_COMMAND = Command(DummyContract.Commands.Create(), listOf(DUMMY_PUBKEY_1))
+            // We can send arbitrary data to a counterparty.
+            // If this is the first ``send``, the counterparty will either:
+            // 1. Ignore the message if they are not registered to respond
+            //    to messages from this flow.
+            // 2. Start the flow they have registered to respond to this flow,
+            //    and run the flow until the first call to ``receive``, at
+            //    which point they process the message.
+            // In other words, we are assuming that the counterparty is
+            // registered to respond to this flow, and has a corresponding
+            // ``receive`` call.
+            send(DUMMY_BANK_A, Any())
+
+            // We can wait to receive arbitrary data of a specific type from a
+            // counterparty. Again, this implies a corresponding ``send`` call
+            // in the counterparty's flow.
+            val data1: UntrustworthyData<Any> = receive<Any>(DUMMY_BANK_B)
+            // We receive the data wrapped in an ``UntrustworthyData``
+            // instance, which we must unwrap using a lambda.
+            val any1: Any = data1.unwrap { data ->
+                // Perform checking on the object received.
+                // T O D O: Check the received object.
+                // Return the object.
+                data
+            }
+
+            // We can also send data to a counterparty and wait to receive
+            // data of a specific type back.
+            val data2: UntrustworthyData<Any> = sendAndReceive<Any>(DUMMY_BANK_C, Any())
+            val any2: Any = data2.unwrap { data ->
+                // Perform checking on the object received.
+                // T O D O: Check the received object.
+                // Return the object.
+                data
+            }
+
+            /**-----------------------------------
+             * EXTRACTING STATES FROM THE VAULT *
+            -----------------------------------**/
+            progressTracker.currentStep = EXTRACTING_VAULT_STATES
+
+            // TODO: Retrieving from the vault
 
             // Input states are identified using ``StateRef`` instances,
             // which pair the hash of the transaction that generated the state
             // with the state's index in the outputs of that transaction.
             val DUMMY_STATE_REF = StateRef(SecureHash.sha256("DummyTransactionHash"), 0)
             // A ``StateAndRef`` pairs a ``StateRef`` with the state it points to.
-            val DUMMY_STATE_AND_REF = StateAndRef(TransactionState(DummyState(), DUMMY_NOTARY), DUMMY_STATE_REF)
+            val DUMMY_STATE_AND_REF = serviceHub.toStateAndRef<DummyState>(DUMMY_STATE_REF)
 
-            // TODO: Getting stuff from the vault
+            /**-----------------------------------------
+             * GATHERING OTHER TRANSACTION COMPONENTS *
+            -----------------------------------------**/
+            progressTracker.currentStep = OTHER_TX_COMPONENTS
+
+            // Output states are constructed from scratch.
+            val DUMMY_OUTPUT = DummyState()
+
+            // Commands pair a ``CommandData`` type with a list of signers.
+            val DUMMY_COMMAND = Command(DummyContract.Commands.Create(), listOf(DUMMY_PUBKEY_1))
 
             // Attachments are identified by their hash.
+            // The attachment with the corresponding hash must have been
+            // uploaded ahead of time via the node's RPC interface.
             val DUMMY_ATTACHMENT = SecureHash.sha256("DummyAttachment")
-
-            // TODO: Uploading attachments
 
             // Timewindows can have a start and end time, or be open at either end.
             val DUMMY_TIME_WINDOW = TimeWindow.between(Instant.MIN, Instant.MAX)
@@ -114,6 +169,7 @@ object MyFlowPair {
              * TRANSACTION BUILDING *
             -----------------------**/
             progressTracker.currentStep = TX_BUILDING
+
             // There are two types of transaction (notary-change and general),
             // and therefore two types of transaction builder:
             val notaryChangeTxBuilder = TransactionBuilder(NotaryChange, DUMMY_NOTARY)
@@ -140,23 +196,34 @@ object MyFlowPair {
              * TRANSACTION SIGNING *
             ----------------------**/
             progressTracker.currentStep = TX_SIGNING
+
             // We finalise the transaction by signing it,
             // converting it into a ``SignedTransaction``.
-            val partSignedTx = serviceHub.signInitialTransaction(regTxBuilder)
+            val onceSignedTx = serviceHub.signInitialTransaction(regTxBuilder)
+
+            // Parties can then add additional signatures as well.
+            val twiceSignedTx = serviceHub.addSignature(onceSignedTx, DUMMY_PUBKEY_1)
 
             /**---------------------------
              * TRANSACTION VERIFICATION *
             ---------------------------**/
             progressTracker.currentStep = TX_VERIFICATION
-            // We can verify a transaction using the following one-liner:
-            partSignedTx.tx.toLedgerTransaction(serviceHub).verify()
+
+            // Verifying a transaction will also verify every transaction in
+            // the transaction's dependency chain. So if a counterparty sends
+            // us a transaction, we need to download all of its dependencies
+            // using``ResolveTransactionsFlow`` before verifying it.
+            subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
+
+            // We verify a transaction using the following one-liner:
+            twiceSignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
             // Let's break that down...
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
             // with signatures over this ``WireTransaction``.
             // We don't verify a signed transaction per se, but rather the ``WireTransaction`` it contains.
-            val wireTx = partSignedTx.tx
+            val wireTx = twiceSignedTx.tx
             // Before we can verify the transaction, we have to resolve its inputs and attachments
             // into actual objects, rather than just references.
             // We achieve this by converting the ``WireTransaction`` into a ``LedgerTransaction``.
@@ -164,45 +231,28 @@ object MyFlowPair {
             // We can now verify the transaction.
             ledgerTx.verify()
 
+            // We'll often want to perform our own additional verification
+            // too. This can be whatever we see fit.
+            val outputState = wireTx.outputs.single().data as DummyState
+            assert(outputState.magicNumber == 777)
+
             /**-----------------------
              * GATHERING SIGNATURES *
             -----------------------**/
             progressTracker.currentStep = SIGS_GATHERING
-            // Given a signed transaction, we can automatically gather the signatures of all
-            // the participants of all the transaction's states who haven't yet signed.
+
+            // The list of parties who need to sign a transaction is dictated
+            // by the transaction's commands. Once we've signed a transaction
+            // ourselves, we can automatically gather the signatures of the
+            // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
-            val fullySignedTx = subFlow(CollectSignaturesFlow(partSignedTx, SIGS_GATHERING.childProgressTracker()))
-
-            // If ``CollectSignaturesFlow`` does not meet our requirements,
-            // we can also send and receive arbitrary data.
-
-            // We can send arbitrary data to a counterparty.
-            send(DUMMY_BANK_A, Any())
-            // We can wait to receive arbitrary data of a specific type from a
-            // counterparty.
-            val data1: UntrustworthyData<Any> = receive<Any>(DUMMY_BANK_B)
-            // We receive the data wrapped in an ``UntrustworthyData``
-            // instance, which we must unwrap using a lambda.
-            val any1: Any = data1.unwrap { data ->
-                // Perform checking on the object received.
-                // T O D O: Check the received object.
-                // Return the object.
-                data
-            }
-            // We can also send data to a counterparty and wait to receive
-            // data of a specific type back.
-            val data2: UntrustworthyData<Any> = sendAndReceive<Any>(DUMMY_BANK_C, Any())
-            val any2: Any = data2.unwrap { data ->
-                // Perform checking on the object received.
-                // T O D O: Check the received object.
-                // Return the object.
-                data
-            }
+            val fullySignedTx = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
 
             /**-----------------------------
              * FINALISING THE TRANSACTION *
             -----------------------------**/
             progressTracker.currentStep = FINALISATION
+
             // We notarise the transaction and get it recorded in the vault of
             // all the participants of all the transaction's states.
             val notarisedTx1 = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()))
@@ -213,15 +263,60 @@ object MyFlowPair {
         }
     }
 
-    // ``ResponderFlow`` is our first flow.
+    // ``ResponderFlow`` is our second flow, and will communicate with
+    // ``InitiatorFlow``.
     // We mark ``ResponderFlow`` as an ``InitiatedByFlow``, meaning that it
     // can only be started in response to a message from its initiating flow.
     // That's ``InitiatorFlow`` in this case.
+    // Each node also has several flow pairs registered by default - see
+    // ``AbstractNode.installCoreFlows``.
     @InitiatedBy(InitiatorFlow::class)
     class ResponderFlow(val otherParty: Party) : FlowLogic<Unit>() {
+
+        companion object {
+            object SIGNING : Step("Responding to CollectSignaturesFlow.")
+            object FINALISATION : Step("Finalising a transaction.")
+
+            fun tracker() = ProgressTracker(
+                    SIGNING,
+                    FINALISATION
+            )
+        }
+
+        override val progressTracker = tracker()
+
         @Suspendable
         override fun call() {
-            // TODO: Fill this out
+            // The ``ResponderFlow` has all the same APIs available. It looks
+            // up network information, sends and receives data, and constructs
+            // transactions in exactly the same way.
+
+            /**----------------------------------------
+             * RESPONDING TO COLLECT_SIGNATURES_FLOW *
+            ----------------------------------------**/
+            progressTracker.currentStep = SIGNING
+
+            // The responder will often need to respond to a call to
+            // ``CollectSignaturesFlow``. It does so my invoking its own
+            // ``SignTransactionFlow`` subclass.
+            val signTransactionFlow = object : SignTransactionFlow(otherParty) {
+                override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                    // Any additional checking we see fit...
+                    val outputState = stx.tx.outputs.single().data as DummyState
+                    assert(outputState.magicNumber == 777)
+                }
+            }
+
+            subFlow(signTransactionFlow)
+
+            /**-----------------------------
+             * FINALISING THE TRANSACTION *
+            -----------------------------**/
+            progressTracker.currentStep = FINALISATION
+
+            // Nothing to do here! As long as some other party calls
+            // ``FinalityFlow``, the recording of the transaction on our node
+            // we be handled automatically.
         }
     }
 }
