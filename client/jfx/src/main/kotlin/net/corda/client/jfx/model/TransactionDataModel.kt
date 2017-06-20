@@ -1,7 +1,6 @@
 package net.corda.client.jfx.model
 
 import javafx.beans.value.ObservableValue
-import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import net.corda.client.jfx.utils.*
 import net.corda.core.contracts.ContractState
@@ -10,11 +9,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.SignedTransaction
 import org.fxmisc.easybind.EasyBind
-
-data class GatheredTransactionData(
-        val transaction: PartiallyResolvedTransaction,
-        val stateMachines: ObservableList<out StateMachineData>
-)
 
 /**
  * [PartiallyResolvedTransaction] holds a [SignedTransaction] that has zero or more inputs resolved. The intent is
@@ -59,7 +53,6 @@ data class PartiallyResolvedTransaction(
  */
 class TransactionDataModel {
     private val transactions by observable(NodeMonitorModel::transactions)
-
     private val collectedTransactions = transactions.recordInSequence()
     private val transactionMap = collectedTransactions.associateBy(SignedTransaction::id)
 

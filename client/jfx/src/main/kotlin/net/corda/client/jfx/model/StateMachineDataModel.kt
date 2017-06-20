@@ -10,20 +10,8 @@ import net.corda.client.jfx.utils.recordAsAssociation
 import net.corda.core.ErrorOr
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
 import org.fxmisc.easybind.EasyBind
-import rx.Observable
-
-data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
-    companion object {
-        fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
-            return stateMachine.progressTrackerStepAndUpdates?.let { (current, future) ->
-                future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
-            }
-        }
-    }
-}
 
 data class ProgressStatus(val status: String?)
 

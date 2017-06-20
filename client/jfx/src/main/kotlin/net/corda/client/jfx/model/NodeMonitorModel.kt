@@ -4,7 +4,9 @@ import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleObjectProperty
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineInfo
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.StateMachineTransactionMapping
@@ -13,6 +15,16 @@ import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
+
+data class ProgressTrackingEvent(val stateMachineId: StateMachineRunId, val message: String) {
+    companion object {
+        fun createStreamFromStateMachineInfo(stateMachine: StateMachineInfo): Observable<ProgressTrackingEvent>? {
+            return stateMachine.progressTrackerStepAndUpdates?.let { (current, future) ->
+                future.map { ProgressTrackingEvent(stateMachine.id, it) }.startWith(ProgressTrackingEvent(stateMachine.id, current))
+            }
+        }
+    }
+}
 
 /**
  * This model exposes raw event streams to and from the node.
