@@ -31,7 +31,7 @@ dependencies {
     compile project(':finance')
 
     // Corda Plugins: dependent flows and services
-    compile project(':samples:bank-of-corda-demo')
+    cordapp project(':samples:bank-of-corda-demo')
 
     testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"

@@ -25,9 +25,6 @@ dependencies {
     compile project(':client:rpc')
     compile project(':test-utils')
     compile project(':cordform-common')
-
-    // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 }
 
 idea {

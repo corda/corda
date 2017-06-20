@@ -51,14 +51,17 @@ class Cordformation implements Plugin<Project> {
                 [group: 'co.paralleluniverse', name: 'quasar-core']
         ]
         // The direct dependencies of this project
-        def directDeps = project.configurations.runtime.allDependencies
+        def cordappDeps = project.configurations.cordapp.allDependencies
+        def directDeps = project.configurations.runtime.allDependencies - cordappDeps
         // We want to filter out anything Corda related or provided by Corda, like kotlin-stdlib and quasar
         def filteredDeps = directDeps.findAll { !(it.group.contains("net.corda") && coreCordaNames.contains(it.name)) }
                 .findAll { excludes.collect { exclude -> exclude.group == it.group && exclude.name == it.name }.findAll { it }.isEmpty() }
         // net.corda may be a core dependency which shouldn't be included in this cordapp so give a warning
         filteredDeps.each {
             if(it.group.contains('net.corda')) {
-                project.logger.warn("Including a dependency with a net.corda group")
+                project.logger.warn("Including a dependency with a net.corda group: $it")
+            } else {
+                project.logger.trace("Including dependency: $it")
             }
         }
         return filteredDeps.collect { project.configurations.runtime.files it }.flatten().toSet()
