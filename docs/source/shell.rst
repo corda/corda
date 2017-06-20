@@ -68,7 +68,7 @@ Yaml (yet another markup language) is a simple JSON-like way to describe object 
 that make it helpful for our use case, like a lightweight syntax and support for "bare words" which mean you can
 often skip the quotes around strings. Here is an example of how this syntax is used:
 
-``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "CN=Bank A,O=Bank A,L=London,C=UK", notary: "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"``
+``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "CN=Bank A,O=Bank A,L=London,C=GB", notary: "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"``
 
 This invokes a constructor of a flow with the following prototype in the code:
 

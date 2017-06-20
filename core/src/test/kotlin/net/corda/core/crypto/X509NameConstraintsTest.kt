@@ -103,7 +103,7 @@ class X509NameConstraintsTest {
         }
 
         assertTrue {
-            val (keystore, trustStore) = makeKeyStores(X500Name("CN=Bank A TLS, UID=, E=me@email.com, C=UK"), nameConstraints)
+            val (keystore, trustStore) = makeKeyStores(X500Name("CN=Bank A TLS, UID=, E=me@email.com, C=GB"), nameConstraints)
             val params = PKIXParameters(trustStore)
             params.isRevocationEnabled = false
             val certPath = certFactory.generateCertPath(keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).asList())
@@ -112,7 +112,7 @@ class X509NameConstraintsTest {
         }
 
         assertTrue {
-            val (keystore, trustStore) = makeKeyStores(X500Name("O=Bank A, UID=, E=me@email.com, C=UK"), nameConstraints)
+            val (keystore, trustStore) = makeKeyStores(X500Name("O=Bank A, UID=, E=me@email.com, C=GB"), nameConstraints)
             val params = PKIXParameters(trustStore)
             params.isRevocationEnabled = false
             val certPath = certFactory.generateCertPath(keystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS).asList())

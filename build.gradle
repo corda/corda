@@ -219,15 +219,15 @@ tasks.withType(Test) {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+    networkMap "CN=Controller,O=R3,OU=corda,L=London,C=GB"
     node {
-        name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Controller,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
     }
     node {
-        name "CN=Bank A,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Bank A,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = []
         p2pPort 10012
         rpcPort 10013
@@ -235,7 +235,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = []
     }
     node {
-        name "CN=Bank B,O=R3,OU=corda,L=London,C=UK"
+        name "CN=Bank B,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = []
         p2pPort 10007
         rpcPort 10008

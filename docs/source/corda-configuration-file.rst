@@ -34,7 +34,7 @@ NetworkMapService plus Simple Notary configuration file.
 
 .. parsed-literal::
 
-    myLegalName : "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
+    myLegalName : "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"
     keyStorePassword : "cordacadevpass"
     trustStorePassword : "trustpass"
     p2pAddress : "localhost:12345"

@@ -78,7 +78,7 @@ object X509Utilities {
         nameBuilder.addRDN(BCStyle.O, "R3")
         nameBuilder.addRDN(BCStyle.OU, "corda")
         nameBuilder.addRDN(BCStyle.L, "London")
-        nameBuilder.addRDN(BCStyle.C, "UK")
+        nameBuilder.addRDN(BCStyle.C, "GB")
         return nameBuilder.build()
     }
 

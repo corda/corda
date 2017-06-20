@@ -249,7 +249,7 @@ class NodeConfigTest {
     }
 
     private fun createConfig(
-            legalName: X500Name = X500Name("CN=Unknown,O=R3,OU=corda,L=Nowhere,C=UK"),
+            legalName: X500Name = X500Name("CN=Unknown,O=R3,OU=corda,L=Nowhere,C=GB"),
             p2pPort: Int = -1,
             rpcPort: Int = -1,
             webPort: Int = -1,
