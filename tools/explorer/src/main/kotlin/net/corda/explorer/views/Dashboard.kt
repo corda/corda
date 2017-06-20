@@ -1,6 +1,7 @@
 package net.corda.explorer.views
 
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView
 import javafx.beans.binding.Bindings
 import javafx.collections.ObservableList
 import javafx.scene.Node
@@ -46,6 +47,7 @@ class Dashboard : CordaView() {
                         selectedView.value = view
                     }
                 }
+                it.icon?.let { graphic = FontAwesomeIconView(it).apply { glyphSize = 30.0 } }
             }
         }
     }

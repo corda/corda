@@ -195,11 +195,12 @@ fun identicon(secureHash: SecureHash, size: Double): ImageView {
     return ImageView(IdenticonRenderer.getIdenticon(secureHash)).apply {
         isPreserveRatio = true
         fitWidth = size
+        styleClass += "identicon"
     }
 }
 
-fun identiconToolTip(secureHash: SecureHash): Tooltip {
-    return Tooltip(Splitter.fixedLength(16).split("$secureHash").joinToString("\n")).apply {
+fun identiconToolTip(secureHash: SecureHash, description: String? = null): Tooltip {
+    return Tooltip(Splitter.fixedLength(16).split("${description ?: secureHash}").joinToString("\n")).apply {
         contentDisplay = ContentDisplay.TOP
         textAlignment = TextAlignment.CENTER
         graphic = identicon(secureHash, 90.0)

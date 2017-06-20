@@ -1,12 +1,17 @@
 package net.corda.node.services.transactions
 
+import bftsmart.communication.ServerCommunicationSystem
+import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
+import bftsmart.communication.client.netty.NettyClientServerSession
 import bftsmart.tom.MessageContext
 import bftsmart.tom.ServiceProxy
 import bftsmart.tom.ServiceReplica
+import bftsmart.tom.core.TOMLayer
 import bftsmart.tom.core.messages.TOMMessage
 import bftsmart.tom.server.defaultservices.DefaultRecoverable
 import bftsmart.tom.server.defaultservices.DefaultReplier
 import bftsmart.tom.util.Extractor
+import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
@@ -20,6 +25,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.toTypedArray
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
@@ -28,7 +34,7 @@ import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
-import net.corda.node.services.transactions.BFTSMaRt.Server
+import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.JDBCHashMap
 import net.corda.node.utilities.transaction
 import org.jetbrains.exposed.sql.Database
@@ -37,10 +43,9 @@ import java.util.*
 
 /**
  * Implements a replicated transaction commit log based on the [BFT-SMaRt](https://github.com/bft-smart/library)
- * consensus algorithm. Every replica in the cluster is running a [Server] maintaining the state, and a[Client] is used
- * to to relay state modification requests to all [Server]s.
+ * consensus algorithm. Every replica in the cluster is running a [Replica] maintaining the state, and a [Client] is used
+ * to relay state modification requests to all [Replica]s.
  */
-// TODO: Write bft-smart host config file based on Corda node configuration.
 // TODO: Define and document the configuration of the bft-smart cluster.
 // TODO: Potentially update the bft-smart API for our use case or rebuild client and server from lower level building
 //       blocks bft-smart provides.
@@ -49,18 +54,18 @@ import java.util.*
 //       consensus about  membership changes). Nodes that join the cluster for the first time or re-join can go through
 //       a "recovering" state and request missing data from their peers.
 object BFTSMaRt {
-    /** Sent from [Client] to [Server]. */
+    /** Sent from [Client] to [Replica]. */
     @CordaSerializable
     data class CommitRequest(val tx: Any, val callerIdentity: Party)
 
-    /** Sent from [Server] to [Client]. */
+    /** Sent from [Replica] to [Client]. */
     @CordaSerializable
     sealed class ReplicaResponse {
         data class Error(val error: NotaryError) : ReplicaResponse()
         data class Signature(val txSignature: DigitalSignature) : ReplicaResponse()
     }
 
-    /** An aggregate response from all replica ([Server]) replies sent from [Client] back to the calling application. */
+    /** An aggregate response from all replica ([Replica]) replies sent from [Client] back to the calling application. */
     @CordaSerializable
     sealed class ClusterResponse {
         data class Error(val error: NotaryError) : ClusterResponse()
@@ -68,15 +73,26 @@ object BFTSMaRt {
     }
 
     class Client(config: BFTSMaRtConfig, private val clientId: Int) : SingletonSerializeAsToken() {
-        private val configHandle = config.handle()
-
         companion object {
             private val log = loggerFor<Client>()
         }
 
         /** A proxy for communicating with the BFT cluster */
-        private val proxy: ServiceProxy by lazy {
-            configHandle.use { buildProxy(it.path) }
+        private val proxy = ServiceProxy(clientId, config.path.toString(), buildResponseComparator(), buildExtractor())
+        private val sessionTable = (proxy.communicationSystem as NettyClientServerCommunicationSystemClientSide).declaredField<Map<Int, NettyClientServerSession>>("sessionTable").value
+
+        fun dispose() {
+            proxy.close() // XXX: Does this do enough?
+        }
+
+        private fun awaitClientConnectionToCluster() {
+            // TODO: Hopefully we only need to wait for the client's initial connection to the cluster, and this method can be moved to some startup code.
+            while (true) {
+                val inactive = sessionTable.entries.mapNotNull { if (it.value.channel.isActive) null else it.key }
+                if (inactive.isEmpty()) break
+                log.info("Client-replica channels not yet active: $clientId to $inactive")
+                Thread.sleep((inactive.size * 100).toLong())
+            }
         }
 
         /**
@@ -85,16 +101,10 @@ object BFTSMaRt {
          */
         fun commitTransaction(transaction: Any, otherSide: Party): ClusterResponse {
             require(transaction is FilteredTransaction || transaction is SignedTransaction) { "Unsupported transaction type: ${transaction.javaClass.name}" }
-            val request = CommitRequest(transaction, otherSide)
-            val responseBytes = proxy.invokeOrdered(request.serialize().bytes)
-            val response = responseBytes.deserialize<ClusterResponse>()
-            return response
-        }
-
-        private fun buildProxy(configHome: Path): ServiceProxy {
-            val comparator = buildResponseComparator()
-            val extractor = buildExtractor()
-            return ServiceProxy(clientId, configHome.toString(), comparator, extractor)
+            awaitClientConnectionToCluster()
+            val requestBytes = CommitRequest(transaction, otherSide).serialize().bytes
+            val responseBytes = proxy.invokeOrdered(requestBytes)
+            return responseBytes.deserialize<ClusterResponse>()
         }
 
         /** A comparator to check if replies from two replicas are the same. */
@@ -136,29 +146,46 @@ object BFTSMaRt {
         }
     }
 
+    /** ServiceReplica doesn't have any kind of shutdown method, so we add one in this subclass. */
+    private class CordaServiceReplica(replicaId: Int, configHome: Path, owner: DefaultRecoverable) : ServiceReplica(replicaId, configHome.toString(), owner, owner, null, DefaultReplier()) {
+        private val tomLayerField = declaredField<TOMLayer>(ServiceReplica::class, "tomLayer")
+        private val csField = declaredField<ServerCommunicationSystem>(ServiceReplica::class, "cs")
+        fun dispose() {
+            // Half of what restart does:
+            val tomLayer = tomLayerField.value
+            tomLayer.shutdown() // Non-blocking.
+            val cs = csField.value
+            cs.join()
+            cs.serversConn.join()
+            tomLayer.join()
+            tomLayer.deliveryThread.join()
+            // TODO: At the cluster level, join all Sender/Receiver threads.
+        }
+    }
+
     /**
      * Maintains the commit log and executes commit commands received from the [Client].
      *
      * The validation logic can be specified by implementing the [executeCommand] method.
      */
-    @Suppress("LeakingThis")
-    abstract class Server(configHome: Path,
-                          val replicaId: Int,
-                          val db: Database,
-                          tableName: String,
-                          val services: ServiceHubInternal,
-                          val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
+    abstract class Replica(config: BFTSMaRtConfig,
+                           replicaId: Int,
+                           private val db: Database,
+                           tableName: String,
+                           private val services: ServiceHubInternal,
+                           private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
         companion object {
-            private val log = loggerFor<Server>()
+            private val log = loggerFor<Replica>()
         }
 
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        val commitLog = db.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        private val commitLog = db.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        @Suppress("LeakingThis")
+        private val replica = CordaServiceReplica(replicaId, config.path, this)
 
-        init {
-            // TODO: Looks like this statement is blocking. Investigate the bft-smart node startup.
-            ServiceReplica(replicaId, configHome.toString(), this, this, null, DefaultReplier())
+        fun dispose() {
+            replica.dispose()
         }
 
         override fun appExecuteUnordered(command: ByteArray, msgCtx: MessageContext): ByteArray? {
@@ -166,10 +193,7 @@ object BFTSMaRt {
         }
 
         override fun appExecuteBatch(command: Array<ByteArray>, mcs: Array<MessageContext>): Array<ByteArray?> {
-            val replies = command.zip(mcs) { c, _ ->
-                executeCommand(c)
-            }
-            return replies.toTypedArray()
+            return Arrays.stream(command).map(this::executeCommand).toTypedArray()
         }
 
         /**

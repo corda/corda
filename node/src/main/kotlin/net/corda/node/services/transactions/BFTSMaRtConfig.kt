@@ -12,27 +12,27 @@ import java.nio.file.Files
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
+class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boolean = false) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 
     init {
-        val claimedPorts = mutableSetOf<Int>()
-        replicaAddresses.map { it.port }.forEach { base ->
+        val claimedPorts = mutableSetOf<HostAndPort>()
+        val n = replicaAddresses.size
+        (0 until n).forEach { replicaId ->
             // Each replica claims the configured port and the next one:
-            (0..1).map { base + it }.forEach { port ->
+            replicaPorts(replicaId).forEach { port ->
                 claimedPorts.add(port) || throw IllegalArgumentException(portIsClaimedFormat.format(port, claimedPorts))
             }
         }
         configWriter("hosts.config") {
             replicaAddresses.forEachIndexed { index, address ->
                 // The documentation strongly recommends IP addresses:
-                println("${index} ${InetAddress.getByName(address.host).hostAddress} ${address.port}")
+                println("$index ${InetAddress.getByName(address.host).hostAddress} ${address.port}")
             }
         }
-        val n = replicaAddresses.size
-        val systemConfig = String.format(javaClass.getResource("system.config.printf").readText(), n, maxFaultyReplicas(n))
+        val systemConfig = String.format(javaClass.getResource("system.config.printf").readText(), n, maxFaultyReplicas(n), if (debug) 1 else 0, (0 until n).joinToString(","))
         configWriter("system.config") {
             print(systemConfig)
         }
@@ -45,6 +45,11 @@ class BFTSMaRtConfig(replicaAddresses: List<HostAndPort>) : PathManager<BFTSMaRt
                 it.run(block)
             }
         }
+    }
+
+    private fun replicaPorts(replicaId: Int): List<HostAndPort> {
+        val base = replicaAddresses[replicaId]
+        return (0..1).map { HostAndPort.fromParts(base.host, base.port + it) }
     }
 }
 

@@ -54,7 +54,7 @@ class Network : CordaView() {
     private val mapOriginalHeight = 2000.0
 
     // UI node observables, declare here to create a strong ref to prevent GC, which removes listener from observables.
-    private var centralLabel: Label? = null
+    private var myLabel: Label? = null
     private val notaryComponents = notaries.map { it.render() }
     private val notaryButtons = notaryComponents.map { it.button }
     private val peerComponents = peers.map { it.render() }
@@ -97,7 +97,6 @@ class Network : CordaView() {
                 }
             }
             setOnMouseClicked {
-                centralLabel = mapLabel
                 mapScrollPane.centerLabel(mapLabel)
             }
         }
@@ -129,7 +128,7 @@ class Network : CordaView() {
         if (node == myIdentity.value) {
             // It has to be a copy if we want to have notary both in notaries list and in identity (if we are looking at that particular notary node).
             myIdentityPane.apply { center = node.renderButton(mapLabel) }
-            centralLabel = mapLabel
+            myLabel = mapLabel
         }
         return MapViewComponents(this, button, mapLabel)
     }
@@ -140,7 +139,7 @@ class Network : CordaView() {
         // Run once when the screen is ready.
         // TODO : Find a better way to do this.
         mapPane.heightProperty().addListener { _, old, _ ->
-            if (old == 0.0) centralLabel?.let {
+            if (old == 0.0) myLabel?.let {
                 mapPane.applyCss()
                 mapPane.layout()
                 mapScrollPane.centerLabel(it)
