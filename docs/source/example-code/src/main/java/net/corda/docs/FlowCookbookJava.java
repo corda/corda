@@ -130,7 +130,7 @@ public class FlowCookbookJava {
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
             // in the counterparty's flow.
-            UntrustworthyData data1 = receive(Object.class, getDUMMY_BANK_B());
+            UntrustworthyData<Object> data1 = receive(Object.class, getDUMMY_BANK_B());
             // We receive the data wrapped in an ``UntrustworthyData``
             // instance, which we must unwrap using a lambda.
             Object any1 = data1.unwrap(data -> {
@@ -142,7 +142,7 @@ public class FlowCookbookJava {
 
             // We can also send data to a counterparty and wait to receive
             // data of a specific type back.
-            UntrustworthyData data2 = sendAndReceive(Object.class, getDUMMY_BANK_C(), new Object());
+            UntrustworthyData<Object> data2 = sendAndReceive(Object.class, getDUMMY_BANK_C(), new Object());
             Object any2 = data2.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
