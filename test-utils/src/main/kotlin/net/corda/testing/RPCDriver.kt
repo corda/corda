@@ -224,6 +224,7 @@ fun <A> rpcDriver(
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
+        startNodesInProcess: Boolean = false,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -234,7 +235,8 @@ fun <A> rpcDriver(
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
-                        isDebug = isDebug
+                        isDebug = isDebug,
+                        startNodesInProcess = startNodesInProcess
                 )
         ),
         coerce = { it },

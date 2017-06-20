@@ -80,6 +80,7 @@ fun <A> verifierDriver(
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
+        startNodesInProcess: Boolean = false,
         dsl: VerifierExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = VerifierDriverDSL(
@@ -90,7 +91,8 @@ fun <A> verifierDriver(
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
-                        isDebug = isDebug
+                        isDebug = isDebug,
+                        startNodesInProcess = startNodesInProcess
                 )
         ),
         coerce = { it },
