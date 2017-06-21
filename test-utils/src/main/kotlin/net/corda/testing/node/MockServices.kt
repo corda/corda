@@ -51,9 +51,11 @@ import javax.annotation.concurrent.ThreadSafe
  * A singleton utility that only provides a mock identity, key and storage service. However, this is sufficient for
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
-open class MockServices(vararg keys: KeyPair ) : ServiceHub {constructor() : this(generateKeyPair())
+open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+    constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
+
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
             storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
