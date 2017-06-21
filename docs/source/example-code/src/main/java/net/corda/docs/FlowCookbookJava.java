@@ -3,6 +3,8 @@ package net.corda.docs;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.contracts.TransactionType.NotaryChange;
@@ -23,7 +25,9 @@ import net.corda.flows.ResolveTransactionsFlow;
 import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
+import java.security.PublicKey;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
@@ -90,6 +94,13 @@ public class FlowCookbookJava {
         @Suspendable
         @Override
         public Void call() throws FlowException {
+            // We'll be using some dummy party and public key objects for
+            // demonstration purposes. These are built in to Corda, and are
+            // generally used for writing tests.
+            Party dummyBank = getDUMMY_BANK_A();
+            Party dummyRegulator = getDUMMY_REGULATOR();
+            PublicKey dummyPubKey = getDUMMY_PUBKEY_1();
+
             /*---------------------------
              * IDENTIFYING OTHER NODES *
             ---------------------------*/
@@ -98,16 +109,19 @@ public class FlowCookbookJava {
             // A transaction generally needs a notary:
             //   - To prevent double-spends if the transaction has inputs
             //   - To serve as a timestamping authority if the transaction has a time-window
-            // We retrieve the notary from the network map.
+            // We retrieve a notary from the network map.
             final NetworkMapCache networkMap = getServiceHub().getNetworkMapCache();
             Party specificNotary = networkMap.getNotary(new X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"));
             Party anyNotary = networkMap.getAnyNotary(null);
+            // Unlike the first two methods, ``getNotaryNodes`` returns a
+            // ``List<NodeInfo>``. We have to extract the notary identity of
+            // the node we want.
             Party firstNotary = networkMap.getNotaryNodes().get(0).getNotaryIdentity();
 
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
             Party namedCounterparty = networkMap.getNodeByLegalName(new X500Name("CN=NodeA,O=NodeA,L=London,C=UK")).getLegalIdentity();
-            Party keyedCounterparty = networkMap.getNodeByLegalIdentityKey(getDUMMY_PUBKEY_1()).getLegalIdentity();
+            Party keyedCounterparty = networkMap.getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
             Party firstCounterparty = networkMap.getPartyNodes().get(0).getLegalIdentity();
 
             /*------------------------------
@@ -125,15 +139,16 @@ public class FlowCookbookJava {
             // In other words, we are assuming that the counterparty is
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
-            send(getDUMMY_BANK_A(), new Object());
+            send(counterparty, new Object());
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
-            // in the counterparty's flow.
-            UntrustworthyData<Object> data1 = receive(Object.class, getDUMMY_BANK_B());
+            // in the counterparty's flow. If the payload we receive is not of
+            // the specified type, a ``FlowException`` is raised.
+            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
             // We receive the data wrapped in an ``UntrustworthyData``
             // instance, which we must unwrap using a lambda.
-            Object any1 = data1.unwrap(data -> {
+            Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
@@ -141,14 +156,21 @@ public class FlowCookbookJava {
             });
 
             // We can also send data to a counterparty and wait to receive
-            // data of a specific type back.
-            UntrustworthyData<Object> data2 = sendAndReceive(Object.class, getDUMMY_BANK_C(), new Object());
-            Object any2 = data2.unwrap(data -> {
+            // data of a specific type back. The type of data sent doesn't
+            // need to match the type of the data received back.
+            UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
+            Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
                 return data;
             });
+
+            // We're not limited to sending to and receiving from a single
+            // counterparty. A flow can send messages to as many parties as it
+            // likes, and they can each invoke a different response flow.
+            send(dummyBank, new Object());
+            UntrustworthyData<Object> packet3 = receive(Object.class, dummyRegulator);
 
             /*------------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -160,9 +182,9 @@ public class FlowCookbookJava {
             // Input states are identified using ``StateRef`` instances,
             // which pair the hash of the transaction that generated the state
             // with the state's index in the outputs of that transaction.
-            StateRef DUMMY_STATE_REF = new StateRef(SecureHash.sha256("DummyTransactionHash"), 0);
+            StateRef ourStateRef = new StateRef(SecureHash.sha256("DummyTransactionHash"), 0);
             // A ``StateAndRef`` pairs a ``StateRef`` with the state it points to.
-            StateAndRef DUMMY_STATE_AND_REF = getServiceHub().toStateAndRef(DUMMY_STATE_REF);
+            StateAndRef ourStateAndRef = getServiceHub().toStateAndRef(ourStateRef);
 
             /*------------------------------------------
              * GATHERING OTHER TRANSACTION COMPONENTS *
@@ -170,20 +192,37 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(OTHER_TX_COMPONENTS);
 
             // Output states are constructed from scratch.
-            DummyState DUMMY_OUTPUT = new DummyState();
+            DummyState ourOutput = new DummyState();
+            // Or copied from input states with some properties changed.
+            // TODO: Wait until vault stuff is ready.
 
-            // Commands pair a ``CommandData`` type with a list of signers.
-            Command DUMMY_COMMAND = new Command(new DummyContract.Commands.Create(), ImmutableList.of(getDUMMY_PUBKEY_1()));
+            // Commands pair a ``CommandData`` instance with a list of
+            // public keys. To be valid, the transaction requires a signature
+            // matching every public key in all of the transaction's commands.
+            CommandData commandData = new DummyContract.Commands.Create();
+            PublicKey ourPubKey = getServiceHub().getLegalIdentityKey();
+            PublicKey counterpartyPubKey = counterparty.getOwningKey();
+            List<PublicKey> requiredSigners = ImmutableList.of(ourPubKey, counterpartyPubKey);
+            Command ourCommand = new Command(commandData, requiredSigners);
+
+            // ``CommandData`` can either be:
+            // 1. Of type ``TypeOnlyCommandData``, in which case it only
+            //    serves to attach signers to the transaction and possibly
+            //    fork the contract's verification logic.
+            TypeOnlyCommandData typeOnlyCommandData = new DummyContract.Commands.Create();
+            // 2. Include additional data which can be used by the contract
+            //    during verification, alongside fulfilling the roles above
+            CommandData commandDataWithData = new Cash.Commands.Issue(12345678);
 
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been
             // uploaded ahead of time via the node's RPC interface.
-            SecureHash DUMMY_ATTACHMENT = SecureHash.sha256("DummyAttachment");
+            SecureHash ourAttachment = SecureHash.sha256("DummyAttachment");
 
-            // Timewindows can have a start and end time, or be open at either end.
-            TimeWindow DUMMY_TIME_WINDOW = TimeWindow.between(Instant.MIN, Instant.MAX);
-            TimeWindow DUMMY_AFTER = TimeWindow.fromOnly(Instant.MIN);
-            TimeWindow DUMMY_BEFORE = TimeWindow.untilOnly(Instant.MAX);
+            // Time windows can have a start and end time, or be open at either end.
+            TimeWindow ourTimeWindow = TimeWindow.between(Instant.MIN, Instant.MAX);
+            TimeWindow ourAfter = TimeWindow.fromOnly(Instant.MIN);
+            TimeWindow ourBefore = TimeWindow.untilOnly(Instant.MAX);
 
             /*------------------------
              * TRANSACTION BUILDING *
@@ -192,25 +231,25 @@ public class FlowCookbookJava {
 
             // There are two types of transaction (notary-change and general),
             // and therefore two types of transaction builder:
-            TransactionBuilder notaryChangeTxBuilder = new TransactionBuilder(NotaryChange.INSTANCE, getDUMMY_NOTARY());
-            TransactionBuilder regTxBuilder = new TransactionBuilder(General.INSTANCE, getDUMMY_NOTARY());
+            TransactionBuilder notaryChangeTxBuilder = new TransactionBuilder(NotaryChange.INSTANCE, specificNotary);
+            TransactionBuilder regTxBuilder = new TransactionBuilder(General.INSTANCE, specificNotary);
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
             regTxBuilder.withItems(
                     // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
-                    DUMMY_STATE_REF,
+                    ourStateRef,
                     // Outputs, as ``ContractState``s
-                    DUMMY_OUTPUT,
+                    ourOutput,
                     // Commands, as ``Command``s
-                    DUMMY_COMMAND
+                    ourCommand
             );
 
             // We can also add items using methods for the individual components:
-            regTxBuilder.addInputState(DUMMY_STATE_AND_REF);
-            regTxBuilder.addOutputState(DUMMY_OUTPUT);
-            regTxBuilder.addCommand(DUMMY_COMMAND);
-            regTxBuilder.addAttachment(DUMMY_ATTACHMENT);
-            regTxBuilder.addTimeWindow(DUMMY_TIME_WINDOW);
+            regTxBuilder.addInputState(ourStateAndRef);
+            regTxBuilder.addOutputState(ourOutput);
+            regTxBuilder.addCommand(ourCommand);
+            regTxBuilder.addAttachment(ourAttachment);
+            regTxBuilder.addTimeWindow(ourTimeWindow);
 
             /*-----------------------
              * TRANSACTION SIGNING *
@@ -221,8 +260,10 @@ public class FlowCookbookJava {
             // converting it into a ``SignedTransaction``.
             SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(regTxBuilder);
 
-            // Parties can then add additional signatures as well.
-            SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx, getDUMMY_PUBKEY_1());
+            // If instead this was a ``SignedTransaction`` that we'd received
+            // from a counterparty and we needed to sign it, we would add our
+            // signature using:
+            SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx, dummyPubKey);
 
             /*----------------------------
              * TRANSACTION VERIFICATION *
@@ -230,8 +271,9 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(TX_VERIFICATION);
 
             // Verifying a transaction will also verify every transaction in
-            // the transaction's dependency chain. So if a counterparty sends
-            // us a transaction, we need to download all of its dependencies
+            // the transaction's dependency chain. So if this was a
+            // transaction we'd received from a counterparty and it had any
+            // dependencies, we'd need to download all of these dependencies
             // using``ResolveTransactionsFlow`` before verifying it.
             subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
 
@@ -241,12 +283,15 @@ public class FlowCookbookJava {
             // Let's break that down...
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
-            // with signatures over this ``WireTransaction``.
-            // We don't verify a signed transaction per se, but rather the ``WireTransaction`` it contains.
+            // with signatures over this ``WireTransaction``. We don't verify
+            // a signed transaction per se, but rather the ``WireTransaction``
+            // it contains.
             WireTransaction wireTx = twiceSignedTx.getTx();
-            // Before we can verify the transaction, we have to resolve its inputs and attachments
-            // into actual objects, rather than just references.
-            // We achieve this by converting the ``WireTransaction`` into a ``LedgerTransaction``.
+            // Before we can verify the transaction, we need the
+            // ``ServiceHub`` to use our node's local storage to resolve the
+            // transaction's inputs and attachments into actual objects,
+            // rather than just references. We do this by converting the
+            // ``WireTransaction`` into a ``LedgerTransaction``.
             LedgerTransaction ledgerTx = wireTx.toLedgerTransaction(getServiceHub());
             // We can now verify the transaction.
             ledgerTx.verify();
@@ -255,6 +300,8 @@ public class FlowCookbookJava {
             // too. This can be whatever we see fit.
             DummyState outputState = (DummyState) wireTx.getOutputs().get(0).getData();
             assert(outputState.getMagicNumber() == 777);
+
+            // TODO: Show throwing a FlowException when unhappy (is that good practice?)
 
             /*------------------------
              * GATHERING SIGNATURES *
@@ -278,7 +325,7 @@ public class FlowCookbookJava {
             SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
-            Set<Party> additionalParties = ImmutableSet.of(getDUMMY_REGULATOR(), getDUMMY_BANK_A());
+            Set<Party> additionalParties = ImmutableSet.of(dummyRegulator, dummyBank);
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
 
             return null;
@@ -295,16 +342,18 @@ public class FlowCookbookJava {
     @InitiatedBy(InitiatorFlow.class)
     public static class ResponderFlow extends FlowLogic<Void> {
 
-        private final Party otherParty;
+        private final Party counterparty;
 
-        public ResponderFlow(Party otherParty) {
-            this.otherParty = otherParty;
+        public ResponderFlow(Party counterparty) {
+            this.counterparty = counterparty;
         }
 
+        private static final Step RECEIVING_AND_SENDING_DATA = new Step("Sending data between parties.");
         private static final Step SIGNING = new Step("Responding to CollectSignaturesFlow.");
         private static final Step FINALISATION = new Step("Finalising a transaction.");
 
         private final ProgressTracker progressTracker = new ProgressTracker(
+                RECEIVING_AND_SENDING_DATA,
                 SIGNING,
                 FINALISATION
         );
@@ -315,6 +364,21 @@ public class FlowCookbookJava {
             // The ``ResponderFlow` has all the same APIs available. It looks
             // up network information, sends and receives data, and constructs
             // transactions in exactly the same way.
+
+            /*------------------------------
+             * SENDING AND RECEIVING DATA *
+             -----------------------------*/
+            progressTracker.setCurrentStep(RECEIVING_AND_SENDING_DATA);
+
+            // We need to respond to the messages sent by the initiator:
+            // 1. They sent us an ``Any`` instance
+            // 2. They waited to receive an ``Integer`` instance back
+            // 3. They sent a ``String`` instance and waited to receive a
+            //    ``Boolean`` instance back
+            // Our side of the flow must mirror these calls.
+            Object obj = receive(Object.class, counterparty).unwrap(data -> data);
+            String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
+            send(counterparty, true);
 
             /*-----------------------------------------
              * RESPONDING TO COLLECT_SIGNATURES_FLOW *
@@ -340,7 +404,7 @@ public class FlowCookbookJava {
                 }
             }
 
-            subFlow(new SignTxFlow(otherParty, SignTransactionFlow.Companion.tracker()));
+            subFlow(new SignTxFlow(counterparty, SignTransactionFlow.Companion.tracker()));
 
             /*------------------------------
              * FINALISING THE TRANSACTION *
