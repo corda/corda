@@ -136,7 +136,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Calls [verifySignatures] to check all required signatures are present, and then calls
+     * Optionally calls [verifySignatures] to check all required signatures are present, and then calls
      * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies,
      * returning an unverified LedgerTransaction.
      *
@@ -151,6 +151,16 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         return tx.toLedgerTransaction(services)
     }
 
+    /**
+     * Optionally calls [verifySignatures] to check all required signatures are present, calls
+     * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies and
+     * return an unverified LedgerTransaction, then verifies the LedgerTransaction.
+     *
+     * @throws AttachmentResolutionException if a required attachment was not found in storage.
+     * @throws TransactionResolutionException if an input points to a transaction not found in storage.
+     * @throws SignatureException if any signatures were invalid or unrecognised
+     * @throws SignaturesMissingException if any signatures that should have been present are missing.
+     */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         if (checkSufficientSignatures) verifySignatures()

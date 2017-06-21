@@ -139,6 +139,7 @@ open class TransactionBuilder(
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
             ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
 
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
