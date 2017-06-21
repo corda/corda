@@ -146,7 +146,16 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
-    fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
+    fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
+        if (checkSufficientSignatures) verifySignatures()
+        return tx.toLedgerTransaction(services)
+    }
+
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
+    fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
+        if (checkSufficientSignatures) verifySignatures()
+        tx.toLedgerTransaction(services).verify()
+    }
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

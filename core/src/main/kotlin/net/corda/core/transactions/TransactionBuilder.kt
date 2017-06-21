@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.identity.Party
+import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
@@ -137,6 +138,8 @@ open class TransactionBuilder(
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
             ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
+
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
