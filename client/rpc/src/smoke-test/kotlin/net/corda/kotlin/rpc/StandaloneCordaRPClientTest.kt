@@ -188,7 +188,6 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test vault query by`() {
-
         // Now issue some cash
         rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryIdentity, notaryIdentity)
                 .returnValue.getOrThrow(timeout)
