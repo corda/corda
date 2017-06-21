@@ -27,6 +27,7 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow
+import org.apache.commons.io.IOUtils
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.time.LocalDate
@@ -90,7 +91,11 @@ object NodeInterestRates {
             services.myInfo.serviceIdentities(type).first(),
             services.myInfo.serviceIdentities(type).first().owningKey.keys.first { services.keyManagementService.keys.contains(it) },
             services
-        )
+        ) {
+            // Set some default fixes to the Oracle, so we can smoothly run the IRS Demo without uploading fixes.
+            // TODO: find a more elegant workaround.
+            addDefaultFixes()
+        }
         // DOCEND 3
 
         companion object {
@@ -178,6 +183,10 @@ object NodeInterestRates {
 
         fun uploadFixes(s: String) {
             knownFixes = parseFile(s)
+        }
+
+        private fun addDefaultFixes() {
+            knownFixes = parseFile(IOUtils.toString(Thread.currentThread().contextClassLoader.getResourceAsStream("net/corda/irs/simulation/example.rates.txt"), Charsets.UTF_8.name()))
         }
     }
 
