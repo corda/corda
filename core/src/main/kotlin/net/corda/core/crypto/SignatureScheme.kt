@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import java.security.Signature
 import java.security.spec.AlgorithmParameterSpec
 
@@ -20,7 +20,8 @@ import java.security.spec.AlgorithmParameterSpec
 data class SignatureScheme(
         val schemeNumberID: Int,
         val schemeCodeName: String,
-        val signatureOID: ASN1ObjectIdentifier,
+        val signatureOID: AlgorithmIdentifier,
+        val alternativeOIDs: List<AlgorithmIdentifier>,
         val providerName: String,
         val algorithmName: String,
         val signatureName: String,
