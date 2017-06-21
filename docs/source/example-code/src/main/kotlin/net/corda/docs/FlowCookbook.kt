@@ -6,10 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionType.General
 import net.corda.core.contracts.TransactionType.NotaryChange
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -52,6 +49,7 @@ object FlowCookbook {
             object TX_SIGNING : Step("Signing a transaction.")
             object TX_VERIFICATION : Step("Verifying a transaction.")
             object SIGS_GATHERING : Step("Gathering a transaction's signatures.") {
+                // Wiring up a child progress tracker in
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
             object FINALISATION : Step("Finalising a transaction.") {
@@ -123,8 +121,15 @@ object FlowCookbook {
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
-            // in the counterparty's flow. If the payload we receive is not of
-            // the specified type, a ``FlowException`` is raised.
+            // in the counterparty's flow. A few scenarios:
+            // - We never receive a message back. In the current design, the
+            //   flow is paused until the node's owner kills the flow.
+            // - Instead of sending a message back, the counterparty throws a
+            //   ``FlowException``. This exception is propagated back to us,
+            //   and we can use the error message to establish what happened.
+            // - We receive a message back, but it's of the wrong type. In
+            //   this case, we throw a ``FlowException``.
+            // - We receive back a message of the correct type. All is good.
             val packet1: UntrustworthyData<Int> = receive<Int>(counterparty)
             // We receive the data wrapped in an ``UntrustworthyData``
             // instance, which we must unwrap using a lambda.
@@ -245,6 +250,10 @@ object FlowCookbook {
             // signature using:
             val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx, dummyPubKey)
 
+            // In practice, however, the process of gathering every signature
+            // but the first can be automated using ``CollectSignaturesFlow``.
+            // See the "Gathering Signatures" section below.
+
             /**---------------------------
              * TRANSACTION VERIFICATION *
             ---------------------------**/
@@ -277,11 +286,23 @@ object FlowCookbook {
             ledgerTx.verify()
 
             // We'll often want to perform our own additional verification
-            // too. This can be whatever we see fit.
+            // too. Just because a transaction is valid based on the contract
+            // rules and requires our signature doesn't mean we have to
+            // sign it! We need to make sure the transaction represents an
+            // agreement we actually want to enter into.
             val outputState: DummyState = wireTx.outputs.single().data as DummyState
-            assert(outputState.magicNumber == 777)
+            if (outputState.magicNumber == 777) {
+                // ``FlowException`` is a special exception type. It will be
+                // propagated back to any counterparty flows waiting for a
+                // message from this flow, notifying them that the flow has
+                // failed.
+                throw FlowException("We expected a magic number of 777.")
+            }
 
-            // TODO: Show throwing a FlowException when unhappy (is that good practice?)
+            // Of course, if you are not a required signer on the transaction,
+            // you have no power to decide whether it is valid or not. If it
+            // requires signatures from all the required signers and is
+            // contractually valid, it's a valid ledger update.
 
             /**-----------------------
              * GATHERING SIGNATURES *
