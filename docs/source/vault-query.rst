@@ -260,7 +260,21 @@ Track unconsumed deal states:
 Java examples
 ^^^^^^^^^^^^^
 
-Query for all consumed contract states:
+Query for all unconsumed linear states:
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultJavaQueryExample0
+    :end-before: DOCEND VaultJavaQueryExample0
+
+This example was previously executed using the deprecated method:
+
+.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
+    :language: java
+    :start-after: DOCSTART VaultDeprecatedJavaQueryExample0
+    :end-before: DOCEND VaultDeprecatedJavaQueryExample0
+
+Query for all consumed cash states:
 
 .. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
     :language: java
@@ -280,13 +294,6 @@ Query for consumed deal states or linear ids, specify a paging specification and
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
-
-This example was previously executed using the deprecated method:
-
-.. literalinclude:: ../../node/src/test/java/net/corda/node/services/vault/VaultQueryJavaTests.java
-    :language: java
-    :start-after: DOCSTART VaultDeprecatedJavaQueryExample2
-    :end-before: DOCEND VaultDeprecatedJavaQueryExample2
 
 Track unconsumed cash states:
 

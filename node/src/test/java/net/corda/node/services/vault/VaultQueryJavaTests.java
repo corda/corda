@@ -99,7 +99,23 @@ public class VaultQueryJavaTests {
      */
 
     @Test
-    public void consumedStates() {
+    public void unconsumedLinearStates() throws VaultQueryException {
+        transaction(database, tx -> {
+
+            fillWithSomeTestLinearStates(services, 3);
+
+            // DOCSTART VaultJavaQueryExample0
+            Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class);
+            // DOCEND VaultJavaQueryExample0
+
+            assertThat(results.getStates()).hasSize(3);
+
+            return tx;
+        });
+    }
+
+    @Test
+    public void consumedCashStates() {
         transaction(database, tx -> {
 
             Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
@@ -118,12 +134,8 @@ public class VaultQueryJavaTests {
             consumeCash(services, amount);
 
             // DOCSTART VaultJavaQueryExample1
-            @SuppressWarnings("unchecked")
-            Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
-            Vault.StateStatus status = Vault.StateStatus.CONSUMED;
-
-            VaultQueryCriteria criteria = new VaultQueryCriteria(status, contractStateTypes);
-            Vault.Page<ContractState> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
+            VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.CONSUMED);
+            Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
             // DOCEND VaultJavaQueryExample1
 
             assertThat(results.getStates()).hasSize(3);
@@ -334,13 +346,15 @@ public class VaultQueryJavaTests {
 
             consumeLinearStates(services, (List<? extends StateAndRef<? extends LinearState>>) linearStates.getStates());
 
-            // DOCSTART VaultDeprecatedJavaQueryExample2
+            // DOCSTART VaultDeprecatedJavaQueryExample0
             @SuppressWarnings("unchecked")
             Set<Class<LinearState>> contractStateTypes = new HashSet(Collections.singletonList(DummyLinearContract.State.class));
             EnumSet<Vault.StateStatus> status = EnumSet.of(Vault.StateStatus.CONSUMED);
 
             // WARNING! unfortunately cannot use inlined reified Kotlin extension methods.
             Iterable<StateAndRef<LinearState>> results = vaultSvc.states(contractStateTypes, status, true);
+            // DOCEND VaultDeprecatedJavaQueryExample0
+
             assertThat(results).hasSize(4);
 
             return tx;
