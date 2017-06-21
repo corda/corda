@@ -40,8 +40,8 @@ interface FlowProgressHandle<A> : FlowHandle<A> {
 
 @CordaSerializable
 data class FlowHandleImpl<A>(
-    override val id: StateMachineRunId,
-    override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
+        override val id: StateMachineRunId,
+        override val returnValue: ListenableFuture<A>) : FlowHandle<A> {
 
      // Remember to add @Throws to FlowHandle.close() if this throws an exception.
     override fun close() {
@@ -51,9 +51,9 @@ data class FlowHandleImpl<A>(
 
 @CordaSerializable
 data class FlowProgressHandleImpl<A>(
-    override val id: StateMachineRunId,
-    override val returnValue: ListenableFuture<A>,
-    override val progress: Observable<String>) : FlowProgressHandle<A> {
+        override val id: StateMachineRunId,
+        override val returnValue: ListenableFuture<A>,
+        override val progress: Observable<String>) : FlowProgressHandle<A> {
 
     // Remember to add @Throws to FlowProgressHandle.close() if this throws an exception.
     override fun close() {

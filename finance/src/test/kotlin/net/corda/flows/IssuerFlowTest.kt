@@ -6,7 +6,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.map
