@@ -8,6 +8,7 @@ import net.corda.core.contracts.TransactionType.NotaryChange
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -40,6 +41,8 @@ object FlowCookbook {
         /**---------------------------------
          * WIRING UP THE PROGRESS TRACKER *
         ---------------------------------**/
+        // Giving our flow a progress tracker allows us to see the flow's
+        // progress visually in our node's CRaSH shell.
         companion object {
             object ID_OTHER_NODES : Step("Identifying other nodes on the network.")
             object SENDING_AND_RECEIVING_DATA : Step("Sending data between parties.")
@@ -49,7 +52,8 @@ object FlowCookbook {
             object TX_SIGNING : Step("Signing a transaction.")
             object TX_VERIFICATION : Step("Verifying a transaction.")
             object SIGS_GATHERING : Step("Gathering a transaction's signatures.") {
-                // Wiring up a child progress tracker in
+                // Wiring up a child progress tracker allows us to see the
+                // subflow's progress steps in our flow's progress tracker.
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
             object FINALISATION : Step("Finalising a transaction.") {
@@ -73,11 +77,9 @@ object FlowCookbook {
 
         @Suspendable
         override fun call() {
-            // We'll be using some dummy party and public key objects for
-            // demonstration purposes. These are built in to Corda, and are
-            // generally used for writing tests.
-            val dummyBank: Party = DUMMY_BANK_A
-            val dummyRegulator: Party = DUMMY_REGULATOR
+            // We'll be using a dummy public key for demonstration purposes.
+            // These are built in to Corda, and are generally used for writing
+            // tests.
             val dummyPubKey: PublicKey = DUMMY_PUBKEY_1
 
             /**--------------------------
@@ -96,11 +98,15 @@ object FlowCookbook {
             // the node we want.
             val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
 
-            // We may also need to identify a specific counterparty.
-            // Again, we do so using the network map.
+            // We may also need to identify a specific counterparty. Again, we
+            // do so using the network map.
             val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"))?.legalIdentity
             val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
             val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
+
+            // Finally, we can use the map to identify nodes providing a
+            // specific service (e.g. a regulator or an oracle).
+            val regulator: Party = serviceHub.networkMapCache.getNodesWithService(ServiceType.regulator)[0].legalIdentity
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
@@ -154,8 +160,8 @@ object FlowCookbook {
             // We're not limited to sending to and receiving from a single
             // counterparty. A flow can send messages to as many parties as it
             // likes, and they can each invoke a different response flow.
-            send(dummyBank, Any())
-            val packet3: UntrustworthyData<Any> = receive<Any>(dummyRegulator)
+            send(regulator, Any())
+            val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
 
             /**-----------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -266,6 +272,9 @@ object FlowCookbook {
             // using``ResolveTransactionsFlow`` before verifying it.
             subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
 
+            // We can also resolve a `StateRef` dependency chain.
+            subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
+
             // We verify a transaction using the following one-liner:
             twiceSignedTx.tx.toLedgerTransaction(serviceHub).verify()
 
@@ -326,7 +335,7 @@ object FlowCookbook {
             val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
-            val additionalParties: Set<Party> = setOf(dummyRegulator, dummyBank)
+            val additionalParties: Set<Party> = setOf(regulator)
             val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
         }
     }
