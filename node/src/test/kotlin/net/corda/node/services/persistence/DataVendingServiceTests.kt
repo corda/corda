@@ -6,9 +6,10 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -27,19 +28,19 @@ import kotlin.test.assertEquals
  * Tests for the data vending service.
  */
 class DataVendingServiceTests {
-    lateinit var network: MockNetwork
+    lateinit var mockNet: MockNetwork
 
     @Before
     fun setup() {
-        network = MockNetwork()
+        mockNet = MockNetwork()
     }
 
     @Test
     fun `notify of transaction`() {
-        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = registerNode.info.legalIdentity.ref(1)
-        network.runNetwork()
+        mockNet.runNetwork()
 
         // Generate an issuance transaction
         val ptx = TransactionType.General.Builder(null)
@@ -64,10 +65,10 @@ class DataVendingServiceTests {
      */
     @Test
     fun `notify failure`() {
-        val (vaultServiceNode, registerNode) = network.createTwoNodes()
+        val (vaultServiceNode, registerNode) = mockNet.createTwoNodes()
         val beneficiary = vaultServiceNode.info.legalIdentity
         val deposit = MEGA_CORP.ref(1)
-        network.runNetwork()
+        mockNet.runNetwork()
 
         // Generate an issuance transaction
         val ptx = TransactionType.General.Builder(DUMMY_NOTARY)
@@ -86,11 +87,10 @@ class DataVendingServiceTests {
     }
 
     private fun MockNode.sendNotifyTx(tx: SignedTransaction, walletServiceNode: MockNode) {
-        walletServiceNode.registerServiceFlow(clientFlowClass = NotifyTxFlow::class, serviceFlowFactory = ::NotifyTransactionHandler)
+        walletServiceNode.registerInitiatedFlow(InitiateNotifyTxFlow::class.java)
         services.startFlow(NotifyTxFlow(walletServiceNode.info.legalIdentity, tx))
-        network.runNetwork()
+        mockNet.runNetwork()
     }
-
 
     @InitiatingFlow
     private class NotifyTxFlow(val otherParty: Party, val stx: SignedTransaction) : FlowLogic<Unit>() {
@@ -98,4 +98,9 @@ class DataVendingServiceTests {
         override fun call() = send(otherParty, NotifyTxRequest(stx))
     }
 
+    @InitiatedBy(NotifyTxFlow::class)
+    private class InitiateNotifyTxFlow(val otherParty: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() = subFlow(NotifyTransactionHandler(otherParty))
+    }
 }

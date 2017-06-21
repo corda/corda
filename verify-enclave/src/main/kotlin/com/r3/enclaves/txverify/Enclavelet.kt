@@ -11,6 +11,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.AttachmentsStorageService
@@ -40,7 +41,7 @@ private class ServicesForVerification(dependenciesList: List<WireTransaction>, a
         get() = throw UnsupportedOperationException()
         set(value) = throw UnsupportedOperationException()
 
-    override fun getAllIdentities() = emptyList<Party>()
+    override fun getAllIdentities() = emptyList<PartyAndCertificate>()
     private val dependencies = dependenciesList.associateBy { it.id }
 
     override val identityService: IdentityService = this
@@ -53,10 +54,11 @@ private class ServicesForVerification(dependenciesList: List<WireTransaction>, a
 
     // Identities: this stuff will all change in future so we don't bother implementing it now.
     override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = TODO("not implemented")
-
-    override fun registerIdentity(party: net.corda.core.identity.Party) = TODO("not implemented")
-    override fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath) = TODO("not implemented")
-
+    override fun registerIdentity(party: PartyAndCertificate) = TODO("not implemented")
+    override fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath) = TODO("not implemented")
+    override fun certificateFromParty(party: Party): PartyAndCertificate? = TODO("not implemented")
+    override fun requirePartyFromAnonymous(party: AbstractParty): Party = TODO("not implemented")
+    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = TODO("not implemented")
     override fun partyFromKey(key: PublicKey): net.corda.core.identity.Party? = null
     override fun partyFromName(name: String): net.corda.core.identity.Party? = null
     override fun partyFromX500Name(principal: X500Name): net.corda.core.identity.Party? = null

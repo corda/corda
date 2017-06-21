@@ -26,8 +26,8 @@ dependencies {
     testCompile "junit:junit:$junit_version"
 
     // Corda integration dependencies
-    runtime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    runtime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
+    compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
     compile project(':client:jfx')
     compile project(':client:rpc')
@@ -42,18 +42,16 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
     // This name "Notary" is hard-coded into BankOfCordaClientApi so if you change it here, change it there too.
     // In this demo the node that runs a standalone notary also acts as the network map server.
-    networkMap "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
+    networkMap "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
     node {
-        name "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
+        name "CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         rpcPort 10003
         cordapps = []
     }
     node {
-        name "CN=BankOfCorda,O=R3,OU=Corda QA Department,L=New York,C=US"
-        nearestCity "New York"
+        name "CN=BankOfCorda,O=R3,L=New York,C=US"
         advertisedServices = ["corda.issuer.USD"]
         p2pPort 10005
         rpcPort 10006
@@ -63,12 +61,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
                 ['username'   : "bankUser",
                  'password'   : "test",
                  'permissions': ["StartFlow.net.corda.flows.CashPaymentFlow",
+                                 "StartFlow.net.corda.flows.CashExitFlow",
                                  "StartFlow.net.corda.flows.IssuerFlow\$IssuanceRequester"]]
         ]
     }
     node {
-        name "CN=BigCorporation,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "New York"
+        name "CN=BigCorporation,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = []
         p2pPort 10008
         rpcPort 10009

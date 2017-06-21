@@ -9,9 +9,10 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.flows.CashExitFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -29,7 +30,7 @@ fun main(args: Array<String>) {
 val BANK_USERNAME = "bankUser"
 val BIGCORP_USERNAME = "bigCorpUser"
 
-val BIGCORP_LEGAL_NAME = X500Name("CN=BigCorporation,O=R3,OU=corda,L=London,C=UK")
+val BIGCORP_LEGAL_NAME = X500Name("CN=BigCorporation,O=R3,OU=corda,L=London,C=GB")
 
 private class BankOfCordaDriver {
     enum class Role {
@@ -57,7 +58,7 @@ private class BankOfCordaDriver {
         val role = options.valueOf(roleArg)!!
         if (role == Role.ISSUER) {
             driver(dsl = {
-                val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>()))
+                val bankUser = User(BANK_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>(), startFlowPermission<IssuerFlow.IssuanceRequester>(), startFlowPermission<CashExitFlow>()))
                 val bigCorpUser = User(BIGCORP_USERNAME, "test", permissions = setOf(startFlowPermission<CashPaymentFlow>()))
                 startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
                 val bankOfCorda = startNode(BOC.name, rpcUsers = listOf(bankUser), advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.USD"))))

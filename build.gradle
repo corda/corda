@@ -5,7 +5,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "0.12-SNAPSHOT"
+    ext.corda_release_version = "0.13-SNAPSHOT"
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     // TODO This is going to be difficult until we have a clear separation throughout the code of what is public and what is internal
     ext.corda_platform_version = 1
@@ -34,7 +34,7 @@ buildscript {
     ext.guava_version = constants.getProperty("guavaVersion")
     ext.quickcheck_version = '0.7'
     ext.okhttp_version = '3.5.0'
-    ext.netty_version = '4.1.5.Final'
+    ext.netty_version = '4.1.9.Final'
     ext.typesafe_config_version = constants.getProperty("typesafeConfigVersion")
     ext.fileupload_version = '1.3.2'
     ext.junit_version = '4.12'
@@ -45,7 +45,7 @@ buildscript {
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
     ext.requery_version = '1.2.1'
-    ext.dokka_version = '0.9.13'
+    ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
 
     // Update 121 is required for ObjectInputFilter and at time of writing 131 was latest:
@@ -219,17 +219,15 @@ tasks.withType(Test) {
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
     directory "./build/nodes"
-    networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK"
+    networkMap "CN=Controller,O=R3,OU=corda,L=London,C=GB"
     node {
-        name "CN=Controller,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
+        name "CN=Controller,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = ["corda.notary.validating"]
         p2pPort 10002
         cordapps = []
     }
     node {
-        name "CN=Bank A,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "London"
+        name "CN=Bank A,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = []
         p2pPort 10012
         rpcPort 10013
@@ -237,8 +235,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         cordapps = []
     }
     node {
-        name "CN=Bank B,O=R3,OU=corda,L=London,C=UK"
-        nearestCity "New York"
+        name "CN=Bank B,O=R3,OU=corda,L=London,C=GB"
         advertisedServices = []
         p2pPort 10007
         rpcPort 10008
@@ -257,7 +254,7 @@ bintrayConfig {
     projectUrl = 'https://github.com/corda/corda'
     gpgSign = true
     gpgPassphrase = System.getenv('CORDA_BINTRAY_GPG_PASSPHRASE')
-    publications = ['jfx', 'mock', 'rpc', 'core', 'corda', 'cordform-common', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver']
+    publications = ['corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver']
     license {
         name = 'Apache-2.0'
         url = 'https://www.apache.org/licenses/LICENSE-2.0'

@@ -59,7 +59,7 @@ Define the version of Corda you want on your nodes and the type of notary.
 
 .. image:: resources/azure_multi_node_step3.png
   :width: 300px
-  
+
 Click 'OK'
 
 STEP 4: Summary
@@ -146,7 +146,7 @@ In the browser window type the following URL to send a Yo message to a target no
 .. sourcecode:: shell
 
 	http://(public IP address):(port)/api/yo/yo?target=(legalname of target node)
-	
+
 where (public IP address) is the public IP address of one of your Corda nodes on the Azure Corda network and (port) is the web server port number for your Corda node, 10004 by default and (legalname of target node) is the Legal Name for the target node as defined in the node.conf file, for example:
 
 .. sourcecode:: shell
@@ -197,7 +197,7 @@ You can open log files with any text editor.
 
 .. image:: resources/azure_syslog.png
   :width: 300px
-  
+
 Next Steps
 ----------
 Now you have built a Corda network and used a basic Corda CorDapp do go and visit the `dedicated Corda website <https://www.corda.net>`_

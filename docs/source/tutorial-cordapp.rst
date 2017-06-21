@@ -448,7 +448,7 @@ Navigate to the "create IOU" button at the top left of the page, and enter the I
   Order Number:  1
   Delivery Date: 2018-09-15
   City:          London
-  Country Code:  UK
+  Country Code:  GB
   Item name:     Wow such item
   Item amount:   5
 
@@ -623,7 +623,8 @@ The example CorDapp has the following directory structure:
     │       │   └── resources
     │       │       ├── META-INF
     │       │       │   └── services
-    │       │       │       └── net.corda.core.node.CordaPluginRegistry
+    │       │       │       ├── net.corda.core.node.CordaPluginRegistry
+    │       │       │       └── net.corda.webserver.services.WebServerPluginRegistry
     │       │       ├── certificates
     │       │       │   ├── readme.txt
     │       │       │   ├── sslkeystore.jks
@@ -665,7 +666,8 @@ The example CorDapp has the following directory structure:
             │   └── resources
             │       ├── META-INF
             │       │   └── services
-            │       │       └── net.corda.core.node.CordaPluginRegistry
+            │       │       ├── net.corda.core.node.CordaPluginRegistry
+            │       │       └── net.corda.webserver.services.WebServerPluginRegistry
             │       ├── certificates
             │       │   ├── readme.txt
             │       │   ├── sslkeystore.jks
@@ -774,10 +776,9 @@ like to deploy for testing. See further details below:
 
   task deployNodes(type: com.r3corda.plugins.Cordform, dependsOn: ['jar']) {
       directory "./kotlin-source/build/nodes"                            // The output directory.
-      networkMap "CN=Controller,O=R3,OU=corda,L=London,C=UK" // The distinguished name of the node to be used as the network map.
+      networkMap "CN=Controller,O=R3,OU=corda,L=London,C=GB" // The distinguished name of the node to be used as the network map.
       node {
-          name "CN=Controller,O=R3,OU=corda,L=London,C=UK" // Distinguished name of node to be deployed.
-          nearestCity "London"                             // For use with the network visualiser.
+          name "CN=Controller,O=R3,OU=corda,L=London,C=GB" // Distinguished name of node to be deployed.
           advertisedServices = ["corda.notary.validating"] // A list of services you wish the node to offer.
           p2pPort 10002
           rpcPort 10003                                    // Usually 1 higher than the messaging port.
@@ -785,8 +786,7 @@ like to deploy for testing. See further details below:
           cordapps = []                                    // Add package names of CordaApps.
       }
       node {                                               // Create an additional node.
-          name "CN=NodeA,O=R3,OU=corda,L=London,C=UK"
-          nearestCity "London"
+          name "CN=NodeA,O=R3,OU=corda,L=London,C=GB"
           advertisedServices = []
           p2pPort 10005
           rpcPort 10006
@@ -810,7 +810,8 @@ Service Provider Configuration File
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you are building a CorDapp from scratch or adding a new CorDapp to the cordapp-tutorial project then you must provide
-a reference to your sub-class of ``CordaPluginRegistry`` in the provider-configuration file in located in the ``resources/META-INF/services`` directory.
+a reference to your sub-class of ``CordaPluginRegistry`` or ``WebServerPluginRegistry`` (for Wep API) in the provider-configuration file
+located in the ``resources/META-INF/services`` directory.
 
 Re-Deploying Your Nodes Locally
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

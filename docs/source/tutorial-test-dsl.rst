@@ -56,7 +56,7 @@ We will start with defining helper function that returns a ``CommercialPaper`` s
 
         fun getPaper(): ICommercialPaperState = CommercialPaper.State(
             issuance = MEGA_CORP.ref(123),
-            owner = MEGA_CORP_PUBKEY,
+            owner = MEGA_CORP,
             faceValue = 1000.DOLLARS `issued by` MEGA_CORP.ref(123),
             maturityDate = TEST_TX_TIME + 7.days
         )
@@ -68,7 +68,7 @@ We will start with defining helper function that returns a ``CommercialPaper`` s
         private ICommercialPaperState getPaper() {
             return new JavaCommercialPaper.State(
                 getMEGA_CORP().ref(defaultRef),
-                getMEGA_CORP_PUBKEY(),
+                getMEGA_CORP(),
                 issuedBy(DOLLARS(1000), getMEGA_CORP().ref(defaultRef)),
                 getTEST_TX_TIME().plus(7, ChronoUnit.DAYS)
             );

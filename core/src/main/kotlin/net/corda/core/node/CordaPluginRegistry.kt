@@ -9,17 +9,16 @@ import java.util.function.Function
  * to extend a Corda node with additional application services.
  */
 abstract class CordaPluginRegistry {
-    /**
-     * List of lambdas returning JAX-RS objects. They may only depend on the RPC interface, as the webserver should
-     * potentially be able to live in a process separate from the node itself.
-     */
+
+    @Suppress("unused")
+    @Deprecated("This is no longer in use, moved to WebServerPluginRegistry class in webserver module",
+            level = DeprecationLevel.ERROR, replaceWith = ReplaceWith("net.corda.webserver.services.WebServerPluginRegistry"))
     open val webApis: List<Function<CordaRPCOps, out Any>> get() = emptyList()
 
-    /**
-     * Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
-     * Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
-     *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
-     */
+
+    @Suppress("unused")
+    @Deprecated("This is no longer in use, moved to WebServerPluginRegistry class in webserver module",
+            level = DeprecationLevel.ERROR, replaceWith = ReplaceWith("net.corda.webserver.services.WebServerPluginRegistry"))
     open val staticServeDirs: Map<String, String> get() = emptyMap()
 
     @Suppress("unused")
@@ -33,6 +32,9 @@ abstract class CordaPluginRegistry {
      * The [PluginServiceHub] will be fully constructed before the plugin service is created and will
      * allow access to the Flow factory and Flow initiation entry points there.
      */
+    @Suppress("unused")
+    @Deprecated("This is no longer used. If you need to create your own service, such as an oracle, then use the " +
+        "@CordaService annotation. For flow registrations use @InitiatedBy.", level = DeprecationLevel.ERROR)
     open val servicePlugins: List<Function<PluginServiceHub, out Any>> get() = emptyList()
 
     /**

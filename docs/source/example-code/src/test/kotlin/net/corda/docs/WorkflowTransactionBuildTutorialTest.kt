@@ -4,7 +4,6 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.getOrThrow
-import net.corda.core.node.ServiceEntry
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
@@ -21,7 +20,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class WorkflowTransactionBuildTutorialTest {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var nodeA: MockNetwork.MockNode
     lateinit var nodeB: MockNetwork.MockNode
@@ -30,29 +29,26 @@ class WorkflowTransactionBuildTutorialTest {
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
         val linearHeads = vaultService.linearHeadsOfType<T>()
         val original = storageService.validatedTransactions.getTransaction(ref.txhash)!!.tx.outRef<T>(ref.index)
-        return linearHeads.get(original.state.data.linearId)!!
+        return linearHeads[original.state.data.linearId]!!
     }
 
     @Before
     fun setup() {
-        net = MockNetwork(threadPerNode = true)
+        mockNet = MockNetwork(threadPerNode = true)
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = net.createNode(
+        notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = net.createPartyNode(notaryNode.info.address)
-        nodeB = net.createPartyNode(notaryNode.info.address)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeA = mockNet.createPartyNode(notaryNode.info.address)
+        nodeB = mockNet.createPartyNode(notaryNode.info.address)
+        nodeA.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 
     @After
     fun cleanUp() {
         println("Close DB")
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test

@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 import java.util.*
@@ -13,13 +13,15 @@ import java.util.*
  * A transaction to be passed as input to a contract verification function. Defines helper methods to
  * simplify verification logic in contracts.
  */
+// DOCSTART 1
 data class TransactionForContract(val inputs: List<ContractState>,
                                   val outputs: List<ContractState>,
                                   val attachments: List<Attachment>,
                                   val commands: List<AuthenticatedObject<CommandData>>,
                                   val origHash: SecureHash,
                                   val inputNotary: Party? = null,
-                                  val timestamp: Timestamp? = null) {
+                                  val timeWindow: TimeWindow? = null) {
+// DOCEND 1
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForContract && other.origHash == origHash
 
@@ -37,6 +39,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
      * currency. To solve this, you would use groupStates with a type of Cash.State and a selector that returns the
      * currency field: the resulting list can then be iterated over to perform the per-currency calculation.
      */
+    // DOCSTART 2
     fun <T : ContractState, K : Any> groupStates(ofType: Class<T>, selector: (T) -> K): List<InOutGroup<T, K>> {
         val inputs = inputs.filterIsInstance(ofType)
         val outputs = outputs.filterIsInstance(ofType)
@@ -47,6 +50,7 @@ data class TransactionForContract(val inputs: List<ContractState>,
         @Suppress("DEPRECATION")
         return groupStatesInternal(inGroups, outGroups)
     }
+    // DOCEND 2
 
     /** See the documentation for the reflection-based version of [groupStates] */
     inline fun <reified T : ContractState, K : Any> groupStates(selector: (T) -> K): List<InOutGroup<T, K>> {
@@ -83,7 +87,9 @@ data class TransactionForContract(val inputs: List<ContractState>,
      * up on both sides of the transaction, but the values must be summed independently per currency. Grouping can
      * be used to simplify this logic.
      */
+    // DOCSTART 3
     data class InOutGroup<out T : ContractState, out K : Any>(val inputs: List<T>, val outputs: List<T>, val groupingKey: K)
+    // DOCEND 3
 }
 
 class TransactionResolutionException(val hash: SecureHash) : FlowException() {

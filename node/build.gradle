@@ -25,6 +25,9 @@ configurations {
 
     integrationTestCompile.extendsFrom testCompile
     integrationTestRuntime.extendsFrom testRuntime
+
+    smokeTestCompile.extendsFrom compile
+    smokeTestRuntime.extendsFrom runtime
 }
 
 sourceSets {
@@ -38,12 +41,32 @@ sourceSets {
             srcDir file('src/integration-test/resources')
         }
     }
+    smokeTest {
+        kotlin {
+            // We must NOT have any Node code on the classpath, so do NOT
+            // include the test or integrationTest dependencies here.
+            compileClasspath += main.output
+            runtimeClasspath += main.output
+            srcDir file('src/smoke-test/kotlin')
+        }
+    }
 }
 
 // Use manual resource copying of log4j2.xml rather than source sets.
 // This prevents problems in IntelliJ with regard to duplicate source roots.
 processResources {
     from file("$rootDir/config/dev/log4j2.xml")
+}
+
+processSmokeTestResources {
+    // Build one of the demos so that we can test CorDapp scanning in CordappScanningTest. It doesn't matter which demo
+    // we use, just make sure the test is updated accordingly.
+    from(project(':samples:trader-demo').tasks.jar) {
+        rename 'trader-demo-(.*)', 'trader-demo.jar'
+    }
+    from(project(':node:capsule').tasks.buildCordaJAR) {
+        rename 'corda-(.*)', 'corda.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -75,7 +98,10 @@ dependencies {
     // Artemis: for reliable p2p message queues.
     compile "org.apache.activemq:artemis-server:${artemis_version}"
     compile "org.apache.activemq:artemis-core-client:${artemis_version}"
-    runtime "org.apache.activemq:artemis-amqp-protocol:${artemis_version}"
+    runtime ("org.apache.activemq:artemis-amqp-protocol:${artemis_version}") {
+        // Gains our proton-j version from core module.
+        exclude group: 'org.apache.qpid', module: 'proton-j'
+    }
 
     // JAnsi: for drawing things to the terminal in nicely coloured ways.
     compile "org.fusesource.jansi:jansi:$jansi_version"
@@ -153,16 +179,35 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 
     // FastClasspathScanner: classpath scanning
-    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.20'
+    compile 'io.github.lukehutch:fast-classpath-scanner:2.0.21'
 
     // Jsh: A SSH implementation for tunneling inbound traffic via a relay
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
 
     // Integration test helpers
     integrationTestCompile "junit:junit:$junit_version"
+    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
+
+    // Smoke tests do NOT have any Node code on the classpath!
+    smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile "org.assertj:assertj-core:${assertj_version}"
+    smokeTestCompile "junit:junit:$junit_version"
 }
 
 task integrationTest(type: Test) {
     testClassesDir = sourceSets.integrationTest.output.classesDir
     classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+task smokeTest(type: Test) {
+    testClassesDir = sourceSets.smokeTest.output.classesDir
+    classpath = sourceSets.smokeTest.runtimeClasspath
+}
+
+jar {
+    baseName 'corda-node'
+}
+
+publish {
+    name = jar.baseName
 }

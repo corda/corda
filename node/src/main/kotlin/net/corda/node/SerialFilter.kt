@@ -1,6 +1,8 @@
 package net.corda.node
 
-import java.lang.reflect.Field
+import net.corda.core.DeclaredField
+import net.corda.core.DeclaredField.Companion.declaredField
+import net.corda.node.internal.Node
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 
@@ -10,7 +12,7 @@ internal object SerialFilter {
     private val undecided: Any
     private val rejected: Any
     private val serialFilterLock: Any
-    private val serialFilterField: Field
+    private val serialFilterField: DeclaredField<Any>
 
     init {
         // ObjectInputFilter and friends are in java.io in Java 9 but sun.misc in backports:
@@ -24,14 +26,14 @@ internal object SerialFilter {
         // JDK 8u121 is the earliest JDK8 JVM that supports this functionality.
         filterInterface = getFilterInterface("java.io")
                 ?: getFilterInterface("sun.misc")
-                ?: failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121.")
+                ?: Node.failStartUp("Corda forbids Java deserialisation. Please upgrade to at least JDK 8u121.")
         serialClassGetter = Class.forName("${filterInterface.name}\$FilterInfo").getMethod("serialClass")
         val statusEnum = Class.forName("${filterInterface.name}\$Status")
         undecided = statusEnum.getField("UNDECIDED").get(null)
         rejected = statusEnum.getField("REJECTED").get(null)
         val configClass = Class.forName("${filterInterface.name}\$Config")
-        serialFilterLock = configClass.getDeclaredField("serialFilterLock").also { it.isAccessible = true }.get(null)
-        serialFilterField = configClass.getDeclaredField("serialFilter").also { it.isAccessible = true }
+        serialFilterLock = declaredField<Any>(configClass, "serialFilterLock").value
+        serialFilterField = declaredField(configClass, "serialFilter")
     }
 
     internal fun install(acceptClass: (Class<*>) -> Boolean) {
@@ -45,7 +47,7 @@ internal object SerialFilter {
         }
         // Can't simply use the setter as in non-trampoline mode Capsule has inited the filter in premain:
         synchronized(serialFilterLock) {
-            serialFilterField.set(null, filter)
+            serialFilterField.value = filter
         }
     }
 

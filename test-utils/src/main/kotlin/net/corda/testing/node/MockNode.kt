@@ -1,14 +1,14 @@
 package net.corda.testing.node
 
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
+import net.corda.flows.TxKeyFlow
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
@@ -16,16 +16,15 @@ import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.AbstractNode
-import net.corda.node.internal.ServiceFlowInfo
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.statemachine.flowVersion
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -42,10 +41,10 @@ import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
 import java.security.KeyPair
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.reflect.KClass
 
 /**
  * A mock node brings up a suite of in-memory services in a fast manner suitable for unit testing.
@@ -73,7 +72,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
     private val networkId = random63BitValue()
 
-    val identities = ArrayList<Party>()
+    val identities = ArrayList<PartyAndCertificate>()
 
     private val _nodes = ArrayList<MockNode>()
     /** A read only view of the current set of executing nodes. */
@@ -167,12 +166,15 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        override fun makeIdentityService() = InMemoryIdentityService(mockNet.identities)
+        // TODO: Specify a CA to validate registration against
+        override fun makeIdentityService(): IdentityService {
+            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(), trustRoot = null as X509Certificate?)
+        }
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
-        override fun makeKeyManagementService(): KeyManagementService {
-            return E2ETestKeyManagementService(partyKeys + (overrideServices?.values ?: emptySet()))
+        override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
+            return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
         }
 
         override fun startMessagingService(rpcOps: RPCOps) {
@@ -192,7 +194,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     val override = overrideServices[it.info]
                     if (override != null) {
                         // TODO: Store the key
-                        ServiceEntry(it.info, Party(it.identity.name, override.public))
+                        ServiceEntry(it.info, getTestPartyAndCertificate(it.identity.name, override.public))
                     } else {
                         it
                     }
@@ -218,7 +220,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun start(): MockNode {
             super.start()
-            mockNet.identities.add(info.legalIdentity)
+            mockNet.identities.add(info.legalIdentityAndCert)
             return this
         }
 
@@ -232,15 +234,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         // It is used from the network visualiser tool.
         @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
 
-        @VisibleForTesting
-        fun registerServiceFlow(clientFlowClass: KClass<out FlowLogic<*>>,
-                                flowVersion: Int = clientFlowClass.java.flowVersion,
-                                serviceFlowFactory: (Party) -> FlowLogic<*>) {
-            serviceFlowFactories[clientFlowClass.java] = ServiceFlowInfo.CorDapp(flowVersion, serviceFlowFactory)
-        }
-
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
-            return (net as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
+            return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
         }
 
         fun disableDBCloseOnStop() {
@@ -248,7 +243,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         }
 
         fun manuallyCloseDB() {
-            dbCloser?.run()
+            dbCloser?.invoke()
             dbCloser = null
         }
 
@@ -262,8 +257,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * Returns a node, optionally created by the passed factory method.
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
-     * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overriden to cause nodes to have stable or colliding identity/service keys.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
@@ -296,6 +289,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
+            // Register flows that are normally found via plugins
+            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
             if (threadPerNode && networkMapAddress != null)
                 node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }
@@ -370,6 +365,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         repeat(numPartyNodes) {
             nodes += createPartyNode(mapNode.info.address)
         }
+        nodes.forEach { itNode ->
+            nodes.map { it.info.legalIdentityAndCert }.forEach(itNode.services.identityService::registerIdentity)
+        }
         return BasketOfNodes(nodes, notaryNode, mapNode)
     }
 
@@ -388,7 +386,16 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     @Suppress("unused") // This is used from the network visualiser tool.
-    fun addressToNode(address: SingleMessageRecipient): MockNode = nodes.single { it.net.myAddress == address }
+    fun addressToNode(msgRecipient: MessageRecipients): MockNode {
+        return when (msgRecipient) {
+            is SingleMessageRecipient -> nodes.single { it.network.myAddress == msgRecipient }
+            is InMemoryMessagingNetwork.ServiceHandle -> {
+                nodes.filter { it.advertisedServices.any { it == msgRecipient.service.info } }.firstOrNull()
+                        ?: throw IllegalArgumentException("Couldn't find node advertising service with info: ${msgRecipient.service.info} ")
+            }
+            else -> throw IllegalArgumentException("Method not implemented for different type of message recipients")
+        }
+    }
 
     fun startNodes() {
         require(nodes.isNotEmpty())

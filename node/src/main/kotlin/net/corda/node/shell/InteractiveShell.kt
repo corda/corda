@@ -12,14 +12,14 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
 import net.corda.jackson.JacksonSupport
 import net.corda.jackson.StringToMethodCallParser
 import net.corda.node.internal.Node
-import net.corda.node.printBasicNodeInfo
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcContext
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -90,7 +90,7 @@ object InteractiveShell {
             // to that local copy, as CRaSH is no longer well maintained by the upstream and the SSH plugin
             // that it comes with is based on a very old version of Apache SSHD which can't handle connections
             // from newer SSH clients. It also means hooking things up to the authentication system.
-            printBasicNodeInfo("SSH server access is not fully implemented, sorry.")
+            Node.printBasicNodeInfo("SSH server access is not fully implemented, sorry.")
             runSSH = false
         }
 
@@ -181,7 +181,7 @@ object InteractiveShell {
     private val yamlInputMapper: ObjectMapper by lazy {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
-        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory()).apply {
+        JacksonSupport.createInMemoryMapper(node.services.identityService, YAMLFactory(), true).apply {
             val rpcModule = SimpleModule()
             rpcModule.addDeserializer(InputStream::class.java, InputStreamDeserializer)
             registerModule(rpcModule)
@@ -302,6 +302,34 @@ object InteractiveShell {
             }
         }
         throw NoApplicableConstructor(errors)
+    }
+
+    // TODO Filtering on error/success when we will have some sort of flow auditing, for now it doesn't make much sense.
+    @JvmStatic
+    fun runStateMachinesView(out: RenderPrintWriter): Any? {
+        val proxy = node.rpcOps
+        val (stateMachines, stateMachineUpdates) = proxy.stateMachinesAndUpdates()
+        val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
+        val subscriber = FlowWatchPrintingSubscriber(out)
+        stateMachineUpdates.startWith(currentStateMachines).subscribe(subscriber)
+        var result: Any? = subscriber.future
+        if (result is Future<*>) {
+            if (!result.isDone) {
+                out.cls()
+                out.println("Waiting for completion or Ctrl-C ... ")
+                out.flush()
+            }
+            try {
+                result = result.get()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            } catch (e: ExecutionException) {
+                throw e.rootCause
+            } catch (e: InvocationTargetException) {
+                throw e.rootCause
+            }
+        }
+        return result
     }
 
     @JvmStatic

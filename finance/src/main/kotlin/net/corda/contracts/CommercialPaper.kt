@@ -126,8 +126,8 @@ class CommercialPaper : Contract {
                                 groupingKey: Issued<Terms>?): Set<Commands> {
                 val consumedCommands = super.verify(tx, inputs, outputs, commands, groupingKey)
                 commands.requireSingleCommand<Commands.Issue>()
-                val timestamp = tx.timestamp
-                val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
+                val timeWindow = tx.timeWindow
+                val time = timeWindow?.untilTime ?: throw IllegalArgumentException("Issuances must have a time-window")
 
                 require(outputs.all { time < it.maturityDate }) { "maturity date is not in the past" }
 
@@ -166,11 +166,11 @@ class CommercialPaper : Contract {
                 // TODO: This should filter commands down to those with compatible subjects (underlying product and maturity date)
                 // before requiring a single command
                 val command = commands.requireSingleCommand<Commands.Redeem>()
-                val timestamp = tx.timestamp
+                val timeWindow = tx.timeWindow
 
                 val input = inputs.single()
                 val received = tx.outputs.sumCashBy(input.owner)
-                val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
+                val time = timeWindow?.fromTime ?: throw IllegalArgumentException("Redemptions must have a time-window")
                 requireThat {
                     "the paper must have matured" using (time >= input.maturityDate)
                     "the received amount equals the face value" using (received == input.faceValue)

@@ -60,7 +60,6 @@ import java.security.PublicKey
  * @param partiallySignedTx Transaction to collect the remaining signatures for
  */
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
-// TODO: TwoPartyTradeFlow needs updating to use this flow.
 // TODO: Update this flow to handle randomly generated keys when that works is complete.
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
                             override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
@@ -123,6 +122,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
         partyNode.legalIdentity
     }
 
+    // DOCSTART 1
     /**
      * Get and check the required signature.
      */
@@ -132,6 +132,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
             it
         }
     }
+    // DOCEND 1
 }
 
 /**

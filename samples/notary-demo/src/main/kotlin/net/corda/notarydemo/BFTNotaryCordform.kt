@@ -12,13 +12,14 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
-import net.corda.core.mapToArray
+import net.corda.core.stream
+import net.corda.core.toTypedArray
 import net.corda.node.services.transactions.minCorrectReplicas
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = BFTNotaryCordform.runNodes()
 
-private val clusterSize = 4 // Minimum size thats tolerates a faulty replica.
+private val clusterSize = 4 // Minimum size that tolerates a faulty replica.
 private val notaryNames = createNotaryNames(clusterSize)
 
 object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", notaryNames[0]) {
@@ -37,7 +38,7 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
             p2pPort(10005)
             rpcPort(10006)
         }
-        val clusterAddresses = (0 until clusterSize).mapToArray { HostAndPort.fromParts("localhost", 11000 + it * 10) }
+        val clusterAddresses = (0 until clusterSize).stream().mapToObj { HostAndPort.fromParts("localhost", 11000 + it * 10) }.toTypedArray()
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
             advertisedServices(advertisedService)

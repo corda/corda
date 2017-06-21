@@ -1,6 +1,6 @@
 {
   "fixedLeg": {
-    "fixedRatePayer": "CN=Bank A,O=Bank A,L=London,C=UK",
+    "fixedRatePayer": "CN=Bank A,O=Bank A,L=London,C=GB",
     "notional": "€25000000",
     "paymentFrequency": "SemiAnnual",
     "effectiveDate": "2016-03-11",

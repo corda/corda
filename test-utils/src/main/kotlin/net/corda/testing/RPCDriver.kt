@@ -13,7 +13,6 @@ import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.utilities.ProcessUtilities
-import net.corda.node.driver.*
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.RPCServer
@@ -22,6 +21,7 @@ import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.User
+import net.corda.testing.driver.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -224,6 +224,7 @@ fun <A> rpcDriver(
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         networkMapStartStrategy: NetworkMapStartStrategy = NetworkMapStartStrategy.Dedicated(startAutomatically = false),
+        startNodesInProcess: Boolean = false,
         dsl: RPCDriverExposedDSLInterface.() -> A
 ) = genericDriver(
         driverDsl = RPCDriverDSL(
@@ -234,7 +235,8 @@ fun <A> rpcDriver(
                         driverDirectory = driverDirectory.toAbsolutePath(),
                         useTestClock = useTestClock,
                         networkMapStartStrategy = networkMapStartStrategy,
-                        isDebug = isDebug
+                        isDebug = isDebug,
+                        startNodesInProcess = startNodesInProcess
                 )
         ),
         coerce = { it },
@@ -419,7 +421,7 @@ data class RPCDriverDSL(
             server.start()
             driverDSL.shutdownManager.registerShutdown {
                 server.stop()
-                addressMustNotBeBound(driverDSL.executorService, hostAndPort).get()
+                addressMustNotBeBound(driverDSL.executorService, hostAndPort)
             }
             RpcBrokerHandle(
                     hostAndPort = hostAndPort,

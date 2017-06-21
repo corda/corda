@@ -4,13 +4,13 @@ if [ -z "$JAVA_HOME" ]; then
 fi
 
 function signApplication() {
-    APPDIR=$1
-    IDENTITY=$2
+    APPDIR="$1"
+    IDENTITY="$2"
 
-    # Resign the embedded JRE because we have included "bin/java"
+    # Re-sign the embedded JRE because we have included "bin/java"
     # after javapackager had already signed the JRE installation.
-    if ! (codesign --force --sign "$IDENTITY" --verbose "$APPDIR/Contents/PlugIns/Java.runtime"); then
-        echo "**** Failed to resign the embedded JVM"
+    if ! (codesign --force --sign "$IDENTITY" --preserve-metadata=identifier,entitlements,requirements --verbose "$APPDIR/Contents/PlugIns/Java.runtime"); then
+        echo "**** Failed to re-sign the embedded JVM"
         return 1
     fi
 }
@@ -27,7 +27,7 @@ fi
 cd ..
 
 # Sign the application using a 'Developer ID Application' key on our keychain.
-if ! (signApplication "Corda DemoBench.app" "Developer ID Application: "); then
+if ! (signApplication "Corda DemoBench.app" "Developer ID Application: @signingKeyUserName@"); then
     echo "**** Failed to sign the application - ABORT SIGNING"
 fi
 

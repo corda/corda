@@ -18,6 +18,7 @@ import net.corda.core.utilities.NonEmptySetSerializer
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPrivateCrtKey
@@ -102,11 +103,8 @@ object DefaultKryoCustomizer {
 
             register(CertPath::class.java, CertPathSerializer)
             register(X509CertPath::class.java, CertPathSerializer)
-            // TODO: We shouldn't need to serialize raw certificates, and if we do then we need a cleaner solution
-            //       than this mess.
-            val x509CertObjectClazz = Class.forName("org.bouncycastle.jcajce.provider.asymmetric.x509.X509CertificateObject")
-            register(x509CertObjectClazz, X509CertificateSerializer)
             register(X500Name::class.java, X500NameSerializer)
+            register(X509CertificateHolder::class.java, X509CertificateSerializer)
 
             register(BCECPrivateKey::class.java, PrivateKeySerializer)
             register(BCECPublicKey::class.java, PublicKeySerializer)

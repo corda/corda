@@ -19,7 +19,8 @@ object SuggestedDetails {
             "Bank of Big Apples" to "New York",
             "Bank of Baguettes" to "Paris",
             "Bank of Fondue" to "Geneve",
-            "Bank of Maple Syrup" to "Toronto"
+            "Bank of Maple Syrup" to "Toronto",
+            "Bank of Golden Gates" to "San Francisco"
     )
 
     private var cursor = 0

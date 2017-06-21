@@ -2,7 +2,7 @@
 
 define(['utils/dayCountBasisLookup'], (dayCountBasisLookup) => {
     return {
-        fixedRatePayer: "CN=Bank A,O=Bank A,L=London,C=UK",
+        fixedRatePayer: "CN=Bank A,O=Bank A,L=London,C=GB",
         notional: {
             quantity: 2500000000
         },

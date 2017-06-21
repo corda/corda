@@ -1,7 +1,7 @@
 buildscript {
     ext.tornadofx_version = '1.7.3'
     ext.jna_version = '4.1.0'
-    ext.purejavacomm_version = '0.0.17'
+    ext.purejavacomm_version = '0.0.18'
     ext.controlsfx_version = '8.40.12'
 
     ext.java_home = System.properties.'java.home'
@@ -9,6 +9,7 @@ buildscript {
     ext.pkg_outDir = "$buildDir/javapackage"
     ext.dist_source = "$pkg_source/demobench-$version"
     ext.pkg_version = "$version".indexOf('-') >= 0 ? "$version".substring(0, "$version".indexOf('-')) : version
+    ext.pkg_macosxKeyUserName = 'R3CEV'
 
     repositories {
         mavenLocal()
@@ -61,12 +62,8 @@ dependencies {
     // FontAwesomeFX: icons in the form of a font.
     compile "de.jensd:fontawesomefx-fontawesome:4.7.0-5"
 
-    // These libraries don't exist in any Maven repository I can find.
-    // See: https://github.com/JetBrains/jediterm
-    //
-    // The terminal JAR here has also been tweaked:
-    // See: https://github.com/JetBrains/jediterm/issues/144
-    compile ':jediterm-terminal-2.5'
+    // JediTerm: the terminal emulator used in IntelliJ. We have forked it and tweaked it, see https://github.com/corda/jediterm
+    compile ':terminal-331a005d6793e52cefc9e2cec6774e62d5a546b1'
     compile ':pty4j-0.7.2'
 
     testCompile project(':node')
@@ -160,8 +157,9 @@ task javapackage(dependsOn: distZip) {
                 include '**/*.wsf'
                 include '**/*.manifest'
             }
-            filter {
-                line -> line.replaceAll('@pkg_version@', pkg_version)
+            filter { line ->
+                line.replaceAll('@pkg_version@', pkg_version)
+                    .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
             }
             into "$pkg_source/package"
         }
@@ -192,6 +190,9 @@ task javapackage(dependsOn: distZip) {
                     include(name: 'explorer/*.jar')
                 }
             }
+
+            // This is specific to MacOSX packager.
+            bundleArgument(arg: 'mac.signing-key-user-name', value: pkg_macosxKeyUserName)
 
             platform {
                 property(name: 'java.util.logging.config.class', value: 'net.corda.demobench.config.LoggingConfig')

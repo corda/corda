@@ -1,35 +1,41 @@
 package net.corda.core.node.services
 
 import net.corda.core.contracts.PartyAndReference
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
-import net.corda.core.identity.Party
+import net.corda.core.identity.*
+import net.corda.core.node.NodeInfo
 import org.bouncycastle.asn1.x500.X500Name
+import java.security.InvalidAlgorithmParameterException
 import java.security.PublicKey
 import java.security.cert.CertPath
-import java.security.cert.X509Certificate
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
 
 /**
- * An identity service maintains an bidirectional map of [Party]s to their associated public keys and thus supports
- * lookup of a party given its key. This is obviously very incomplete and does not reflect everything a real identity
- * service would provide.
+ * An identity service maintains a directory of parties by their associated distinguished name/public keys and thus
+ * supports lookup of a party given its key, or name. The service also manages the certificates linking confidential
+ * identities back to the well known identity (i.e. the identity in the network map) of a party.
  */
 interface IdentityService {
-    fun registerIdentity(party: Party)
+    /**
+     * Verify and then store a well known identity.
+     *
+     * @param party a party representing a legal entity.
+     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
+     * certificate chain for the anonymous party.
+     */
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun registerIdentity(party: PartyAndCertificate)
 
     /**
-     * Verify and then store the certificates proving that an anonymous party's key is owned by the given full
-     * party.
+     * Verify and then store an identity.
      *
-     * @param trustedRoot trusted root certificate, typically the R3 master signing certificate.
-     * @param anonymousParty an anonymised party belonging to the legal entity.
-     * @param path certificate path from the trusted root to the anonymised party.
-     * @throws IllegalArgumentException if the chain does not link the two parties, or if there is already an existing
-     * certificate chain for the anonymous party. Anonymous parties must always resolve to a single owning party.
+     * @param anonymousParty a party representing a legal entity in a transaction.
+     * @param path certificate path from the trusted root to the party.
+     * @throws IllegalArgumentException if the certificate path is invalid, or if there is already an existing
+     * certificate chain for the anonymous party.
      */
-    // TODO: Move this into internal identity service once available
-    @Throws(IllegalArgumentException::class)
-    fun registerPath(trustedRoot: X509Certificate, anonymousParty: AnonymousParty, path: CertPath)
+    @Throws(CertificateExpiredException::class, CertificateNotYetValidException::class, InvalidAlgorithmParameterException::class)
+    fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath)
 
     /**
      * Asserts that an anonymous party maps to the given full party, by looking up the certificate chain associated with
@@ -44,24 +50,63 @@ interface IdentityService {
      * Get all identities known to the service. This is expensive, and [partyFromKey] or [partyFromX500Name] should be
      * used in preference where possible.
      */
-    fun getAllIdentities(): Iterable<Party>
+    fun getAllIdentities(): Iterable<PartyAndCertificate>
+
+    /**
+     * Get the certificate and path for a well known identity.
+     *
+     * @return the party and certificate, or null if unknown.
+     */
+    fun certificateFromParty(party: Party): PartyAndCertificate?
 
     // There is no method for removing identities, as once we are made aware of a Party we want to keep track of them
     // indefinitely. It may be that in the long term we need to drop or archive very old Party information for space,
     // but for now this is not supported.
 
     fun partyFromKey(key: PublicKey): Party?
-    @Deprecated("Use partyFromX500Name")
+    @Deprecated("Use partyFromX500Name or partiesFromName")
     fun partyFromName(name: String): Party?
     fun partyFromX500Name(principal: X500Name): Party?
 
+    /**
+     * Resolve the well known identity of a party. If the party passed in is already a well known identity
+     * (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity, or null if unknown.
+     */
     fun partyFromAnonymous(party: AbstractParty): Party?
+
+    /**
+     * Resolve the well known identity of a party. If the party passed in is already a well known identity
+     * (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity, or null if unknown.
+     */
     fun partyFromAnonymous(partyRef: PartyAndReference) = partyFromAnonymous(partyRef.party)
+
+    /**
+     * Resolve the well known identity of a party. Throws an exception if the party cannot be identified.
+     * If the party passed in is already a well known identity (i.e. a [Party]) this returns it as-is.
+     *
+     * @return the well known identity.
+     * @throws IllegalArgumentException
+     */
+    fun requirePartyFromAnonymous(party: AbstractParty): Party
 
     /**
      * Get the certificate chain showing an anonymous party is owned by the given party.
      */
     fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath?
+
+    /**
+     * Returns a list of candidate matches for a given string, with optional fuzzy(ish) matching. Fuzzy matching may
+     * get smarter with time e.g. to correct spelling errors, so you should not hard-code indexes into the results
+     * but rather show them via a user interface and let the user pick the one they wanted.
+     *
+     * @param query The string to check against the X.500 name components
+     * @param exactMatch If true, a case sensitive match is done against each component of each X.500 name.
+     */
+    fun partiesFromName(query: String, exactMatch: Boolean): Set<Party>
 
     class UnknownAnonymousPartyException(msg: String) : Exception(msg)
 }

@@ -7,75 +7,117 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-* API changes:
+* A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
+  an unambiguous identity by searching the network map.
+
+* The node driver has moved to net.corda.testing.driver in the test-utils module
+
+* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone)
+
+* Added DER encoded format for CompositeKey so they can be used in X.509 certificates
+
+* Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential identities
+  are used
+
+Milestone 13
+------------
+
+    * Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
+    ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
+    Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
+    and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
+
+Milestone 12
+------------
+
+* Quite a few changes have been made to the flow API which should make things simpler when writing CorDapps:
+
     * ``CordaPluginRegistry.requiredFlows`` is no longer needed. Instead annotate any flows you wish to start via RPC with
-      ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
+     ``@StartableByRPC`` and any scheduled flows with ``@SchedulableFlow``.
 
-    *  Flows which initiate flows in their counterparties (an example of which is the ``NotaryFlow.Client``) are now
-       required to be annotated with ``@InitiatingFlow``.
+   * ``CordaPluginRegistry.servicePlugins`` is also no longer used, along with ``PluginServiceHub.registerFlowInitiator``.
+     Instead annotate your initiated flows with ``@InitiatedBy``. This annotation takes a single parameter which is the
+     initiating flow. This initiating flow further has to be annotated with ``@InitiatingFlow``. For any services you
+     may have, such as oracles, annotate them with ``@CordaService``. These annotations will be picked up automatically
+     when the node starts up.
 
-    * ``PluginServiceHub.registerFlowInitiator`` has been deprecated and replaced by ``registerServiceFlow`` with the
-      marker Class restricted to ``FlowLogic``. In line with the introduction of ``InitiatingFlow``, it throws an
-      ``IllegalArgumentException`` if the initiating flow class is not annotated with it.
+   * Due to these changes, when unit testing flows make sure to use ``AbstractNode.registerInitiatedFlow`` so that the flows
+     are wired up. Likewise for services use ``AbstractNode.installCordaService``.
 
-    * Also related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
-      removed. Its purpose was to allow subflows to be inlined with the parent flow - i.e. the subflow does not initiate
-      new sessions with parties the parent flow has already started. This allowed flows to be used as building blocks. To
-      achieve the same effect now simply requires the subflow to be *not* annotated wth ``InitiatingFlow`` (i.e. we've made
-      this the default behaviour). If the subflow is not meant to be inlined, and is supposed to initiate flows on the
-      other side, the annotation is required.
+   * Related to ``InitiatingFlow``, the ``shareParentSessions`` boolean parameter of ``FlowLogic.subFlow`` has been
+     removed. This was an unfortunate parameter that unnecessarily exposed the inner workings of flow sessions. Now, if
+     your sub-flow can be started outside the context of the parent flow then annotate it with ``@InitiatingFlow``. If
+     it's meant to be used as a continuation of the existing parent flow, such as ``CollectSignaturesFlow``, then it
+     doesn't need any annotation.
 
-    * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
+   * The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
+     number, defaulting to 1 if it's not specified. This enables versioning of flows with nodes only accepting communication
+     if the version number matches. At some point we will support the ability for a node to have multiple versions of the
+     same flow registered, enabling backwards compatibility of flows.
 
-    * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
+   * ``ContractUpgradeFlow.Instigator`` has been renamed to just ``ContractUpgradeFlow``.
 
-    * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
-      manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
+   * ``NotaryChangeFlow.Instigator`` has been renamed to just ``NotaryChangeFlow``.
 
-    * There are major changes to the ``Party`` class as part of confidential identities:
+   * ``FlowLogic.getCounterpartyMarker`` is no longer used and been deprecated for removal. If you were using this to
+     manage multiple independent message streams with the same party in the same flow then use sub-flows instead.
 
-         * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
-           backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
-           as possible.
-         * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. This now replaces
-           use of ``Party`` and ``PublicKey`` in state objects, and allows use of full or anonymised parties depending on
-           use-case.
-         * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
-           name. As a result all node legal names must now be structured as X.500 distinguished names.
+* There are major changes to the ``Party`` class as part of confidential identities:
 
-    * There are major changes to transaction signing in flows:
+    * ``Party`` has moved to the ``net.corda.core.identity`` package; there is a deprecated class in its place for
+      backwards compatibility, but it will be removed in a future release and developers should move to the new class as soon
+      as possible.
+    * There is a new ``AbstractParty`` superclass to ``Party``, which contains just the public key. This now replaces
+      use of ``Party`` and ``PublicKey`` in state objects, and allows use of full or anonymised parties depending on
+      use-case.
+    * A new ``PartyAndCertificate`` class has been added which aggregates a Party along with an X.509 certificate and
+      certificate path back to a network trust root. This is used where a Party and its proof of identity are required,
+      for example in identity registration.
+    * Names of parties are now stored as a ``X500Name`` rather than a ``String``, to correctly enforce basic structure of the
+      name. As a result all node legal names must now be structured as X.500 distinguished names.
 
-         * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most
+* The identity management service takes an optional network trust root which it will validate certificate paths to, if
+  provided. A later release will make this a required parameter.
+
+* There are major changes to transaction signing in flows:
+
+     * You should use the new ``CollectSignaturesFlow`` and corresponding ``SignTransactionFlow`` which handle most
            of the details of this for you. They may get more complex in future as signing becomes a more featureful
            operation.
          * ``ServiceHub.legalIdentityKey`` no longer returns a ``KeyPair``, it instead returns just the ``PublicKey`` portion of this pair.
-           The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
+       The ``ServiceHub.notaryIdentityKey`` has changed similarly. The goal of this change is to keep private keys
            encapsulated and away from most flow code/Java code, so that the private key material can be stored in HSMs
            and other key management devices.
-         * The ``KeyManagementService`` now provides no mechanism to request the node's ``PrivateKey`` objects directly.
-           Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
-           which of the node's multiple keys to use. This lookup also works for ``CompositeKey`` scenarios
-           and the service will search for a leaf key hosted on the node.
-         * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
-           with the ``PrivateKey`` kept internally to the service.
-         * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
-           should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
-           generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
-           Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
-           provided with two signatures. One version that signs with the default node key, the other which allows key selection
-           by passing in the ``PublicKey`` partner of the desired signing key.
-         * The original ``KeyPair`` signing methods have been left on the ``TransactionBuilder`` and ``SignedTransaction``, but
-           should only be used as part of unit testing.
-           
-* The ``InitiatingFlow`` annotation also has an integer ``version`` property which assigns the initiating flow a version
-  number, defaulting to 1 if it's specified. The flow version is included in the flow session request and the counterparty
-  will only respond and start their own flow if the version number matches to the one they've registered with. At some
-  point we will support the ability for a node to have multiple versions of the same flow registered, enabling backwards
-  compatibility of CorDapp flows.
+     * The ``KeyManagementService`` no longer provides any mechanism to request the node's ``PrivateKey`` objects directly.
+       Instead signature creation occurs in the ``KeyManagementService.sign``, with the ``PublicKey`` used to indicate
+       which of the node's keypairs to use. This lookup also works for ``CompositeKey`` scenarios
+       and the service will search for a leaf key hosted on the node.
+     * The ``KeyManagementService.freshKey`` method now returns only the ``PublicKey`` portion of the newly generated ``KeyPair``
+       with the ``PrivateKey`` kept internally to the service.
+     * Flows which used to acquire a node's ``KeyPair``, typically via ``ServiceHub.legalIdentityKey``,
+       should instead use the helper methods on ``ServiceHub``. In particular to freeze a ``TransactionBuilder`` and
+       generate an initial partially signed ``SignedTransaction`` the flow should use ``ServiceHub.signInitialTransaction``.
+       Flows generating additional party signatures should use ``ServiceHub.createSignature``. Each of these methods is
+       provided with two signatures. One version that signs with the default node key, the other which allows key selection
+       by passing in the ``PublicKey`` partner of the desired signing key.
+     * The original ``KeyPair`` signing methods have been left on the ``TransactionBuilder`` and ``SignedTransaction``, but
+       should only be used as part of unit testing.
+
+* ``Timestamp`` used for validation/notarization time-range has been renamed to ``TimeWindow``.
+   There are now 4 factory methods ``TimeWindow.fromOnly(fromTime: Instant)``,
+   ``TimeWindow.untilOnly(untilTime: Instant)``, ``TimeWindow.between(fromTime: Instant, untilTime: Instant)`` and
+   ``TimeWindow.withTolerance(time: Instant, tolerance: Duration)``.
+   Previous constructors ``TimeWindow(fromTime: Instant, untilTime: Instant)`` and
+   ``TimeWindow(time: Instant, tolerance: Duration)`` have been removed.
+
+* The Bouncy Castle library ``X509CertificateHolder`` class is now used in place of ``X509Certificate`` in order to
+  have a consistent class used internally. Conversions to/from ``X509Certificate`` are done as required, but should
+  be avoided where possible.
 
 * The certificate hierarchy has been changed in order to allow corda node to sign keys with proper certificate chain.
      * The corda node will now be issued a restricted client CA for identity/transaction key signing.
      * TLS certificate are now stored in `sslkeystore.jks` and identity keys are stored in `nodekeystore.jks`
+
 .. warning:: The old keystore will need to be removed when upgrading to this version.
 
 Milestone 11.1
@@ -513,7 +555,7 @@ New features in this release:
       are trees of public keys in which interior nodes can have validity thresholds attached, thus allowing
       boolean formulas of keys to be created. This is similar to Bitcoin's multi-sig support and the data model
       is the same as the InterLedger Crypto-Conditions spec, which should aid interop in future. Read more about
-      key trees in the ":doc:`key-concepts-core-types`" article.
+      key trees in the ":doc:`api-core-types`" article.
     * A new tutorial has been added showing how to use transaction attachments in more detail.
 
 * Testnet
@@ -529,7 +571,7 @@ New features in this release:
 * Standalone app development:
 
     * The Corda libraries that app developers need to link against can now be installed into your local Maven
-      repository, where they can then be used like any other JAR. See :doc:`creating-a-cordapp`.
+      repository, where they can then be used like any other JAR. See :doc:`running-a-node`.
 
 * User interfaces:
 
@@ -688,8 +730,8 @@ Highlights of this release:
 We have new documentation on:
 
 * :doc:`event-scheduling`
-* :doc:`key-concepts-core-types`
-* :doc:`key-concepts-consensus-notaries`
+* :doc:`core-types`
+* :doc:`key-concepts-consensus`
 
 Summary of API changes (not exhaustive):
 

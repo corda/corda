@@ -6,7 +6,7 @@ mainClassName = 'net.corda.loadtest.MainKt'
 dependencies {
     compile project(':client:mock')
     compile project(':client:rpc')
-    compile project(':node')
+    compile project(':test-utils')
 
     // https://mvnrepository.com/artifact/com.jcraft/jsch
     compile group: 'com.jcraft', name: 'jsch', version: '0.1.54'
@@ -24,5 +24,14 @@ dependencies {
 run {
     if (project.hasProperty('loadtest-config')) {
         args project["loadtest-config"]
+    }
+    System.properties.forEach { k, v ->
+        if (k.toString().startsWith("loadtest."))
+            systemProperty k, v
+    }
+    if (System.properties.getProperty('consoleLogLevel') != null) {
+        logging.captureStandardOutput(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        logging.captureStandardError(LogLevel.valueOf(System.properties.getProperty('consoleLogLevel')))
+        systemProperty "consoleLogLevel", System.properties.getProperty('consoleLogLevel')
     }
 }

@@ -5,7 +5,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.core.ErrorOr
-import net.corda.core.internal.addShutdownHook
+import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.core.div
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -13,20 +13,19 @@ import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
-import net.corda.nodeapi.config.SSLConfiguration
+import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
 
 data class VerifierConfiguration(
-        val baseDirectory: Path,
+        override val baseDirectory: Path,
         val config: Config
-) : SSLConfiguration {
+) : NodeSSLConfiguration {
     val nodeHostAndPort: HostAndPort by config
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
-    override val certificatesDirectory = baseDirectory / "certificates"
 }
 
 class Verifier {

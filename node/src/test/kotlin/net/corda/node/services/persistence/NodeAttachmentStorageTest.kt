@@ -14,9 +14,9 @@ import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.persistence.schemas.AttachmentEntity
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.configureDatabase
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,7 +55,7 @@ class NodeAttachmentStorageTest {
 
     @After
     fun tearDown() {
-        TransactionManager.current().close()
+        dataSource.close()
     }
 
     @Test
@@ -63,37 +63,41 @@ class NodeAttachmentStorageTest {
         val testJar = makeTestJar()
         val expectedHash = testJar.readAll().sha256()
 
-        val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
-        val id = testJar.read { storage.importAttachment(it) }
-        assertEquals(expectedHash, id)
+        database.transaction {
+            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val id = testJar.read { storage.importAttachment(it) }
+            assertEquals(expectedHash, id)
 
-        assertNull(storage.openAttachment(SecureHash.randomSHA256()))
-        val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
-        val e1 = stream.nextJarEntry!!
-        assertEquals("test1.txt", e1.name)
-        assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "This is some useful content")
-        val e2 = stream.nextJarEntry!!
-        assertEquals("test2.txt", e2.name)
-        assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "Some more useful content")
+            assertNull(storage.openAttachment(SecureHash.randomSHA256()))
+            val stream = storage.openAttachment(expectedHash)!!.openAsJAR()
+            val e1 = stream.nextJarEntry!!
+            assertEquals("test1.txt", e1.name)
+            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "This is some useful content")
+            val e2 = stream.nextJarEntry!!
+            assertEquals("test2.txt", e2.name)
+            assertEquals(stream.readBytes().toString(Charset.defaultCharset()), "Some more useful content")
 
-        stream.close()
+            stream.close()
 
-        storage.openAttachment(id)!!.openAsJAR().use {
-            it.nextJarEntry
-            it.readBytes()
+            storage.openAttachment(id)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
         }
     }
 
     @Test
     fun `duplicates not allowed`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
-        testJar.read {
-            storage.importAttachment(it)
-        }
-        assertFailsWith<FileAlreadyExistsException> {
+        database.transaction {
+            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
             testJar.read {
                 storage.importAttachment(it)
+            }
+            assertFailsWith<FileAlreadyExistsException> {
+                testJar.read {
+                    storage.importAttachment(it)
+                }
             }
         }
     }
@@ -101,38 +105,42 @@ class NodeAttachmentStorageTest {
     @Test
     fun `corrupt entry throws exception`() {
         val testJar = makeTestJar()
-        val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
-        val id = testJar.read { storage.importAttachment(it) }
+        database.transaction {
+            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val id = testJar.read { storage.importAttachment(it) }
 
-        // Corrupt the file in the store.
-        val bytes = testJar.readAll()
-        val corruptBytes = "arggghhhh".toByteArray()
-        System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-        val corruptAttachment = AttachmentEntity()
-        corruptAttachment.attId = id
-        corruptAttachment.content = bytes
-        storage.session.update(corruptAttachment)
+            // Corrupt the file in the store.
+            val bytes = testJar.readAll()
+            val corruptBytes = "arggghhhh".toByteArray()
+            System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
+            val corruptAttachment = AttachmentEntity()
+            corruptAttachment.attId = id
+            corruptAttachment.content = bytes
+            storage.session.update(corruptAttachment)
 
-        val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
-            storage.openAttachment(id)!!.open().use { it.readBytes() }
-        }
-        assertEquals(e.expected, id)
+            val e = assertFailsWith<NodeAttachmentService.HashMismatchException> {
+                storage.openAttachment(id)!!.open().use { it.readBytes() }
+            }
+            assertEquals(e.expected, id)
 
-        // But if we skip around and read a single entry, no exception is thrown.
-        storage.openAttachment(id)!!.openAsJAR().use {
-            it.nextJarEntry
-            it.readBytes()
+            // But if we skip around and read a single entry, no exception is thrown.
+            storage.openAttachment(id)!!.openAsJAR().use {
+                it.nextJarEntry
+                it.readBytes()
+            }
         }
     }
 
     @Test
     fun `non jar rejected`() {
-        val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
-        val path = fs.getPath("notajar")
-        path.writeLines(listOf("Hey", "there!"))
-        path.read {
-            assertFailsWith<IllegalArgumentException>("either empty or not a JAR") {
-                storage.importAttachment(it)
+        database.transaction {
+            val storage = NodeAttachmentService(fs.getPath("/"), dataSourceProperties, MetricRegistry())
+            val path = fs.getPath("notajar")
+            path.writeLines(listOf("Hey", "there!"))
+            path.read {
+                assertFailsWith<IllegalArgumentException>("either empty or not a JAR") {
+                    storage.importAttachment(it)
+                }
             }
         }
     }

@@ -8,6 +8,22 @@ description 'Testing utilities for Corda'
 configurations {
     // we don't want isolated.jar in classPath, since we want to test jar being dynamically loaded as an attachment
     runtime.exclude module: 'isolated'
+
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
 }
 
 dependencies {
@@ -15,7 +31,6 @@ dependencies {
     compile project(':core')
     compile project(':node')
     compile project(':webserver')
-    compile project(':verifier')
     compile project(':client:mock')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
@@ -33,4 +48,21 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+
+    // Integration test helpers
+    integrationTestCompile "org.assertj:assertj-core:${assertj_version}"
+    integrationTestCompile "junit:junit:$junit_version"
+}
+
+task integrationTest(type: Test) {
+    testClassesDir = sourceSets.integrationTest.output.classesDir
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+jar {
+    baseName 'corda-test-utils'
+}
+
+publish {
+    name = jar.baseName
 }

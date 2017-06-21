@@ -1,22 +1,21 @@
 package net.corda.irs.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.Fix
-import net.corda.core.contracts.FixOf
+import net.corda.contracts.Fix
+import net.corda.contracts.FixOf
 import net.corda.core.crypto.DigitalSignature
-import net.corda.core.identity.Party
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.irs.flows.RatesFixFlow.FixOutOfRange
-import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import java.math.BigDecimal
-import java.time.Instant
 import java.util.*
+import java.util.function.Predicate
 
 // This code is unit tested in NodeInterestRates.kt
 
@@ -47,7 +46,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixOutOfRange(@Suppress("unused") val byAmount: BigDecimal) : Exception("Fix out of range by $byAmount")
 
     @CordaSerializable
-    data class QueryRequest(val queries: List<FixOf>, val deadline: Instant)
+    data class QueryRequest(val queries: List<FixOf>)
 
     @CordaSerializable
     data class SignRequest(val ftx: FilteredTransaction)
@@ -62,7 +61,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
         tx.addCommand(fix, oracle.owningKey)
         beforeSigning(fix)
         progressTracker.currentStep = SIGNING
-        val mtx = tx.toWireTransaction().buildFilteredTransaction({ filtering(it) })
+        val mtx = tx.toWireTransaction().buildFilteredTransaction(Predicate { filtering(it) })
         val signature = subFlow(FixSignFlow(tx, oracle, mtx))
         tx.addSignatureUnchecked(signature)
     }
@@ -98,9 +97,8 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
     class FixQueryFlow(val fixOf: FixOf, val oracle: Party) : FlowLogic<Fix>() {
         @Suspendable
         override fun call(): Fix {
-            val deadline = suggestInterestRateAnnouncementTimeWindow(fixOf.name, oracle.name.toString(), fixOf.forDay).end
             // TODO: add deadline to receive
-            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf), deadline))
+            val resp = sendAndReceive<ArrayList<Fix>>(oracle, QueryRequest(listOf(fixOf)))
 
             return resp.unwrap {
                 val fix = it.first()

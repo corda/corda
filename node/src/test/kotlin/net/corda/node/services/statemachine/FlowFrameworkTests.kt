@@ -7,13 +7,13 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.*
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSessionException
 import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
@@ -30,15 +30,19 @@ import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.FinalityFlow
 import net.corda.flows.NotaryFlow
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction
-import net.corda.testing.*
+import net.corda.testing.expect
+import net.corda.testing.expectEvents
+import net.corda.testing.getTestX509Name
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.InMemoryMessagingNetwork.MessageTransfer
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
+import net.corda.testing.sequence
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType
@@ -60,7 +64,7 @@ class FlowFrameworkTests {
         }
     }
 
-    private val net = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
     private val sessionTransfers = ArrayList<SessionTransfer>()
     private lateinit var node1: MockNode
     private lateinit var node2: MockNode
@@ -69,7 +73,7 @@ class FlowFrameworkTests {
 
     @Before
     fun start() {
-        val nodes = net.createTwoNodes()
+        val nodes = mockNet.createTwoNodes()
         node1 = nodes.first
         node2 = nodes.second
         val notaryKeyPair = generateKeyPair()
@@ -77,16 +81,16 @@ class FlowFrameworkTests {
         val overrideServices = mapOf(Pair(notaryService, notaryKeyPair))
         // Note that these notaries don't operate correctly as they don't share their state. They are only used for testing
         // service addressing.
-        notary1 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
-        notary2 = net.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary1 = mockNet.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
+        notary2 = mockNet.createNotaryNode(networkMapAddr = node1.services.myInfo.address, overrideServices = overrideServices, serviceName = notaryService.name)
 
-        net.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
-        net.runNetwork()
+        mockNet.messagingNetwork.receivedMessages.toSessionTransfers().forEach { sessionTransfers += it }
+        mockNet.runNetwork()
     }
 
     @After
     fun cleanUp() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test
@@ -110,7 +114,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `exception while fiber suspended`() {
-        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow("Hello", it) }
+        node2.registerFlowFactory(ReceiveFlow::class) { SendFlow("Hello", it) }
         val flow = ReceiveFlow(node2.info.legalIdentity)
         val fiber = node1.services.startFlow(flow) as FlowStateMachineImpl
         // Before the flow runs change the suspend action to throw an exception
@@ -118,7 +122,7 @@ class FlowFrameworkTests {
         fiber.actionOnSuspend = {
             throw exceptionDuringSuspend
         }
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatThrownBy {
             fiber.resultFuture.getOrThrow()
         }.isSameAs(exceptionDuringSuspend)
@@ -129,7 +133,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `flow restarted just after receiving payload`() {
-        node2.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
+        node2.registerFlowFactory(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         node1.services.startFlow(SendFlow("Hello", node2.info.legalIdentity))
 
         // We push through just enough messages to get only the payload sent
@@ -137,49 +141,49 @@ class FlowFrameworkTests {
         node2.disableDBCloseOnStop()
         node2.acceptableLiveFiberCountOnStop = 1
         node2.stop()
-        net.runNetwork()
+        mockNet.runNetwork()
         val restoredFlow = node2.restartAndGetRestoredFlow<ReceiveFlow>(node1)
         assertThat(restoredFlow.receivedPayloads[0]).isEqualTo("Hello")
     }
 
     @Test
     fun `flow added before network map does run after init`() {
-        val node3 = net.createNode(node1.info.address) //create vanilla node
+        val node3 = mockNet.createNode(node1.info.address) //create vanilla node
         val flow = NoOpFlow()
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
-        net.runNetwork() // Allow network map messages to flow
+        mockNet.runNetwork() // Allow network map messages to flow
         assertEquals(true, flow.flowStarted) // Now we should have run the flow
     }
 
     @Test
     fun `flow added before network map will be init checkpointed`() {
-        var node3 = net.createNode(node1.info.address) //create vanilla node
+        var node3 = mockNet.createNode(node1.info.address) //create vanilla node
         val flow = NoOpFlow()
         node3.services.startFlow(flow)
         assertEquals(false, flow.flowStarted) // Not started yet as no network activity has been allowed yet
         node3.disableDBCloseOnStop()
         node3.stop()
 
-        node3 = net.createNode(node1.info.address, forcedID = node3.id)
+        node3 = mockNet.createNode(node1.info.address, forcedID = node3.id)
         val restoredFlow = node3.getSingleFlow<NoOpFlow>().first
         assertEquals(false, restoredFlow.flowStarted) // Not started yet as no network activity has been allowed yet
-        net.runNetwork() // Allow network map messages to flow
+        mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertEquals(true, restoredFlow.flowStarted) // Now we should have run the flow and hopefully cleared the init checkpoint
         node3.disableDBCloseOnStop()
         node3.stop()
 
         // Now it is completed the flow should leave no Checkpoint.
-        node3 = net.createNode(node1.info.address, forcedID = node3.id)
-        net.runNetwork() // Allow network map messages to flow
+        node3 = mockNet.createNode(node1.info.address, forcedID = node3.id)
+        mockNet.runNetwork() // Allow network map messages to flow
         node3.smm.executor.flush()
         assertTrue(node3.smm.findStateMachines(NoOpFlow::class.java).isEmpty())
     }
 
     @Test
     fun `flow loaded from checkpoint will respond to messages from before start`() {
-        node1.registerServiceFlow(ReceiveFlow::class) { SendFlow("Hello", it) }
+        node1.registerFlowFactory(ReceiveFlow::class) { SendFlow("Hello", it) }
         node2.services.startFlow(ReceiveFlow(node1.info.legalIdentity).nonTerminating()) // Prepare checkpointed receive flow
         // Make sure the add() has finished initial processing.
         node2.smm.executor.flush()
@@ -195,11 +199,11 @@ class FlowFrameworkTests {
         val payload2 = random63BitValue()
 
         var sentCount = 0
-        net.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
+        mockNet.messagingNetwork.sentMessages.toSessionTransfers().filter { it.isPayloadTransfer }.forEach { sentCount++ }
 
-        val node3 = net.createNode(node1.info.address)
-        val secondFlow = node3.initiateSingleShotFlow(PingPongFlow::class) { PingPongFlow(it, payload2) }
-        net.runNetwork()
+        val node3 = mockNet.createNode(node1.info.address)
+        val secondFlow = node3.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, payload2) }
+        mockNet.runNetwork()
 
         // Kick off first send and receive
         node2.services.startFlow(PingPongFlow(node3.info.legalIdentity, payload))
@@ -214,11 +218,11 @@ class FlowFrameworkTests {
         node2.database.transaction {
             assertEquals(1, node2.checkpointStorage.checkpoints().size) // confirm checkpoint
         }
-        val node2b = net.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
+        val node2b = mockNet.createNode(node1.info.address, node2.id, advertisedServices = *node2.advertisedServices.toTypedArray())
         node2.manuallyCloseDB()
         val (firstAgain, fut1) = node2b.getSingleFlow<PingPongFlow>()
         // Run the network which will also fire up the second flow. First message should get deduped. So message data stays in sync.
-        net.runNetwork()
+        mockNet.runNetwork()
         node2b.smm.executor.flush()
         fut1.getOrThrow()
 
@@ -241,13 +245,13 @@ class FlowFrameworkTests {
 
     @Test
     fun `sending to multiple parties`() {
-        val node3 = net.createNode(node1.info.address)
-        net.runNetwork()
-        node2.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
-        node3.registerServiceFlow(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
+        val node3 = mockNet.createNode(node1.info.address)
+        mockNet.runNetwork()
+        node2.registerFlowFactory(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
+        node3.registerFlowFactory(SendFlow::class) { ReceiveFlow(it).nonTerminating() }
         val payload = "Hello World"
         node1.services.startFlow(SendFlow(payload, node2.info.legalIdentity, node3.info.legalIdentity))
-        net.runNetwork()
+        mockNet.runNetwork()
         val node2Flow = node2.getSingleFlow<ReceiveFlow>().first
         val node3Flow = node3.getSingleFlow<ReceiveFlow>().first
         assertThat(node2Flow.receivedPayloads[0]).isEqualTo(payload)
@@ -273,16 +277,16 @@ class FlowFrameworkTests {
 
     @Test
     fun `receiving from multiple parties`() {
-        val node3 = net.createNode(node1.info.address)
-        net.runNetwork()
+        val node3 = mockNet.createNode(node1.info.address)
+        mockNet.runNetwork()
         val node2Payload = "Test 1"
         val node3Payload = "Test 2"
-        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow(node2Payload, it) }
-        node3.registerServiceFlow(ReceiveFlow::class) { SendFlow(node3Payload, it) }
+        node2.registerFlowFactory(ReceiveFlow::class) { SendFlow(node2Payload, it) }
+        node3.registerFlowFactory(ReceiveFlow::class) { SendFlow(node3Payload, it) }
         val multiReceiveFlow = ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity).nonTerminating()
         node1.services.startFlow(multiReceiveFlow)
         node1.acceptableLiveFiberCountOnStop = 1
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(multiReceiveFlow.receivedPayloads[0]).isEqualTo(node2Payload)
         assertThat(multiReceiveFlow.receivedPayloads[1]).isEqualTo(node3Payload)
 
@@ -303,9 +307,9 @@ class FlowFrameworkTests {
 
     @Test
     fun `both sides do a send as their first IO request`() {
-        node2.registerServiceFlow(PingPongFlow::class) { PingPongFlow(it, 20L) }
+        node2.registerFlowFactory(PingPongFlow::class) { PingPongFlow(it, 20L) }
         node1.services.startFlow(PingPongFlow(node2.info.legalIdentity, 10L))
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertSessionTransfers(
                 node1 sent sessionInit(PingPongFlow::class, 1, 10L) to node2,
@@ -328,9 +332,9 @@ class FlowFrameworkTests {
         // We pay a couple of times, the notary picking should go round robin
         for (i in 1..3) {
             node1.services.startFlow(CashPaymentFlow(500.DOLLARS, node2.info.legalIdentity))
-            net.runNetwork()
+            mockNet.runNetwork()
         }
-        val endpoint = net.messagingNetwork.endpoint(notary1.net.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
+        val endpoint = mockNet.messagingNetwork.endpoint(notary1.network.myAddress as InMemoryMessagingNetwork.PeerHandle)!!
         val party1Info = notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!
         assertTrue(party1Info is PartyInfo.Service)
         val notary1Address: MessageRecipients = endpoint.getAddressOfParty(notary1.services.networkMapCache.getPartyInfo(notary1.info.notaryIdentity)!!)
@@ -339,7 +343,7 @@ class FlowFrameworkTests {
         sessionTransfers.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
-                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -349,7 +353,7 @@ class FlowFrameworkTests {
                         assertEquals(notary1.id, it.from)
                     },
                     // Second pay
-                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -359,7 +363,7 @@ class FlowFrameworkTests {
                         assertEquals(notary2.id, it.from)
                     },
                     // Third pay
-                    expect(match = { it.message is SessionInit && it.message.clientFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -374,9 +378,9 @@ class FlowFrameworkTests {
 
     @Test
     fun `other side ends before doing expected send`() {
-        node2.registerServiceFlow(ReceiveFlow::class) { NoOpFlow() }
+        node2.registerFlowFactory(ReceiveFlow::class) { NoOpFlow() }
         val resultFuture = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
             resultFuture.getOrThrow()
         }.withMessageContaining(String::class.java.name)  // Make sure the exception message mentions the type the flow was expecting to receive
@@ -384,7 +388,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `non-FlowException thrown on other side`() {
-        val erroringFlowFuture = node2.initiateSingleShotFlow(ReceiveFlow::class) {
+        val erroringFlowFuture = node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { Exception("evil bug!") }
         }
         val erroringFlowSteps = erroringFlowFuture.flatMap { it.progressSteps }
@@ -393,7 +397,7 @@ class FlowFrameworkTests {
         val receiveFlowSteps = receiveFlow.progressSteps
         val receiveFlowResult = node1.services.startFlow(receiveFlow).resultFuture
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertThat(erroringFlowSteps.get()).containsExactly(
                 Notification.createOnNext(ExceptionFlow.START_STEP),
@@ -418,14 +422,14 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown on other side`() {
-        val erroringFlow = node2.initiateSingleShotFlow(ReceiveFlow::class) {
+        val erroringFlow = node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { MyFlowException("Nothing useful") }
         }
         val erroringFlowSteps = erroringFlow.flatMap { it.progressSteps }
 
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)) as FlowStateMachineImpl
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertThatExceptionOfType(MyFlowException::class.java)
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
@@ -453,13 +457,13 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException propagated in invocation chain`() {
-        val node3 = net.createNode(node1.info.address)
-        net.runNetwork()
+        val node3 = mockNet.createNode(node1.info.address)
+        mockNet.runNetwork()
 
-        node3.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
-        node2.initiateSingleShotFlow(ReceiveFlow::class) { ReceiveFlow(node3.info.legalIdentity) }
+        node3.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Chain") } }
+        node2.registerFlowFactory(ReceiveFlow::class) { ReceiveFlow(node3.info.legalIdentity) }
         val receivingFiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity))
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(MyFlowException::class.java)
                 .isThrownBy { receivingFiber.resultFuture.getOrThrow() }
                 .withMessage("Chain")
@@ -467,18 +471,18 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException thrown and there is a 3rd unrelated party flow`() {
-        val node3 = net.createNode(node1.info.address)
-        net.runNetwork()
+        val node3 = mockNet.createNode(node1.info.address)
+        mockNet.runNetwork()
 
         // Node 2 will send its payload and then block waiting for the receive from node 1. Meanwhile node 1 will move
         // onto node 3 which will throw the exception
         val node2Fiber = node2
-                .initiateSingleShotFlow(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
+                .registerFlowFactory(ReceiveFlow::class) { SendAndReceiveFlow(it, "Hello") }
                 .map { it.stateMachine }
-        node3.initiateSingleShotFlow(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
+        node3.registerFlowFactory(ReceiveFlow::class) { ExceptionFlow { MyFlowException("Nothing useful") } }
 
         val node1Fiber = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity, node3.info.legalIdentity)) as FlowStateMachineImpl
-        net.runNetwork()
+        mockNet.runNetwork()
 
         // Node 1 will terminate with the error it received from node 3 but it won't propagate that to node 2 (as it's
         // not relevant to it) but it will end its session with it
@@ -528,17 +532,17 @@ class FlowFrameworkTests {
             }
         }
 
-        node2.registerServiceFlow(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
+        node2.registerFlowFactory(AskForExceptionFlow::class) { ConditionalExceptionFlow(it, "Hello") }
         val resultFuture = node1.services.startFlow(RetryOnExceptionFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(resultFuture.getOrThrow()).isEqualTo("Hello")
     }
 
     @Test
     fun `serialisation issue in counterparty`() {
-        node2.registerServiceFlow(ReceiveFlow::class) { SendFlow(NonSerialisableData(1), it) }
+        node2.registerFlowFactory(ReceiveFlow::class) { SendFlow(NonSerialisableData(1), it) }
         val result = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
             result.getOrThrow()
         }
@@ -546,11 +550,11 @@ class FlowFrameworkTests {
 
     @Test
     fun `FlowException has non-serialisable object`() {
-        node2.initiateSingleShotFlow(ReceiveFlow::class) {
+        node2.registerFlowFactory(ReceiveFlow::class) {
             ExceptionFlow { NonSerialisableFlowException(NonSerialisableData(1)) }
         }
         val result = node1.services.startFlow(ReceiveFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(FlowException::class.java).isThrownBy {
             result.getOrThrow()
         }
@@ -562,11 +566,11 @@ class FlowFrameworkTests {
         ptx.addOutputState(DummyState())
         val stx = node1.services.signInitialTransaction(ptx)
 
-        val committerFiber = node1
-                .initiateSingleShotFlow(WaitingFlows.Waiter::class) { WaitingFlows.Committer(it) }
-                .map { it.stateMachine }
+        val committerFiber = node1.registerFlowFactory(WaitingFlows.Waiter::class) {
+            WaitingFlows.Committer(it)
+        }.map { it.stateMachine }
         val waiterStx = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(waiterStx.getOrThrow()).isEqualTo(committerFiber.getOrThrow().resultFuture.getOrThrow())
     }
 
@@ -576,11 +580,11 @@ class FlowFrameworkTests {
         ptx.addOutputState(DummyState())
         val stx = node1.services.signInitialTransaction(ptx)
 
-        node1.registerServiceFlow(WaitingFlows.Waiter::class) {
+        node1.registerFlowFactory(WaitingFlows.Waiter::class) {
             WaitingFlows.Committer(it) { throw Exception("Error") }
         }
         val waiter = node2.services.startFlow(WaitingFlows.Waiter(stx, node1.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
             waiter.getOrThrow()
         }
@@ -589,22 +593,31 @@ class FlowFrameworkTests {
     @Test
     fun `lazy db iterator left on stack during checkpointing`() {
         val result = node2.services.startFlow(VaultAccessFlow()).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
     }
 
     @Test
-    fun `custom client flow`() {
-        val receiveFlowFuture = node2.initiateSingleShotFlow(SendFlow::class) { ReceiveFlow(it) }
+    fun `customised client flow`() {
+        val receiveFlowFuture = node2.registerFlowFactory(SendFlow::class) { ReceiveFlow(it) }
         node1.services.startFlow(CustomSendFlow("Hello", node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(receiveFlowFuture.getOrThrow().receivedPayloads).containsOnly("Hello")
+    }
+
+    @Test
+    fun `customised client flow which has annotated @InitiatingFlow again`() {
+        val result = node1.services.startFlow(IncorrectCustomSendFlow("Hello", node2.info.legalIdentity)).resultFuture
+        mockNet.runNetwork()
+        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
+            result.getOrThrow()
+        }.withMessageContaining(InitiatingFlow::class.java.simpleName)
     }
 
     @Test
     fun `upgraded flow`() {
         node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity))
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(sessionTransfers).startsWith(
                 node1 sent sessionInit(UpgradedFlow::class, 2) to node2
         )
@@ -612,9 +625,13 @@ class FlowFrameworkTests {
 
     @Test
     fun `unsupported new flow version`() {
-        node2.registerServiceFlow(UpgradedFlow::class, flowVersion = 1) { SendFlow("Hello", it) }
+        node2.internalRegisterFlowFactory(
+                UpgradedFlow::class.java,
+                InitiatedFlowFactory.CorDapp(version = 1, factory = ::DoubleInlinedSubFlow),
+                DoubleInlinedSubFlow::class.java,
+                track = false)
         val result = node1.services.startFlow(UpgradedFlow(node2.info.legalIdentity)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThatExceptionOfType(FlowSessionException::class.java).isThrownBy {
             result.getOrThrow()
         }.withMessageContaining("Version")
@@ -622,17 +639,17 @@ class FlowFrameworkTests {
 
     @Test
     fun `single inlined sub-flow`() {
-        node2.registerServiceFlow(SendAndReceiveFlow::class) { SingleInlinedSubFlow(it) }
+        node2.registerFlowFactory(SendAndReceiveFlow::class, ::SingleInlinedSubFlow)
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
     @Test
     fun `double inlined sub-flow`() {
-        node2.registerServiceFlow(SendAndReceiveFlow::class) { DoubleInlinedSubFlow(it) }
+        node2.registerFlowFactory(SendAndReceiveFlow::class, ::DoubleInlinedSubFlow)
         val result = node1.services.startFlow(SendAndReceiveFlow(node2.info.legalIdentity, "Hello")).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEqualTo("HelloHello")
     }
 
@@ -654,6 +671,18 @@ class FlowFrameworkTests {
         return smm.findStateMachines(P::class.java).single()
     }
 
+    private inline fun <reified P : FlowLogic<*>> MockNode.registerFlowFactory(
+        initiatingFlowClass: KClass<out FlowLogic<*>>,
+        noinline flowFactory: (Party) -> P): ListenableFuture<P>
+    {
+        val observable = internalRegisterFlowFactory(initiatingFlowClass.java, object : InitiatedFlowFactory<P> {
+            override fun createFlow(platformVersion: Int, otherParty: Party, sessionInit: SessionInit): P {
+                return flowFactory(otherParty)
+            }
+        }, P::class.java, track = true)
+        return observable.toFuture()
+    }
+
     private fun sessionInit(clientFlowClass: KClass<out FlowLogic<*>>, flowVersion: Int = 1, payload: Any? = null): SessionInit {
         return SessionInit(0, clientFlowClass.java, flowVersion, payload)
     }
@@ -667,7 +696,7 @@ class FlowFrameworkTests {
     }
 
     private fun assertSessionTransfers(node: MockNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.net.myAddress }
+        val actualForNode = sessionTransfers.filter { it.from == node.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
         return actualForNode
     }
@@ -695,7 +724,7 @@ class FlowFrameworkTests {
     }
 
     private infix fun MockNode.sent(message: SessionMessage): Pair<Int, SessionMessage> = Pair(id, message)
-    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.net.myAddress)
+    private infix fun Pair<Int, SessionMessage>.to(node: MockNode): SessionTransfer = SessionTransfer(first, second, node.network.myAddress)
 
     private val FlowLogic<*>.progressSteps: ListenableFuture<List<Notification<ProgressTracker.Step>>> get() {
         return progressTracker!!.changes
@@ -730,7 +759,11 @@ class FlowFrameworkTests {
     }
 
     private interface CustomInterface
+
     private class CustomSendFlow(payload: String, otherParty: Party) : CustomInterface, SendFlow(payload, otherParty)
+
+    @InitiatingFlow
+    private class IncorrectCustomSendFlow(payload: String, otherParty: Party) : CustomInterface, SendFlow(payload, otherParty)
 
     @InitiatingFlow
     private class ReceiveFlow(vararg val otherParties: Party) : FlowLogic<Unit>() {
@@ -852,7 +885,7 @@ class FlowFrameworkTests {
     }
 
     private data class NonSerialisableData(val a: Int)
-    private class NonSerialisableFlowException(val data: NonSerialisableData) : FlowException()
+    private class NonSerialisableFlowException(@Suppress("unused") val data: NonSerialisableData) : FlowException()
 
     //endregion Helpers
 }

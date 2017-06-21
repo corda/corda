@@ -13,6 +13,7 @@ import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
+import java.util.function.Predicate
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
@@ -31,8 +32,8 @@ class WireTransaction(
         notary: Party?,
         signers: List<PublicKey>,
         type: TransactionType,
-        timestamp: Timestamp?
-) : BaseTransaction(inputs, outputs, notary, signers, type, timestamp), TraversableTransaction {
+        timeWindow: TimeWindow?
+) : BaseTransaction(inputs, outputs, notary, signers, type, timeWindow), TraversableTransaction {
     init {
         checkInvariants()
     }
@@ -100,13 +101,13 @@ class WireTransaction(
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timestamp, type)
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timeWindow, type)
     }
 
     /**
      * Build filtered transaction using provided filtering functions.
      */
-    fun buildFilteredTransaction(filtering: (Any) -> Boolean): FilteredTransaction {
+    fun buildFilteredTransaction(filtering: Predicate<Any>): FilteredTransaction {
         return FilteredTransaction.buildMerkleTransaction(this, filtering)
     }
 
@@ -120,17 +121,17 @@ class WireTransaction(
      * @param filtering filtering over the whole WireTransaction
      * @returns FilteredLeaves used in PartialMerkleTree calculation and verification.
      */
-    fun filterWithFun(filtering: (Any) -> Boolean): FilteredLeaves {
-        fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering(elem)) null else elem
+    fun filterWithFun(filtering: Predicate<Any>): FilteredLeaves {
+        fun notNullFalse(elem: Any?): Any? = if (elem == null || !filtering.test(elem)) null else elem
         return FilteredLeaves(
-                inputs.filter { filtering(it) },
-                attachments.filter { filtering(it) },
-                outputs.filter { filtering(it) },
-                commands.filter { filtering(it) },
+                inputs.filter { filtering.test(it) },
+                attachments.filter { filtering.test(it) },
+                outputs.filter { filtering.test(it) },
+                commands.filter { filtering.test(it) },
                 notNullFalse(notary) as Party?,
-                mustSign.filter { filtering(it) },
+                mustSign.filter { filtering.test(it) },
                 notNullFalse(type) as TransactionType?,
-                notNullFalse(timestamp) as Timestamp?
+                notNullFalse(timeWindow) as TimeWindow?
         )
     }
 

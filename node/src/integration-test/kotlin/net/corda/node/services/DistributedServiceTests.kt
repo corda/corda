@@ -14,8 +14,8 @@ import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.driver
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.testing.expect
@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 
 class DistributedServiceTests : DriverBasedTest() {
     lateinit var alice: NodeHandle
-    lateinit var notaries: List<NodeHandle>
+    lateinit var notaries: List<NodeHandle.OutOfProcess>
     lateinit var aliceProxy: CordaRPCOps
     lateinit var raftNotaryIdentity: Party
     lateinit var notaryStateMachines: Observable<Pair<NodeInfo, StateMachineUpdate>>
@@ -52,7 +52,7 @@ class DistributedServiceTests : DriverBasedTest() {
         alice = aliceFuture.get()
         val (notaryIdentity, notaryNodes) = notariesFuture.get()
         raftNotaryIdentity = notaryIdentity
-        notaries = notaryNodes
+        notaries = notaryNodes.map { it as NodeHandle.OutOfProcess }
 
         assertEquals(notaries.size, clusterSize)
         assertEquals(notaries.size, notaries.map { it.nodeInfo.legalIdentity }.toSet().size)

@@ -1,7 +1,9 @@
 package net.corda.irs.contract
 
+import net.corda.contracts.Tenor
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Tenor
 import net.corda.core.serialization.CordaSerializable
 import java.math.BigDecimal
 import java.util.*
@@ -36,6 +38,7 @@ val String.percent: PercentageRatioUnit get() = PercentageRatioUnit(this)
 /**
  * Parent of the Rate family. Used to denote fixed rates, floating rates, reference rates etc.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 open class Rate(val ratioUnit: RatioUnit? = null) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -63,6 +66,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
  */
 @CordaSerializable
 class FixedRate(ratioUnit: RatioUnit) : Rate(ratioUnit) {
+    @JsonIgnore
     fun isPositive(): Boolean = ratioUnit!!.value > BigDecimal("0.0")
 
     override fun equals(other: Any?) = other?.javaClass == javaClass && super.equals(other)

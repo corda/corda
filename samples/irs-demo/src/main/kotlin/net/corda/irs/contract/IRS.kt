@@ -1,16 +1,20 @@
 package net.corda.irs.contract
 
+import net.corda.contracts.*
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.flows.FixingFlow
 import net.corda.irs.utilities.suggestInterestRateAnnouncementTimeWindow
 import org.apache.commons.jexl3.JexlBuilder
@@ -106,6 +110,7 @@ abstract class RatePaymentEvent(date: LocalDate,
  * Assumes that the rate is valid.
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FixedRatePaymentEvent(date: LocalDate,
                             accrualStartDate: LocalDate,
                             accrualEndDate: LocalDate,
@@ -129,6 +134,7 @@ class FixedRatePaymentEvent(date: LocalDate,
  * If the rate is null returns a zero payment. // TODO: Is this the desired behaviour?
  */
 @CordaSerializable
+@JsonIgnoreProperties(ignoreUnknown = true)
 class FloatingRatePaymentEvent(date: LocalDate,
                                accrualStartDate: LocalDate,
                                accrualEndDate: LocalDate,
@@ -190,10 +196,6 @@ class FloatingRatePaymentEvent(date: LocalDate,
  */
 class InterestRateSwap : Contract {
     override val legalContractReference = SecureHash.sha256("is_this_the_text_of_the_contract ? TBD")
-
-    companion object {
-        val oracleType = ServiceType.corda.getSubType("interest_rates")
-    }
 
     /**
      * This Common area contains all the information that is not leg specific.
@@ -459,7 +461,7 @@ class InterestRateSwap : Contract {
                 fixingCalendar, index, indexSource, indexTenor)
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.TimeWindow(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Clauses {
         /**
@@ -515,13 +517,13 @@ class InterestRateSwap : Contract {
             }
         }
 
-        class Timestamped : Clause<ContractState, Commands, Unit>() {
+        class TimeWindow : Clause<ContractState, Commands, Unit>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timestamp?.midpoint != null) { "must be timestamped" }
+                require(tx.timeWindow?.midpoint != null) { "must be have a time-window)" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -655,6 +657,7 @@ class InterestRateSwap : Contract {
     /**
      * The state class contains the 4 major data classes.
      */
+    @JsonIgnoreProperties("parties", "participants", ignoreUnknown = true)
     data class State(
             val fixedLeg: FixedLeg,
             val floatingLeg: FloatingLeg,
@@ -666,25 +669,22 @@ class InterestRateSwap : Contract {
         override val contract = IRS_PROGRAM_ID
 
         override val oracleType: ServiceType
-            get() = InterestRateSwap.oracleType
+            get() = NodeInterestRates.Oracle.type
 
         override val ref = common.tradeID
 
         override val participants: List<AbstractParty>
-            get() = parties
+            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
 
         override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
             return fixedLeg.fixedRatePayer.owningKey.containsAny(ourKeys) || floatingLeg.floatingRatePayer.owningKey.containsAny(ourKeys)
         }
 
-        override val parties: List<AbstractParty>
-            get() = listOf(fixedLeg.fixedRatePayer, floatingLeg.floatingRatePayer)
-
         override fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity? {
             val nextFixingOf = nextFixingOf() ?: return null
 
             // This is perhaps not how we should determine the time point in the business day, but instead expect the schedule to detail some of these aspects
-            val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).start
+            val instant = suggestInterestRateAnnouncementTimeWindow(index = nextFixingOf.name, source = floatingLeg.indexSource, date = nextFixingOf.forDay).fromTime!!
             return ScheduledActivity(flowLogicRefFactory.create(FixingFlow.FixingRoleDecider::class.java, thisStateRef), instant)
         }
 

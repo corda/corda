@@ -11,13 +11,13 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import javafx.util.Duration
-import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.crypto.commonName
 import net.corda.core.serialization.deserialize
 import net.corda.core.then
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.simulation.IRSSimulation
-import net.corda.irs.simulation.Simulation
 import net.corda.netmap.VisualiserViewModel.Style
+import net.corda.netmap.simulation.IRSSimulation
+import net.corda.netmap.simulation.Simulation
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.SessionConfirm
 import net.corda.node.services.statemachine.SessionEnd
@@ -109,9 +109,9 @@ class NetworkMapVisualiser : Application() {
             }
         }
         // Fire the message bullets between nodes.
-        simulation.network.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
-            val senderNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.sender)
-            val destNode: MockNetwork.MockNode = simulation.network.addressToNode(msg.recipients as SingleMessageRecipient)
+        simulation.mockNet.messagingNetwork.sentMessages.observeOn(uiThread).subscribe { msg: InMemoryMessagingNetwork.MessageTransfer ->
+            val senderNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.sender)
+            val destNode: MockNetwork.MockNode = simulation.mockNet.addressToNode(msg.recipients)
 
             if (transferIsInteresting(msg)) {
                 viewModel.nodesToWidgets[senderNode]!!.pulseAnim.play()
@@ -234,7 +234,7 @@ class NetworkMapVisualiser : Application() {
                 } else if (!viewModel.trackerBoxes.containsKey(tracker)) {
                     // New flow started up; add.
                     val extraLabel = viewModel.simulation.extraNodeLabels[node]
-                    val label = if (extraLabel != null) "${node.info.legalIdentity.name}: $extraLabel" else node.info.legalIdentity.name.toString()
+                    val label = if (extraLabel != null) "${node.info.legalIdentity.name.commonName}: $extraLabel" else node.info.legalIdentity.name.commonName
                     val widget = view.buildProgressTrackerWidget(label, tracker.topLevelTracker)
                     println("Added: $tracker, $widget")
                     viewModel.trackerBoxes[tracker] = widget

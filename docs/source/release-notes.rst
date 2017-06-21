@@ -6,13 +6,52 @@ Here are release notes for each snapshot release from M9 onwards.
 Unreleased
 ----------
 
-We've added the ability for flows to be versioned by their CorDapp developers. This enables a node to support a particular
-version of a flow and allows it to reject flow communication with a node which isn't using the same fact. In a future
-release we allow a node to have multiple versions of the same flow running to enable backwards compatibility.
+Certificate checks have been enabled for much of the identity service, with additional checks coming targetted at M13.
+These are part of the confidential identities work, and ensure that parties are actually who they claim to be by checking
+their certificate path back to the network trust root (certificate authority).
 
-There are major changes to the ``Party`` class as part of confidential identities, and how parties and keys are stored
-in transaction state objects. See :doc:`changelog` for full details.
+Milestone 12 - First Public Beta
+--------------------------------
 
+One of our busiest releases, lots of changes that take us closer to API stability (for more detailed information about
+what has changed, see :doc:`changelog`). In this release we focused mainly on making developers' lives easier. Taking
+into account feedback from numerous training courses and meet-ups, we decided to add ``CollectSignaturesFlow`` which
+factors out a lot of code which CorDapp developers needed to write to get their transactions signed.
+The improvement is up to 150 fewer lines of code in each flow! To have your transaction signed by different parties, you
+need only now call a subflow which collects the parties' signatures for you.
+
+Additionally we introduced classpath scanning to wire-up flows automatically. Writing CorDapps has been made simpler by
+removing boiler-plate code that was previously required when registering flows. Writing services such as oracles has also been simplified.
+
+We made substantial RPC performance improvements (please note that this is separate to node performance, we are focusing
+on that area in future milestones):
+
+- 15-30k requests per second for a single client/server RPC connection.
+  * 1Kb requests, 1Kb responses, server and client on same machine, parallelism 8, measured on a Dell XPS 17(i7-6700HQ, 16Gb RAM)
+- The framework is now multithreaded on both client and server side.
+- All remaining bottlenecks are in the messaging layer.
+
+Security of the key management service has been improved by removing support for extracting private keys, in order that
+it can support use of a hardware security module (HSM) for key storage. Instead it exposes functionality for signing data
+(typically transactions). The service now also supports multiple signature schemes (not just EdDSA).
+
+We've added the beginnings of flow versioning. Nodes now reject flow requests if the initiating side is not using the same
+flow version. In a future milestone release will add the ability to support backwards compatibility.
+
+As with the previous few releases we have continued work extending identity support. There are major changes to the ``Party``
+class as part of confidential identities, and how parties and keys are stored in transaction state objects.
+See :doc:`changelog` for full details.
+
+Added new Byzantine fault tolerant (BFT) decentralised notary demo, based on the `BFT-SMaRT protocol <https://bft-smart.github.io/library/>`_
+For how to run the demo see: :ref:`notary-demo`
+
+We continued to work on tools that enable diagnostics on the node. The newest addition to Corda Shell is ``flow watch`` command which
+lets the administrator see all flows currently running with result or error information as well as who is the flow initiator.
+Here is the view from DemoBench:
+
+.. image:: resources/flowWatchCmd.png
+
+We also started work on the strategic wire format (not integrated).
 
 Milestone 11
 ------------
@@ -29,7 +68,7 @@ distinguished names (see RFC 1779 for details on the construction of distinguish
 enforced, however it will be in a later milestone.
 
 * "myLegalName" in node configurations will need to be replaced, for example "Bank A" is replaced with
-  "CN=Bank A,O=Bank A,L=London,C=UK". Obviously organisation, location and country ("O", "L" and "C" respectively)
+  "CN=Bank A,O=Bank A,L=London,C=GB". Obviously organisation, location and country ("O", "L" and "C" respectively)
   must be given values which are appropriate to the node, do not just use these example values.
 * "networkMap" in node configurations must be updated to match any change to the legal name of the network map.
 * If you are using mock parties for testing, try to standardise on the ``DUMMY_NOTARY``, ``DUMMY_BANK_A``, etc. provided

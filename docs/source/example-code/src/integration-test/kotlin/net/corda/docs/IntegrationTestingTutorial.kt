@@ -14,7 +14,7 @@ import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User

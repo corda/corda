@@ -22,8 +22,8 @@ object SimmRevaluation {
             val stateAndRef = serviceHub.vaultService.linearHeadsOfType<PortfolioState>().values.first { it.ref == curStateRef }
             val curState = stateAndRef.state.data
             val myIdentity = serviceHub.myInfo.legalIdentity
-            if (myIdentity == curState.parties[0]) {
-                val otherParty = serviceHub.identityService.partyFromAnonymous(curState.parties[1])
+            if (myIdentity == curState.participants[0]) {
+                val otherParty = serviceHub.identityService.partyFromAnonymous(curState.participants[1])
                 require(otherParty != null) { "Other party must be known by this node" }
                 subFlow(SimmFlow.Requester(otherParty!!, valuationDate, stateAndRef))
             }

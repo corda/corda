@@ -26,24 +26,24 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class NotaryServiceTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var clientNode: MockNetwork.MockNode
 
     @Before fun setup() {
-        net = MockNetwork()
-        notaryNode = net.createNode(
+        mockNet = MockNetwork()
+        notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        clientNode = net.createNode(networkMapAddress = notaryNode.info.address)
-        net.runNetwork() // Clear network map registration messages
+        clientNode = mockNet.createNode(networkMapAddress = notaryNode.info.address)
+        mockNet.runNetwork() // Clear network map registration messages
     }
 
-    @Test fun `should sign a unique transaction with a valid timestamp`() {
+    @Test fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.setTime(Instant.now(), 30.seconds)
+            tx.addTimeWindow(Instant.now(), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -52,7 +52,7 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should sign a unique transaction without a timestamp`() {
+    @Test fun `should sign a unique transaction without a time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -64,18 +64,18 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should report error for transaction with an invalid timestamp`() {
+    @Test fun `should report error for transaction with an invalid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.setTime(Instant.now().plusSeconds(3600), 30.seconds)
+            tx.addTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 
         val future = runNotaryClient(stx)
 
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
-        assertThat(ex.error).isInstanceOf(NotaryError.TimestampInvalid::class.java)
+        assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
     @Test fun `should sign identical transaction multiple times (signing is idempotent)`() {
@@ -90,7 +90,7 @@ class NotaryServiceTests {
         val f1 = clientNode.services.startFlow(firstAttempt)
         val f2 = clientNode.services.startFlow(secondAttempt)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
     }
@@ -112,7 +112,7 @@ class NotaryServiceTests {
         clientNode.services.startFlow(firstSpend)
         val future = clientNode.services.startFlow(secondSpend)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         val ex = assertFailsWith(NotaryException::class) { future.resultFuture.getOrThrow() }
         val notaryError = ex.error as NotaryError.Conflict
@@ -123,7 +123,7 @@ class NotaryServiceTests {
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
         val flow = NotaryFlow.Client(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         return future
     }
 

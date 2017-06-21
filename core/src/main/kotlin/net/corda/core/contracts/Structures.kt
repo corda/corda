@@ -5,11 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogicRef
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.*
-import net.corda.core.transactions.TransactionBuilder
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -24,37 +21,7 @@ interface NamedByHash {
     val id: SecureHash
 }
 
-/**
- * Interface for state objects that support being netted with other state objects.
- */
-interface BilateralNettableState<N : BilateralNettableState<N>> {
-    /**
-     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
-     * equal objects, they can be close out netted together.
-     */
-    val bilateralNetState: Any
-
-    /**
-     * Perform bilateral netting of this state with another state. The two states must be compatible (as in
-     * bilateralNetState objects are equal).
-     */
-    fun net(other: N): N
-}
-
-/**
- * Interface for state objects that support being netted with other state objects.
- */
-interface MultilateralNettableState<out T : Any> {
-    /**
-     * Returns an object used to determine if two states can be subject to close-out netting. If two states return
-     * equal objects, they can be close out netted together.
-     */
-    val multilateralNetState: T
-}
-
-interface NettableState<N : BilateralNettableState<N>, out T : Any> : BilateralNettableState<N>,
-        MultilateralNettableState<T>
-
+// DOCSTART 1
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
@@ -117,7 +84,9 @@ interface ContractState {
      */
     val participants: List<AbstractParty>
 }
+// DOCEND 1
 
+// DOCSTART 4
 /**
  * A wrapper for [ContractState] containing additional platform-level state information.
  * This is the definitive state that is stored on the ledger and used in transaction outputs.
@@ -146,6 +115,7 @@ data class TransactionState<out T : ContractState> @JvmOverloads constructor(
          * otherwise the transaction is not valid.
          */
         val encumbrance: Int? = null)
+// DOCEND 4
 
 /** Wraps the [ContractState] in a [TransactionState] object */
 infix fun <T : ContractState> T.`with notary`(newNotary: Party) = withNotary(newNotary)
@@ -170,6 +140,7 @@ data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
  */
 fun <T : Any> Amount<Issued<T>>.withoutIssuer(): Amount<T> = Amount(quantity, token.product)
 
+// DOCSTART 3
 /**
  * A contract state that can have a single owner.
  */
@@ -180,6 +151,7 @@ interface OwnableState : ContractState {
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
     fun withNewOwner(newOwner: AbstractParty): Pair<CommandData, OwnableState>
 }
+// DOCEND 3
 
 /** Something which is scheduled to happen at a point in time */
 interface Scheduled {
@@ -208,6 +180,7 @@ data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instan
  */
 data class ScheduledActivity(val logicRef: FlowLogicRef, override val scheduledAt: Instant) : Scheduled
 
+// DOCSTART 2
 /**
  * A state that evolves by superseding itself, all of which share the common "linearId".
  *
@@ -246,6 +219,7 @@ interface LinearState : ContractState {
         }
     }
 }
+// DOCEND 2
 
 interface SchedulableState : ContractState {
     /**
@@ -260,64 +234,6 @@ interface SchedulableState : ContractState {
     fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity?
 }
 
-/**
- * Interface representing an agreement that exposes various attributes that are common. Implementing it simplifies
- * implementation of general flows that manipulate many agreement types.
- */
-interface DealState : LinearState {
-    /** Human readable well known reference (e.g. trade reference) */
-    val ref: String
-
-    /**
-     * Exposes the Parties involved in a generic way.
-     *
-     * Appears to duplicate [participants] a property of [ContractState]. However [participants] only holds public keys.
-     * Currently we need to hard code Party objects into [ContractState]s. [Party] objects are a wrapper for public
-     * keys which also contain some identity information about the public key owner. You can keep track of individual
-     * parties by adding a property for each one to the state, or you can append parties to the [parties] list if you
-     * are implementing [DealState]. We need to do this as identity management in Corda is currently incomplete,
-     * therefore the only way to record identity information is in the [ContractState]s themselves. When identity
-     * management is completed, parties to a transaction will only record public keys in the [DealState] and through a
-     * separate process exchange certificates to ascertain identities. Thus decoupling identities from
-     * [ContractState]s.
-     * */
-    val parties: List<AbstractParty>
-
-    /**
-     * Generate a partial transaction representing an agreement (command) to this deal, allowing a general
-     * deal/agreement flow to generate the necessary transaction for potential implementations.
-     *
-     * TODO: Currently this is the "inception" transaction but in future an offer of some description might be an input state ref
-     *
-     * TODO: This should more likely be a method on the Contract (on a common interface) and the changes to reference a
-     * Contract instance from a ContractState are imminent, at which point we can move this out of here.
-     */
-    fun generateAgreement(notary: Party): TransactionBuilder
-}
-
-/**
- * Interface adding fixing specific methods.
- */
-interface FixableDealState : DealState {
-    /**
-     * When is the next fixing and what is the fixing for?
-     */
-    fun nextFixingOf(): FixOf?
-
-    /**
-     * What oracle service to use for the fixing
-     */
-    val oracleType: ServiceType
-
-    /**
-     * Generate a fixing command for this deal and fix.
-     *
-     * TODO: This would also likely move to methods on the Contract once the changes to reference
-     * the Contract from the ContractState are in.
-     */
-    fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix)
-}
-
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
 
@@ -326,13 +242,17 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bytes)
  * transaction defined the state and where in that transaction it was.
  */
 @CordaSerializable
+// DOCSTART 8
 data class StateRef(val txhash: SecureHash, val index: Int) {
     override fun toString() = "$txhash($index)"
 }
+// DOCEND 8
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a vault (which holds available assets) contains these. */
 @CordaSerializable
+// DOCSTART 7
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef)
+// DOCEND 7
 
 /** Filters a list of [StateAndRef] objects according to the type of the states */
 inline fun <reified T : ContractState> Iterable<StateAndRef<ContractState>>.filterStatesOfType(): List<StateAndRef<T>> {
@@ -360,7 +280,9 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 @CordaSerializable
+// DOCSTART 9
 data class Command(val value: CommandData, val signers: List<PublicKey>) {
+// DOCEND 9
     init {
         require(signers.isNotEmpty())
     }
@@ -387,15 +309,10 @@ interface MoveCommand : CommandData {
     val contractHash: SecureHash?
 }
 
-/** A common netting command for contracts whose states can be netted. */
-interface NetCommand : CommandData {
-    /** The type of netting to apply, see [NetType] for options. */
-    val type: NetType
-}
-
 /** Indicates that this transaction replaces the inputs contract state to another contract state */
 data class UpgradeCommand(val upgradedContractClass: Class<out UpgradedContract<*, *>>) : CommandData
 
+// DOCSTART 6
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 @CordaSerializable
 data class AuthenticatedObject<out T : Any>(
@@ -404,35 +321,71 @@ data class AuthenticatedObject<out T : Any>(
         val signingParties: List<Party>,
         val value: T
 )
+// DOCEND 6
 
 /**
+ * A time-window is required for validation/notarization purposes.
  * If present in a transaction, contains a time that was verified by the uniqueness service. The true time must be
- * between (after, before).
+ * between (fromTime, untilTime).
+ * Usually, a time-window is required to have both sides set (fromTime, untilTime).
+ * However, some apps may require that a time-window has a start [Instant] (fromTime), but no end [Instant] (untilTime) and vice versa.
+ * TODO: Consider refactoring using TimeWindow abstraction like TimeWindow.From, TimeWindow.Until, TimeWindow.Between.
  */
 @CordaSerializable
-data class Timestamp(
-        /** The time at which this transaction is said to have occurred is after this moment */
-        val after: Instant?,
-        /** The time at which this transaction is said to have occurred is before this moment */
-        val before: Instant?
+class TimeWindow private constructor(
+        /** The time at which this transaction is said to have occurred is after this moment. */
+        val fromTime: Instant?,
+        /** The time at which this transaction is said to have occurred is before this moment. */
+        val untilTime: Instant?
 ) {
-    init {
-        if (after == null && before == null)
-            throw IllegalArgumentException("At least one of before/after must be specified")
-        if (after != null && before != null)
-            check(after <= before)
+    companion object {
+        /** Use when the left-side [fromTime] of a [TimeWindow] is only required and we don't need an end instant (untilTime). */
+        @JvmStatic
+        fun fromOnly(fromTime: Instant) = TimeWindow(fromTime, null)
+
+        /** Use when the right-side [untilTime] of a [TimeWindow] is only required and we don't need a start instant (fromTime). */
+        @JvmStatic
+        fun untilOnly(untilTime: Instant) = TimeWindow(null, untilTime)
+
+        /** Use when both sides of a [TimeWindow] must be set ([fromTime], [untilTime]). */
+        @JvmStatic
+        fun between(fromTime: Instant, untilTime: Instant): TimeWindow {
+            require(fromTime < untilTime) { "fromTime should be earlier than untilTime" }
+            return TimeWindow(fromTime, untilTime)
+        }
+
+        /** Use when we have a start time and a period of validity. */
+        @JvmStatic
+        fun fromStartAndDuration(fromTime: Instant, duration: Duration): TimeWindow = between(fromTime, fromTime + duration)
+
+        /**
+         * When we need to create a [TimeWindow] based on a specific time [Instant] and some tolerance in both sides of this instant.
+         * The result will be the following time-window: ([time] - [tolerance], [time] + [tolerance]).
+         */
+        @JvmStatic
+        fun withTolerance(time: Instant, tolerance: Duration) = between(time - tolerance, time + tolerance)
     }
 
-    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
+    /** The midpoint is calculated as fromTime + (untilTime - fromTime)/2. Note that it can only be computed if both sides are set. */
+    val midpoint: Instant get() = fromTime!! + Duration.between(fromTime, untilTime!!).dividedBy(2)
 
-    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is TimeWindow) return false
+        return (fromTime == other.fromTime && untilTime == other.untilTime)
+    }
+
+    override fun hashCode() = 31 * (fromTime?.hashCode() ?: 0) + (untilTime?.hashCode() ?: 0)
+
+    override fun toString() = "TimeWindow(fromTime=$fromTime, untilTime=$untilTime)"
 }
 
+// DOCSTART 5
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
  * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
- * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
+ * time-window attached to the transaction itself i.e. it is NOT necessarily the current time.
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
@@ -453,6 +406,7 @@ interface Contract {
      */
     val legalContractReference: SecureHash
 }
+// DOCEND 5
 
 /**
  * Interface which can upgrade state objects issued by a contract to a new state object issued by a different contract.
@@ -510,7 +464,7 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
             val storage = serviceHub.storageService.attachments
             return {
                 val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
-                if (a is AbstractAttachment) a.attachmentData else a.open().use { it.readBytes() }
+                (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
             }
         }
     }

@@ -1,6 +1,6 @@
 package net.corda.contracts.universal
 
-import net.corda.core.contracts.Frequency
+import net.corda.contracts.Frequency
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.testing.transaction
 import org.junit.Test
@@ -143,7 +143,7 @@ class RollOutTests {
     fun issue() {
         transaction {
             output { stateStart }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             this `fails with` "transaction has a single command"
 
@@ -164,7 +164,7 @@ class RollOutTests {
             input { stateStart }
             output { stateStep1a }
             output { stateStep1b }
-            timestamp(TEST_TX_TIME_1)
+            timeWindow(TEST_TX_TIME_1)
 
             /*   tweak {
                    command(highStreetBank.owningKey) { UniversalContract.Commands.Action("some undefined name") }

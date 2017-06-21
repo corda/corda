@@ -1,0 +1,8 @@
+apply plugin: 'kotlin'
+
+description 'Utilities needed for smoke tests in Corda'
+
+dependencies {
+    // Smoke tests do NOT have any Node code on the classpath!
+    compile project(':client:rpc')
+}

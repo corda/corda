@@ -1,0 +1,29 @@
+API: ServiceHub
+===============
+Within ``FlowLogic.call``, the flow developer has access to the node's ``ServiceHub``, which provides access to the
+various services the node provides. The services offered by the ``ServiceHub`` are split into the following categories:
+
+* ``ServiceHub.networkMapCache``
+    * Provides information on other nodes on the network (e.g. notaries…)
+* ``ServiceHub.identityService``
+    * Allows you to resolve anonymous identities to well-known identities if you have the required certificates
+* ``ServiceHub.vaultService``
+    * Stores the node’s current and historic states
+* ``ServiceHub.storageService``
+    * Stores additional information such as transactions and attachments
+* ``ServiceHub.keyManagementService``
+    * Manages signing transactions and generating fresh public keys
+* ``ServiceHub.myInfo``
+    * Other information about the node
+* ``ServiceHub.clock``
+    * Provides access to the node’s internal time and date
+
+Additional, ``ServiceHub`` exposes the following properties:
+
+* ``ServiceHub.loadState`` and ``ServiceHub.toStateAndRef`` to resolve a ``StateRef`` into a ``TransactionState`` or
+  a ``StateAndRef``
+* ``ServiceHub.signInitialTransaction`` to sign a ``TransactionBuilder`` and convert it into a ``SignedTransaction``
+* ``ServiceHub.createSignature`` and ``ServiceHub.addSignature`` to create and add signatures to a ``SignedTransaction``
+
+Finally, ``ServiceHub`` exposes the node's legal identity key (via ``ServiceHub.legalIdentityKey``) and its notary
+identity key (via ``ServiceHub.notaryIdentityKey``).

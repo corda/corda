@@ -2,10 +2,11 @@ package net.corda.vega.api
 
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount
 import net.corda.client.rpc.notUsed
-import net.corda.core.contracts.DealState
+import net.corda.contracts.DealState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.crypto.*
+import net.corda.core.crypto.parsePublicKeyBase58
+import net.corda.core.crypto.toBase58String
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -41,7 +42,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
         val (vault, vaultUpdates) = rpc.vaultAndUpdates()
         vaultUpdates.notUsed()
-        return vault.filterStatesOfType<T>().filter { it.state.data.parties.any { it == party } }
+        return vault.filterStatesOfType<T>().filter { it.state.data.participants.any { it == party } }
     }
 
     /**
@@ -153,7 +154,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) {
             val states = dealsWith<IRSState>(it)
             val tradeState = states.first { it.state.data.swap.id.second == tradeId }.state.data
-            Response.ok().entity(portfolioUtils.createTradeView(tradeState)).build()
+            Response.ok().entity(portfolioUtils.createTradeView(rpc, tradeState)).build()
         }
     }
 

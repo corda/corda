@@ -76,7 +76,7 @@ dependencies {
     compile "io.requery:requery-kotlin:$requery_version"
 
     // For AMQP serialisation.
-    compile "org.apache.qpid:proton-j:0.18.0"
+    compile "org.apache.qpid:proton-j:0.19.0"
 }
 
 configurations {
@@ -90,4 +90,12 @@ task testJar(type: Jar) {
 
 artifacts {
     testArtifacts testJar
+}
+
+jar {
+    baseName 'corda-core'
+}
+
+publish {
+    name = jar.baseName
 }

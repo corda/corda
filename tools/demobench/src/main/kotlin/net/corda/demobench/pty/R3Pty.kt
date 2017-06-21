@@ -44,14 +44,13 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
 
     @Throws(IOException::class)
     fun run(args: Array<String>, envs: Map<String, String>, workingDir: String?) {
-        check(!terminal.isSessionRunning, { "${terminal.sessionName} is already running" })
+        check(!terminal.isSessionRunning) { "${terminal.sessionName} is already running" }
 
         val environment = envs.toMutableMap()
         if (!UIUtil.isWindows) {
             environment["TERM"] = "xterm"
-
-            // This environment variable is specific to MacOSX.
-            environment.remove("TERM_PROGRAM")
+            // This, in combination with running on a Mac JetBrains JRE, enables emoji in Mac demobench.
+            environment["TERM_PROGRAM"] = "JediTerm"
         }
 
         val connector = createTtyConnector(args, environment, workingDir)
@@ -64,8 +63,7 @@ class R3Pty(val name: X500Name, settings: SettingsProvider, dimension: Dimension
             onExit(exitValue)
         }
 
-        val session = terminal.createTerminalSession(connector)
-        session.start()
+        terminal.createTerminalSession(connector).apply { start() }
     }
 
     @Suppress("unused")

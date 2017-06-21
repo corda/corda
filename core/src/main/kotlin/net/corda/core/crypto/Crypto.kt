@@ -9,6 +9,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.ASN1EncodableVector
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
+import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.DERSequence
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
@@ -19,8 +20,9 @@ import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.NameConstraints
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.cert.bc.BcX509ExtensionUtils
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
@@ -29,6 +31,14 @@ import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECParameterSpec
+import org.bouncycastle.jce.spec.ECPrivateKeySpec
+import org.bouncycastle.jce.spec.ECPublicKeySpec
+import org.bouncycastle.math.ec.ECConstants
+import org.bouncycastle.math.ec.FixedPointCombMultiplier
+import org.bouncycastle.math.ec.WNafUtil
+import org.bouncycastle.operator.ContentSigner
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
@@ -42,11 +52,12 @@ import java.math.BigInteger
 import java.security.*
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
-import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * This object controls and provides the available and supported signature schemes for Corda.
@@ -242,8 +253,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePrivateKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PrivateKey {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         try {
             return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
@@ -298,8 +308,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeySpecException::class)
     fun decodePublicKey(signatureScheme: SignatureScheme, encodedKey: ByteArray): PublicKey {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         try {
             return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
@@ -345,8 +354,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
     fun doSign(signatureScheme: SignatureScheme, privateKey: PrivateKey, clearData: ByteArray): ByteArray {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         if (clearData.isEmpty()) throw Exception("Signing of an empty array is not permitted!")
         signature.initSign(privateKey)
@@ -425,8 +433,7 @@ object Crypto {
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
     fun doVerify(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         if (signatureData.isEmpty()) throw IllegalArgumentException("Signature data is empty!")
         if (clearData.isEmpty()) throw IllegalArgumentException("Clear data is empty, nothing to verify!")
         val verificationResult = isValid(signatureScheme, publicKey, signatureData, clearData)
@@ -488,8 +495,7 @@ object Crypto {
      */
     @Throws(SignatureException::class, IllegalArgumentException::class)
     fun isValid(signatureScheme: SignatureScheme, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray): Boolean {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         val signature = Signature.getInstance(signatureScheme.signatureName, providerMap[signatureScheme.providerName])
         signature.initVerify(publicKey)
         signature.update(clearData)
@@ -516,14 +522,150 @@ object Crypto {
     @Throws(IllegalArgumentException::class)
     @JvmOverloads
     fun generateKeyPair(signatureScheme: SignatureScheme = DEFAULT_SIGNATURE_SCHEME): KeyPair {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         val keyPairGenerator = KeyPairGenerator.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
         if (signatureScheme.algSpec != null)
             keyPairGenerator.initialize(signatureScheme.algSpec, newSecureRandom())
         else
             keyPairGenerator.initialize(signatureScheme.keySize, newSecureRandom())
         return keyPairGenerator.generateKeyPair()
+    }
+
+    /**
+     * Deterministically generate/derive a [KeyPair] using an existing private key and a seed as inputs.
+     * This operation is currently supported for ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
+     *
+     * Similarly to BIP32, the implemented algorithm uses an HMAC function based on SHA512 and it is actually
+     * an implementation the HKDF rfc - Step 1: Extract function,
+     * @see <a href="https://tools.ietf.org/html/rfc5869">HKDF</a>
+     * which is practically a variation of the private-parent-key -> private-child-key hardened key generation of BIP32.
+     *
+     * Unlike BIP32, where both private and public keys are extended to prevent deterministically
+     * generated child keys from depending solely on the key itself, current method uses normal elliptic curve keys
+     * without a chain-code and the generated key relies solely on the security of the private key.
+     *
+     * Although without a chain-code we lose the aforementioned property of not depending solely on the key,
+     * it should be mentioned that the cryptographic strength of the HMAC depends upon the size of the secret key.
+     * @see <a href="https://en.wikipedia.org/wiki/Hash-based_message_authentication_code#Security">HMAC Security</a>
+     * Thus, as long as the master key is kept secret and has enough entropy (~256 bits for EC-schemes), the system
+     * is considered secure.
+     *
+     * It is also a fact that if HMAC is used as PRF and/or MAC but not as checksum function, the function is still
+     * secure even if the underlying hash function is not collision resistant (e.g. if we used MD5).
+     * In practice, for our DKG purposes (thus PRF), a collision would not necessarily reveal the master HMAC key,
+     * because multiple inputs can produce the same hash output.
+     *
+     * Also according to the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) rfc5869:
+     * <p><ul>
+     * <li>a chain-code (aka the salt) is recommended, but not required.
+     * <li>the salt can be public, but a hidden one provides stronger security guarantee.
+     * <li>even a simple counter can work as a salt, but ideally it should be random.
+     * <li>salt values should not be chosen by an attacker.
+     * </ul></p>
+     *
+     * Regarding the last requirement, according to Krawczyk's HKDF scheme: <i>While there is no need to keep the salt secret,
+     * it is assumed that salt values are independent of the input keying material</i>.
+     * @see <a href="http://eprint.iacr.org/2010/264.pdf">Cryptographic Extraction and Key Derivation - The HKDF Scheme</a>.
+     *
+     * There are also protocols that require an authenticated nonce (e.g. when a DH derived key is used as a seed) and thus
+     * we need to make sure that nonces come from legitimate parties rather than selected by an attacker.
+     * Similarly, in DLT systems, proper handling is required if users should agree on a common value as a seed,
+     * e.g. a transaction's nonce or hash.
+     *
+     * Moreover if a unique key per transaction is prerequisite, an attacker should never force a party to reuse a
+     * previously used key, due to privacy and forward secrecy reasons.
+     *
+     * All in all, this algorithm can be used with a counter as seed, however it is suggested that the output does
+     * not solely depend on the key, i.e. a secret salt per user or a random nonce per transaction could serve this role.
+     * In case where a non-random seed policy is selected, such as the BIP32 counter logic, one needs to carefully keep state
+     * so that the same salt is used only once.
+     *
+     * @param signatureScheme the [SignatureScheme] of the private key input.
+     * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
+     * @param seed an extra seed that will be used as value to the underlying HMAC.
+     * @return a new deterministically generated [KeyPair].
+     * @throws IllegalArgumentException if the requested signature scheme is not supported.
+     * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
+     */
+    fun deterministicKeyPair(signatureScheme: SignatureScheme, privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
+        when (signatureScheme) {
+            ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
+            EDDSA_ED25519_SHA512 -> return deriveKeyPairEdDSA(privateKey, seed)
+        }
+        throw UnsupportedOperationException("Although supported for signing, deterministic key derivation is not currently implemented for ${signatureScheme.schemeCodeName}")
+    }
+
+    /**
+     * Deterministically generate/derive a [KeyPair] using an existing private key and a seed as inputs.
+     * Use this method if the [SignatureScheme] of the private key input is not known.
+     * @param privateKey the [PrivateKey] that will be used as key to the HMAC-ed DKG function.
+     * @param seed an extra seed that will be used as value to the underlying HMAC.
+     * @return a new deterministically generated [KeyPair].
+     * @throws IllegalArgumentException if the requested signature scheme is not supported.
+     * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
+     */
+    fun deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        return deterministicKeyPair(findSignatureScheme(privateKey), privateKey, seed)
+    }
+
+    // Given the domain parameters, this routine deterministically generates an ECDSA key pair
+    // in accordance with X9.62 section 5.2.1 pages 26, 27.
+    private fun deriveKeyPairECDSA(parameterSpec: ECParameterSpec, privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        // Compute HMAC(privateKey, seed).
+        val macBytes = deriveHMAC(privateKey, seed)
+        // Get the first EC curve fieldSized-bytes from macBytes.
+        // According to recommendations from the deterministic ECDSA rfc, see https://tools.ietf.org/html/rfc6979
+        // performing a simple modular reduction would induce biases that would be detrimental to security.
+        // Thus, the result is not reduced modulo q and similarly to BIP32, EC curve fieldSized-bytes are utilised.
+        val fieldSizeMacBytes = macBytes.copyOf(parameterSpec.curve.fieldSize / 8)
+
+        // Calculate value d for private key.
+        val deterministicD = BigInteger(1, fieldSizeMacBytes)
+
+        // Key generation checks follow the BC logic found in
+        // https://github.com/bcgit/bc-java/blob/master/core/src/main/java/org/bouncycastle/crypto/generators/ECKeyPairGenerator.java
+        // There is also an extra check to align with the BIP32 protocol, according to which
+        // if deterministicD >= order_of_the_curve the resulted key is invalid and we should proceed with another seed.
+        // TODO: We currently use SHA256(seed) when retrying, but BIP32 just skips a counter (i) that results to an invalid key.
+        //       Although our hashing approach seems reasonable, we should check if there are alternatives,
+        //       especially if we use counters as well.
+        if (deterministicD < ECConstants.TWO
+                || WNafUtil.getNafWeight(deterministicD) < parameterSpec.n.bitLength().ushr(2)
+                || deterministicD >= parameterSpec.n) {
+            // Instead of throwing an exception, we retry with SHA256(seed).
+            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
+        }
+        val privateKeySpec = ECPrivateKeySpec(deterministicD, parameterSpec)
+        val privateKeyD = BCECPrivateKey(privateKey.algorithm, privateKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        // Compute the public key by scalar multiplication.
+        // Note that BIP32 uses masterKey + mac_derived_key as the final private key and it consequently
+        // requires an extra point addition: master_public + mac_derived_public for the public part.
+        // In our model, the mac_derived_output, deterministicD, is not currently added to the masterKey and it
+        // it forms, by itself, the new private key, which in turn is used to compute the new public key.
+        val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
+        // This is unlikely to happen, but we should check for point at infinity.
+        if (pointQ.isInfinity)
+            // Instead of throwing an exception, we retry with SHA256(seed).
+            return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
+        val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
+        val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)
+
+        return KeyPair(publicKeyD, privateKeyD)
+    }
+
+    // Deterministically generate an EdDSA key.
+    private fun deriveKeyPairEdDSA(privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        // Compute HMAC(privateKey, seed).
+        val macBytes = deriveHMAC(privateKey, seed)
+
+        // Calculate key pair.
+        val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
+        val bytes = macBytes.copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
+        val privateKeyD = EdDSAPrivateKeySpec(bytes, params)
+        val publicKeyD = EdDSAPublicKeySpec(privateKeyD.a, params)
+        return KeyPair(EdDSAPublicKey(publicKeyD), EdDSAPrivateKey(privateKeyD))
     }
 
     /**
@@ -535,11 +677,11 @@ object Crypto {
      * @return a new [KeyPair] from an entropy input.
      * @throws IllegalArgumentException if the requested signature scheme is not supported for KeyPair generation using an entropy input.
      */
-    fun generateKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
+    fun deriveKeyPairFromEntropy(signatureScheme: SignatureScheme, entropy: BigInteger): KeyPair {
         when (signatureScheme) {
-            EDDSA_ED25519_SHA512 -> return generateEdDSAKeyPairFromEntropy(entropy)
+            EDDSA_ED25519_SHA512 -> return deriveEdDSAKeyPairFromEntropy(entropy)
         }
-        throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: $signatureScheme.schemeCodeName")
+        throw IllegalArgumentException("Unsupported signature scheme for fixed entropy-based key pair generation: ${signatureScheme.schemeCodeName}")
     }
 
     /**
@@ -547,32 +689,51 @@ object Crypto {
      * @param entropy a [BigInteger] value.
      * @return a new [KeyPair] from an entropy input.
      */
-    fun generateKeyPairFromEntropy(entropy: BigInteger): KeyPair = generateKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
+    fun deriveKeyPairFromEntropy(entropy: BigInteger): KeyPair = deriveKeyPairFromEntropy(DEFAULT_SIGNATURE_SCHEME, entropy)
 
     // custom key pair generator from entropy.
-    private fun generateEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
+    private fun deriveEdDSAKeyPairFromEntropy(entropy: BigInteger): KeyPair {
         val params = EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec
-        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // need to pad the entropy to the valid seed length.
+        val bytes = entropy.toByteArray().copyOf(params.curve.field.getb() / 8) // Need to pad the entropy to the valid seed length.
         val priv = EdDSAPrivateKeySpec(bytes, params)
         val pub = EdDSAPublicKeySpec(priv.a, params)
         return KeyPair(EdDSAPublicKey(pub), EdDSAPrivateKey(priv))
     }
 
+    // Compute the HMAC-SHA512 using a privateKey as the MAC_key and a seed ByteArray.
+    private fun deriveHMAC(privateKey: PrivateKey, seed: ByteArray): ByteArray {
+        // Compute hmac(privateKey, seed).
+        val mac = Mac.getInstance("HmacSHA512", providerMap[BouncyCastleProvider.PROVIDER_NAME])
+        val keyData = when (privateKey) {
+            is BCECPrivateKey -> privateKey.d.toByteArray()
+            is EdDSAPrivateKey -> privateKey.geta()
+            else -> throw InvalidKeyException("Key type ${privateKey.algorithm} is not supported for deterministic key derivation")
+        }
+        val key = SecretKeySpec(keyData, "HmacSHA512")
+        mac.init(key)
+        return mac.doFinal(seed)
+    }
+
     /**
-     * Use bouncy castle utilities to sign completed X509 certificate with CA cert private key.
+     * Build a partial X.509 certificate ready for signing.
+     *
+     * @param issuer name of the issuing entity.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      */
-    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name,
                           subject: X500Name, subjectPublicKey: PublicKey,
                           validityWindow: Pair<Date, Date>,
-                          nameConstraints: NameConstraints? = null): X509Certificate {
+                          nameConstraints: NameConstraints? = null): X509v3CertificateBuilder {
 
-        val signatureScheme = findSignatureScheme(issuerKeyPair.private)
-        val provider = providerMap[signatureScheme.providerName]
         val serial = BigInteger.valueOf(random63BitValue())
         val keyPurposes = DERSequence(ASN1EncodableVector().apply { certificateType.purposes.forEach { add(it) } })
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(ASN1Sequence.getInstance(subjectPublicKey.encoded))
 
         val builder = JcaX509v3CertificateBuilder(issuer, serial, validityWindow.first, validityWindow.second, subject, subjectPublicKey)
-                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(SubjectPublicKeyInfo.getInstance(subjectPublicKey.encoded)))
+                .addExtension(Extension.subjectKeyIdentifier, false, BcX509ExtensionUtils().createSubjectKeyIdentifier(subjectPublicKeyInfo))
                 .addExtension(Extension.basicConstraints, certificateType.isCA, BasicConstraints(certificateType.isCA))
                 .addExtension(Extension.keyUsage, false, certificateType.keyUsage)
                 .addExtension(Extension.extendedKeyUsage, false, keyPurposes)
@@ -580,11 +741,52 @@ object Crypto {
         if (nameConstraints != null) {
             builder.addExtension(Extension.nameConstraints, true, nameConstraints)
         }
+        return builder
+    }
+
+    /**
+     * Build and sign an X.509 certificate with the given signer.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerSigner content signer to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerSigner: ContentSigner,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
+        return builder.build(issuerSigner).apply {
+            require(isValidOn(Date()))
+        }
+    }
+
+    /**
+     * Build and sign an X.509 certificate with CA cert private key.
+     *
+     * @param issuer name of the issuing entity.
+     * @param issuerKeyPair the public & private key to sign the certificate with.
+     * @param subject name of the certificate subject.
+     * @param subjectPublicKey public key of the certificate subject.
+     * @param validityWindow the time period the certificate is valid for.
+     * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
+     */
+    fun createCertificate(certificateType: CertificateType, issuer: X500Name, issuerKeyPair: KeyPair,
+                          subject: X500Name, subjectPublicKey: PublicKey,
+                          validityWindow: Pair<Date, Date>,
+                          nameConstraints: NameConstraints? = null): X509CertificateHolder {
+
+        val signatureScheme = findSignatureScheme(issuerKeyPair.private)
+        val provider = providerMap[signatureScheme.providerName]
+        val builder = createCertificate(certificateType, issuer, subject, subjectPublicKey, validityWindow, nameConstraints)
 
         val signer = ContentSignerBuilder.build(signatureScheme, issuerKeyPair.private, provider)
-        return JcaX509CertificateConverter().setProvider(provider).getCertificate(builder.build(signer)).apply {
-            checkValidity(Date())
-            verify(issuerKeyPair.public, provider)
+        return builder.build(signer).apply {
+            require(isValidOn(Date()))
+            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
         }
     }
 
@@ -617,8 +819,7 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun publicKeyOnCurve(signatureScheme: SignatureScheme, publicKey: PublicKey): Boolean {
-        if (!isSupportedSignatureScheme(signatureScheme))
-            throw IllegalArgumentException("Unsupported signature scheme: $signatureScheme.schemeCodeName")
+        require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         when (publicKey) {
             is BCECPublicKey -> return (publicKey.parameters == signatureScheme.algSpec && !publicKey.q.isInfinity && publicKey.q.isValid)
             is EdDSAPublicKey -> return (publicKey.params == signatureScheme.algSpec && !isEdDSAPointAtInfinity(publicKey) && publicKey.a.isOnCurve)
@@ -669,6 +870,19 @@ object Crypto {
             is BCRSAPrivateKey, is BCSphincs256PrivateKey -> return true // TODO: Check if non-ECC keys satisfy params (i.e. approved/valid RSA modulus size).
             else -> throw IllegalArgumentException("Unsupported key type: ${key::class}")
         }
+    }
+
+    /**
+     * Convert a public key to a supported implementation. This method is usually required to retrieve a key from an
+     * [X509CertificateHolder].
+     *
+     * @param key a public key.
+     * @return a supported implementation of the input public key.
+     * @throws IllegalArgumentException on not supported scheme or if the given key specification
+     * is inappropriate for a supported key factory to produce a private key.
+     */
+    fun toSupportedPublicKey(key: SubjectPublicKeyInfo): PublicKey {
+        return Crypto.decodePublicKey(key.encoded)
     }
 
     /**

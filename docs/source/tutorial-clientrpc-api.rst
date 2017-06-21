@@ -1,7 +1,7 @@
 .. _graphstream: http://graphstream-project.org/
 
-Client RPC API tutorial
-=======================
+Using the client RPC API
+========================
 
 In this tutorial we will build a simple command line utility that connects to a node, creates some Cash transactions and
 meanwhile dumps the transaction graph to the standard output. We will then put some simple visualisation on top. For an
@@ -104,7 +104,7 @@ requests or responses with the Corda node.  Here's an example of both ways you c
     :start-after: START 7
     :end-before: END 7
 
-See more on plugins in :doc:`creating-a-cordapp`.
+See more on plugins in :doc:`running-a-node`.
 
 .. warning:: We will be replacing the use of Kryo in the serialization framework and so additional changes here are likely.
 
@@ -125,7 +125,7 @@ In the instructions above the server node permissions are configured programmati
 
         driver(driverDirectory = baseDirectory) {
             val user = User("user", "password", permissions = setOf(startFlowPermission<CashFlow>()))
-            val node = startNode("CN=Alice Corp,O=Alice Corp,L=London,C=UK", rpcUsers = listOf(user)).get()
+            val node = startNode("CN=Alice Corp,O=Alice Corp,L=London,C=GB", rpcUsers = listOf(user)).get()
 
 When starting a standalone node using a configuration file we must supply the RPC credentials as follows:
 
@@ -162,4 +162,4 @@ With regards to the start flow RPCs, there is an extra layer of security whereby
 annotated with ``@StartableByRPC``. Flows without this annotation cannot execute using RPC.
 
 See more on security in :doc:`secure-coding-guidelines`,  node configuration in :doc:`corda-configuration-file` and
-Cordformation in :doc:`creating-a-cordapp`
+Cordformation in :doc:`running-a-node`.

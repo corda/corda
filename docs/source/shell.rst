@@ -39,8 +39,9 @@ Starting flows and performing remote method calls
 -------------------------------------------------
 
 **Flows** are the way the ledger is changed. If you aren't familiar with them, please review ":doc:`flow-state-machines`"
-first. The ``flow list`` command can be used to list the flows understood by the node and ``flow start`` can be
-used to start them. The ``flow start`` command takes the class name of a flow, or *any unambiguous substring* and
+first. The ``flow list`` command can be used to list the flows understood by the node, ``flow watch`` shows all the flows
+currently running on the node with the result (or error) information in a user friendly way, ``flow start`` can be
+used to start flows. The ``flow start`` command takes the class name of a flow, or *any unambiguous substring* and
 then the data to be passed to the flow constructor. The unambiguous substring feature is helpful for reducing
 the needed typing. If the match is ambiguous the possible matches will be printed out. If a flow has multiple
 constructors then the names and types of the arguments will be used to try and determine which to use automatically.
@@ -67,7 +68,7 @@ Yaml (yet another markup language) is a simple JSON-like way to describe object 
 that make it helpful for our use case, like a lightweight syntax and support for "bare words" which mean you can
 often skip the quotes around strings. Here is an example of how this syntax is used:
 
-``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "CN=Bank A,O=Bank A,L=London,C=UK", notary: "CN=Notary Service,O=R3,OU=corda,L=London,C=UK"``
+``flow start CashIssue amount: $1000, issueRef: 1234, recipient: "CN=Bank A,O=Bank A,L=London,C=GB", notary: "CN=Notary Service,O=R3,OU=corda,L=London,C=GB"``
 
 This invokes a constructor of a flow with the following prototype in the code:
 

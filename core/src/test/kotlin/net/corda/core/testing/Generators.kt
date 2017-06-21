@@ -5,7 +5,8 @@ import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.generator.java.util.ArrayListGenerator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
@@ -118,9 +119,9 @@ class DurationGenerator : Generator<Duration>(Duration::class.java) {
     }
 }
 
-class TimestampGenerator : Generator<Timestamp>(Timestamp::class.java) {
-    override fun generate(random: SourceOfRandomness, status: GenerationStatus): Timestamp {
-        return Timestamp(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
+class TimeWindowGenerator : Generator<TimeWindow>(TimeWindow::class.java) {
+    override fun generate(random: SourceOfRandomness, status: GenerationStatus): TimeWindow {
+        return TimeWindow.withTolerance(InstantGenerator().generate(random, status), DurationGenerator().generate(random, status))
     }
 }
 
@@ -134,7 +135,7 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
     /**
      * Append something that looks a bit like a proper noun to the string builder.
      */
-    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness, status: GenerationStatus) : StringBuilder {
+    private fun appendProperNoun(builder: StringBuilder, random: SourceOfRandomness) : StringBuilder {
         val length = random.nextByte(1, 8)
         val encoded = ByteBuffer.allocate(length.toInt())
         encoded.put((random.nextByte(0, 25) + asciiA).toByte())
@@ -148,7 +149,7 @@ class X500NameGenerator : Generator<X500Name>(X500Name::class.java) {
         val wordCount = random.nextByte(1, 3)
         val cn = StringBuilder()
         for (word in 0..wordCount) {
-            appendProperNoun(cn, random, status).append(" ")
+            appendProperNoun(cn, random).append(" ")
         }
         return getTestX509Name(cn.trim().toString())
     }

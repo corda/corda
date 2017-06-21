@@ -1,8 +1,8 @@
 package net.corda.node
 
 import com.google.common.base.Stopwatch
-import net.corda.node.driver.NetworkMapStartStrategy
-import net.corda.node.driver.driver
+import net.corda.testing.driver.NetworkMapStartStrategy
+import net.corda.testing.driver.driver
 import org.junit.Ignore
 import org.junit.Test
 import java.util.*

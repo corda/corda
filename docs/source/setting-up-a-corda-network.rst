@@ -1,6 +1,6 @@
 .. _log4j2: http://logging.apache.org/log4j/2.x/
 
-What is a Corda network?
+Creating a Corda network
 ========================
 
 A Corda network consists of a number of machines running nodes, including a single node operating as the network map

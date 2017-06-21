@@ -1,6 +1,9 @@
 package net.corda.contracts.asset
 
 import com.google.common.annotations.VisibleForTesting
+import net.corda.contracts.NetCommand
+import net.corda.contracts.NetType
+import net.corda.contracts.NettableState
 import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.contracts.clause.*
 import net.corda.core.contracts.*
@@ -24,36 +27,9 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 import java.util.*
-import kotlin.collections.Collection
-import kotlin.collections.Iterable
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.Set
-import kotlin.collections.all
-import kotlin.collections.asIterable
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.contains
-import kotlin.collections.distinct
-import kotlin.collections.emptySet
-import kotlin.collections.filter
-import kotlin.collections.filterIsInstance
-import kotlin.collections.first
-import kotlin.collections.firstOrNull
-import kotlin.collections.forEach
-import kotlin.collections.groupBy
-import kotlin.collections.isNotEmpty
-import kotlin.collections.iterator
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.none
-import kotlin.collections.reduce
 import kotlin.collections.set
-import kotlin.collections.setOf
-import kotlin.collections.single
-import kotlin.collections.toSet
-import kotlin.collections.union
-import kotlin.collections.withIndex
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val OBLIGATION_PROGRAM_ID = Obligation<Currency>()
@@ -432,12 +408,12 @@ class Obligation<P : Any> : Contract {
             if (input is State<P>) {
                 val actualOutput = outputs[stateIdx]
                 val deadline = input.dueBefore
-                val timestamp = tx.timestamp
+                val timeWindow = tx.timeWindow
                 val expectedOutput = input.copy(lifecycle = expectedOutputLifecycle)
 
                 requireThat {
-                    "there is a timestamp from the authority" using (timestamp != null)
-                    "the due date has passed" using (timestamp!!.after?.isAfter(deadline) ?: false)
+                    "there is a time-window from the authority" using (timeWindow != null)
+                    "the due date has passed" using (timeWindow!!.fromTime?.isAfter(deadline) ?: false)
                     "input state lifecycle is correct" using (input.lifecycle == expectedInputLifecycle)
                     "output state corresponds exactly to input state, with lifecycle changed" using (expectedOutput == actualOutput)
                 }
@@ -482,11 +458,11 @@ class Obligation<P : Any> : Contract {
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public key of the assets issuer, who must sign the transaction for it to be valid.
+     * @return the public keys who must sign the transaction for it to be valid.
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
-                     assetStates: List<StateAndRef<Obligation.State<P>>>): PublicKey
+                     assetStates: List<StateAndRef<Obligation.State<P>>>): Set<PublicKey>
             = OnLedgerAsset.generateExit(tx, amountIssued, assetStates,
             deriveState = { state, amount, owner -> state.copy(data = state.data.move(amount, owner)) },
             generateMoveCommand = { -> Commands.Move() },
@@ -567,7 +543,7 @@ class Obligation<P : Any> : Contract {
             }
             tx.addCommand(Commands.SetLifecycle(lifecycle), partiesUsed.map { it.owningKey }.distinct())
         }
-        tx.setTime(issuanceDef.dueBefore, issuanceDef.timeTolerance)
+        tx.addTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
     }
 
     /**
@@ -750,7 +726,7 @@ infix fun <T : Any> Obligation.State<T>.`issued by`(party: AbstractParty) = copy
 /** A randomly generated key. */
 val DUMMY_OBLIGATION_ISSUER_KEY by lazy { entropyToKeyPair(BigInteger.valueOf(10)) }
 /** A dummy, randomly generated issuer party by the name of "Snake Oil Issuer" */
-val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=UK"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
+val DUMMY_OBLIGATION_ISSUER by lazy { Party(X500Name("CN=Snake Oil Issuer,O=R3,OU=corda,L=London,C=GB"), DUMMY_OBLIGATION_ISSUER_KEY.public) }
 
 val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
     get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)

@@ -1,7 +1,7 @@
 package net.corda.vega.contracts
 
+import net.corda.contracts.DealState
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.DealState
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.keys
@@ -21,17 +21,14 @@ data class IRSState(val swap: SwapData,
                     override val contract: OGTrade,
                     override val linearId: UniqueIdentifier = UniqueIdentifier(swap.id.first + swap.id.second)) : DealState {
     override val ref: String = linearId.externalId!! // Same as the constructor for UniqueIdentified
-    override val parties: List<AbstractParty> get() = listOf(buyer, seller)
+    override val participants: List<AbstractParty> get() = listOf(buyer, seller)
 
     override fun isRelevant(ourKeys: Set<PublicKey>): Boolean {
-        return parties.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
+        return participants.flatMap { it.owningKey.keys }.intersect(ourKeys).isNotEmpty()
     }
 
     override fun generateAgreement(notary: Party): TransactionBuilder {
         val state = IRSState(swap, buyer, seller, OGTrade())
-        return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), parties.map { it.owningKey }))
+        return TransactionType.General.Builder(notary).withItems(state, Command(OGTrade.Commands.Agree(), participants.map { it.owningKey }))
     }
-
-    override val participants: List<AbstractParty>
-        get() = parties
 }

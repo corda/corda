@@ -1,36 +1,15 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.internal.addShutdownHook
+import net.corda.nodeapi.internal.addShutdownHook
 import java.io.Closeable
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
-internal class DeleteOnExitPath(internal val path: Path) {
+private class DeleteOnExitPath(internal val path: Path) {
     private val shutdownHook = addShutdownHook { dispose() }
     internal fun dispose() {
         path.toFile().deleteRecursively()
         shutdownHook.cancel()
-    }
-}
-
-open class PathHandle internal constructor(private val deleteOnExitPath: DeleteOnExitPath, private val handleCounter: AtomicInteger) : Closeable {
-    val path
-        get(): Path {
-            val path = deleteOnExitPath.path
-            check(handleCounter.get() != 0) { "Defunct path: $path" }
-            return path
-        }
-
-    init {
-        handleCounter.incrementAndGet()
-    }
-
-    fun handle() = PathHandle(deleteOnExitPath, handleCounter)
-
-    override fun close() {
-        if (handleCounter.decrementAndGet() == 0) {
-            deleteOnExitPath.dispose()
-        }
     }
 }
 
@@ -40,4 +19,25 @@ open class PathHandle internal constructor(private val deleteOnExitPath: DeleteO
  * The path is (recursively) deleted when [close] is called on the last handle, typically at the end of a [use] expression.
  * The value of eager cleanup of temporary files is that there are cases when shutdown hooks don't run e.g. SIGKILL.
  */
-open class PathManager(path: Path) : PathHandle(DeleteOnExitPath(path), AtomicInteger())
+open class PathManager<T : PathManager<T>>(path: Path) : Closeable {
+    private val deleteOnExitPath = DeleteOnExitPath(path)
+    private val handleCounter = AtomicInteger(1)
+    val path
+        get(): Path {
+            val path = deleteOnExitPath.path
+            check(handleCounter.get() != 0) { "Defunct path: $path" }
+            return path
+        }
+
+    fun handle(): T {
+        handleCounter.incrementAndGet()
+        @Suppress("UNCHECKED_CAST")
+        return this as T
+    }
+
+    override fun close() {
+        if (handleCounter.decrementAndGet() == 0) {
+            deleteOnExitPath.dispose()
+        }
+    }
+}

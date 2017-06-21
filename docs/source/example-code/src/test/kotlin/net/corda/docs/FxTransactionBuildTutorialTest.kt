@@ -18,31 +18,28 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 class FxTransactionBuildTutorialTest {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var nodeA: MockNetwork.MockNode
     lateinit var nodeB: MockNetwork.MockNode
 
     @Before
     fun setup() {
-        net = MockNetwork(threadPerNode = true)
+        mockNet = MockNetwork(threadPerNode = true)
         val notaryService = ServiceInfo(ValidatingNotaryService.type)
-        notaryNode = net.createNode(
+        notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
-                overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
+                overrideServices = mapOf(notaryService to DUMMY_NOTARY_KEY),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = net.createPartyNode(notaryNode.info.address)
-        nodeB = net.createPartyNode(notaryNode.info.address)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeA.services)
-        FxTransactionDemoTutorial.registerFxProtocols(nodeB.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeA.services)
-        WorkflowTransactionBuildTutorial.registerWorkflowProtocols(nodeB.services)
+        nodeA = mockNet.createPartyNode(notaryNode.info.address)
+        nodeB = mockNet.createPartyNode(notaryNode.info.address)
+        nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 
     @After
     fun cleanUp() {
         println("Close DB")
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test

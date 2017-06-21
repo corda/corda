@@ -30,7 +30,7 @@ dependencies {
     compile project(':core')
     compile project(':client:jfx')
     compile project(':client:mock')
-    compile project(':node')
+    compile project(':test-utils')
     compile project(':finance')
 
     // Capsule is a library for building independently executable fat JARs.

@@ -7,7 +7,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_BANK_A
 import net.corda.core.utilities.DUMMY_BANK_B
 import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.node.driver.driver
+import net.corda.testing.driver.driver
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.IntegrationTestCategory
 import net.corda.testing.http.HttpApi
@@ -50,8 +50,9 @@ class SimmValuationTest : IntegrationTestCategory {
         }
     }
 
-    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty =
-            getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
+    private fun getPartyWithName(partyApi: HttpApi, counterparty: X500Name): PortfolioApi.ApiParty {
+        return getAvailablePartiesFor(partyApi).counterparties.single { it.text == counterparty }
+    }
 
     private fun getAvailablePartiesFor(partyApi: HttpApi): PortfolioApi.AvailableParties {
         return partyApi.getJson<PortfolioApi.AvailableParties>("whoami")

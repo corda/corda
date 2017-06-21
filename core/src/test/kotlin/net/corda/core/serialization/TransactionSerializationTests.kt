@@ -107,11 +107,11 @@ class TransactionSerializationTests {
     }
 
     @Test
-    fun timestamp() {
-        tx.setTime(TEST_TX_TIME, 30.seconds)
+    fun timeWindow() {
+        tx.addTimeWindow(TEST_TX_TIME, 30.seconds)
         tx.signWith(MEGA_CORP_KEY)
         tx.signWith(DUMMY_NOTARY_KEY)
         val stx = tx.toSignedTransaction()
-        assertEquals(TEST_TX_TIME, stx.tx.timestamp?.midpoint)
+        assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)
     }
 }

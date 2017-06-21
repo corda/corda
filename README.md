@@ -1,5 +1,7 @@
 ![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
 
+<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_CordaBuild&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a>
+
 # Corda
 
 Corda is a decentralised database system in which nodes trust each other as little as possible.
@@ -12,8 +14,6 @@ Corda is a decentralised database system in which nodes trust each other as litt
 * "Notary" infrastructure to validate uniqueness of transactions
 * Written as a platform for distributed apps called CorDapps
 * Written in [Kotlin](https://kotlinlang.org), targeting the JVM
- 
-Read our full and planned feature list [here](https://docs.corda.net/inthebox.html).
 
 ## Getting started
 
@@ -29,7 +29,7 @@ After the above, watching the following webinars will give you a great introduct
 
 ### Webinar 1 – [Introduction to Corda](https://vimeo.com/192757743/c2ec39c1e1)
  
-Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](https://www.r3.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
+Richard Brown, R3 Chief Technology Officer, explains Corda's unique architecture, the only distributed ledger platform designed by and for the financial industry's unique requirements. You may want to read the [Corda non-technical whitepaper](https://www.r3cev.com/s/corda-introductory-whitepaper-final.pdf) as pre-reading for this session.
  
 ### Webinar 2 – [Corda Developers’ Tutorial](https://vimeo.com/192797322/aab499b152)
  

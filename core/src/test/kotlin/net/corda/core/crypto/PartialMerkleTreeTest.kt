@@ -15,6 +15,7 @@ import net.corda.core.utilities.TEST_TX_TIME
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
+import java.util.function.Predicate
 import kotlin.test.*
 
 class PartialMerkleTreeTest {
@@ -43,7 +44,7 @@ class PartialMerkleTreeTest {
             input("MEGA_CORP cash")
             output("MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
             command(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-            timestamp(TEST_TX_TIME)
+            timeWindow(TEST_TX_TIME)
             this.verifies()
         }
     }
@@ -98,13 +99,13 @@ class PartialMerkleTreeTest {
                 is StateRef -> true
                 is TransactionState<*> -> elem.data.participants[0].owningKey.keys == MINI_CORP_PUBKEY.keys
                 is Command -> MEGA_CORP_PUBKEY in elem.signers
-                is Timestamp -> true
+                is TimeWindow -> true
                 is PublicKey -> elem == MEGA_CORP_PUBKEY
                 else -> false
             }
         }
 
-        val mt = testTx.buildFilteredTransaction(::filtering)
+        val mt = testTx.buildFilteredTransaction(Predicate(::filtering))
         val leaves = mt.filteredLeaves
         val d = WireTransaction.deserialize(testTx.serialized)
         assertEquals(testTx.id, d.id)
@@ -113,7 +114,7 @@ class PartialMerkleTreeTest {
         assertEquals(1, leaves.inputs.size)
         assertEquals(1, leaves.mustSign.size)
         assertEquals(0, leaves.attachments.size)
-        assertTrue(mt.filteredLeaves.timestamp != null)
+        assertTrue(mt.filteredLeaves.timeWindow != null)
         assertEquals(null, mt.filteredLeaves.type)
         assertEquals(null, mt.filteredLeaves.notary)
         assertTrue(mt.verify())
@@ -128,12 +129,12 @@ class PartialMerkleTreeTest {
 
     @Test
     fun `nothing filtered`() {
-        val mt = testTx.buildFilteredTransaction({ false })
+        val mt = testTx.buildFilteredTransaction(Predicate { false })
         assertTrue(mt.filteredLeaves.attachments.isEmpty())
         assertTrue(mt.filteredLeaves.commands.isEmpty())
         assertTrue(mt.filteredLeaves.inputs.isEmpty())
         assertTrue(mt.filteredLeaves.outputs.isEmpty())
-        assertTrue(mt.filteredLeaves.timestamp == null)
+        assertTrue(mt.filteredLeaves.timeWindow == null)
         assertFailsWith<MerkleTreeException> { mt.verify() }
     }
 
@@ -219,7 +220,7 @@ class PartialMerkleTreeTest {
         }
     }
 
-    private fun makeSimpleCashWtx(notary: Party, timestamp: Timestamp? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {
+    private fun makeSimpleCashWtx(notary: Party, timeWindow: TimeWindow? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {
         return WireTransaction(
                 inputs = testTx.inputs,
                 attachments = attachments,
@@ -228,7 +229,7 @@ class PartialMerkleTreeTest {
                 notary = notary,
                 signers = listOf(MEGA_CORP_PUBKEY, DUMMY_PUBKEY_1),
                 type = TransactionType.General,
-                timestamp = timestamp
+                timeWindow = timeWindow
         )
     }
 }

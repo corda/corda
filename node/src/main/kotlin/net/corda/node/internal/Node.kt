@@ -5,18 +5,18 @@ import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.*
-import net.corda.core.internal.ShutdownHook
-import net.corda.core.internal.addShutdownHook
+import net.corda.core.flatMap
 import net.corda.core.messaging.RPCOps
+import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.node.services.UniquenessProvider
+import net.corda.core.seconds
+import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.printBasicNodeInfo
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -37,15 +37,19 @@ import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
 import net.corda.nodeapi.ArtemisTcpTransport
 import net.corda.nodeapi.ConnectionDirection
+import net.corda.nodeapi.internal.ShutdownHook
+import net.corda.nodeapi.internal.addShutdownHook
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Clock
 import java.util.*
 import javax.management.ObjectName
+import kotlin.system.exitProcess
 
 /**
  * A Node manages a standalone server that takes part in the P2P network. It creates the services found in [ServiceHub],
@@ -56,18 +60,32 @@ import javax.management.ObjectName
  * but nodes are not required to advertise services they run (hence subset).
  * @param clock The clock used within the node and by all flows etc.
  */
-class Node(override val configuration: FullNodeConfiguration,
-           advertisedServices: Set<ServiceInfo>,
-           val versionInfo: VersionInfo,
-           clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
+open class Node(override val configuration: FullNodeConfiguration,
+                advertisedServices: Set<ServiceInfo>,
+                val versionInfo: VersionInfo,
+                clock: Clock = NodeClock()) : AbstractNode(configuration, advertisedServices, clock) {
     companion object {
         private val logger = loggerFor<Node>()
+        var renderBasicInfoToConsole = true
+
+        /** Used for useful info that we always want to show, even when not logging to the console */
+        fun printBasicNodeInfo(description: String, info: String? = null) {
+            val msg = if (info == null) description else "${description.padEnd(40)}: $info"
+            val loggerName = if (renderBasicInfoToConsole) "BasicInfo" else "Main"
+            LoggerFactory.getLogger(loggerName).info(msg)
+        }
+
+        internal fun failStartUp(message: String): Nothing {
+            println(message)
+            println("Corda will now exit...")
+            exitProcess(1)
+        }
     }
 
     override val log: Logger get() = logger
     override val platformVersion: Int get() = versionInfo.platformVersion
     override val networkMapAddress: NetworkMapAddress? get() = configuration.networkMapService?.address?.let(::NetworkMapAddress)
-    override fun makeTransactionVerifierService() = (net as NodeMessagingClient).verifierService
+    override fun makeTransactionVerifierService() = (network as NodeMessagingClient).verifierService
 
     // DISCUSSION
     //
@@ -126,7 +144,7 @@ class Node(override val configuration: FullNodeConfiguration,
             }
         }
 
-        printBasicNodeInfo("Incoming connection address:", advertisedAddress.toString())
+        printBasicNodeInfo("Incoming connection address", advertisedAddress.toString())
 
         val myIdentityOrNullIfNetworkMapService = if (networkMapAddress != null) obtainLegalIdentity().owningKey else null
         return NodeMessagingClient(
@@ -227,13 +245,12 @@ class Node(override val configuration: FullNodeConfiguration,
     override fun startMessagingService(rpcOps: RPCOps) {
         // Start up the embedded MQ server
         messageBroker?.apply {
-            runOnStop += Runnable { stop() }
+            runOnStop += this::stop
             start()
         }
 
         // Start up the MQ client.
-        val net = net as NodeMessagingClient
-        net.start(rpcOps, userService)
+        (network as NodeMessagingClient).start(rpcOps, userService)
     }
 
     /**
@@ -250,7 +267,7 @@ class Node(override val configuration: FullNodeConfiguration,
             RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
                 val provider = RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
                 provider.start()
-                runOnStop += Runnable { provider.stop() }
+                runOnStop += provider::stop
                 provider
             }
             else -> PersistentUniquenessProvider()
@@ -279,7 +296,7 @@ class Node(override val configuration: FullNodeConfiguration,
                         "-tcpAllowOthers",
                         "-tcpDaemon",
                         "-key", "node", databaseName)
-                runOnStop += Runnable { server.stop() }
+                runOnStop += server::stop
                 val url = server.start().url
                 printBasicNodeInfo("Database connection url is", "jdbc:h2:$url/node")
             }
@@ -321,7 +338,7 @@ class Node(override val configuration: FullNodeConfiguration,
 
     /** Starts a blocking event loop for message dispatch. */
     fun run() {
-        (net as NodeMessagingClient).run(messageBroker!!.serverControl)
+        (network as NodeMessagingClient).run(messageBroker!!.serverControl)
     }
 
     // TODO: Do we really need setup?

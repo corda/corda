@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowStateMachine
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
@@ -13,7 +13,7 @@ import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
-import net.corda.node.internal.ServiceFlowInfo
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -21,21 +21,21 @@ import net.corda.node.services.statemachine.FlowStateMachineImpl
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
      * Deregister from updates from the given map service.
-     * @param net the network messaging service.
+     * @param network the network messaging service.
      * @param service the network map service to fetch current state from.
      */
-    fun deregisterForUpdates(net: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit>
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
      * updates.
-     * @param net the network messaging service.
+     * @param network the network messaging service.
      * @param networkMapAddress the network map service to fetch current state from.
      * @param subscribe if the cache should subscribe to updates.
      * @param ifChangedSinceVer an optional version number to limit updating the map based on. If the latest map
      * version is less than or equal to the given version, no update is fetched.
      */
-    fun addMapService(net: MessagingService, networkMapAddress: SingleMessageRecipient,
+    fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient,
                       subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
 
     /** Adds a node to the local cache (generally only used for adding ourselves). */
@@ -47,7 +47,6 @@ interface NetworkMapCacheInternal : NetworkMapCache {
     /** For testing where the network map cache is manipulated marks the service as immediately ready. */
     @VisibleForTesting
     fun runWithoutMapService()
-
 }
 
 @CordaSerializable
@@ -93,7 +92,6 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method. [FlowInitiator]
      * defaults to [FlowInitiator.RPC] with username "Only For Testing".
      */
-    // TODO Move it to test utils.
     @VisibleForTesting
     fun <T> startFlow(logic: FlowLogic<T>): FlowStateMachine<T> = startFlow(logic, FlowInitiator.RPC("Only For Testing"))
 
@@ -102,7 +100,6 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
     abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
-
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -122,5 +119,5 @@ abstract class ServiceHubInternal : PluginServiceHub {
         return startFlow(logic, flowInitiator)
     }
 
-    abstract fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo?
+    abstract fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
 }

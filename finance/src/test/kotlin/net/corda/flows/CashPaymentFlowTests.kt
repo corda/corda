@@ -3,8 +3,8 @@ package net.corda.flows
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
-import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
@@ -16,7 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CashPaymentFlowTests {
-    private val net = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
+    private val mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin())
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
     private lateinit var bankOfCordaNode: MockNode
@@ -26,37 +26,39 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        val nodes = net.createTwoNodes()
+        val nodes = mockNet.createTwoNodes()
         notaryNode = nodes.first
         bankOfCordaNode = nodes.second
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        net.runNetwork()
+        mockNet.runNetwork()
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
                 bankOfCorda,
                 notary)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         future.getOrThrow()
     }
 
     @After
     fun cleanUp() {
-        net.stopNodes()
+        mockNet.stopNodes()
     }
 
     @Test
     fun `pay some cash`() {
         val payTo = notaryNode.info.legalIdentity
-        val expected = 500.DOLLARS
-        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
+        val expectedPayment = 500.DOLLARS
+        val expectedChange = 1500.DOLLARS
+        val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                 payTo)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         val paymentTx = future.getOrThrow()
         val states = paymentTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>()
         val ourState = states.single { it.owner.owningKey != payTo.owningKey }
         val paymentState = states.single { it.owner.owningKey == payTo.owningKey }
-        assertEquals(expected.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
+        assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), ourState.amount)
+        assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
     }
 
     @Test
@@ -65,7 +67,7 @@ class CashPaymentFlowTests {
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
         }
@@ -77,7 +79,7 @@ class CashPaymentFlowTests {
         val expected = 0.DOLLARS
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expected,
                 payTo)).resultFuture
-        net.runNetwork()
+        mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()
         }

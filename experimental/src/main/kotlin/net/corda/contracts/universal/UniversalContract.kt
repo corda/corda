@@ -1,5 +1,7 @@
 package net.corda.contracts.universal
 
+import net.corda.contracts.BusinessCalendar
+import net.corda.contracts.FixOf
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
@@ -18,7 +20,7 @@ class UniversalContract : Contract {
 
     interface Commands : CommandData {
 
-        data class Fix(val fixes: List<net.corda.core.contracts.Fix>) : Commands
+        data class Fix(val fixes: List<net.corda.contracts.Fix>) : Commands
 
         // transition according to business rules defined in contract
         data class Action(val name: String) : Commands
@@ -47,8 +49,8 @@ class UniversalContract : Contract {
         is PerceivableOr -> eval(tx, expr.left) || eval(tx, expr.right)
         is Const<Boolean> -> expr.value
         is TimePerceivable -> when (expr.cmp) {
-            Comparison.LTE -> tx.timestamp!!.after!! <= eval(tx, expr.instant)
-            Comparison.GTE -> tx.timestamp!!.before!! >= eval(tx, expr.instant)
+            Comparison.LTE -> tx.timeWindow!!.fromTime!! <= eval(tx, expr.instant)
+            Comparison.GTE -> tx.timeWindow!!.untilTime!! >= eval(tx, expr.instant)
             else -> throw NotImplementedError("eval special")
         }
         is ActorPerceivable -> tx.commands.single().signers.contains(expr.actor.owningKey)
@@ -207,7 +209,7 @@ class UniversalContract : Contract {
                 assert(rest is Zero)
 
                 requireThat {
-                    "action must be timestamped" using (tx.timestamp != null)
+                    "action must have a time-window" using (tx.timeWindow != null)
                     // "action must be authorized" by (cmd.signers.any { action.actors.any { party -> party.owningKey == it } })
                     // todo perhaps merge these two requirements?
                     "condition must be met" using (eval(tx, action.condition))

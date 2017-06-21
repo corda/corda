@@ -154,7 +154,7 @@ class DBTransactionStorageTests {
                 notary = DUMMY_NOTARY,
                 signers = emptyList(),
                 type = TransactionType.General,
-                timestamp = null
+                timeWindow = null
         )
         return SignedTransaction(wtx.serialized, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
     }

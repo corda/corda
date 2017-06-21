@@ -4,6 +4,7 @@ apply plugin: 'net.corda.plugins.publish-utils'
 
 dependencies {
     compile project(':core')
+    compile project(':finance')
     compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 
@@ -22,4 +23,12 @@ dependencies {
     //       of javassist:javassist.
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile "com.pholser:junit-quickcheck-generators:$quickcheck_version"
+}
+
+jar {
+    baseName 'corda-jackson'
+}
+
+publish {
+    name = jar.baseName
 }

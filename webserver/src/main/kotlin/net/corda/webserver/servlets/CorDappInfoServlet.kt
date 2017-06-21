@@ -3,7 +3,7 @@ package net.corda.webserver.servlets
 import kotlinx.html.*
 import kotlinx.html.stream.appendHTML
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.CordaPluginRegistry
+import net.corda.webserver.services.WebServerPluginRegistry
 import org.glassfish.jersey.server.model.Resource
 import org.glassfish.jersey.server.model.ResourceMethod
 import java.io.IOException
@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServletResponse
  * Dumps some data about the installed CorDapps.
  * TODO: Add registered flow initiators.
  */
-class CorDappInfoServlet(val plugins: List<CordaPluginRegistry>, val rpc: CordaRPCOps): HttpServlet() {
+class CorDappInfoServlet(val plugins: List<WebServerPluginRegistry>, val rpc: CordaRPCOps): HttpServlet() {
 
     @Throws(IOException::class)
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {

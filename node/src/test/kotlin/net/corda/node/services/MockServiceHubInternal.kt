@@ -3,11 +3,11 @@ package net.corda.node.services
 import com.codahale.metrics.MetricRegistry
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.node.internal.ServiceFlowInfo
+import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
 import net.corda.node.services.messaging.MessagingService
@@ -23,7 +23,7 @@ import java.time.Clock
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
         val keyManagement: KeyManagementService? = null,
-        val net: MessagingService? = null,
+        val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
         val storage: TxWritableStorageService? = MockStorageService(),
         val mapCache: NetworkMapCacheInternal? = MockNetworkMapCache(),
@@ -41,7 +41,7 @@ open class MockServiceHubInternal(
     override val identityService: IdentityService
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
-        get() = net ?: throw UnsupportedOperationException()
+        get() = network ?: throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCacheInternal
         get() = mapCache ?: throw UnsupportedOperationException()
     override val storageService: StorageService
@@ -67,11 +67,11 @@ open class MockServiceHubInternal(
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) = recordTransactionsInternal(txStorageService, txs)
 
+    override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw UnsupportedOperationException()
+
     override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
         return smm.executor.fetchFrom { smm.add(logic, flowInitiator) }
     }
 
-    override fun registerServiceFlow(initiatingFlowClass: Class<out FlowLogic<*>>, serviceFlowFactory: (Party) -> FlowLogic<*>) = Unit
-
-    override fun getServiceFlowFactory(clientFlowClass: Class<out FlowLogic<*>>): ServiceFlowInfo? = null
+    override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? = null
 }

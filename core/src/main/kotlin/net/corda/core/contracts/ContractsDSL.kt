@@ -3,8 +3,8 @@
 package net.corda.core.contracts
 
 import net.corda.core.identity.Party
-import java.security.PublicKey
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.util.*
 
 /**
@@ -22,15 +22,12 @@ import java.util.*
 
 fun currency(code: String) = Currency.getInstance(code)!!
 
-fun commodity(code: String) = Commodity.getInstance(code)!!
-
 @JvmField val USD = currency("USD")
 @JvmField val GBP = currency("GBP")
 @JvmField val EUR = currency("EUR")
 @JvmField val CHF = currency("CHF")
 @JvmField val JPY = currency("JPY")
 @JvmField val RUB = currency("RUB")
-@JvmField val FCOJ = commodity("FCOJ")   // Frozen concentrated orange juice, yum!
 
 fun <T : Any> AMOUNT(amount: Int, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount.toLong()), token)
 fun <T : Any> AMOUNT(amount: Double, token: T): Amount<T> = Amount.fromDecimal(BigDecimal.valueOf(amount), token)
@@ -38,19 +35,15 @@ fun DOLLARS(amount: Int): Amount<Currency> = AMOUNT(amount, USD)
 fun DOLLARS(amount: Double): Amount<Currency> = AMOUNT(amount, USD)
 fun POUNDS(amount: Int): Amount<Currency> = AMOUNT(amount, GBP)
 fun SWISS_FRANCS(amount: Int): Amount<Currency> = AMOUNT(amount, CHF)
-fun FCOJ(amount: Int): Amount<Commodity> = AMOUNT(amount, FCOJ)
 
 val Int.DOLLARS: Amount<Currency> get() = DOLLARS(this)
 val Double.DOLLARS: Amount<Currency> get() = DOLLARS(this)
 val Int.POUNDS: Amount<Currency> get() = POUNDS(this)
 val Int.SWISS_FRANCS: Amount<Currency> get() = SWISS_FRANCS(this)
-val Int.FCOJ: Amount<Commodity> get() = FCOJ(this)
 
 infix fun Currency.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
-infix fun Commodity.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Amount<Currency>.`issued by`(deposit: PartyAndReference) = issuedBy(deposit)
 infix fun Currency.issuedBy(deposit: PartyAndReference) = Issued(deposit, this)
-infix fun Commodity.issuedBy(deposit: PartyAndReference) = Issued(deposit, this)
 infix fun Amount<Currency>.issuedBy(deposit: PartyAndReference) = Amount(quantity, displayTokenSize, token.issuedBy(deposit))
 
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////

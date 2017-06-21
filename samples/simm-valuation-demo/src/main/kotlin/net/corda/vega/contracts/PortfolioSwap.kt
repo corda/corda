@@ -10,7 +10,7 @@ import net.corda.core.crypto.SecureHash
  * of the portfolio arbitrarily.
  */
 data class PortfolioSwap(override val legalContractReference: SecureHash = SecureHash.sha256("swordfish")) : Contract {
-    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.Timestamped(), Clauses.Group()), tx.commands.select<Commands>())
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, AllOf(Clauses.TimeWindowed(), Clauses.Group()), tx.commands.select<Commands>())
 
     interface Commands : CommandData {
         class Agree : TypeOnlyCommandData(), Commands  // Both sides agree to portfolio
@@ -18,13 +18,13 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
     }
 
     interface Clauses {
-        class Timestamped : Clause<ContractState, Commands, Unit>() {
+        class TimeWindowed : Clause<ContractState, Commands, Unit>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<ContractState>,
                                 outputs: List<ContractState>,
                                 commands: List<AuthenticatedObject<Commands>>,
                                 groupingKey: Unit?): Set<Commands> {
-                require(tx.timestamp?.midpoint != null) { "must be timestamped" }
+                require(tx.timeWindow?.midpoint != null) { "must  have a time-window)" }
                 // We return an empty set because we don't process any commands
                 return emptySet()
             }
@@ -70,8 +70,7 @@ data class PortfolioSwap(override val legalContractReference: SecureHash = Secur
                 requireThat {
                     "there are no inputs" using (inputs.size == 0)
                     "there is one output" using (outputs.size == 1)
-                    "valuer must be a party" using (outputs[0].parties.contains(outputs[0].valuer))
-                    "all participants must be parties" using (outputs[0].parties.containsAll(outputs[0].participants))
+                    "valuer must be a party" using (outputs[0].participants.contains(outputs[0].valuer))
                 }
 
                 return setOf(command.value)

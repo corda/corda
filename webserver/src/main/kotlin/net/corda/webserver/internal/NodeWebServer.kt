@@ -3,10 +3,10 @@ package net.corda.webserver.internal
 import com.google.common.html.HtmlEscapers.htmlEscaper
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.webserver.WebServerConfig
+import net.corda.webserver.services.WebServerPluginRegistry
 import net.corda.webserver.servlets.*
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.eclipse.jetty.server.*
@@ -203,9 +203,9 @@ class NodeWebServer(val config: WebServerConfig) {
         return connection.proxy
     }
 
-    /** Fetch CordaPluginRegistry classes registered in META-INF/services/net.corda.core.node.CordaPluginRegistry files that exist in the classpath */
-    val pluginRegistries: List<CordaPluginRegistry> by lazy {
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList()
+    /** Fetch WebServerPluginRegistry classes registered in META-INF/services/net.corda.webserver.services.WebServerPluginRegistry files that exist in the classpath */
+    val pluginRegistries: List<WebServerPluginRegistry> by lazy {
+        ServiceLoader.load(WebServerPluginRegistry::class.java).toList()
     }
 
     /** Used for useful info that we always want to show, even when not logging to the console */

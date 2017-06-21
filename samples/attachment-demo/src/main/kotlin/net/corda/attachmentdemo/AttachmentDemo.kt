@@ -8,23 +8,22 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
-import net.corda.core.identity.Party
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.flows.FinalityFlow
-import net.corda.node.driver.poll
+import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.security.PublicKey
 import java.util.concurrent.Executors
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServletResponse.SC_OK
@@ -170,7 +169,7 @@ private fun printHelp(parser: OptionParser) {
 
 class AttachmentContract : Contract {
     override val legalContractReference: SecureHash
-        get() = TODO("not implemented")
+        get() = SecureHash.zeroHash // TODO not implemented
 
     override fun verify(tx: TransactionForContract) {
         val state = tx.outputs.filterIsInstance<AttachmentContract.State>().single()

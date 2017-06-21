@@ -36,12 +36,12 @@ abstract class BaseTransaction(
          * If specified, a time window in which this transaction may have been notarised. Contracts can check this
          * time window to find out when a transaction is deemed to have occurred, from the ledger's perspective.
          */
-        val timestamp: Timestamp?
+        val timeWindow: TimeWindow?
 ) : NamedByHash {
 
     protected fun checkInvariants() {
-        if (notary == null) check(inputs.isEmpty()) { "The notary must be specified explicitly for any transaction that has inputs." }
-        if (timestamp != null) check(notary != null) { "If a timestamp is provided, there must be a notary." }
+        if (notary == null) check(inputs.isEmpty()) { "The notary must be specified explicitly for any transaction that has inputs" }
+        if (timeWindow != null) check(notary != null) { "If a time-window is provided, there must be a notary" }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -50,10 +50,10 @@ abstract class BaseTransaction(
                 notary == other.notary &&
                 mustSign == other.mustSign &&
                 type == other.type &&
-                timestamp == other.timestamp
+                timeWindow == other.timeWindow
     }
 
-    override fun hashCode() = Objects.hash(notary, mustSign, type, timestamp)
+    override fun hashCode() = Objects.hash(notary, mustSign, type, timeWindow)
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

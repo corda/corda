@@ -8,6 +8,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.NotaryChangeFlow
 import net.corda.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode
@@ -24,7 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
-    lateinit var net: MockNetwork
+    lateinit var mockNet: MockNetwork
     lateinit var oldNotaryNode: MockNetwork.MockNode
     lateinit var newNotaryNode: MockNetwork.MockNode
     lateinit var clientNodeA: MockNetwork.MockNode
@@ -32,15 +33,15 @@ class NotaryChangeTests {
 
     @Before
     fun setup() {
-        net = MockNetwork()
-        oldNotaryNode = net.createNode(
+        mockNet = MockNetwork()
+        oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        clientNodeA = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        clientNodeB = net.createNode(networkMapAddress = oldNotaryNode.info.address)
-        newNotaryNode = net.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+        clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
+        clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
+        newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
-        net.runNetwork() // Clear network map registration messages
+        mockNet.runNetwork() // Clear network map registration messages
     }
 
     @Test
@@ -50,7 +51,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
@@ -63,7 +64,7 @@ class NotaryChangeTests {
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
@@ -75,11 +76,11 @@ class NotaryChangeTests {
     @Test
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode)
-        val newEvilNotary = Party(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=UK"), generateKeyPair().public)
-        val flow = NotaryChangeFlow(state, newEvilNotary)
+        val newEvilNotary = getTestPartyAndCertificate(X500Name("CN=Evil Notary,O=Evil R3,OU=corda,L=London,C=GB"), generateKeyPair().public)
+        val flow = NotaryChangeFlow(state, newEvilNotary.party)
         val future = clientNodeA.services.startFlow(flow)
 
-        net.runNetwork()
+        mockNet.runNetwork()
 
         assertThatExceptionOfType(StateReplacementException::class.java).isThrownBy {
             future.resultFuture.getOrThrow()
@@ -94,7 +95,7 @@ class NotaryChangeTests {
         val newNotary = newNotaryNode.info.notaryIdentity
         val flow = NotaryChangeFlow(state, newNotary)
         val future = clientNodeA.services.startFlow(flow)
-        net.runNetwork()
+        mockNet.runNetwork()
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
@@ -170,7 +171,7 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: A
 
 fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
-    tx.setTime(Instant.now(), 30.seconds)
+    tx.addTimeWindow(Instant.now(), 30.seconds)
     val stx = node.services.signInitialTransaction(tx)
     node.services.recordTransactions(listOf(stx))
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))

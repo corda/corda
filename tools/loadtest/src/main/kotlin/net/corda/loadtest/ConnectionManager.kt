@@ -1,17 +1,15 @@
 package net.corda.loadtest
 
 import com.google.common.net.HostAndPort
-import com.jcraft.jsch.*
+import com.jcraft.jsch.Buffer
+import com.jcraft.jsch.Identity
+import com.jcraft.jsch.IdentityRepository
+import com.jcraft.jsch.JSch
 import com.jcraft.jsch.agentproxy.AgentProxy
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.node.driver.PortAllocation
+import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
-import java.io.ByteArrayOutputStream
-import java.io.Closeable
 import java.util.*
 import kotlin.streams.toList
 
@@ -62,27 +60,23 @@ fun setupJSchWithSshAgent(): JSch {
     }
 }
 
-class ConnectionManager(private val username: String, private val jSch: JSch) {
-    fun connectToNode(
-            nodeHost: String,
-            remoteMessagingPort: Int,
-            localTunnelAddress: HostAndPort,
-            rpcUsername: String,
-            rpcPassword: String
-    ): NodeConnection {
-        val session = jSch.getSession(username, nodeHost, 22)
+class ConnectionManager(private val jSch: JSch) {
+    fun connectToNode(remoteNode: RemoteNode, localTunnelAddress: HostAndPort): NodeConnection {
+        val session = jSch.getSession(remoteNode.sshUserName, remoteNode.hostname, 22)
         // We don't check the host fingerprints because they may change often
         session.setConfig("StrictHostKeyChecking", "no")
-        log.info("Connecting to $nodeHost...")
+        log.info("Connecting to ${remoteNode.hostname}...")
         session.connect()
-        log.info("Connected to $nodeHost!")
+        log.info("Connected to ${remoteNode.hostname}!")
 
-        log.info("Creating tunnel from $nodeHost:$remoteMessagingPort to $localTunnelAddress...")
-        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.host, remoteMessagingPort)
+        log.info("Creating tunnel from ${remoteNode.hostname} to $localTunnelAddress...")
+        session.setPortForwardingL(localTunnelAddress.port, localTunnelAddress.host, remoteNode.rpcPort)
         log.info("Tunnel created!")
 
-        val connection = NodeConnection(nodeHost, session, localTunnelAddress, rpcUsername, rpcPassword)
-        connection.startClient()
+        val connection = NodeConnection(remoteNode, session, localTunnelAddress)
+        connection.startNode()
+        connection.waitUntilUp()
+        connection.startRPCClient()
         return connection
     }
 }
@@ -98,132 +92,15 @@ class ConnectionManager(private val username: String, private val jSch: JSch) {
  * @param withConnections An action to run once we're connected to the nodes.
  * @return The return value of [withConnections]
  */
-fun <A> connectToNodes(
-        username: String,
-        nodeHosts: List<String>,
-        remoteMessagingPort: Int,
-        tunnelPortAllocation: PortAllocation,
-        rpcUsername: String,
-        rpcPassword: String,
-        withConnections: (List<NodeConnection>) -> A
-): A {
-    val manager = ConnectionManager(username, setupJSchWithSshAgent())
-    val connections = nodeHosts.parallelStream().map { nodeHost ->
-        manager.connectToNode(
-                nodeHost = nodeHost,
-                remoteMessagingPort = remoteMessagingPort,
-                localTunnelAddress = tunnelPortAllocation.nextHostAndPort(),
-                rpcUsername = rpcUsername,
-                rpcPassword = rpcPassword
-        )
+fun <A> connectToNodes(remoteNodes: List<RemoteNode>, tunnelPortAllocation: PortAllocation, withConnections: (List<NodeConnection>) -> A): A {
+    val manager = ConnectionManager(setupJSchWithSshAgent())
+    val connections = remoteNodes.parallelStream().map { remoteNode ->
+        manager.connectToNode(remoteNode, tunnelPortAllocation.nextHostAndPort())
     }.toList()
-
     return try {
         withConnections(connections)
     } finally {
         connections.forEach(NodeConnection::close)
-    }
-}
-
-/**
- * [NodeConnection] allows executing remote shell commands on the node as well as executing RPCs.
- * The RPC Client start/stop must be controlled externally with [startClient] and [doWhileClientStopped]. For example
- * if we want to do some action on the node that requires bringing down of the node we should nest it in a
- * [doWhileClientStopped], otherwise the RPC link will be broken.
- */
-class NodeConnection(
-        val hostName: String,
-        private val jSchSession: Session,
-        private val localTunnelAddress: HostAndPort,
-        private val rpcUsername: String,
-        private val rpcPassword: String
-) : Closeable {
-    private val client = CordaRPCClient(localTunnelAddress)
-    private var connection: CordaRPCConnection? = null
-    val proxy: CordaRPCOps get() = connection?.proxy ?: throw IllegalStateException("proxy requested, but the client is not running")
-
-    data class ShellCommandOutput(
-            val originalShellCommand: String,
-            val exitCode: Int,
-            val stdout: String,
-            val stderr: String
-    ) {
-        fun getResultOrThrow(): String {
-            if (exitCode != 0) {
-                val diagnostic =
-                        "There was a problem running \"$originalShellCommand\":\n" +
-                                "    stdout:\n$stdout" +
-                                "    stderr:\n$stderr"
-                log.error(diagnostic)
-                throw Exception(diagnostic)
-            } else {
-                return stdout
-            }
-        }
-    }
-
-    fun <A> doWhileClientStopped(action: () -> A): A {
-        val connection = connection
-        require(connection != null) { "doWhileClientStopped called with no running client" }
-        log.info("Stopping RPC proxy to $hostName, tunnel at $localTunnelAddress")
-        connection!!.close()
-        try {
-            return action()
-        } finally {
-            log.info("Starting new RPC proxy to $hostName, tunnel at $localTunnelAddress")
-            // TODO expose these somehow?
-            val newConnection = client.start(rpcUsername, rpcPassword)
-            this.connection = newConnection
-        }
-    }
-
-    fun startClient() {
-        log.info("Creating RPC proxy to $hostName, tunnel at $localTunnelAddress")
-        connection = client.start(rpcUsername, rpcPassword)
-        log.info("Proxy created")
-    }
-
-    /**
-     * @return Pair of (stdout, stderr) of command
-     */
-    fun runShellCommandGetOutput(command: String): ShellCommandOutput {
-        log.info("Running '$command' on $hostName")
-        val (exitCode, pair) = withChannelExec(command) { channel ->
-            val stdoutStream = ByteArrayOutputStream()
-            val stderrStream = ByteArrayOutputStream()
-            channel.outputStream = stdoutStream
-            channel.setErrStream(stderrStream)
-            channel.connect()
-            poll { channel.isEOF }
-            Pair(stdoutStream.toString(), stderrStream.toString())
-        }
-        return ShellCommandOutput(
-                originalShellCommand = command,
-                exitCode = exitCode,
-                stdout = pair.first,
-                stderr = pair.second
-        )
-    }
-
-    /**
-     * @param function should call [ChannelExec.connect]
-     * @return A pair of (exit code, [function] return value)
-     */
-    private fun <A> withChannelExec(command: String, function: (ChannelExec) -> A): Pair<Int, A> {
-        val channel = jSchSession.openChannel("exec") as ChannelExec
-        channel.setCommand(command)
-        try {
-            val result = function(channel)
-            poll { channel.isEOF }
-            return Pair(channel.exitStatus, result)
-        } finally {
-            channel.disconnect()
-        }
-    }
-
-    override fun close() {
-        connection?.close()
-        jSchSession.disconnect()
     }
 }
 

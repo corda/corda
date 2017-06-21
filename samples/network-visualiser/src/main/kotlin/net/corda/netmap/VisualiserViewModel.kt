@@ -7,8 +7,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.util.Duration
+import net.corda.core.crypto.commonName
 import net.corda.core.utilities.ProgressTracker
-import net.corda.irs.simulation.IRSSimulation
+import net.corda.netmap.simulation.IRSSimulation
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
@@ -49,7 +50,7 @@ class VisualiserViewModel {
     var bankCount: Int = 0
     var serviceCount: Int = 0
 
-    var stepDuration = Duration.millis(500.0)
+    var stepDuration: Duration = Duration.millis(500.0)
     var runningPausedState: NetworkMapVisualiser.RunningPausedState = NetworkMapVisualiser.RunningPausedState.Paused()
 
     var displayStyle: Style = Style.MAP
@@ -155,7 +156,7 @@ class VisualiserViewModel {
         view.root.children += longPulseOuterDot
         view.root.children += innerDot
 
-        val nameLabel = Label(label.toString())
+        val nameLabel = Label(label.commonName)
         val nameLabelRect = StackPane(nameLabel).apply {
             styleClass += "node-label"
             alignment = Pos.CENTER_RIGHT

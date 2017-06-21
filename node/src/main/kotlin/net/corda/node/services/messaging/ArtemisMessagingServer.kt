@@ -13,7 +13,7 @@ import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.node.printBasicNodeInfo
+import net.corda.node.internal.Node
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
@@ -47,7 +47,6 @@ import org.apache.activemq.artemis.utils.ConfigurationHelper
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Subscription
-import sun.security.x509.X509CertImpl
 import java.io.IOException
 import java.math.BigInteger
 import java.security.KeyStore
@@ -156,9 +155,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
             registerPostQueueDeletionCallback { address, qName -> log.debug { "Queue deleted: $qName for $address" } }
         }
         activeMQServer.start()
-        printBasicNodeInfo("Listening on port", p2pPort.toString())
+        Node.printBasicNodeInfo("Listening on port", p2pPort.toString())
         if (rpcPort != null) {
-            printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
+            Node.printBasicNodeInfo("RPC service listening on port", rpcPort.toString())
         }
     }
 
@@ -263,10 +262,9 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
         val trustStore = KeyStoreUtilities.loadKeyStore(config.trustStoreFile, config.trustStorePassword)
         val ourCertificate = keyStore.getX509Certificate(CORDA_CLIENT_TLS)
 
-        val ourSubjectDN = X500Name(ourCertificate.subjectDN.name)
         // This is a sanity check and should not fail unless things have been misconfigured
-        require(ourSubjectDN == config.myLegalName) {
-            "Legal name does not match with our subject CN: $ourSubjectDN"
+        require(ourCertificate.subject == config.myLegalName) {
+            "Legal name does not match with our subject CN: ${ourCertificate.subject}"
         }
         val defaultCertPolicies = mapOf(
                 PEER_ROLE to CertificateChainCheckPolicy.RootMustMatch,
@@ -510,7 +508,7 @@ private class VerifyingNettyConnector(configuration: MutableMap<String, Any>,
                     "Peer has wrong subject name in the certificate - expected $expectedLegalName but got ${peerCertificate.subject}. This is either a fatal " +
                             "misconfiguration by the remote peer or an SSL man-in-the-middle attack!"
                 }
-                X509Utilities.validateCertificateChain(X509CertImpl(session.localCertificates.last().encoded), *session.peerCertificates)
+                X509Utilities.validateCertificateChain(X509CertificateHolder(session.localCertificates.last().encoded), *session.peerCertificates)
                 server.onTcpConnection(peerLegalName)
             } catch (e: IllegalArgumentException) {
                 connection.close()

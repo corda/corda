@@ -3,6 +3,7 @@ package net.corda.core.node
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.node.services.*
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
@@ -43,6 +44,13 @@ interface ServiceHub : ServicesForResolution {
     val transactionVerifierService: TransactionVerifierService
     val clock: Clock
     val myInfo: NodeInfo
+
+    /**
+     * Return the singleton instance of the given Corda service type. This is a class that is annotated with
+     * [CordaService] and will have automatically been registered by the node.
+     * @throws IllegalArgumentException If [type] is not annotated with [CordaService] or if the instance is not found.
+     */
+    fun <T : SerializeAsToken> cordaService(type: Class<T>): T
 
     /**
      * Given a [SignedTransaction], writes it to the local storage for validated transactions and then
@@ -141,7 +149,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalArgumentException is thrown if any keys are unavailable locally.
      * @return Returns a [SignedTransaction] with the new node signature attached.
      */
-    fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: List<PublicKey>): SignedTransaction {
+    fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: Iterable<PublicKey>): SignedTransaction {
         var stx: SignedTransaction? = null
         for (pubKey in signingPubKeys) {
             stx = if (stx == null) {

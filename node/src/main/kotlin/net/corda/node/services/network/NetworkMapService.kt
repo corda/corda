@@ -2,8 +2,10 @@ package net.corda.node.services.network
 
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.ThreadBox
-import net.corda.core.crypto.*
-import net.corda.core.identity.Party
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
@@ -16,6 +18,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AbstractNodeService
 import net.corda.node.services.api.ServiceHubInternal
@@ -80,7 +83,7 @@ interface NetworkMapService {
     @CordaSerializable
     data class FetchMapResponse(val nodes: List<NodeRegistration>?, val version: Int)
 
-    data class QueryIdentityRequest(val identity: Party,
+    data class QueryIdentityRequest(val identity: PartyAndCertificate,
                                     override val replyTo: SingleMessageRecipient,
                                     override val sessionID: Long = random63BitValue()) : ServiceRequestMessage
 
@@ -114,7 +117,7 @@ interface NetworkMapService {
 class InMemoryNetworkMapService(services: ServiceHubInternal, minimumPlatformVersion: Int)
     : AbstractNetworkMapService(services, minimumPlatformVersion) {
 
-    override val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo> = ConcurrentHashMap()
+    override val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo> = ConcurrentHashMap()
     override val subscribers = ThreadBox(mutableMapOf<SingleMessageRecipient, LastAcknowledgeInfo>())
 
     init {
@@ -133,14 +136,14 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
                                          val minimumPlatformVersion: Int) : NetworkMapService, AbstractNodeService(services) {
     companion object {
         /**
-         * Maximum credible size for a registration request. Generally requests are around 500-600 bytes, so this gives a
+         * Maximum credible size for a registration request. Generally requests are around 2000-6000 bytes, so this gives a
          * 10 times overhead.
          */
-        private const val MAX_SIZE_REGISTRATION_REQUEST_BYTES = 5500
+        private const val MAX_SIZE_REGISTRATION_REQUEST_BYTES = 40000
         private val logger = loggerFor<AbstractNetworkMapService>()
     }
 
-    protected abstract val nodeRegistrations: MutableMap<Party, NodeRegistrationInfo>
+    protected abstract val nodeRegistrations: MutableMap<PartyAndCertificate, NodeRegistrationInfo>
 
     // Map from subscriber address, to most recently acknowledged update map version.
     protected abstract val subscribers: ThreadBox<MutableMap<SingleMessageRecipient, LastAcknowledgeInfo>>
@@ -169,7 +172,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         handlers += addMessageHandler(QUERY_TOPIC) { req: QueryIdentityRequest -> processQueryRequest(req) }
         handlers += addMessageHandler(REGISTER_TOPIC) { req: RegistrationRequest -> processRegistrationRequest(req) }
         handlers += addMessageHandler(SUBSCRIPTION_TOPIC) { req: SubscribeRequest -> processSubscriptionRequest(req) }
-        handlers += net.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
+        handlers += network.addMessageHandler(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             val req = message.data.deserialize<UpdateAcknowledge>()
             processAcknowledge(req)
         }
@@ -178,7 +181,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     @VisibleForTesting
     fun unregisterNetworkHandlers() {
         for (handler in handlers) {
-            net.removeMessageHandler(handler)
+            network.removeMessageHandler(handler)
         }
         handlers.clear()
     }
@@ -230,7 +233,9 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
     }
 
     private fun processRegistrationRequest(request: RegistrationRequest): RegistrationResponse {
-        if (request.wireReg.raw.size > MAX_SIZE_REGISTRATION_REQUEST_BYTES) {
+        val requestSize = request.wireReg.raw.size
+        logger.debug { "Received registration request of size: $requestSize" }
+        if (requestSize > MAX_SIZE_REGISTRATION_REQUEST_BYTES) {
             return RegistrationResponse("Request is too big")
         }
 
@@ -250,7 +255,7 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // in on different threads, there is no risk of a race condition while checking
         // sequence numbers.
         val registrationInfo = try {
-            nodeRegistrations.compute(node.legalIdentity) { _, existing: NodeRegistrationInfo? ->
+            nodeRegistrations.compute(node.legalIdentityAndCert) { _, existing: NodeRegistrationInfo? ->
                 require(!((existing == null || existing.reg.type == REMOVE) && change.type == REMOVE)) {
                     "Attempting to de-register unknown node"
                 }
@@ -284,14 +289,14 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // TODO: Once we have a better established messaging system, we can probably send
         //       to a MessageRecipientGroup that nodes join/leave, rather than the network map
         //       service itself managing the group
-        val update = NetworkMapService.Update(wireReg, newMapVersion, net.myAddress).serialize().bytes
-        val message = net.createMessage(PUSH_TOPIC, DEFAULT_SESSION_ID, update)
+        val update = NetworkMapService.Update(wireReg, newMapVersion, network.myAddress).serialize().bytes
+        val message = network.createMessage(PUSH_TOPIC, DEFAULT_SESSION_ID, update)
 
         subscribers.locked {
             // Remove any stale subscribers
             values.removeIf { (mapVersion) -> newMapVersion - mapVersion > maxUnacknowledgedUpdates }
             // TODO: introduce some concept of time in the condition to avoid unsubscribes when there's a message burst.
-            keys.forEach { recipient -> net.send(message, recipient) }
+            keys.forEach { recipient -> network.send(message, recipient) }
         }
     }
 

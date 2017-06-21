@@ -3,13 +3,14 @@ package net.corda.core.crypto
 import net.corda.core.exists
 import net.corda.core.read
 import net.corda.core.write
+import org.bouncycastle.cert.X509CertificateHolder
+import org.bouncycastle.cert.path.CertPath
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.file.Path
 import java.security.*
 import java.security.cert.Certificate
-import java.security.cert.X509Certificate
 
 object KeyStoreUtilities {
     val KEYSTORE_TYPE = "JKS"
@@ -75,6 +76,18 @@ object KeyStoreUtilities {
  * but for SSL purposes this is recommended.
  * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
  */
+fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: CertPath) {
+    addOrReplaceKey(alias, key, password, chain.certificates.map { it.cert }.toTypedArray<Certificate>())
+}
+
+/**
+ * Helper extension method to add, or overwrite any key data in store.
+ * @param alias name to record the private key and certificate chain under.
+ * @param key cryptographic key to store.
+ * @param password password for unlocking the key entry in the future. This does not have to be the same password as any keys stored,
+ * but for SSL purposes this is recommended.
+ * @param chain the sequence of certificates starting with the public key certificate for this key and extending to the root CA cert.
+ */
 fun KeyStore.addOrReplaceKey(alias: String, key: Key, password: CharArray, chain: Array<Certificate>) {
     if (containsAlias(alias)) {
         this.deleteEntry(alias)
@@ -122,8 +135,9 @@ fun KeyStore.getKeyPair(alias: String, keyPassword: String): KeyPair = getCertif
  * @param keyPassword The password for the PrivateKey (not the store access password).
  */
 fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): CertificateAndKeyPair {
-    val cert = getCertificate(alias) as X509Certificate
-    return CertificateAndKeyPair(cert, KeyPair(Crypto.toSupportedPublicKey(cert.publicKey), getSupportedKey(alias, keyPassword)))
+    val cert = getX509Certificate(alias)
+    val publicKey = Crypto.toSupportedPublicKey(cert.subjectPublicKeyInfo)
+    return CertificateAndKeyPair(cert, KeyPair(publicKey, getSupportedKey(alias, keyPassword)))
 }
 
 /**
@@ -131,7 +145,10 @@ fun KeyStore.getCertificateAndKeyPair(alias: String, keyPassword: String): Certi
  * @param alias The name to lookup the Key and Certificate chain from.
  * @return The X509Certificate found in the KeyStore under the specified alias.
  */
-fun KeyStore.getX509Certificate(alias: String): X509Certificate = getCertificate(alias) as X509Certificate
+fun KeyStore.getX509Certificate(alias: String): X509CertificateHolder {
+    val encoded = getCertificate(alias)?.encoded ?: throw IllegalArgumentException("No certificate under alias \"${alias}\"")
+    return X509CertificateHolder(encoded)
+}
 
 /**
  * Extract a private key from a KeyStore file assuming storage alias is known.

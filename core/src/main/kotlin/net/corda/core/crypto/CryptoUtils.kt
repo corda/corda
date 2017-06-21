@@ -2,7 +2,6 @@
 
 package net.corda.core.crypto
 
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -24,6 +23,7 @@ val NULL_PARTY = AnonymousParty(NullPublicKey)
 
 // TODO: Clean up this duplication between Null and Dummy public key
 @CordaSerializable
+@Deprecated("Has encoding format problems, consider entropyToKeyPair() instead")
 class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()
@@ -145,12 +145,12 @@ fun generateKeyPair(): KeyPair = Crypto.generateKeyPair()
  * you want hard-coded private keys.
  * This currently works for the default signature scheme EdDSA ed25519 only.
  */
-fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.generateKeyPairFromEntropy(entropy)
+fun entropyToKeyPair(entropy: BigInteger): KeyPair = Crypto.deriveKeyPairFromEntropy(entropy)
 
 /**
  * Helper function for signing.
  * @param metaData tha attached MetaData object.
- * @return a [TransactionSignature] object.
+ * @return a [TransactionSignature ] object.
  * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
  * @throws InvalidKeyException if the private key is invalid.
  * @throws SignatureException if signing is not possible due to malformed data or private key.

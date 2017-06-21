@@ -27,9 +27,9 @@ import net.corda.flows.CashFlowCommand
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow
-import net.corda.node.driver.NodeHandle
-import net.corda.node.driver.PortAllocation
-import net.corda.node.driver.driver
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
@@ -79,7 +79,7 @@ class ExplorerSimulation(val options: OptionSet) {
             val bob = startNode(BOB.name, rpcUsers = arrayListOf(user),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("cash"))),
                     customOverrides = mapOf("nearestCity" to "Madrid"))
-            val ukBankName = X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=UK")
+            val ukBankName = X500Name("CN=UK Bank Plc,O=UK Bank Plc,L=London,C=GB")
             val usaBankName = X500Name("CN=USA Bank Corp,O=USA Bank Corp,L=New York,C=USA")
             val issuerGBP = startNode(ukBankName, rpcUsers = arrayListOf(manager),
                     advertisedServices = setOf(ServiceInfo(ServiceType.corda.getSubType("issuer.GBP"))),

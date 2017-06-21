@@ -20,24 +20,24 @@ with this basic skeleton:
    .. sourcecode:: kotlin
 
       class ResolveTransactionsFlowTest {
-          lateinit var net: MockNetwork
+          lateinit var mockNet: MockNetwork
           lateinit var a: MockNetwork.MockNode
           lateinit var b: MockNetwork.MockNode
           lateinit var notary: Party
 
           @Before
           fun setup() {
-              net = MockNetwork()
-              val nodes = net.createSomeNodes()
+              mockNet = MockNetwork()
+              val nodes = mockNet.createSomeNodes()
               a = nodes.partyNodes[0]
               b = nodes.partyNodes[1]
               notary = nodes.notaryNode.info.notaryIdentity
-              net.runNetwork()
+              mockNet.runNetwork()
           }
 
           @After
           fun tearDown() {
-              net.stopNodes()
+              mockNet.stopNodes()
           }
       }
 
@@ -56,7 +56,7 @@ We'll take a look at the ``makeTransactions`` function in a moment. For now, it'
 but not node B.
 
 The test logic is simple enough: we create the flow, giving it node A's identity as the target to talk to.
-Then we start it on node B and use the ``net.runNetwork()`` method to bounce messages around until things have
+Then we start it on node B and use the ``mockNet.runNetwork()`` method to bounce messages around until things have
 settled (i.e. there are no more messages waiting to be delivered). All this is done using an in memory message
 routing implementation that is fast to initialise and use. Finally, we obtain the result of the flow and do
 some tests on it. We also check the contents of node B's database to see that the flow had the intended effect
@@ -80,4 +80,9 @@ valid) inside a ``database.transaction``.  All node flows run within a database 
 but any time we need to use the database directly from a unit test, you need to provide a database transaction as shown
 here.
 
-And that's it: you can explore the documentation for the `MockNetwork API <api/kotlin/corda/net.corda.testing.node/-mock-network/index.html>`_ here.
+With regards to initiated flows (see :doc:`flow-state-machines` for information on initiated and initiating flows), the
+full node automatically registers them by scanning the CorDapp jars. In a unit test environment this is not possible so
+``MockNode`` has the ``registerInitiatedFlow`` method to manually register an initiated flow.
+
+And that's it: you can explore the documentation for the `MockNetwork API <api/kotlin/corda/net.corda.testing.node/-mock-network/index.html>`_
+here.

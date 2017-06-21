@@ -1,4 +1,5 @@
 <div class="ui container">
+    <div class="ui hidden divider"></div>
     <div class="ui negative message" id="http-error" ng-show="httpError">{{httpError}}</div>
     <div class="ui info message" id="info-message" ng-show="infoMsg">{{infoMsg}}</div>
     <div class="ui active dimmer" ng-show="isLoading()">
@@ -46,9 +47,9 @@
             <tbody>
             <tr class="center aligned" ng-repeat="deal in deals">
                 <td><a href="#/deal/{{deal.ref}}">{{deal.ref}}</a></td>
-                <td class="single line">{{deal.fixedLeg.fixedRatePayer}}</td>
+                <td class="single line">{{renderX500Name(deal.fixedLeg.fixedRatePayer)}}</td>
                 <td class="single line">{{deal.fixedLeg.notional.quantity | number}} {{deal.fixedLeg.notional.token}}</td>
-                <td class="single line">{{deal.floatingLeg.floatingRatePayer}}</td>
+                <td class="single line">{{renderX500Name(deal.floatingLeg.floatingRatePayer)}}</td>
                 <td class="single line">{{deal.floatingLeg.notional.quantity | number}} {{deal.floatingLeg.notional.token}}</td>
             </tr>
             </tbody>
