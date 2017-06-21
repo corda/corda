@@ -20,7 +20,7 @@ sourceSets {
 }
 
 processResources {
-    from file("$rootDir/config/dev/log4j2.xml")
+    from file("$rootDir/config/dev/log4j2-corda.xml")
     from file("$rootDir/config/dev/jolokia-access.xml")
 }
 

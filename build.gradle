@@ -103,12 +103,6 @@ allprojects {
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
-    // Use manual resource copying of log4j2.xml rather than source sets.
-    // This prevents problems in IntelliJ with regard to duplicate source roots.
-    processTestResources {
-        from file("$rootDir/config/test/log4j2.xml")
-    }
-
     tasks.withType(JavaCompile) {
         options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << "-Xlint:-options" << "-parameters"
     }

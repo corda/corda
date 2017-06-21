@@ -31,6 +31,7 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
     applicationSource = files(
         project(':tools:explorer').configurations.runtime,
         project(':tools:explorer').jar,
+        new File(project(':node').buildDir, 'classes/main/AbstractCordaCaplet.class'),
         '../build/classes/main/ExplorerCaplet.class'
     )
     classifier 'fat'
@@ -38,6 +39,7 @@ task buildExplorerJAR(type: FatCapsule, dependsOn: project(':tools:explorer').co
     capsuleManifest {
         applicationVersion = corda_release_version
         systemProperties['visualvm.display.name'] = 'Node Explorer'
+        systemProperties['log4j.configurationFile'] = 'classpath:log4j2-corda.xml'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
         caplets = ['ExplorerCaplet']
