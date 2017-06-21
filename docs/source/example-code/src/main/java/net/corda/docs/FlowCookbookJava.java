@@ -143,8 +143,15 @@ public class FlowCookbookJava {
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
-            // in the counterparty's flow. If the payload we receive is not of
-            // the specified type, a ``FlowException`` is raised.
+            // in the counterparty's flow. A few scenarios:
+            // - We never receive a message back. In the current design, the
+            //   flow is paused until the node's owner kills the flow.
+            // - Instead of sending a message back, the counterparty throws a
+            //   ``FlowException``. This exception is propagated back to us,
+            //   and we can use the error message to establish what happened.
+            // - We receive a message back, but it's of the wrong type. In
+            //   this case, we throw a ``FlowException``.
+            // - We receive back a message of the correct type. All is good.
             UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
             // We receive the data wrapped in an ``UntrustworthyData``
             // instance, which we must unwrap using a lambda.
@@ -297,11 +304,19 @@ public class FlowCookbookJava {
             ledgerTx.verify();
 
             // We'll often want to perform our own additional verification
-            // too. This can be whatever we see fit.
+            // too. Just because a transaction is valid based on the contract
+            // rules and requires our signature doesn't mean we have to
+            // sign it! We need to make sure the transaction represents an
+            // agreement we actually want to enter into.
             DummyState outputState = (DummyState) wireTx.getOutputs().get(0).getData();
-            assert(outputState.getMagicNumber() == 777);
+            if (outputState.getMagicNumber() != 777) {
+                throw new FlowException("We expected a magic number of 777.");
+            }
 
-            // TODO: Show throwing a FlowException when unhappy (is that good practice?)
+            // Of course, if you are not a required signer on the transaction,
+            // you have no power to decide whether it is valid or not. If it
+            // requires signatures from all the required signers and is
+            // contractually valid, it's a valid ledger update.
 
             /*------------------------
              * GATHERING SIGNATURES *
