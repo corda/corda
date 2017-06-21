@@ -23,7 +23,9 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
@@ -57,7 +59,6 @@ import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
@@ -215,8 +216,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
-            val tokenizableServices = makeServices(keyStoreWrapper)
+            val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -439,8 +439,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
-        val keyStore = keyStoreWrapper.keyStore
+    private fun makeServices(): MutableList<Any> {
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -778,7 +777,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             // Check that the identity in the config file matches the identity file we have stored to disk.
             // This is just a sanity check. It shouldn't fail unless the admin has fiddled with the files and messed
             // things up for us.
-            val myIdentity = pubIdentityFile.readAll().deserialize<PartyAndCertificate>()
+            val myIdentity = pubIdentityFile.readAll().deserialize<Party>()
             if (myIdentity.name != serviceName)
                 throw ConfigurationException("The legal name in the config file doesn't match the stored identity file:" +
                         "$serviceName vs ${myIdentity.name}")
@@ -787,7 +786,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
-            Pair(myIdentity, keyPair)
+            val partyAndCertificate = getTestPartyAndCertificate(myIdentity)
+            // Sanity check the certificate and path
+            val validatorParameters = PKIXParameters(setOf(TrustAnchor(DUMMY_CA.certificate.cert, null)))
+            val validator = CertPathValidator.getInstance("PKIX")
+            validatorParameters.isRevocationEnabled = false
+            validator.validate(partyAndCertificate.certPath, validatorParameters) as PKIXCertPathValidatorResult
+            Pair(partyAndCertificate, keyPair)
         } else {
             val clientCertPath = keyStore.keyStore.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
             val clientCA = keyStore.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA)!!

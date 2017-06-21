@@ -613,7 +613,7 @@ class DriverDSL(
     ): ListenableFuture<Pair<Party, List<NodeHandle>>> {
         val nodeNames = (0 until clusterSize).map { DUMMY_NOTARY.name.appendToCommonName(" $it") }
         val paths = nodeNames.map { baseDirectory(it) }
-        ServiceIdentityGenerator.generateToDisk(paths, DUMMY_CA, type.id, notaryName)
+        ServiceIdentityGenerator.generateToDisk(paths, type.id, notaryName)
         val advertisedServices = setOf(ServiceInfo(type, notaryName))
         val notaryClusterAddress = portAllocation.nextHostAndPort()
 

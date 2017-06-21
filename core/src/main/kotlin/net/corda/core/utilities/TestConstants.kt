@@ -23,8 +23,8 @@ val DUMMY_KEY_2: KeyPair by lazy { generateKeyPair() }
 
 val DUMMY_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
 /** Dummy notary identity for tests and simulations */
-val DUMMY_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), DUMMY_NOTARY_KEY.public)
-val DUMMY_NOTARY: Party get() = DUMMY_NOTARY_IDENTITY.party
+val DUMMY_NOTARY_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(DUMMY_NOTARY)
+val DUMMY_NOTARY: Party get() = Party(X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), DUMMY_NOTARY_KEY.public)
 
 val DUMMY_MAP_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(30)) }
 /** Dummy network map service identity for tests and simulations */
@@ -44,13 +44,13 @@ val DUMMY_BANK_C: Party get() = Party(X500Name("CN=Bank C,O=Bank C,L=Tokyo,C=JP"
 
 val ALICE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(70)) }
 /** Dummy individual identity for tests and simulations */
-val ALICE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X500Name("CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES"), ALICE_KEY.public)
-val ALICE: Party get() = ALICE_IDENTITY.party
+val ALICE_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(ALICE)
+val ALICE: Party get() = Party(X500Name("CN=Alice Corp,O=Alice Corp,L=Madrid,C=ES"), ALICE_KEY.public)
 
 val BOB_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(80)) }
 /** Dummy individual identity for tests and simulations */
-val BOB_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(X500Name("CN=Bob Plc,O=Bob Plc,L=Rome,C=IT"), BOB_KEY.public)
-val BOB: Party get() = BOB_IDENTITY.party
+val BOB_IDENTITY: PartyAndCertificate get() = getTestPartyAndCertificate(BOB)
+val BOB: Party get() = Party(X500Name("CN=Bob Plc,O=Bob Plc,L=Rome,C=IT"), BOB_KEY.public)
 
 val CHARLIE_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(90)) }
 /** Dummy individual identity for tests and simulations */
@@ -70,9 +70,11 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
 /**
  * Build a test party with a nonsense certificate authority for testing purposes.
  */
-fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA) = getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
+
+fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
     val certFactory = CertificateFactory.getInstance("X509")
-    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, name, publicKey)
+    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
     val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
-    return PartyAndCertificate(name, publicKey, certHolder, certPath)
+    return PartyAndCertificate(party, certHolder, certPath)
 }
