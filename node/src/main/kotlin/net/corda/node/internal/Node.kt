@@ -258,18 +258,6 @@ open class Node(override val configuration: FullNodeConfiguration,
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
-    override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
-        return when (type) {
-            RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
-                val provider = RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
-                provider.start()
-                runOnStop += provider::stop
-                provider
-            }
-            else -> PersistentUniquenessProvider()
-        }
-    }
-
     /**
      * If the node is persisting to an embedded H2 database, then expose this via TCP with a JDBC URL of the form:
      * jdbc:h2:tcp://<host>:<port>/node

@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.MetricRegistry
+import com.fasterxml.jackson.module.kotlin.isKotlinClass
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.ListenableFuture
@@ -29,7 +30,6 @@ import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.events.NodeSchedulerService
@@ -117,6 +117,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected val partyKeys = mutableSetOf<KeyPair>()
 
     val services = object : ServiceHubInternal() {
+        override val db: Database get() = database
+        override val config: NodeConfiguration get() = configuration
         override val networkService: MessagingService get() = network
         override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
@@ -269,27 +271,26 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return this
     }
 
-    private fun installCordaServices(scanResult: ScanResult) {
-        fun getServiceType(clazz: Class<*>): ServiceType? {
-            return try {
-                clazz.getField("type").get(null) as ServiceType
-            } catch (e: NoSuchFieldException) {
-                log.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
-                null
+    private fun installPluginServices(scanResult: ScanResult) {
+        val factoryNames = scanResult.getNamesOfClassesImplementing(PluginServiceFactory::class.java)
+        factoryNames.forEach {
+            val factoryClass = Class.forName(it, false, javaClass.classLoader).asSubclass(PluginServiceFactory::class.java)
+            val create = factoryClass.getMethod("create", PluginServiceHub::class.java)
+            val serviceClass = create.returnType
+            if (isServiceEnabled(serviceClass)) {
+                val objectInstance = if (factoryClass.isKotlinClass()) factoryClass.kotlin.objectInstance else null
+                log.debug { "Installing service ${serviceClass.simpleName}" }
+                val service = create.invoke(objectInstance, services) as PluginService
+                cordappServices.putInstance(service.javaClass, service)
+                service.start()
+                runOnStop += service::stop
             }
         }
+    }
 
-        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
-                .filter {
-                    val serviceType = getServiceType(it)
-                    if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
-                        log.debug { "Ignoring ${it.name} as a Corda service since $serviceType is not one of our " +
-                                "advertised services" }
-                        false
-                    } else {
-                        true
-                    }
-                }
+    private fun installCordaServices(scanResult: ScanResult) {
+        scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+                .filter(this::isServiceEnabled)
                 .forEach {
                     try {
                         installCordaService(it)
@@ -300,6 +301,28 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                         log.error("Unable to install Corda service ${it.name}", e)
                     }
                 }
+    }
+
+    private fun isServiceEnabled(serviceClass: Class<*>): Boolean {
+        fun getServiceType(clazz: Class<*>): ServiceType? {
+            return try {
+                clazz.getField("type").get(null) as ServiceType
+            } catch (e: NoSuchFieldException) {
+                log.warn("${clazz.name} does not have a type field, optimistically proceeding with install.")
+                null
+            }
+        }
+
+        val serviceType = getServiceType(serviceClass)
+        return if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
+            log.debug {
+                "Ignoring ${serviceClass.name} as a Corda service since $serviceType is not one of our " +
+                        "advertised services"
+            }
+            false
+        } else {
+            true
+        }
     }
 
     /**
@@ -659,33 +682,24 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     open protected fun makeNotaryService(type: ServiceType, tokenizableServices: MutableList<Any>) {
-        val timeWindowChecker = TimeWindowChecker(platformClock, 30.seconds)
-        val uniquenessProvider = makeUniquenessProvider(type)
-        tokenizableServices.add(uniquenessProvider)
-
-        val notaryService = when (type) {
-            SimpleNotaryService.type -> SimpleNotaryService(timeWindowChecker, uniquenessProvider)
-            ValidatingNotaryService.type -> ValidatingNotaryService(timeWindowChecker, uniquenessProvider)
-            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
-            RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
-            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
-                val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
-                BFTSMaRtConfig(notaryClusterAddresses).use { config ->
-                    BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database).also {
-                        tokenizableServices += it.client
-                        runOnStop += it::dispose
-                    }
-                }
-            }
+        val factory = when (type) {
+            SimpleNotaryService.type -> SimpleNotaryService.Factory
+            ValidatingNotaryService.type -> ValidatingNotaryService.Factory
+            RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService.Factory
+            RaftValidatingNotaryService.type -> RaftValidatingNotaryService.Factory
+            BFTNonValidatingNotaryService.type -> BFTNonValidatingNotaryService.Factory
             else -> {
-                throw IllegalArgumentException("Notary type ${type.id} is not handled by makeNotaryService.")
+                log.debug { "Notary type ${type.id} does not match any built-in notary types" }
+                return
             }
         }
 
-        installCoreFlow(NotaryFlow.Client::class, notaryService.serviceFlowFactory)
+        val notaryService = factory.create(services, tokenizableServices).apply {
+            start()
+            runOnStop += this::stop
+        }
+        installCoreFlow(NotaryFlow.Client::class, (notaryService as NotaryService).serviceFlowFactory)
     }
-
-    protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
 
     protected open fun makeIdentityService(): IdentityService {
         val keyStore = KeyStoreUtilities.loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)

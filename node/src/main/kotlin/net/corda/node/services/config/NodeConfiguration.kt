@@ -26,6 +26,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
+    val plugins: Properties
 }
 
 data class FullNodeConfiguration(
@@ -58,7 +59,8 @@ data class FullNodeConfiguration(
         val notaryClusterAddresses: List<HostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
-        val useTestClock: Boolean = false
+        val useTestClock: Boolean = false,
+        override val plugins: Properties = Properties()
 ) : NodeConfiguration {
     /** This is not retrieved from the config file but rather from a command line argument. */
     @Suppress("DEPRECATION")
