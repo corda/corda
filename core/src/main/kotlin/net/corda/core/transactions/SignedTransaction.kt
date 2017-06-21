@@ -145,6 +145,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignatureException if any signatures were invalid or unrecognised
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
+    @JvmOverloads
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
         if (checkSufficientSignatures) verifySignatures()
@@ -161,6 +162,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignatureException if any signatures were invalid or unrecognised
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
+    @JvmOverloads
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         if (checkSufficientSignatures) verifySignatures()
