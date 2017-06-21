@@ -1,5 +1,11 @@
-Persistence
-===========
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
+API: Persistence
+================
 
 Corda offers developers the option to expose all or some part of a contract state to an *Object Relational Mapping*
 (ORM) tool to be persisted in a RDBMS.  The purpose of this is to assist *vault* development by effectively indexing
@@ -11,9 +17,9 @@ The ORM mapping is specified using the `Java Persistence API <https://en.wikiped
 in the node's local vault as part of a transaction.
 
 .. note:: Presently the node includes an instance of the H2 database but any database that supports JDBC is a
-candidate and the node will in the future support a range of database implementations via their JDBC drivers.  Much
-of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
-info in ":doc:`node-administration`" for details.
+   candidate and the node will in the future support a range of database implementations via their JDBC drivers. Much
+   of the node internal state is also persisted there. You can access the internal H2 database via JDBC, please see the
+   info in ":doc:`node-administration`" for details.
 
 Schemas
 -------

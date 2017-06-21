@@ -1,5 +1,5 @@
-CorDapp overview
-================
+What is a CorDapp?
+==================
 
 Corda is a platform. Its functionality is extended by developers through the writing of Corda distributed
 applications (CorDapps). CorDapps are installed at the level of the individual node, rather than on the network
