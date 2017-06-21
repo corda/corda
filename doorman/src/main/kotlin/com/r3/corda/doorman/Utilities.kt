@@ -4,6 +4,11 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import joptsimple.ArgumentAcceptingOptionSpec
 import joptsimple.OptionParser
+import org.bouncycastle.cert.X509CertificateHolder
+import java.io.ByteArrayInputStream
+import java.security.cert.Certificate
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 /**
  * Convert commandline arguments to [Config] object will allow us to use kotlin delegate with [ConfigHelper].
@@ -27,3 +32,11 @@ object OptionParserHelper {
 }
 
 class ShowHelpException(val parser: OptionParser) : Exception()
+
+object CertificateUtilities {
+    fun toX509Certificate(byteArray: ByteArray): X509Certificate {
+        return CertificateFactory.getInstance("X509").generateCertificate(ByteArrayInputStream(byteArray)) as X509Certificate
+    }
+}
+
+fun X509CertificateHolder.toX509Certificate(): Certificate = CertificateUtilities.toX509Certificate(encoded)

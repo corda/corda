@@ -3,6 +3,7 @@ package com.r3.corda.doorman.internal.persistence
 import com.r3.corda.doorman.persistence.CertificateResponse
 import com.r3.corda.doorman.persistence.CertificationRequestData
 import com.r3.corda.doorman.persistence.DBCertificateRequestStorage
+import com.r3.corda.doorman.toX509Certificate
 import net.corda.core.crypto.CertificateType
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.X509Utilities
@@ -143,7 +144,7 @@ class DBCertificateRequestStorageTest {
         storage.approveRequest(requestId) {
             JcaPKCS10CertificationRequest(request).run {
                 val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, subject))), arrayOf())
-                X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints)
+                X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
             }
         }
     }

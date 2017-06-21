@@ -13,6 +13,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
+import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
 import org.junit.After
@@ -36,7 +37,7 @@ class DoormanServiceTest {
     private lateinit var doormanServer: DoormanServer
 
     private fun startSigningServer(storage: CertificationRequestStorage) {
-        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), CertificateAndKeyPair(intermediateCACert, intermediateCAKey), rootCACert, storage)
+        doormanServer = DoormanServer(HostAndPort.fromParts("localhost", 0), CertificateAndKeyPair(intermediateCACert, intermediateCAKey), rootCACert.toX509Certificate(), storage)
         doormanServer.start()
     }
 
@@ -92,7 +93,7 @@ class DoormanServiceTest {
 
         storage.approveRequest(id) {
             JcaPKCS10CertificationRequest(request).run {
-                X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey)
+                X509Utilities.createCertificate(CertificateType.TLS, intermediateCACert, intermediateCAKey, subject, publicKey).toX509Certificate()
             }
         }
 
@@ -139,7 +140,7 @@ class DoormanServiceTest {
         storage.approveRequest(id) {
             JcaPKCS10CertificationRequest(request).run {
                 val nameConstraints = NameConstraints(arrayOf(GeneralSubtree(GeneralName(GeneralName.directoryName, X500Name("CN=LegalName, L=London")))), arrayOf())
-                X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints)
+                X509Utilities.createCertificate(CertificateType.CLIENT_CA, intermediateCACert, intermediateCAKey, subject, publicKey, nameConstraints = nameConstraints).toX509Certificate()
             }
         }
 
@@ -148,9 +149,10 @@ class DoormanServiceTest {
         assertEquals(3, certificates.size)
 
         val sslKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
-        val sslCert = X509Utilities.createCertificate(CertificateType.TLS, certificates.first(), keyPair, X500Name("CN=LegalName,L=London"), sslKey.public)
+        val sslCert = X509Utilities.createCertificate(CertificateType.TLS, X509CertificateHolder(certificates.first().encoded), keyPair, X500Name("CN=LegalName,L=London"), sslKey.public).toX509Certificate()
 
-        X509Utilities.validateCertificateChain(certificates.last(), sslCert, *certificates.toTypedArray())
+        // TODO: This is temporary solution, remove all certificate re-shaping after identity refactoring is done.
+        X509Utilities.validateCertificateChain(X509CertificateHolder(certificates.last().encoded), sslCert, *certificates.toTypedArray())
     }
 
     @Test

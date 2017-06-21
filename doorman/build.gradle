@@ -1,3 +1,11 @@
+ext {
+    // We use Corda release artifact dependencies instead of project dependencies to make sure each doorman releases are
+    // align with the corresponding Corda release.
+    corda_dependency_version = '0.12.1'
+}
+
+version "$corda_dependency_version"
+
 apply plugin: 'us.kirchmeier.capsule'
 apply plugin: 'kotlin'
 
@@ -14,35 +22,28 @@ repositories {
 }
 
 task buildDoormanJAR(type: FatCapsule, dependsOn: 'jar') {
+    group = 'build'
     applicationClass 'com.r3.corda.doorman.MainKt'
-    archiveName 'doorman.jar'
 
     capsuleManifest {
-        systemProperties['log4j.configuration'] = 'log4j2.xml'
+        applicationVersion = corda_dependency_version
+        systemProperties['visualvm.display.name'] = 'Doorman'
         minJavaVersion = '1.8.0'
+        jvmArgs = ['-XX:+UseG1GC']
     }
-}
-
-sourceSets {
-    main {
-        resources {
-            srcDir "../config/dev"
-        }
-    }
-    test {
-        resources {
-            srcDir "../config/test"
-        }
-    }
+    // Make the resulting JAR file directly executable on UNIX by prepending a shell script to it.
+    // This lets you run the file like so: ./corda.jar
+    // Other than being slightly less typing, this has one big advantage: Ctrl-C works properly in the terminal.
+    reallyExecutable { trampolining() }
 }
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    compile project(":core")
-    compile project(":node")
-    compile project(":node-api")
-    testCompile project(":test-utils")
+    compile "net.corda:core:$corda_dependency_version"
+    compile "net.corda:node:$corda_dependency_version"
+    compile "net.corda:node-api:$corda_dependency_version"
+    testCompile "net.corda:test-utils:$corda_dependency_version"
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -70,7 +71,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile "com.nhaarman:mockito-kotlin:0.6.1"
 
-    compile ('com.atlassian.jira:jira-rest-java-client-core:4.0.0'){
+    compile('com.atlassian.jira:jira-rest-java-client-core:4.0.0') {
         // The jira client includes jersey-core 1.5 which breaks everything.
         exclude module: 'jersey-core'
     }

@@ -64,7 +64,7 @@ class DoormanWebService(val intermediateCACertAndKey: CertificateAndKeyPair, val
                     // Client certificate must come first and root certificate should come last.
                     val entries = listOf(
                             CORDA_CLIENT_CA to response.certificate,
-                            CORDA_INTERMEDIATE_CA to intermediateCACertAndKey.certificate,
+                            CORDA_INTERMEDIATE_CA to intermediateCACertAndKey.certificate.toX509Certificate(),
                             CORDA_ROOT_CA to rootCert
                     )
                     entries.forEach {
