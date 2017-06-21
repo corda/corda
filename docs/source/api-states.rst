@@ -116,7 +116,7 @@ Other interfaces
 ``ContractState`` has several more sub-interfaces that can optionally be implemented:
 
 * ``QueryableState``, which allows the state to be queried in the node's database using SQL (see
-  :doc:`persistence`)
+  :doc:`api-persistence`)
 * ``SchedulableState``, which allows us to schedule future actions for the state (e.g. a coupon on a bond) (see
   :doc:`event-scheduling`)
 

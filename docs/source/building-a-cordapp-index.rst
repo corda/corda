@@ -6,11 +6,5 @@ Building a CorDapp
 
    cordapp-overview
    writing-cordapps
-   api
-   api-states
-   api-contracts
-   api-transactions
-   api-flows
-   api-service-hub
-   api-core-types
+   api-index
    cheat-sheet
