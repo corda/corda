@@ -1,6 +1,7 @@
 package net.corda.node.services.identity
 
 import net.corda.core.contracts.PartyAndReference
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.subject
 import net.corda.core.crypto.toStringShort
@@ -136,12 +137,18 @@ class InMemoryIdentityService(identities: Iterable<PartyAndCertificate>,
      * Verify that the given certificate path is valid and leads to the owning key of the party.
      */
     private fun validateCertificatePath(party: AbstractParty, path: CertPath): PKIXCertPathValidatorResult {
+        // Check that the path ends with a certificate for the correct party.
+        val endCertificate = path.certificates.first()
+        // Ensure the key is in the correct format for comparison.
+        // TODO: Replace with a Bouncy Castle cert path so we can avoid Sun internal classes appearing unexpectedly.
+        //       For now we have to deal with this potentially being an [X509Key] which is Sun's equivalent to
+        //       [SubjectPublicKeyInfo] but doesn't compare properly with [PublicKey].
+        val endKey = Crypto.decodePublicKey(endCertificate.publicKey.encoded)
+        require(endKey == party.owningKey) { "Certificate path validation must end at owning key ${party.owningKey.toStringShort()}, found ${endKey.toStringShort()}" }
+
         val validatorParameters = PKIXParameters(setOf(trustAnchor))
         val validator = CertPathValidator.getInstance("PKIX")
         validatorParameters.isRevocationEnabled = false
-        val result = validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult
-        require(result.trustAnchor == null || result.trustAnchor == trustAnchor)
-        require(result.publicKey == party.owningKey) { "Certificate path validation must end at owning key ${party.owningKey.toStringShort()}, found ${result.publicKey.toStringShort()}" }
-        return result
+        return validator.validate(path, validatorParameters) as PKIXCertPathValidatorResult
     }
 }
