@@ -28,5 +28,5 @@ data class SignatureScheme(
         val algorithmName: String,
         val signatureName: String,
         val algSpec: AlgorithmParameterSpec?,
-        val keySize: Int,
+        val keySize: Int?,
         val desc: String)
