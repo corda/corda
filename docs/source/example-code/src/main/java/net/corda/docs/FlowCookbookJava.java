@@ -12,6 +12,7 @@ import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.NetworkMapCache;
+import net.corda.core.node.services.ServiceType;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -61,6 +62,8 @@ public class FlowCookbookJava {
         /*----------------------------------
          * WIRING UP THE PROGRESS TRACKER *
         ----------------------------------*/
+        // Giving our flow a progress tracker allows us to see the flow's
+        // progress visually in our node's CRaSH shell.
         private static final Step ID_OTHER_NODES = new Step("Identifying other nodes on the network.");
         private static final Step SENDING_AND_RECEIVING_DATA = new Step("Sending data between parties.");
         private static final Step EXTRACTING_VAULT_STATES = new Step("Extracting states from the vault.");
@@ -69,6 +72,8 @@ public class FlowCookbookJava {
         private static final Step TX_SIGNING = new Step("Signing a transaction.");
         private static final Step TX_VERIFICATION = new Step("Verifying a transaction.");
         private static final Step SIGS_GATHERING = new Step("Gathering a transaction's signatures.") {
+            // Wiring up a child progress tracker allows us to see the
+            // subflow's progress steps in our flow's progress tracker.
             @Override public ProgressTracker childProgressTracker() {
                 return CollectSignaturesFlow.Companion.tracker();
             }
@@ -94,11 +99,9 @@ public class FlowCookbookJava {
         @Suspendable
         @Override
         public Void call() throws FlowException {
-            // We'll be using some dummy party and public key objects for
-            // demonstration purposes. These are built in to Corda, and are
-            // generally used for writing tests.
-            Party dummyBank = getDUMMY_BANK_A();
-            Party dummyRegulator = getDUMMY_REGULATOR();
+            // We'll be using a dummy public key for demonstration purposes.
+            // These are built in to Corda, and are generally used for writing
+            // tests.
             PublicKey dummyPubKey = getDUMMY_PUBKEY_1();
 
             /*---------------------------
@@ -123,6 +126,10 @@ public class FlowCookbookJava {
             Party namedCounterparty = networkMap.getNodeByLegalName(new X500Name("CN=NodeA,O=NodeA,L=London,C=UK")).getLegalIdentity();
             Party keyedCounterparty = networkMap.getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
             Party firstCounterparty = networkMap.getPartyNodes().get(0).getLegalIdentity();
+
+            // Finally, we can use the map to identify nodes providing a
+            // specific service (e.g. a regulator or an oracle).
+            Party regulator = getServiceHub().getNetworkMapCache().getNodesWithService(ServiceType.Companion.getRegulator()).get(0).getLegalIdentity();
 
             /*------------------------------
              * SENDING AND RECEIVING DATA *
@@ -176,8 +183,8 @@ public class FlowCookbookJava {
             // We're not limited to sending to and receiving from a single
             // counterparty. A flow can send messages to as many parties as it
             // likes, and they can each invoke a different response flow.
-            send(dummyBank, new Object());
-            UntrustworthyData<Object> packet3 = receive(Object.class, dummyRegulator);
+            send(regulator, new Object());
+            UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
 
             /*------------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -284,6 +291,9 @@ public class FlowCookbookJava {
             // using``ResolveTransactionsFlow`` before verifying it.
             subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
 
+            // We can also resolve a `StateRef` dependency chain.
+            subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
+
             // We verify a transaction using the following one-liner:
             twiceSignedTx.getTx().toLedgerTransaction(getServiceHub()).verify();
 
@@ -340,7 +350,7 @@ public class FlowCookbookJava {
             SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
-            Set<Party> additionalParties = ImmutableSet.of(dummyRegulator, dummyBank);
+            Set<Party> additionalParties = ImmutableSet.of(regulator, regulator);
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
 
             return null;
