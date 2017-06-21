@@ -127,8 +127,8 @@ class TwoPartyTradeFlowTests {
 
         ledger {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-            val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+            val aliceNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), ALICE.name)
+            val bobNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), BOB.name)
 
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
@@ -173,13 +173,13 @@ class TwoPartyTradeFlowTests {
     fun `shutdown and restore`() {
         ledger {
             val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-            val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-            var bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+            val aliceNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), ALICE.name)
+            var bobNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), BOB.name)
             aliceNode.disableDBCloseOnStop()
             bobNode.disableDBCloseOnStop()
 
             val bobAddr = bobNode.network.myAddress as InMemoryMessagingNetwork.PeerHandle
-            val networkMapAddr = notaryNode.info.address
+            val networkMapAddr = notaryNode.info.addresses.first()
 
             mockNet.runNetwork() // Clear network map registration messages
 
@@ -291,8 +291,8 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `check dependencies of sale asset are resolved`() {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
+        val aliceNode = makeNodeWithTracking(notaryNode.info.addresses.first(), ALICE.name)
+        val bobNode = makeNodeWithTracking(notaryNode.info.addresses.first(), BOB.name)
 
         ledger(aliceNode.services) {
 
@@ -390,8 +390,8 @@ class TwoPartyTradeFlowTests {
     @Test
     fun `track works`() {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = makeNodeWithTracking(notaryNode.info.address, ALICE.name)
-        val bobNode = makeNodeWithTracking(notaryNode.info.address, BOB.name)
+        val aliceNode = makeNodeWithTracking(notaryNode.info.addresses.first(), ALICE.name)
+        val bobNode = makeNodeWithTracking(notaryNode.info.addresses.first(), BOB.name)
 
         ledger(aliceNode.services) {
 
@@ -528,8 +528,8 @@ class TwoPartyTradeFlowTests {
             expectedMessageSubstring: String
     ) {
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), BOB.name)
         val issuer = MEGA_CORP.ref(1, 2, 3)
 
         val bobsBadCash = bobNode.database.transaction {

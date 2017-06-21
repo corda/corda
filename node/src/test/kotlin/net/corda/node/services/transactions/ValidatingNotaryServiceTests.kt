@@ -33,7 +33,7 @@ class ValidatingNotaryServiceTests {
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type))
         )
-        clientNode = mockNet.createNode(networkMapAddress = notaryNode.info.address)
+        clientNode = mockNet.createNode(networkMapAddress = notaryNode.info.addresses.first())
         mockNet.runNetwork() // Clear network map registration messages
     }
 

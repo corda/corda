@@ -567,7 +567,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.Node -> partyInfo.node.address
+            is PartyInfo.Node -> partyInfo.node.addresses.first() // TODO load balancing
             is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
         }
     }

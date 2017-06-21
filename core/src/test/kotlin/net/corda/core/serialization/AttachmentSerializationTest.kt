@@ -69,7 +69,7 @@ class AttachmentSerializationTest {
     fun setUp() {
         mockNet = MockNetwork()
         server = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        client = mockNet.createNode(server.info.address)
+        client = mockNet.createNode(server.info.addresses.first())
         client.disableDBCloseOnStop() // Otherwise the in-memory database may disappear (taking the checkpoint with it) while we reboot the client.
         mockNet.runNetwork()
     }
@@ -149,7 +149,7 @@ class AttachmentSerializationTest {
 
     private fun rebootClientAndGetAttachmentContent(checkAttachmentsOnLoad: Boolean = true): String {
         client.stop()
-        client = mockNet.createNode(server.info.address, client.id, object : MockNetwork.Factory {
+        client = mockNet.createNode(server.info.addresses.first(), client.id, object : MockNetwork.Factory {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun startMessagingService(rpcOps: RPCOps) {

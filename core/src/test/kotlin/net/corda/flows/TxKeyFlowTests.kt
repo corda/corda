@@ -27,8 +27,8 @@ class TxKeyFlowTests {
 
         // Set up values we'll need
         val notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        val aliceNode = mockNet.createPartyNode(notaryNode.info.address, ALICE.name)
-        val bobNode = mockNet.createPartyNode(notaryNode.info.address, BOB.name)
+        val aliceNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), ALICE.name)
+        val bobNode = mockNet.createPartyNode(notaryNode.info.addresses.first(), BOB.name)
         val alice: Party = aliceNode.services.myInfo.legalIdentity
         val bob: Party = bobNode.services.myInfo.legalIdentity
         aliceNode.services.identityService.registerIdentity(bobNode.info.legalIdentityAndCert)

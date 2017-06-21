@@ -73,7 +73,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, getTestPartyAndCertificate(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
+    override val myInfo: NodeInfo get() = NodeInfo(listOf(object : SingleMessageRecipient {}), setOf(getTestPartyAndCertificate(MEGA_CORP.name, key.public)), MOCK_VERSION_INFO.platformVersion)
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService())): VaultService {

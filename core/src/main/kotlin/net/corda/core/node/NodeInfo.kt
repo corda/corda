@@ -6,7 +6,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
-import org.bouncycastle.cert.X509CertificateHolder
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -18,16 +17,20 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 /**
  * Info about a network node that acts on behalf of some form of contract party.
  */
+// TODO The only support for multi-IP/multi-identity nodes required as part of this project is slots in the data structures.
+//  Enhancing the node to support the rest of the feature is not a goal.
 @CordaSerializable
-data class NodeInfo(val address: SingleMessageRecipient,
-                    val legalIdentityAndCert: PartyAndCertificate,
+data class NodeInfo(val addresses: List<SingleMessageRecipient>,
+                    val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),
-                    val physicalLocation: PhysicalLocation? = null) {
+                    val worldMapLocation: WorldMapLocation? = null) {
     init {
         require(advertisedServices.none { it.identity == legalIdentityAndCert }) { "Service identities must be different from node legal identity" }
     }
 
+    val legalIdentityAndCert: PartyAndCertificate
+        get() = legalIdentitiesAndCerts.first() // TODO different handling
     val legalIdentity: Party
         get() = legalIdentityAndCert.party
     val notaryIdentity: Party

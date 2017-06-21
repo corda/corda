@@ -61,7 +61,10 @@ object UpdateBusinessDayFlow {
 
         @Suspendable
         private fun doNextRecipient(recipient: NodeInfo) {
-            send(recipient.legalIdentity, UpdateBusinessDayMessage(date))
+            if (recipient.addresses.first() is MockNetworkMapCache.MockAddress) {
+                // Ignore
+            } else {
+                send(recipient.legalIdentity, UpdateBusinessDayMessage(date))
+            }
         }
     }
-}

@@ -213,7 +213,7 @@ class NodeInterestRatesTest {
     fun `network tearoff`() {
         val mockNet = MockNetwork()
         val n1 = mockNet.createNotaryNode()
-        val n2 = mockNet.createNode(n1.info.address, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
+        val n2 = mockNet.createNode(n1.info.addresses.first(), advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type))
         n2.registerInitiatedFlow(NodeInterestRates.FixQueryHandler::class.java)
         n2.registerInitiatedFlow(NodeInterestRates.FixSignHandler::class.java)
         n2.database.transaction {

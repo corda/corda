@@ -34,15 +34,15 @@ class InMemoryMessagingTests {
     @Test
     fun basics() {
         val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
-        val node3 = mockNet.createNode(networkMapAddress = node1.info.address)
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.addresses.first())
+        val node3 = mockNet.createNode(networkMapAddress = node1.info.addresses.first())
 
         val bits = "test-content".toByteArray()
         var finalDelivery: Message? = null
 
         with(node2) {
             node2.network.addMessageHandler { msg, _ ->
-                node2.network.send(msg, node3.info.address)
+                node2.network.send(msg, node3.info.addresses.first())
             }
         }
 
@@ -53,7 +53,7 @@ class InMemoryMessagingTests {
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we run the network
-        node1.network.send(node1.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.info.address)
+        node1.network.send(node1.network.createMessage("test.topic", DEFAULT_SESSION_ID, bits), node2.info.addresses.first())
 
         mockNet.runNetwork(rounds = 1)
 
@@ -63,8 +63,8 @@ class InMemoryMessagingTests {
     @Test
     fun broadcast() {
         val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
-        val node3 = mockNet.createNode(networkMapAddress = node1.info.address)
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.addresses.first())
+        val node3 = mockNet.createNode(networkMapAddress = node1.info.addresses.first())
 
         val bits = "test-content".toByteArray()
 
@@ -82,7 +82,7 @@ class InMemoryMessagingTests {
     @Test
     fun `skip unhandled messages`() {
         val node1 = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        val node2 = mockNet.createNode(networkMapAddress = node1.info.address)
+        val node2 = mockNet.createNode(networkMapAddress = node1.info.addresses.first())
         var received: Int = 0
 
         node1.network.addMessageHandler("valid_message") { _, _ ->

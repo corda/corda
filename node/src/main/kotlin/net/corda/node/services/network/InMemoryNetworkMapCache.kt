@@ -134,7 +134,7 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     override fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit> {
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
-        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, service.address).map {
+        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, service.addresses.first()).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
         _registrationFuture.setFuture(future)

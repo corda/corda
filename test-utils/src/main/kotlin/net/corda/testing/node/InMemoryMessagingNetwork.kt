@@ -330,7 +330,7 @@ class InMemoryMessagingNetwork(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.Node -> partyInfo.node.address
+                is PartyInfo.Node -> partyInfo.node.addresses.first()
                 is PartyInfo.Service -> ServiceHandle(partyInfo.service)
             }
         }

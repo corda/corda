@@ -59,8 +59,8 @@ class CordaRPCOpsImplTest {
     fun setup() {
         mockNet = MockNetwork()
         val networkMap = mockNet.createNode(advertisedServices = ServiceInfo(NetworkMapService.type))
-        aliceNode = mockNet.createNode(networkMapAddress = networkMap.info.address)
-        notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.address)
+        aliceNode = mockNet.createNode(networkMapAddress = networkMap.info.addresses.first())
+        notaryNode = mockNet.createNode(advertisedServices = ServiceInfo(SimpleNotaryService.type), networkMapAddress = networkMap.info.addresses.first())
         rpc = CordaRPCOpsImpl(aliceNode.services, aliceNode.smm, aliceNode.database)
         CURRENT_RPC_CONTEXT.set(RpcContext(User("user", "pwd", permissions = setOf(
                 startFlowPermission<CashIssueFlow>(),

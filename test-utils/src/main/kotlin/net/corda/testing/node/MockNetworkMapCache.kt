@@ -28,8 +28,8 @@ class MockNetworkMapCache : InMemoryNetworkMapCache() {
     data class MockAddress(val id: String) : SingleMessageRecipient
 
     init {
-        val mockNodeA = NodeInfo(MockAddress("bankC:8080"), BANK_C, MOCK_VERSION_INFO.platformVersion)
-        val mockNodeB = NodeInfo(MockAddress("bankD:8080"), BANK_D, MOCK_VERSION_INFO.platformVersion)
+        val mockNodeA = NodeInfo(listOf(MockAddress("bankC:8080")), setOf(BANK_C), MOCK_VERSION_INFO.platformVersion)
+        val mockNodeB = NodeInfo(listOf(MockAddress("bankD:8080")), setOf(BANK_D), MOCK_VERSION_INFO.platformVersion)
         registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
         registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
         runWithoutMapService()

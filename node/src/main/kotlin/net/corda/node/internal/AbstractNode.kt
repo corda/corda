@@ -158,7 +158,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
     }
 
-    open fun findMyLocation(): PhysicalLocation? {
+    open fun findMyLocation(): WorldMapLocation? {
         return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
     }
 
@@ -547,8 +547,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val legalIdentity = obtainLegalIdentity()
-        return NodeInfo(network.myAddress, legalIdentity, platformVersion, advertisedServiceEntries, findMyLocation())
+        val legalIdentity = obtainLegalIdentity() //todo merge legalIdentity and advertisedServices identities
+        // TODO take network.myAddress addresses from configs?
+        // TODO add legalIdentities from services
+        return NodeInfo(listOf(network.myAddress), setOf(legalIdentity), platformVersion, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -641,7 +643,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
-        val address = networkMapAddress ?: info.address
+        // TODO single message recipient
+        val address = networkMapAddress ?: info.addresses.first() // TODO for now it's the first address from a list
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
