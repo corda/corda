@@ -59,7 +59,8 @@ abstract class NodeBasedTest {
     @After
     fun stopAllNodes() {
         val shutdownExecutor = listeningDecorator(Executors.newScheduledThreadPool(nodes.size))
-        Futures.allAsList(nodes.map { shutdownExecutor.submit(it::stop) }).getOrThrow()
+        // Don't use allAsList, which may hide errors/hangs:
+        nodes.map { shutdownExecutor.submit(it::stop) }.map { it.getOrThrow() }
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
