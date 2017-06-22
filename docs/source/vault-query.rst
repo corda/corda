@@ -78,7 +78,7 @@ Examples of these ``QueryCriteria`` objects are presented below for Kotlin and J
 The Vault Query API leverages the rich semantics of the underlying Requery_ persistence framework adopted by Corda.
 
 .. _Requery: https://github.com/requery/requery/wiki
-.. _Persistence: https://docs.corda.net/persistence.html
+.. _Persistence: https://docs.corda.net/api-persistence.html
 
 .. note:: Permissioning at the database level will be enforced at a later date to ensure authenticated, role-based, read-only access to underlying Corda tables.
 
