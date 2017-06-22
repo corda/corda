@@ -22,6 +22,7 @@ import java.time.Clock
 
 open class MockServiceHubInternal(
         val customVault: VaultService? = null,
+        val customVaultQuery: VaultQueryService? = null,
         val keyManagement: KeyManagementService? = null,
         val network: MessagingService? = null,
         val identity: IdentityService? = MOCK_IDENTITY_SERVICE,
@@ -32,6 +33,8 @@ open class MockServiceHubInternal(
         val schemas: SchemaService? = NodeSchemaService(),
         val customTransactionVerifierService: TransactionVerifierService? = InMemoryTransactionVerifierService(2)
 ) : ServiceHubInternal() {
+    override val vaultQueryService: VaultQueryService
+        get() = customVaultQuery ?: throw UnsupportedOperationException()
     override val transactionVerifierService: TransactionVerifierService
         get() = customTransactionVerifierService ?: throw UnsupportedOperationException()
     override val vaultService: VaultService

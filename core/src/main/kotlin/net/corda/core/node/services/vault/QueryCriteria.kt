@@ -3,14 +3,17 @@ package net.corda.core.node.services.vault
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria.AndComposition
 import net.corda.core.node.services.vault.QueryCriteria.OrComposition
+import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
+import javax.persistence.criteria.Predicate
 
 /**
  * Indexing assumptions:
@@ -18,27 +21,39 @@ import java.util.*
  */
 @CordaSerializable
 sealed class QueryCriteria {
+    abstract fun visit(parser: IQueryCriteriaParser): Collection<Predicate>
+
+    @CordaSerializable
+    data class TimeCondition(val type: TimeInstantType, val predicate: ColumnPredicate<Instant>)
 
     /**
      * VaultQueryCriteria: provides query by attributes defined in [VaultSchema.VaultStates]
      */
     data class VaultQueryCriteria @JvmOverloads constructor (
             val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            val stateRefs: List<StateRef>? = null,
             val contractStateTypes: Set<Class<out ContractState>>? = null,
+            val stateRefs: List<StateRef>? = null,
             val notaryName: List<X500Name>? = null,
-            val includeSoftlockedStates: Boolean? = true,
-            val timeCondition: Logical<TimeInstantType, Array<Instant>>? = null,
-            val participantIdentities: List<X500Name>? = null) : QueryCriteria()
+            val includeSoftlockedStates: Boolean = true,
+            val timeCondition: TimeCondition? = null) : QueryCriteria() {
+
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseCriteria(this)
+        }
+    }
 
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(
+            val participants: List<AbstractParty>? = null,
             val linearId: List<UniqueIdentifier>? = null,
-            val latestOnly: Boolean? = true,
-            val dealRef: List<String>? = null,
-            val dealPartyName: List<X500Name>? = null) : QueryCriteria()
+            val dealRef: List<String>? = null) : QueryCriteria() {
+
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseCriteria(this)
+        }
+    }
 
    /**
     * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleState]
@@ -48,13 +63,16 @@ sealed class QueryCriteria {
     *   [Commodity] as used in [CommodityContract] state
     */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
-            val ownerIdentity: List<X500Name>? = null,
-            val quantity: Logical<*,Long>? = null,
-            val tokenType: List<Class<out Any>>? = null,
-            val tokenValue: List<String>? = null,
-            val issuerPartyName: List<X500Name>? = null,
-            val issuerRef: List<OpaqueBytes>? = null,
-            val exitKeyIdentity: List<String>? = null) : QueryCriteria()
+           val participants: List<AbstractParty>? = null,
+           val owner: List<AbstractParty>? = null,
+           val quantity: ColumnPredicate<Long>? = null,
+           val issuerPartyName: List<AbstractParty>? = null,
+           val issuerRef: List<OpaqueBytes>? = null) : QueryCriteria() {
+
+       override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+           return parser.parseCriteria(this)
+       }
+   }
 
     /**
      * VaultCustomQueryCriteria: provides query by custom attributes defined in a contracts
@@ -62,16 +80,28 @@ sealed class QueryCriteria {
      * (see Persistence documentation for more information)
      *
      * Params
-     *  [indexExpression] refers to a (composable) JPA Query like WHERE expression clauses of the form:
-     *      [JPA entityAttributeName] [Operand] [Value]
+     *  [expression] refers to a (composable) type safe [CriteriaExpression]
      *
      * Refer to [CommercialPaper.State] for a concrete example.
      */
-    data class VaultCustomQueryCriteria<L,R>(val indexExpression: Logical<L,R>? = null) : QueryCriteria()
+    data class VaultCustomQueryCriteria<L : PersistentState>(val expression: CriteriaExpression<L, Boolean>) : QueryCriteria() {
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseCriteria(this)
+        }
+    }
 
     // enable composition of [QueryCriteria]
-    data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
-    data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria()
+    data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseAnd(this.a, this.b)
+        }
+    }
+
+    data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
+            return parser.parseOr(this.a, this.b)
+        }
+    }
 
     // timestamps stored in the vault states table [VaultSchema.VaultStates]
     @CordaSerializable
@@ -79,6 +109,16 @@ sealed class QueryCriteria {
         RECORDED,
         CONSUMED
     }
+}
+
+interface IQueryCriteriaParser {
+    fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate>
+    fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate>
+    fun <L: PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
+    fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
+    fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
+    fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
+    fun parse(criteria: QueryCriteria, sorting: Sort? = null) : Collection<Predicate>
 }
 
 infix fun QueryCriteria.and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)

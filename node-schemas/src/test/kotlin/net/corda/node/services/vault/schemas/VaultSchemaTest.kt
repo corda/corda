@@ -2,15 +2,13 @@ package net.corda.node.services.vault.schemas
 
 import io.requery.Persistable
 import io.requery.TransactionIsolation
-import io.requery.kotlin.`in`
-import io.requery.kotlin.eq
-import io.requery.kotlin.invoke
-import io.requery.kotlin.isNull
+import io.requery.kotlin.*
 import io.requery.query.RowExpression
 import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -23,10 +21,8 @@ import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.core.utilities.*
+import net.corda.node.services.vault.schemas.requery.*
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After
 import org.junit.Assert
@@ -34,7 +30,6 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
@@ -56,7 +51,7 @@ class VaultSchemaTest {
     fun setup() {
         val dataSource = JdbcDataSource()
         dataSource.setURL("jdbc:h2:mem:vault_persistence;DB_CLOSE_ON_EXIT=FALSE;DB_CLOSE_DELAY=-1")
-        val configuration = KotlinConfiguration(dataSource = dataSource, model = Models.VAULT, mapping = setupCustomMapping())
+        val configuration = KotlinConfiguration(dataSource = dataSource, model = Models.VAULT, mapping = setupCustomMapping(), useDefaultLogging = true)
         instance = KotlinEntityDataStore<Persistable>(configuration)
         oinstance = KotlinRxEntityStore(KotlinEntityDataStore<Persistable>(configuration))
         val tables = SchemaModifier(configuration)
@@ -102,7 +97,10 @@ class VaultSchemaTest {
     }
 
     private fun setupDummyData() {
-        // dummy Transaction
+        // dummy Transaction comprised of 3 different Contract State types
+        // 1. SingleOwnerState
+        // 2. MultiOwnerState
+        // 3. VaultNoopState
         val notary: Party = DUMMY_NOTARY
         val inState1 = TransactionState(DummyContract.SingleOwnerState(0, ALICE), notary)
         val inState2 = TransactionState(DummyContract.MultiOwnerState(0,
@@ -284,6 +282,24 @@ class VaultSchemaTest {
         data.invoke {
             val result = select(VaultSchema.VaultStates::class)
             Assert.assertSame(3, result().toList().size)
+        }
+    }
+
+    @Test
+    fun testDistinctContractStateTypes() {
+        val txn = createTxnWithTwoStateTypes()
+        dummyStatesInsert(txn)
+
+        data.invoke {
+            transaction!!.inputs.forEach {
+                val stateEntity = createStateEntity(it)
+                insert(stateEntity)
+            }
+
+            val query = select(VaultSchema.VaultStates::contractStateClassName).distinct()
+            val results = query.get()
+
+            Assert.assertSame(3, results.count())
         }
     }
 

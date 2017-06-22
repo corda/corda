@@ -49,7 +49,7 @@ open class MappedSchema(schemaFamily: Class<*>,
  * A super class for all mapped states exported to a schema that ensures the [StateRef] appears on the database row.  The
  * [StateRef] will be set to the correct value by the framework (there's no need to set during mapping generation by the state itself).
  */
-@MappedSuperclass open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : Persistable
+@MappedSuperclass open class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.
@@ -64,3 +64,8 @@ data class PersistentStateRef(
 ) : Serializable {
     constructor(stateRef: StateRef) : this(stateRef.txhash.bytes.toHexString(), stateRef.index)
 }
+
+/**
+ * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
+ */
+interface StatePersistable : Persistable

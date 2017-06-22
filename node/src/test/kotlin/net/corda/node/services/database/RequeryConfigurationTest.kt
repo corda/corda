@@ -19,10 +19,10 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_PUBKEY_1
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.vault.schemas.Models
-import net.corda.node.services.vault.schemas.VaultCashBalancesEntity
-import net.corda.node.services.vault.schemas.VaultSchema
-import net.corda.node.services.vault.schemas.VaultStatesEntity
+import net.corda.node.services.vault.schemas.requery.Models
+import net.corda.node.services.vault.schemas.requery.VaultCashBalancesEntity
+import net.corda.node.services.vault.schemas.requery.VaultSchema
+import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -30,6 +30,7 @@ import org.assertj.core.api.Assertions
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
@@ -123,6 +124,55 @@ class RequeryConfigurationTest {
         }
     }
 
+    @Test
+    fun `bounded iteration`() {
+        // insert 100 entities
+        database.transaction {
+            requerySession.withTransaction {
+                (1..100)
+                        .map { newTransaction(it) }
+                        .forEach { insert(createVaultStateEntity(it)) }
+            }
+        }
+
+        // query entities 41..45
+        database.transaction {
+            requerySession.withTransaction {
+                // Note: cannot specify a limit explicitly when using iterator skip & take
+                val query = select(VaultSchema.VaultStates::class)
+                val count = query.get().count()
+                Assertions.assertThat(count).isEqualTo(100)
+                val result = query.get().iterator(40, 5)
+                Assertions.assertThat(result.asSequence().count()).isEqualTo(5)
+            }
+        }
+    }
+
+    @Test
+    fun `test calling an arbitrary JDBC native query`() {
+        val txn = newTransaction()
+
+        database.transaction {
+            transactionStorage.addTransaction(txn)
+            requerySession.withTransaction {
+                insert(createVaultStateEntity(txn))
+            }
+        }
+
+        val dataSourceProperties = makeTestDataSourceProperties()
+        val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
+
+        database.transaction {
+            val configuration = RequeryConfiguration(dataSourceProperties, true)
+            val jdbcSession = configuration.jdbcSession()
+            val prepStatement = jdbcSession.prepareStatement(nativeQuery)
+            val rs = prepStatement.executeQuery()
+            assertTrue(rs.next())
+            assertEquals(rs.getString(1), txn.tx.inputs[0].txhash.toString())
+            assertEquals(rs.getInt(2), txn.tx.inputs[0].index)
+        }
+    }
+
     private fun createVaultStateEntity(txn: SignedTransaction): VaultStatesEntity {
         val txnState = txn.tx.inputs[0]
         val state = VaultStatesEntity().apply {
@@ -158,9 +208,9 @@ class RequeryConfigurationTest {
         }
     }
 
-    private fun newTransaction(): SignedTransaction {
+    private fun newTransaction(index: Int = 0): SignedTransaction {
         val wtx = WireTransaction(
-                inputs = listOf(StateRef(SecureHash.randomSHA256(), 0)),
+                inputs = listOf(StateRef(SecureHash.randomSHA256(), index)),
                 attachments = emptyList(),
                 outputs = emptyList(),
                 commands = emptyList(),

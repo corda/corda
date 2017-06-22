@@ -53,7 +53,8 @@ class CordaRPCOpsImplTest {
     lateinit var rpc: CordaRPCOpsImpl
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultUpdates: Observable<Vault.Update>
+    lateinit var vaultUpdates: Observable<Vault.Update>             // TODO: deprecated
+    lateinit var vaultTrackCash: Observable<Vault.Update>
 
     @Before
     fun setup() {
@@ -71,6 +72,7 @@ class CordaRPCOpsImplTest {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
             transactions = rpc.verifiedTransactions().second
             vaultUpdates = rpc.vaultAndUpdates().second
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().future
         }
     }
 
@@ -112,7 +114,15 @@ class CordaRPCOpsImplTest {
             }
         }
 
+        // TODO: deprecated
         vaultUpdates.expectEvents {
+            expect { update ->
+                val actual = update.produced.single().state.data
+                assertEquals(expectedState, actual)
+            }
+        }
+
+        vaultTrackCash.expectEvents {
             expect { update ->
                 val actual = update.produced.single().state.data
                 assertEquals(expectedState, actual)
@@ -180,7 +190,23 @@ class CordaRPCOpsImplTest {
             )
         }
 
+        // TODO: deprecated
         vaultUpdates.expectEvents {
+            sequence(
+                    // ISSUE
+                    expect { update ->
+                        require(update.consumed.isEmpty()) { update.consumed.size }
+                        require(update.produced.size == 1) { update.produced.size }
+                    },
+                    // MOVE
+                    expect { update ->
+                        require(update.consumed.size == 1) { update.consumed.size }
+                        require(update.produced.size == 1) { update.produced.size }
+                    }
+            )
+        }
+
+        vaultTrackCash.expectEvents {
             sequence(
                     // ISSUE
                     expect { update ->
