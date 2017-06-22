@@ -28,6 +28,7 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial {
+    @Ignore
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
