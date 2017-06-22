@@ -22,7 +22,6 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
 import org.bouncycastle.asn1.x500.X500Name
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import kotlin.test.*
@@ -53,13 +52,11 @@ class BFTNotaryServiceTests : NodeBasedTest() {
     }
 
     @Test
-    @Ignore("Under investigation due to failure on TC build server")
     fun `detect double spend 1 faulty`() {
         detectDoubleSpend(1)
     }
 
     @Test
-    @Ignore("Under investigation due to failure on TC build server")
     fun `detect double spend 2 faulty`() {
         detectDoubleSpend(2)
     }
