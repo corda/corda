@@ -171,7 +171,6 @@ class ClassCarpenter {
                 visitEnd()
             }
         }
-
     }
 
     private fun generate(schema: Schema, generator : (ClassWriter, Schema) -> Unit): Class<*> {
