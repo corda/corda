@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution
+to Corda in M13.
 
 * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
   an unambiguous identity by searching the network map.
@@ -37,16 +39,20 @@ UNRELEASED
   which takes a start-time and a period-of-validity (after this start-time) as inputs.
 
 * A new function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
-  to support deterministically generate/derive a ``KeyPair`` using an existing private key and a seed as inputs.
-  This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private -> child-private
-  key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes. Currently, key-pairs for
-  the following schemes are supported: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
+  has been implemented to support deterministically generate a ``KeyPair`` using an existing private key and a seed
+  as inputs. This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private ->
+  child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes. Currently,
+  this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
 
 * A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
   which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
   This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
   the class itself. An ``IllegalStateException`` informs the user if a class is blacklisted and such an exception is
   returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
+
+* Dependencies changes:
+    * Upgraded BouncyCastle to v1.57.
+    * Upgraded Apache ActiveMQ Artemis to v2.1.0.
 
 Milestone 12
 ------------
