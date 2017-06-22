@@ -1,6 +1,7 @@
 package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
@@ -18,9 +19,9 @@ import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
 import net.corda.testing.MOCK_VERSION_INFO
-import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
+import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
@@ -59,10 +60,11 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun startSimpleNode(legalName: X500Name,
                                 trustRoot: X509CertificateHolder? = null): SimpleNode {
-        val config = TestNodeConfiguration(
+        val config = testNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
-                myLegalName = legalName,
-                networkMapService = NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
+                myLegalName = legalName).also {
+            whenever(it.networkMapService).thenReturn(NetworkMapInfo(networkMapNode.configuration.p2pAddress, networkMapNode.info.legalIdentity.name))
+        }
         config.configureWithDevSSLCertificate() // This creates the node's TLS cert with the CN as the legal name
         return SimpleNode(config, trustRoot = trustRoot).apply { start() }
     }

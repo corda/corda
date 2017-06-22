@@ -4,12 +4,13 @@
 package net.corda.testing
 
 import com.google.common.net.HostAndPort
+import com.nhaarman.mockito_kotlin.spy
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
@@ -18,10 +19,8 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
-import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.*
 import net.corda.node.services.identity.InMemoryIdentityService
-import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -33,8 +32,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.CertPath
-import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -147,23 +144,26 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
 ) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
 
-// TODO Replace this with testConfiguration
-data class TestNodeConfiguration(
-        override val baseDirectory: Path,
-        override val myLegalName: X500Name,
-        override val networkMapService: NetworkMapInfo?,
-        override val minimumPlatformVersion: Int = 1,
-        override val keyStorePassword: String = "cordacadevpass",
-        override val trustStorePassword: String = "trustpass",
-        override val rpcUsers: List<User> = emptyList(),
-        override val dataSourceProperties: Properties = makeTestDataSourceProperties(myLegalName.commonName),
-        override val emailAddress: String = "",
-        override val exportJMXto: String = "",
-        override val devMode: Boolean = true,
-        override val certificateSigningService: URL = URL("http://localhost"),
-        override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
-        override val verifierType: VerifierType = VerifierType.InMemory,
-        override val messageRedeliveryDelaySeconds: Int = 5) : NodeConfiguration {
+fun testNodeConfiguration(
+        baseDirectory: Path,
+        myLegalName: X500Name): NodeConfiguration {
+    abstract class MockableNodeConfiguration : NodeConfiguration // Otherwise Mockito is defeated by val getters.
+    val nc = spy<MockableNodeConfiguration>()
+    whenever(nc.baseDirectory).thenReturn(baseDirectory)
+    whenever(nc.myLegalName).thenReturn(myLegalName)
+    whenever(nc.minimumPlatformVersion).thenReturn(1)
+    whenever(nc.keyStorePassword).thenReturn("cordacadevpass")
+    whenever(nc.trustStorePassword).thenReturn("trustpass")
+    whenever(nc.rpcUsers).thenReturn(emptyList())
+    whenever(nc.dataSourceProperties).thenReturn(makeTestDataSourceProperties(myLegalName.commonName))
+    whenever(nc.emailAddress).thenReturn("")
+    whenever(nc.exportJMXto).thenReturn("")
+    whenever(nc.devMode).thenReturn(true)
+    whenever(nc.certificateSigningService).thenReturn(URL("http://localhost"))
+    whenever(nc.certificateChainCheckPolicies).thenReturn(emptyList())
+    whenever(nc.verifierType).thenReturn(VerifierType.InMemory)
+    whenever(nc.messageRedeliveryDelaySeconds).thenReturn(5)
+    return nc
 }
 
 fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): FullNodeConfiguration {

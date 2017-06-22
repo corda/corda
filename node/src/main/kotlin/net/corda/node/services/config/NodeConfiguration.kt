@@ -26,6 +26,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val certificateChainCheckPolicies: List<CertChainPolicyConfig>
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
+    val bftReplicaId: Int?
+    val notaryClusterAddresses: List<HostAndPort>
 }
 
 data class FullNodeConfiguration(
@@ -53,9 +55,9 @@ data class FullNodeConfiguration(
         // Instead this should be a Boolean indicating whether that broker is an internal one started by the node or an external one
         val messagingServerAddress: HostAndPort?,
         val extraAdvertisedServiceIds: List<String>,
-        val bftReplicaId: Int?,
+        override val bftReplicaId: Int?,
         val notaryNodeAddress: HostAndPort?,
-        val notaryClusterAddresses: List<HostAndPort>,
+        override val notaryClusterAddresses: List<HostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
         val useTestClock: Boolean = false,
