@@ -14,6 +14,16 @@ from bug fixes and code refactoring, there are also significant improvements mai
 Identity Service, respectively (for more detailed information about what has changed, see :doc:`changelog`).
 More specifically:
 
+The long awaited new **Vault Query** service makes its debut in this release and provides advanced vault query capabilities
+using criteria specifications (see ``QueryCriteria``), sorting, and pagination. Criteria specifications enable selective
+filtering with and/or composition using multiple operator primitives on standard attributes stored in Corda internal
+vault tables (eg. vault_states, vault_fungible_states, vault_linear_states), and also on custom contract state schemas
+defined by CorDapp developers when modelling new contract types. Custom queries are specifiable using a simple but
+sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by RPC
+clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former, provides point-in-time snapshot
+queries whilst the later supplements the snapshot with dynamic streaming of updates.
+See :doc:`vault-query` for full details.
+
 We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
 to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
 to allow your node to handle new business processes. It also explains how you can use our contract and
