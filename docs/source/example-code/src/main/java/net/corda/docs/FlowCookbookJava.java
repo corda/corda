@@ -11,6 +11,8 @@ import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.ServiceType;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.vault.QueryCriteria;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -24,8 +26,13 @@ import net.corda.flows.ResolveTransactionsFlow;
 import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
+import rx.Observable;
+
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -213,11 +220,28 @@ public class FlowCookbookJava {
             ------------------------------------*/
             progressTracker.setCurrentStep(EXTRACTING_VAULT_STATES);
 
-            // TODO: Retrieving from the vault
+            // Let's assume there are already some ``DummyState``s in our
+            // node's vault, stored there as a result of running past flows,
+            // and we want to consume them in a transaction. There are many
+            // ways to extract these states from our vault.
 
-            // Input states are identified using ``StateRef`` instances,
-            // which pair the hash of the transaction that generated the state
-            // with the state's index in the outputs of that transaction.
+            // For example, we would extract any unconsumed ``DummyState``s
+            // from our vault as follows:
+            Vault.StateStatus status = Vault.StateStatus.UNCONSUMED;
+            Set<Class<DummyState>> dummyStateTypes = new HashSet<>(ImmutableList.of(DummyState.class));
+
+            VaultQueryCriteria criteria = new VaultQueryCriteria(status, null, dummyStateTypes);
+            Vault.Page<DummyState> results = getServiceHub().getVaultService().queryBy(criteria);
+
+            List<StateAndRef<DummyState>> dummyStates = results.getStates();
+
+            // For a full list of the available ways of extracting states from
+            // the vault, see the Vault Query docs page.
+
+            // When building a transaction, input states are passed in as
+            // ``StateRef`` instances, which pair the hash of the transaction
+            // that generated the state with the state's index in the outputs
+            // of that transaction.
             StateRef ourStateRef = new StateRef(SecureHash.sha256("DummyTransactionHash"), 0);
             // A ``StateAndRef`` pairs a ``StateRef`` with the state it points to.
             StateAndRef ourStateAndRef = getServiceHub().toStateAndRef(ourStateRef);
@@ -229,8 +253,8 @@ public class FlowCookbookJava {
 
             // Output states are constructed from scratch.
             DummyState ourOutput = new DummyState();
-            // Or copied from input states with some properties changed.
-            // TODO: Wait until vault stuff is ready.
+            // Or as copies of other states with some properties changed.
+            DummyState ourOtherOutput = ourOutput.copy(77);
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature

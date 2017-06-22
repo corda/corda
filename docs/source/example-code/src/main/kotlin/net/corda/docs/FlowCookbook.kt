@@ -9,6 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -193,11 +195,24 @@ object FlowCookbook {
             -----------------------------------**/
             progressTracker.currentStep = EXTRACTING_VAULT_STATES
 
-            // TODO: Retrieving from the vault
+            // Let's assume there are already some ``DummyState``s in our
+            // node's vault, stored there as a result of running past flows,
+            // and we want to consume them in a transaction. There are many
+            // ways to extract these states from our vault.
 
-            // Input states are identified using ``StateRef`` instances,
-            // which pair the hash of the transaction that generated the state
-            // with the state's index in the outputs of that transaction.
+            // For example, we would extract any unconsumed ``DummyState``s
+            // from our vault as follows:
+            val criteria = QueryCriteria.VaultQueryCriteria() // default is UNCONSUMED
+            val results: Vault.Page<DummyState> = serviceHub.vaultService.queryBy<DummyState>(criteria)
+            val dummyStates: List<StateAndRef<DummyState>> = results.states
+
+            // For a full list of the available ways of extracting states from
+            // the vault, see the Vault Query docs page.
+
+            // When building a transaction, input states are passed in as
+            // ``StateRef`` instances, which pair the hash of the transaction
+            // that generated the state with the state's index in the outputs
+            // of that transaction.
             val ourStateRef: StateRef = StateRef(SecureHash.sha256("DummyTransactionHash"), 0)
             // A ``StateAndRef`` pairs a ``StateRef`` with the state it points to.
             val ourStateAndRef: StateAndRef<DummyState> = serviceHub.toStateAndRef<DummyState>(ourStateRef)
@@ -208,9 +223,9 @@ object FlowCookbook {
             progressTracker.currentStep = OTHER_TX_COMPONENTS
 
             // Output states are constructed from scratch.
-            val ourOutput: ContractState = DummyState()
-            // Or copied from input states with some properties changed.
-            // TODO: Wait until vault stuff is ready.
+            val ourOutput: DummyState = DummyState()
+            // Or as copies of other states with some properties changed.
+            val ourOtherOutput: DummyState = ourOutput.copy(magicNumber = 77)
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature
