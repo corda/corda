@@ -4,11 +4,34 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
-----------
+------------
 
-Certificate checks have been enabled for much of the identity service, with additional checks coming targetted at M13.
-These are part of the confidential identities work, and ensure that parties are actually who they claim to be by checking
-their certificate path back to the network trust root (certificate authority).
+Milestone 13
+------------
+
+Following our first public beta in M12, this release continues the work on API stability and user friendliness. Apart
+from bug fixes and code refactoring, there are also significant improvements mainly in the Vault Query and the
+Identity Service, respectively (for more detailed information about what has changed, see :doc:`changelog`).
+More specifically:
+
+We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
+to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
+to allow your node to handle new business processes. It also explains how you can use our contract and
+flow testing frameworks to massively reduce CorDapp development time.
+
+Certificate checks have been enabled for much of the identity service, with additional checks coming targeted at M13.
+These are part of the confidential (anonymous) identities work, and ensure that parties are actually who they claim to
+be by checking their certificate path back to the network trust root (certificate authority).
+
+To deal with anonymized keys, we've also implemented a deterministic key generation (DKG) function that combines logic
+from the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) protocol and the BIP32 hardened
+parent-private-key -> child-private-key scheme. This function currently supports the following algorithms:
+ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully support anonymous
+identities so as to increase privacy even against validating notaries.
+
+We've also started working on improving user experience when searching, by adding a new RPC to support fuzzy matching
+of X.500 names. Our aim is to extend our work in usability and we are planning to apply AI and ML techniques in the
+near future.
 
 Milestone 12 - First Public Beta
 --------------------------------
