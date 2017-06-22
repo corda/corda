@@ -73,7 +73,7 @@ object Crypto {
     val RSA_SHA256 = SignatureScheme(
             1,
             "RSA_SHA256",
-            AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, DERNull.INSTANCE),
+            AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null),
             emptyList(),
             BouncyCastleProvider.PROVIDER_NAME,
             "RSA",
@@ -187,6 +187,21 @@ object Crypto {
     }
 
     /**
+     * Normalise an algorithm identifier by converting [DERNull] parameters into a Kotlin null value.
+     */
+    private fun normaliseAlgorithmIdentifier(id: AlgorithmIdentifier): AlgorithmIdentifier {
+        return if (id.parameters is DERNull) {
+            AlgorithmIdentifier(id.algorithm, null)
+        } else {
+            id
+        }
+    }
+
+    fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
+        return algorithmGroups[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
+    }
+
+    /**
      * Factory pattern to retrieve the corresponding [SignatureScheme] based on the type of the [String] input.
      * This function is usually called by key generators and verify signature functions.
      * In case the input is not a key in the supportedSignatureSchemes map, null will be returned.
@@ -206,7 +221,7 @@ object Crypto {
      */
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
         val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
-        return algorithmGroups[keyInfo.algorithm] ?: throw IllegalArgumentException("Unsupported key algorithm: ${key.algorithm} or invalid key format")
+        return findSignatureScheme(keyInfo.algorithm)
     }
 
     /**
@@ -219,7 +234,7 @@ object Crypto {
      */
     fun findSignatureScheme(key: PrivateKey): SignatureScheme {
         val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
-        return algorithmGroups[keyInfo.privateKeyAlgorithm] ?: throw IllegalArgumentException("Unsupported key algorithm: ${key.algorithm} or invalid key format")
+        return findSignatureScheme(keyInfo.privateKeyAlgorithm)
     }
 
     /**
@@ -231,14 +246,9 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        val key = PrivateKeyInfo.getInstance(encodedKey)
-        val signatureScheme = algorithmGroups[key.privateKeyAlgorithm]
-        val temp = algorithmGroups
-        return if (signatureScheme != null) {
-            KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
-        } else {
-            throw IllegalArgumentException("This private key cannot be decoded, please ensure it is PKCS8 encoded and the signature scheme is supported.")
-        }
+        val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
+        val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
+        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
     }
 
     /**
@@ -280,12 +290,8 @@ object Crypto {
     @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
-        val signatureScheme= algorithmGroups[subjectPublicKeyInfo.algorithm]
-        return if (signatureScheme != null) {
-            KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
-        } else {
-            throw IllegalArgumentException("This public key cannot be decoded, please ensure it is X509 encoded and the signature scheme is supported.")
-        }
+        val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
+        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
     }
 
     /**
