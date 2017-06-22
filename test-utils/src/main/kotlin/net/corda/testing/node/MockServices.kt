@@ -99,6 +99,8 @@ class MockKeyManagementService(val identityService: IdentityService,
         return k.public
     }
 
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
+
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }

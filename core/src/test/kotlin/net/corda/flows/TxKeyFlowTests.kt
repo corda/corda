@@ -40,7 +40,7 @@ class TxKeyFlowTests {
         val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bob))
 
         // Get the results
-        val actual: Map<Party, TxKeyFlow.AnonymousIdentity> = requesterFlow.resultFuture.getOrThrow()
+        val actual: Map<Party, AnonymisedIdentity> = requesterFlow.resultFuture.getOrThrow()
         assertEquals(2, actual.size)
         // Verify that the generated anonymous identities do not match the well known identities
         val aliceAnonymousIdentity = actual[alice] ?: throw IllegalStateException()
