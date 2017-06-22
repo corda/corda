@@ -30,6 +30,19 @@ configurations.testCompile {
     exclude group: 'javassist', module: 'javassist'
 }
 
+configurations {
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
 jar {
     baseName 'corda-finance'
 }

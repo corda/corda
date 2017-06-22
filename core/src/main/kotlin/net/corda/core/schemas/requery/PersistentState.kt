@@ -4,6 +4,7 @@ import io.requery.Key
 import io.requery.Persistable
 import io.requery.Superclass
 import net.corda.core.contracts.StateRef
+import net.corda.core.schemas.StatePersistable
 
 import javax.persistence.Column
 
@@ -14,7 +15,7 @@ object Requery {
      */
     // TODO: this interface will supercede the existing [PersistentState] interface defined in PersistentTypes.kt
     //       once we cut-over all existing Hibernate ContractState persistence to Requery
-    @Superclass interface PersistentState : Persistable {
+    @Superclass interface PersistentState : StatePersistable {
         @get:Key
         @get:Column(name = "transaction_id", length = 64)
         var txId: String

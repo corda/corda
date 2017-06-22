@@ -11,7 +11,7 @@ import net.corda.core.utilities.LogHelper
 import net.corda.core.write
 import net.corda.core.writeLines
 import net.corda.node.services.database.RequeryConfiguration
-import net.corda.node.services.persistence.schemas.AttachmentEntity
+import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction

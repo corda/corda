@@ -38,6 +38,7 @@ interface ServicesForResolution {
  */
 interface ServiceHub : ServicesForResolution {
     val vaultService: VaultService
+    val vaultQueryService: VaultQueryService
     val keyManagementService: KeyManagementService
     override val storageService: StorageService
     val networkMapCache: NetworkMapCache

@@ -1,4 +1,7 @@
 apply plugin: 'kotlin'
+// Java Persistence API support: create no-arg constructor
+// see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
+apply plugin: 'kotlin-jpa'
 apply plugin: 'java'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
@@ -136,6 +139,9 @@ dependencies {
     testCompile "com.pholser:junit-quickcheck-core:$quickcheck_version"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
+
+    // sample test schemas
+    testCompile project(path: ':finance', configuration: 'testArtifacts')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"

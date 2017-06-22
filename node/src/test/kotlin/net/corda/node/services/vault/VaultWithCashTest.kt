@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.testing.*
