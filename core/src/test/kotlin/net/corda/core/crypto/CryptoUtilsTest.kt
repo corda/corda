@@ -662,7 +662,7 @@ class CryptoUtilsTest {
     @Test
     fun `ECDSA secp256R1 deterministic key generation`() {
         val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
-        val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
@@ -687,15 +687,15 @@ class CryptoUtilsTest {
         assertNotEquals(pub, dpub)
 
         // A new keyPair is always generated per different seed.
-        val (dpriv2, dpub2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertNotEquals(dpriv, dpriv2)
         assertNotEquals(dpub, dpub2)
 
         // Check if the same input always produces the same output (i.e. deterministically generated).
-        val (dpriv_1, dpub_1) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
         assertEquals(dpriv, dpriv_1)
         assertEquals(dpub, dpub_1)
-        val (dpriv_2, dpub_2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertEquals(dpriv2, dpriv_2)
         assertEquals(dpub2, dpub_2)
     }
@@ -703,7 +703,7 @@ class CryptoUtilsTest {
     @Test
     fun `ECDSA secp256K1 deterministic key generation`() {
         val (priv, pub) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
-        val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
@@ -728,15 +728,15 @@ class CryptoUtilsTest {
         assertNotEquals(pub, dpub)
 
         // A new keyPair is always generated per different seed.
-        val (dpriv2, dpub2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertNotEquals(dpriv, dpriv2)
         assertNotEquals(dpub, dpub2)
 
         // Check if the same input always produces the same output (i.e. deterministically generated).
-        val (dpriv_1, dpub_1) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
         assertEquals(dpriv, dpriv_1)
         assertEquals(dpub, dpub_1)
-        val (dpriv_2, dpub_2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertEquals(dpriv2, dpriv_2)
         assertEquals(dpub2, dpub_2)
     }
@@ -744,7 +744,7 @@ class CryptoUtilsTest {
     @Test
     fun `EdDSA ed25519 deterministic key generation`() {
         val (priv, pub) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
-        val (dpriv, dpub) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv, dpub) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
 
         // Check scheme.
         assertEquals(priv.algorithm, dpriv.algorithm)
@@ -769,15 +769,15 @@ class CryptoUtilsTest {
         assertNotEquals(pub, dpub)
 
         // A new keyPair is always generated per different seed.
-        val (dpriv2, dpub2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv2, dpub2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertNotEquals(dpriv, dpriv2)
         assertNotEquals(dpub, dpub2)
 
         // Check if the same input always produces the same output (i.e. deterministically generated).
-        val (dpriv_1, dpub_1) = Crypto.deriveKeyPair(priv, "seed-1".toByteArray())
+        val (dpriv_1, dpub_1) = Crypto.deterministicKeyPair(priv, "seed-1".toByteArray())
         assertEquals(dpriv, dpriv_1)
         assertEquals(dpub, dpub_1)
-        val (dpriv_2, dpub_2) = Crypto.deriveKeyPair(priv, "seed-2".toByteArray())
+        val (dpriv_2, dpub_2) = Crypto.deterministicKeyPair(priv, "seed-2".toByteArray())
         assertEquals(dpriv2, dpriv_2)
         assertEquals(dpub2, dpub_2)
     }
