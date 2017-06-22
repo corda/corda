@@ -36,7 +36,7 @@ UNRELEASED
 * ``TimeWindow`` has a new 5th factory method ``TimeWindow.fromStartAndDuration(fromTime: Instant, duration: Duration)``
   which takes a start-time and a period-of-validity (after this start-time) as inputs.
 
-* A new function for deterministic key derivation ``Crypto.deriveKeyPair(privateKey: PrivateKey, seed: ByteArray)``
+* A new function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
   to support deterministically generate/derive a ``KeyPair`` using an existing private key and a seed as inputs.
   This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private -> child-private
   key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes. Currently, key-pairs for
