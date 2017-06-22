@@ -51,8 +51,13 @@ to Corda in M13.
   returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
 
 * Dependencies changes:
-    * Upgraded BouncyCastle to v1.57.
+    * Upgraded Kotlin to v1.1.2.
+    * Upgraded Dokka to v0.9.14.
+	* Upgraded Gradle Plugins to 0.12.4.
     * Upgraded Apache ActiveMQ Artemis to v2.1.0.
+    * Upgraded Netty to v4.1.9.Final.
+    * Upgraded BouncyCastle to v1.57.
+    * Upgraded Requery to v1.3.1.
 
 Milestone 12
 ------------
