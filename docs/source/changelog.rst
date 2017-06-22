@@ -10,7 +10,7 @@ UNRELEASED
 Milestone 13
 ----------
 Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution
-in supporting more currencies to the Demobench and Explorer tools.
+in supporting more currencies to the DemoBench and Explorer tools.
 
 * A new Vault Query service:
 
