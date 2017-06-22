@@ -103,6 +103,8 @@ class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
     }
 }
 
+fun <A> Generator<Iterable<Iterable<A>>>.flatten(): Generator<List<A>> = map { it.flatten() }
+
 fun <A> Generator.Companion.frequency(vararg generators: Pair<Double, Generator<A>>) = frequency(generators.toList())
 
 fun <A> Generator<A>.generateOrFail(random: SplittableRandom, numberOfTries: Int = 1): A {
