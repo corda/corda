@@ -22,6 +22,7 @@ import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.parallel
 import net.corda.testing.sequence
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
