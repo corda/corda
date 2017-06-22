@@ -9,6 +9,8 @@ API: Flows
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-flows`.
 
+.. contents::
+
 An example flow
 ---------------
 Before we discuss the API offered by the flow, let's consider what a standard flow may look like.
@@ -191,6 +193,11 @@ Common flow tasks
 -----------------
 There are a number of common tasks that you will need to perform within ``FlowLogic.call`` in order to agree ledger
 updates. This section details the API for common tasks.
+
+Transaction building
+^^^^^^^^^^^^^^^^^^^^
+The majority of the work performed during a flow will be to build, verify and sign a transaction. We cover this in
+:doc:`api-transactions`.
 
 Retrieving information about other nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -394,18 +401,17 @@ Corda provides a number of built-in flows that should be used for handling commo
 * ``NotaryChangeFlow``, which should be used to change a state's notary
 
 These flows are designed to be used as building blocks in your own flows. You invoke them by calling
-``FlowLogic.subFlow`` from within your flow's ``call`` method. Here is an example from ``TwoPartyDealFlow.kt``:
+``FlowLogic.subFlow`` from within your flow's ``call`` method. Let's look at three very common examples.
 
-.. container:: codeset
+FinalityFlow
+~~~~~~~~~~~~
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/flows/TwoPartyDealFlow.kt
-        :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
-        :dedent: 12
+CollectSignaturesFlow/SignTransactionFlow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this example, we are starting a ``CollectSignaturesFlow``, passing in a partially signed transaction, and
-receiving back a fully-signed version of the same transaction.
+ResolveTransactionsFlow
+~~~~~~~~~~~~~~~~~~~~~~~
+
 
 FlowException
 -------------
