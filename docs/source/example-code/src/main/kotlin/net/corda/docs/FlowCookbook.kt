@@ -91,22 +91,28 @@ object FlowCookbook {
             //   - To prevent double-spends if the transaction has inputs
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve the notary from the network map.
+            // DOCSTART 1
             val specificNotary: Party? = serviceHub.networkMapCache.getNotary(X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"))
             val anyNotary: Party? = serviceHub.networkMapCache.getAnyNotary()
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
             // the node we want.
             val firstNotary: Party = serviceHub.networkMapCache.notaryNodes[0].notaryIdentity
+            // DOCEND 1
 
             // We may also need to identify a specific counterparty. Again, we
             // do so using the network map.
+            // DOCSTART 2
             val namedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalName(X500Name("CN=NodeA,O=NodeA,L=London,C=UK"))?.legalIdentity
             val keyedCounterparty: Party? = serviceHub.networkMapCache.getNodeByLegalIdentityKey(dummyPubKey)?.legalIdentity
             val firstCounterparty: Party = serviceHub.networkMapCache.partyNodes[0].legalIdentity
+            // DOCEND 2
 
             // Finally, we can use the map to identify nodes providing a
             // specific service (e.g. a regulator or an oracle).
+            // DOCSTART 3
             val regulator: Party = serviceHub.networkMapCache.getNodesWithService(ServiceType.regulator)[0].legalIdentity
+            // DOCEND 3
 
             /**-----------------------------
              * SENDING AND RECEIVING DATA *
@@ -123,7 +129,9 @@ object FlowCookbook {
             // In other words, we are assuming that the counterparty is
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
+            // DOCSTART 4
             send(counterparty, Any())
+            // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
@@ -134,21 +142,31 @@ object FlowCookbook {
             //   ``FlowException``. This exception is propagated back to us,
             //   and we can use the error message to establish what happened.
             // - We receive a message back, but it's of the wrong type. In
-            //   this case, we throw a ``FlowException``.
+            //   this case, a ``FlowException`` is thrown.
             // - We receive back a message of the correct type. All is good.
-            val packet1: UntrustworthyData<Int> = receive<Int>(counterparty)
+            //
+            // Upon calling ``receive()`` (or ``sendAndReceive()``), the
+            // ``FlowLogic`` is suspended until it receives a response.
+            //
             // We receive the data wrapped in an ``UntrustworthyData``
-            // instance, which we must unwrap using a lambda.
+            // instance. This is a reminder that the data we receive may not
+            // be what it appears to be! We must unwrap the
+            // ``UntrustworthyData`` using a lambda.
+            // DOCSTART 5
+            val packet1: UntrustworthyData<Int> = receive<Int>(counterparty)
             val int: Int = packet1.unwrap { data ->
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
                 data
             }
+            // DOCEND 5
 
-            // We can also send data to a counterparty and wait to receive
-            // data of a specific type back. The type of data sent doesn't
-            // need to match the type of the data received back.
+            // We can also use a single call to send data to a counterparty
+            // and wait to receive data of a specific type back. The type of
+            // data sent doesn't need to match the type of the data received
+            // back.
+            // DOCSTART 7
             val packet2: UntrustworthyData<Boolean> = sendAndReceive<Boolean>(counterparty, "You can send and receive any class!")
             val boolean: Boolean = packet2.unwrap { data ->
                 // Perform checking on the object received.
@@ -156,12 +174,15 @@ object FlowCookbook {
                 // Return the object.
                 data
             }
+            // DOCEND 7
 
             // We're not limited to sending to and receiving from a single
             // counterparty. A flow can send messages to as many parties as it
-            // likes, and they can each invoke a different response flow.
+            // likes, and each party can invoke a different response flow.
+            // DOCSTART 6
             send(regulator, Any())
             val packet3: UntrustworthyData<Any> = receive<Any>(regulator)
+            // DOCEND 6
 
             /**-----------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -381,9 +402,11 @@ object FlowCookbook {
             // 3. They sent a ``String`` instance and waited to receive a
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
+            // DOCSTART 8
             val any: Any = receive<Any>(counterparty).unwrap { data -> data }
             val string: String = sendAndReceive<String>(counterparty, 99).unwrap { data -> data }
             send(counterparty, true)
+            // DOCEND 8
 
             /**----------------------------------------
              * RESPONDING TO COLLECT_SIGNATURES_FLOW *

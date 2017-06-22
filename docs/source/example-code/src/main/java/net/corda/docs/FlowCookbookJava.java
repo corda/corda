@@ -113,23 +113,28 @@ public class FlowCookbookJava {
             //   - To prevent double-spends if the transaction has inputs
             //   - To serve as a timestamping authority if the transaction has a time-window
             // We retrieve a notary from the network map.
-            final NetworkMapCache networkMap = getServiceHub().getNetworkMapCache();
-            Party specificNotary = networkMap.getNotary(new X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"));
-            Party anyNotary = networkMap.getAnyNotary(null);
+            // DOCSTART 1
+            Party specificNotary = getServiceHub().getNetworkMapCache().getNotary(new X500Name("CN=Notary Service,O=R3,OU=corda,L=London,C=UK"));
+            Party anyNotary = getServiceHub().getNetworkMapCache().getAnyNotary(null);
             // Unlike the first two methods, ``getNotaryNodes`` returns a
             // ``List<NodeInfo>``. We have to extract the notary identity of
             // the node we want.
-            Party firstNotary = networkMap.getNotaryNodes().get(0).getNotaryIdentity();
+            Party firstNotary = getServiceHub().getNetworkMapCache().getNotaryNodes().get(0).getNotaryIdentity();
+            // DOCEND 1
 
             // We may also need to identify a specific counterparty.
             // Again, we do so using the network map.
-            Party namedCounterparty = networkMap.getNodeByLegalName(new X500Name("CN=NodeA,O=NodeA,L=London,C=UK")).getLegalIdentity();
-            Party keyedCounterparty = networkMap.getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
-            Party firstCounterparty = networkMap.getPartyNodes().get(0).getLegalIdentity();
+            // DOCSTART 2
+            Party namedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalName(new X500Name("CN=NodeA,O=NodeA,L=London,C=UK")).getLegalIdentity();
+            Party keyedCounterparty = getServiceHub().getNetworkMapCache().getNodeByLegalIdentityKey(dummyPubKey).getLegalIdentity();
+            Party firstCounterparty = getServiceHub().getNetworkMapCache().getPartyNodes().get(0).getLegalIdentity();
+            // DOCEND 2
 
             // Finally, we can use the map to identify nodes providing a
             // specific service (e.g. a regulator or an oracle).
+            // DOCSTART 3
             Party regulator = getServiceHub().getNetworkMapCache().getNodesWithService(ServiceType.Companion.getRegulator()).get(0).getLegalIdentity();
+            // DOCEND 3
 
             /*------------------------------
              * SENDING AND RECEIVING DATA *
@@ -146,7 +151,9 @@ public class FlowCookbookJava {
             // In other words, we are assuming that the counterparty is
             // registered to respond to this flow, and has a corresponding
             // ``receive`` call.
+            // DOCSTART 4
             send(counterparty, new Object());
+            // DOCEND 4
 
             // We can wait to receive arbitrary data of a specific type from a
             // counterparty. Again, this implies a corresponding ``send`` call
@@ -157,21 +164,31 @@ public class FlowCookbookJava {
             //   ``FlowException``. This exception is propagated back to us,
             //   and we can use the error message to establish what happened.
             // - We receive a message back, but it's of the wrong type. In
-            //   this case, we throw a ``FlowException``.
+            //   this case, a ``FlowException`` is thrown.
             // - We receive back a message of the correct type. All is good.
-            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
+            //
+            // Upon calling ``receive()`` (or ``sendAndReceive()``), the
+            // ``FlowLogic`` is suspended until it receives a response.
+            //
             // We receive the data wrapped in an ``UntrustworthyData``
-            // instance, which we must unwrap using a lambda.
+            // instance. This is a reminder that the data we receive may not
+            // be what it appears to be! We must unwrap the
+            // ``UntrustworthyData`` using a lambda.
+            // DOCSTART 5
+            UntrustworthyData<Integer> packet1 = receive(Integer.class, counterparty);
             Integer integer = packet1.unwrap(data -> {
                 // Perform checking on the object received.
                 // T O D O: Check the received object.
                 // Return the object.
                 return data;
             });
+            // DOCEND 5
 
-            // We can also send data to a counterparty and wait to receive
-            // data of a specific type back. The type of data sent doesn't
-            // need to match the type of the data received back.
+            // We can also use a single call to send data to a counterparty
+            // and wait to receive data of a specific type back. The type of
+            // data sent doesn't need to match the type of the data received
+            // back.
+            // DOCSTART 7
             UntrustworthyData<Boolean> packet2 = sendAndReceive(Boolean.class, counterparty, "You can send and receive any class!");
             Boolean bool = packet2.unwrap(data -> {
                 // Perform checking on the object received.
@@ -179,12 +196,15 @@ public class FlowCookbookJava {
                 // Return the object.
                 return data;
             });
+            // DOCEND 7
 
             // We're not limited to sending to and receiving from a single
             // counterparty. A flow can send messages to as many parties as it
-            // likes, and they can each invoke a different response flow.
+            // likes, and each party can invoke a different response flow.
+            // DOCSTART 6
             send(regulator, new Object());
             UntrustworthyData<Object> packet3 = receive(Object.class, regulator);
+            // DOCEND 6
 
             /*------------------------------------
              * EXTRACTING STATES FROM THE VAULT *
@@ -401,9 +421,11 @@ public class FlowCookbookJava {
             // 3. They sent a ``String`` instance and waited to receive a
             //    ``Boolean`` instance back
             // Our side of the flow must mirror these calls.
+            // DOCSTART 8
             Object obj = receive(Object.class, counterparty).unwrap(data -> data);
             String string = sendAndReceive(String.class, counterparty, 99).unwrap(data -> data);
             send(counterparty, true);
+            // DOCEND 8
 
             /*-----------------------------------------
              * RESPONDING TO COLLECT_SIGNATURES_FLOW *
