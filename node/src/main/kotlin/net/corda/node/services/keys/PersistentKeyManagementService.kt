@@ -60,6 +60,10 @@ class PersistentKeyManagementService(val identityService: IdentityService,
 
     override val keys: Set<PublicKey> get() = mutex.locked { keys.keys }
 
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return mutex.locked { candidateKeys.filter { it in this.keys } }
+    }
+
     override fun freshKey(): PublicKey {
         val keyPair = generateKeyPair()
         mutex.locked {

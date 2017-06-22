@@ -41,12 +41,12 @@ private fun gatherOurInputs(serviceHub: ServiceHub,
     // Collect cash type inputs
     val cashStates = serviceHub.vaultService.unconsumedStates<Cash.State>()
     // extract our identity for convenience
-    val ourIdentity = serviceHub.myInfo.legalIdentity
+    val ourKeys = serviceHub.keyManagementService.keys
     // Filter down to our own cash states with right currency and issuer
     val suitableCashStates = cashStates.filter {
         val state = it.state.data
-        (state.owner == ourIdentity)
-                && (state.amount.token == amountRequired.token)
+        // TODO: We may want to have the list of our states pre-cached somewhere for performance
+        (state.owner.owningKey in ourKeys) && (state.amount.token == amountRequired.token)
     }
     require(!suitableCashStates.isEmpty()) { "Insufficient funds" }
     var remaining = amountRequired.quantity
@@ -132,9 +132,6 @@ class ForeignExchangeFlow(val tradeId: String,
             require(it.inputs.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
-            require(it.inputs.all { it.state.data.owner == remoteRequestWithNotary.owner }) {
-                "The inputs are not owned by the correct counterparty"
-            }
             require(it.inputs.all { it.state.data.amount.token == remoteRequestWithNotary.amount.token }) {
                 "Inputs not of the correct currency"
             }
@@ -200,7 +197,7 @@ class ForeignExchangeFlow(val tradeId: String,
         // We have already validated their response and trust our own data
         // so we can sign. Note the returned SignedTransaction is still not fully signed
         // and would not pass full verification yet.
-        return serviceHub.signInitialTransaction(builder)
+        return serviceHub.signInitialTransaction(builder, ourSigners.single())
     }
     // DOCEND 3
 }
@@ -234,10 +231,12 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         val ourResponse = prepareOurInputsAndOutputs(serviceHub, request)
 
         // Send back our proposed states and await the full transaction to verify
+        val ourKeys = serviceHub.keyManagementService.keys
+        val ourKey = serviceHub.keyManagementService.filterMyKeys(ourResponse.inputs.flatMap { it.state.data.participants }.map { it.owningKey }).single()
         val proposedTrade = sendAndReceive<SignedTransaction>(source, ourResponse).unwrap {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
-            it.verifySignatures(serviceHub.myInfo.legalIdentity.owningKey, wtx.notary!!.owningKey)
+            it.verifySignatures(ourKey, wtx.notary!!.owningKey)
 
             // We need to fetch their complete input states and dependencies so that verify can operate
             checkDependencies(it)
@@ -251,7 +250,7 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         }
 
         // assuming we have completed state and business level validation we can sign the trade
-        val ourSignature = serviceHub.createSignature(proposedTrade)
+        val ourSignature = serviceHub.createSignature(proposedTrade, ourKey)
 
         // send the other side our signature.
         send(source, ourSignature)

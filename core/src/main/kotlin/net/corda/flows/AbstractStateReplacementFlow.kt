@@ -9,6 +9,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -34,6 +35,15 @@ abstract class AbstractStateReplacementFlow {
     data class Proposal<out M>(val stateRef: StateRef, val modification: M, val stx: SignedTransaction)
 
     /**
+     * The assembled transaction for upgrading a contract.
+     *
+     * @param stx signed transaction to do the upgrade.
+     * @param participants the parties involved in the upgrade transaction.
+     * @param myKey key
+     */
+    data class UpgradeTx(val stx: SignedTransaction, val participants: Iterable<PublicKey>, val myKey: PublicKey)
+
+    /**
      * The [Instigator] assembles the transaction for state replacement and sends out change proposals to all participants
      * ([Acceptor]) of that state. If participants agree to the proposed change, they each sign the transaction.
      * Finally, [Instigator] sends the transaction containing all participants' signatures to the notary for signature, and
@@ -57,17 +67,14 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
-            val (stx, participants) = assembleTx()
+            val (stx, participantKeys, myKey) = assembleTx()
 
             progressTracker.currentStep = SIGNING
 
-            val myKey = serviceHub.myInfo.legalIdentity
-            val me = listOf(myKey)
-
-            val signatures = if (participants == me) {
+            val signatures = if (participantKeys.singleOrNull() == myKey) {
                 getNotarySignatures(stx)
             } else {
-                collectSignatures((participants - me).map { it.owningKey }, stx)
+                collectSignatures(participantKeys - myKey, stx)
             }
 
             val finalTx = stx + signatures
@@ -75,7 +82,13 @@ abstract class AbstractStateReplacementFlow {
             return finalTx.tx.outRef(0)
         }
 
-        abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>>
+        /**
+         * Build the upgrade transaction.
+         *
+         * @return a triple of the transaction, the public keys of all participants, and the participating public key of
+         * this node.
+         */
+        abstract protected fun assembleTx(): UpgradeTx
 
         @Suspendable
         private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {

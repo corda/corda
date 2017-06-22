@@ -60,7 +60,7 @@ class ArtemisMessagingTests {
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
-    val networkMapCache = InMemoryNetworkMapCache()
+    val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
 
     val rpcOps = object : RPCOps {
         override val protocolVersion: Int get() = throw UnsupportedOperationException()

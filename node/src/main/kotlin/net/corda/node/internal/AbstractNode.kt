@@ -459,7 +459,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
-        netMapCache = InMemoryNetworkMapCache()
+        netMapCache = InMemoryNetworkMapCache(services)
         network = makeMessagingService()
         schemas = makeSchemaService()
         vault = makeVaultService(configuration.dataSourceProperties)
