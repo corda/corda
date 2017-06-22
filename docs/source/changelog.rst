@@ -10,22 +10,43 @@ UNRELEASED
 * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
   an unambiguous identity by searching the network map.
 
-* The node driver has moved to net.corda.testing.driver in the test-utils module
+* The node driver has moved to net.corda.testing.driver in the test-utils module.
 
-* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone)
+* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone).
 
-* Added DER encoded format for CompositeKey so they can be used in X.509 certificates
+* Added DER encoded format for CompositeKey so they can be used in X.509 certificates.
 
 * Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential identities
-  are used
+  are used.
 
-Milestone 13
-------------
+* Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
+  ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
+  Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
+  and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
 
-    * Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
-    ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
-    Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
-    and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
+* Added a flag to the driver that allows the running of started nodes in-process, allowing easier debugging.
+  To enable use `driver(startNodesInProcess = true) { .. }`, or `startNode(startInSameProcess = true, ..)`
+  to specify for individual nodes.
+
+* We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
+  to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
+  to allow your node to handle new business processes. It also explains how you can use our contract and
+  flow testing frameworks to massively reduce CorDapp development time.
+
+* ``TimeWindow`` has a new 5th factory method ``TimeWindow.fromStartAndDuration(fromTime: Instant, duration: Duration)``
+  which takes a start-time and a period-of-validity (after this start-time) as inputs.
+
+* A new function for deterministic key derivation ``Crypto.deriveKeyPair(privateKey: PrivateKey, seed: ByteArray)``
+  to support deterministically generate/derive a ``KeyPair`` using an existing private key and a seed as inputs.
+  This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private -> child-private
+  key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes. Currently, key-pairs for
+  the following schemes are supported: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
+
+* A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
+  which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
+  This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
+  the class itself. An ``IllegalStateException`` informs the user if a class is blacklisted and such an exception is
+  returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
 
 Milestone 12
 ------------
