@@ -3,7 +3,6 @@ package net.corda.docs;
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
@@ -11,7 +10,6 @@ import net.corda.core.contracts.TransactionType.NotaryChange;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
-import net.corda.core.node.services.NetworkMapCache;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.SignedTransaction;
@@ -32,7 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.core.utilities.TestConstants.*;
+import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_1;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -64,6 +62,7 @@ public class FlowCookbookJava {
         ----------------------------------*/
         // Giving our flow a progress tracker allows us to see the flow's
         // progress visually in our node's CRaSH shell.
+        // DOCSTART 17
         private static final Step ID_OTHER_NODES = new Step("Identifying other nodes on the network.");
         private static final Step SENDING_AND_RECEIVING_DATA = new Step("Sending data between parties.");
         private static final Step EXTRACTING_VAULT_STATES = new Step("Extracting states from the vault.");
@@ -95,6 +94,7 @@ public class FlowCookbookJava {
                 SIGS_GATHERING,
                 FINALISATION
         );
+        // DOCEND 17
 
         @Suspendable
         @Override
@@ -107,7 +107,9 @@ public class FlowCookbookJava {
             /*---------------------------
              * IDENTIFYING OTHER NODES *
             ---------------------------*/
+            // DOCSTART 18
             progressTracker.setCurrentStep(ID_OTHER_NODES);
+            // DOCEND 18
 
             // A transaction generally needs a notary:
             //   - To prevent double-spends if the transaction has inputs
@@ -309,10 +311,14 @@ public class FlowCookbookJava {
             // transaction we'd received from a counterparty and it had any
             // dependencies, we'd need to download all of these dependencies
             // using``ResolveTransactionsFlow`` before verifying it.
+            // DOCSTART 13
             subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
+            // DOCEND 13
 
             // We can also resolve a `StateRef` dependency chain.
+            // DOCSTART 14
             subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
+            // DOCEND 14
 
             // We verify a transaction using the following one-liner:
             twiceSignedTx.getTx().toLedgerTransaction(getServiceHub()).verify();
@@ -358,7 +364,9 @@ public class FlowCookbookJava {
             // ourselves, we can automatically gather the signatures of the
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
+            // DOCSTART 15
             SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
+            // DOCEND 15
 
             /*------------------------------
              * FINALISING THE TRANSACTION *
@@ -366,12 +374,16 @@ public class FlowCookbookJava {
             progressTracker.setCurrentStep(FINALISATION);
 
             // We notarise the transaction and get it recorded in the vault of
-            // all the participants of all the transaction's states.
+            // the participants of all the transaction's states.
+            // DOCSTART 9
             SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).get(0);
+            // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
+            // DOCSTART 10
             Set<Party> additionalParties = ImmutableSet.of(regulator, regulator);
             SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(ImmutableList.of(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).get(0);
+            // DOCEND 10
 
             return null;
         }
@@ -435,6 +447,7 @@ public class FlowCookbookJava {
             // The responder will often need to respond to a call to
             // ``CollectSignaturesFlow``. It does so my invoking its own
             // ``SignTransactionFlow`` subclass.
+            // DOCSTART 16
             class SignTxFlow extends SignTransactionFlow {
                 private SignTxFlow(Party otherParty, ProgressTracker progressTracker) {
                     super(otherParty, progressTracker);
@@ -452,6 +465,7 @@ public class FlowCookbookJava {
             }
 
             subFlow(new SignTxFlow(counterparty, SignTransactionFlow.Companion.tracker()));
+            // DOCEND 16
 
             /*------------------------------
              * FINALISING THE TRANSACTION *

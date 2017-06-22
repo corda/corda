@@ -404,14 +404,115 @@ These flows are designed to be used as building blocks in your own flows. You in
 ``FlowLogic.subFlow`` from within your flow's ``call`` method. Let's look at three very common examples.
 
 FinalityFlow
-~~~~~~~~~~~~
+^^^^^^^^^^^^
+``FinalityFlow`` allows us to notarise the transaction and get it recorded in the vault of the participants of all
+the transaction's states:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+        :dedent: 12
+
+We can also choose to send the transaction to additional parties who aren't one of the state's participants:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 10
+        :end-before: DOCEND 10
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 10
+        :end-before: DOCEND 10
+        :dedent: 12
+
+Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It does
+**not** need to be called by each participant individually.
 
 CollectSignaturesFlow/SignTransactionFlow
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The list of parties who need to sign a transaction is dictated by the transaction's commands. Once we've signed a
+transaction ourselves, we can automatically gather the signatures of the other required signers using
+``CollectSignaturesFlow``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 15
+        :end-before: DOCEND 15
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 15
+        :end-before: DOCEND 15
+        :dedent: 12
+
+Each required signer will need to respond by invoking its own ``SignTransactionFlow`` subclass to check the
+transaction and provide their signature if they are satisfied:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 16
+        :end-before: DOCEND 16
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 16
+        :end-before: DOCEND 16
+        :dedent: 12
 
 ResolveTransactionsFlow
-~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^
+Verifying a transaction will also verify every transaction in the transaction's dependency chain. So if we receive a
+transaction from a counterparty and it has any dependencies, we'd need to download all of these dependencies
+using``ResolveTransactionsFlow`` before verifying it:
 
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 12
+
+We can also resolve a `StateRef` dependency chain:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 12
 
 FlowException
 -------------
@@ -437,3 +538,39 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * A transaction's signatures are invalid
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
+
+ProgressTracker
+---------------
+We can give our flow a progress tracker. This allows us to see the flow's progress visually in our node's CRaSH shell.
+
+To provide a progress tracker, we have to override ``FlowLogic.progressTracker`` in our flow:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 17
+        :end-before: DOCEND 17
+        :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 17
+        :end-before: DOCEND 17
+        :dedent: 8
+
+We then update the progress tracker's current step as we progress through the flow as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 18
+        :end-before: DOCEND 18
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 18
+        :end-before: DOCEND 18
+        :dedent: 12

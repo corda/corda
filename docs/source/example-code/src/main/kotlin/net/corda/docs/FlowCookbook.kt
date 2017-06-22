@@ -43,6 +43,7 @@ object FlowCookbook {
         ---------------------------------**/
         // Giving our flow a progress tracker allows us to see the flow's
         // progress visually in our node's CRaSH shell.
+        // DOCSTART 17
         companion object {
             object ID_OTHER_NODES : Step("Identifying other nodes on the network.")
             object SENDING_AND_RECEIVING_DATA : Step("Sending data between parties.")
@@ -72,6 +73,7 @@ object FlowCookbook {
                     FINALISATION
             )
         }
+        // DOCEND 17
 
         override val progressTracker: ProgressTracker = tracker()
 
@@ -85,7 +87,9 @@ object FlowCookbook {
             /**--------------------------
              * IDENTIFYING OTHER NODES *
             --------------------------**/
+            // DOCSTART 18
             progressTracker.currentStep = ID_OTHER_NODES
+            // DOCEND 18
 
             // A transaction generally needs a notary:
             //   - To prevent double-spends if the transaction has inputs
@@ -291,10 +295,14 @@ object FlowCookbook {
             // transaction we'd received from a counterparty and it had any
             // dependencies, we'd need to download all of these dependencies
             // using``ResolveTransactionsFlow`` before verifying it.
+            // DOCSTART 13
             subFlow(ResolveTransactionsFlow(twiceSignedTx, counterparty))
+            // DOCEND 13
 
             // We can also resolve a `StateRef` dependency chain.
+            // DOCSTART 14
             subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
+            // DOCEND 14
 
             // We verify a transaction using the following one-liner:
             twiceSignedTx.tx.toLedgerTransaction(serviceHub).verify()
@@ -344,7 +352,9 @@ object FlowCookbook {
             // ourselves, we can automatically gather the signatures of the
             // other required signers using ``CollectSignaturesFlow``.
             // The responder flow will need to call ``SignTransactionFlow``.
+            // DOCSTART 15
             val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
+            // DOCEND 15
 
             /**-----------------------------
              * FINALISING THE TRANSACTION *
@@ -352,12 +362,16 @@ object FlowCookbook {
             progressTracker.currentStep = FINALISATION
 
             // We notarise the transaction and get it recorded in the vault of
-            // all the participants of all the transaction's states.
+            // the participants of all the transaction's states.
+            // DOCSTART 9
             val notarisedTx1: SignedTransaction = subFlow(FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker())).single()
+            // DOCEND 9
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
+            // DOCSTART 10
             val additionalParties: Set<Party> = setOf(regulator)
             val notarisedTx2: SignedTransaction = subFlow(FinalityFlow(listOf(fullySignedTx), additionalParties, FINALISATION.childProgressTracker())).single()
+            // DOCEND 10
         }
     }
 
@@ -416,6 +430,7 @@ object FlowCookbook {
             // The responder will often need to respond to a call to
             // ``CollectSignaturesFlow``. It does so my invoking its own
             // ``SignTransactionFlow`` subclass.
+            // DOCSTART 16
             val signTransactionFlow: SignTransactionFlow = object : SignTransactionFlow(counterparty) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     // Any additional checking we see fit...
@@ -425,6 +440,7 @@ object FlowCookbook {
             }
 
             subFlow(signTransactionFlow)
+            // DOCEND 16
 
             /**-----------------------------
              * FINALISING THE TRANSACTION *
