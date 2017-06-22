@@ -21,7 +21,7 @@ class ClassCarpenterTest {
 
     @Test
     fun empty() {
-        val clazz = cc.build(ClassCarpenter.Schema("gen.EmptyClass", emptyMap(), null))
+        val clazz = cc.build(ClassCarpenter.ClassSchema("gen.EmptyClass", emptyMap(), null))
         assertEquals(0, clazz.nonSyntheticFields.size)
         assertEquals(2, clazz.nonSyntheticMethods.size)   // get, toString
         assertEquals(0, clazz.declaredConstructors[0].parameterCount)
@@ -30,7 +30,7 @@ class ClassCarpenterTest {
 
     @Test
     fun prims() {
-        val clazz = cc.build(ClassCarpenter.Schema("gen.Prims", mapOf(
+        val clazz = cc.build(ClassCarpenter.ClassSchema("gen.Prims", mapOf(
                 "anIntField" to Int::class.javaPrimitiveType!!,
                 "aLongField" to Long::class.javaPrimitiveType!!,
                 "someCharField" to Char::class.javaPrimitiveType!!,
@@ -65,7 +65,7 @@ class ClassCarpenterTest {
     }
 
     private fun genPerson(): Pair<Class<*>, Any> {
-        val clazz = cc.build(ClassCarpenter.Schema("gen.Person", mapOf(
+        val clazz = cc.build(ClassCarpenter.ClassSchema("gen.Person", mapOf(
                 "age" to Int::class.javaPrimitiveType!!,
                 "name" to String::class.java
         )))
@@ -88,14 +88,14 @@ class ClassCarpenterTest {
 
     @Test(expected = ClassCarpenter.DuplicateName::class)
     fun duplicates() {
-        cc.build(ClassCarpenter.Schema("gen.EmptyClass", emptyMap(), null))
-        cc.build(ClassCarpenter.Schema("gen.EmptyClass", emptyMap(), null))
+        cc.build(ClassCarpenter.ClassSchema("gen.EmptyClass", emptyMap(), null))
+        cc.build(ClassCarpenter.ClassSchema("gen.EmptyClass", emptyMap(), null))
     }
 
     @Test
     fun `can refer to each other`() {
         val (clazz1, i) = genPerson()
-        val clazz2 = cc.build(ClassCarpenter.Schema("gen.Referee", mapOf(
+        val clazz2 = cc.build(ClassCarpenter.ClassSchema("gen.Referee", mapOf(
                 "ref" to clazz1
         )))
         val i2 = clazz2.constructors[0].newInstance(i)
@@ -104,8 +104,8 @@ class ClassCarpenterTest {
 
     @Test
     fun superclasses() {
-        val schema1 = ClassCarpenter.Schema("gen.A", mapOf("a" to String::class.java))
-        val schema2 = ClassCarpenter.Schema("gen.B", mapOf("b" to String::class.java), schema1)
+        val schema1 = ClassCarpenter.ClassSchema("gen.A", mapOf("a" to String::class.java))
+        val schema2 = ClassCarpenter.ClassSchema("gen.B", mapOf("b" to String::class.java), schema1)
         val clazz = cc.build(schema2)
         val i = clazz.constructors[0].newInstance("xa", "xb") as SimpleFieldAccess
         assertEquals("xa", i["a"])
@@ -115,8 +115,8 @@ class ClassCarpenterTest {
 
     @Test
     fun interfaces() {
-        val schema1 = ClassCarpenter.Schema("gen.A", mapOf("a" to String::class.java))
-        val schema2 = ClassCarpenter.Schema("gen.B", mapOf("b" to Int::class.java), schema1, interfaces = listOf(DummyInterface::class.java))
+        val schema1 = ClassCarpenter.ClassSchema("gen.A", mapOf("a" to String::class.java))
+        val schema2 = ClassCarpenter.ClassSchema("gen.B", mapOf("b" to Int::class.java), schema1, interfaces = listOf(DummyInterface::class.java))
         val clazz = cc.build(schema2)
         val i = clazz.constructors[0].newInstance("xa", 1) as DummyInterface
         assertEquals("xa", i.a)
@@ -125,10 +125,92 @@ class ClassCarpenterTest {
 
     @Test(expected = ClassCarpenter.InterfaceMismatch::class)
     fun `mismatched interface`() {
-        val schema1 = ClassCarpenter.Schema("gen.A", mapOf("a" to String::class.java))
-        val schema2 = ClassCarpenter.Schema("gen.B", mapOf("c" to Int::class.java), schema1, interfaces = listOf(DummyInterface::class.java))
+        val schema1 = ClassCarpenter.ClassSchema("gen.A", mapOf("a" to String::class.java))
+        val schema2 = ClassCarpenter.ClassSchema("gen.B", mapOf("c" to Int::class.java), schema1, interfaces = listOf(DummyInterface::class.java))
         val clazz = cc.build(schema2)
         val i = clazz.constructors[0].newInstance("xa", 1) as DummyInterface
         assertEquals(1, i.b)
+    }
+
+    @Test
+    fun `generate interface`() {
+        val schema1 = ClassCarpenter.InterfaceSchema("gen.Interface", mapOf("a" to Int::class.java))
+        val iface = cc.build(schema1)
+
+        assert (iface.isInterface())
+        assert (iface.constructors.isEmpty())
+        assertEquals (iface.declaredMethods.size, 1)
+        assertEquals (iface.declaredMethods[0].name, "getA")
+
+        val schema2 = ClassCarpenter.ClassSchema("gen.Derived", mapOf("a" to Int::class.java), interfaces = listOf (iface))
+        val clazz   = cc.build(schema2)
+        val testA   = 42
+        val i       = clazz.constructors[0].newInstance(testA) as SimpleFieldAccess
+
+        assertEquals(testA, i["a"])
+    }
+
+    @Test
+    fun `generate multiple interfaces`() {
+        val iFace1 = ClassCarpenter.InterfaceSchema("gen.Interface1", mapOf("a" to Int::class.java, "b" to String::class.java))
+        val iFace2 = ClassCarpenter.InterfaceSchema("gen.Interface2", mapOf("c" to Int::class.java, "d" to String::class.java))
+
+        val class1 = ClassCarpenter.ClassSchema(
+            "gen.Derived",
+            mapOf(
+                "a" to Int::class.java,
+                "b" to String::class.java,
+                "c" to Int::class.java,
+                "d" to String::class.java),
+            interfaces = listOf (cc.build (iFace1), cc.build (iFace2)))
+
+        val clazz = cc.build(class1)
+        val testA   = 42
+        val testB   = "don't touch me, I'm scared"
+        val testC   = 0xDEAD
+        val testD   = "wibble"
+        val i       = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
+
+        assertEquals(testA, i["a"])
+        assertEquals(testB, i["b"])
+        assertEquals(testC, i["c"])
+        assertEquals(testD, i["d"])
+    }
+
+    @Test
+    fun `interface implementing interface`() {
+        val iFace1 = ClassCarpenter.InterfaceSchema(
+            "gen.Interface1",
+            mapOf (
+                "a" to Int::class.java,
+                "b" to String::class.java))
+
+        val iFace2 = ClassCarpenter.InterfaceSchema(
+            "gen.Interface2",
+            mapOf(
+                "c" to Int::class.java,
+                "d" to String::class.java),
+            interfaces = listOf (cc.build (iFace1)))
+
+        val class1 = ClassCarpenter.ClassSchema(
+            "gen.Derived",
+            mapOf(
+                "a" to Int::class.java,
+                "b" to String::class.java,
+                "c" to Int::class.java,
+                "d" to String::class.java),
+            interfaces = listOf (cc.build (iFace2)))
+
+        val clazz = cc.build(class1)
+        val testA   = 99
+        val testB   = "green is not a creative colour"
+        val testC   = 7
+        val testD   = "I like jam"
+        val i       = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
+
+        assertEquals(testA, i["a"])
+        assertEquals(testB, i["b"])
+        assertEquals(testC, i["c"])
+        assertEquals(testD, i["d"])
     }
 }

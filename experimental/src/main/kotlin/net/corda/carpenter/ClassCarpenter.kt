@@ -71,13 +71,27 @@ class ClassCarpenter {
     /**
      * A Schema represents a desired class.
      */
-    class Schema(val name: String, fields: Map<String, Class<out Any?>>, val superclass: Schema? = null, val interfaces: List<Class<*>> = emptyList()) {
+    open class Schema(val name: String, fields: Map<String, Class<out Any?>>, val superclass: Schema? = null, val interfaces: List<Class<*>> = emptyList()) {
         val fields = LinkedHashMap(fields)  // Fix the order up front if the user didn't.
         val descriptors = fields.map { it.key to Type.getDescriptor(it.value) }.toMap()
 
         fun fieldsIncludingSuperclasses(): Map<String, Class<out Any?>> = (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
         fun descriptorsIncludingSuperclasses(): Map<String, String> =  (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(descriptors)
     }
+
+    class ClassSchema(
+        name: String,
+        fields: Map<String, Class<out Any?>>,
+        superclass: Schema? = null,
+        interfaces: List<Class<*>> = emptyList()
+    ) : Schema (name, fields, superclass, interfaces)
+
+    class InterfaceSchema(
+        name: String,
+        fields: Map<String, Class<out Any?>>,
+        superclass: Schema? = null,
+        interfaces: List<Class<*>> = emptyList()
+    ) : Schema (name, fields, superclass, interfaces)
 
     class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
     class InterfaceMismatch(msg: String) : RuntimeException(msg)
@@ -111,11 +125,16 @@ class ClassCarpenter {
             hierarchy += cursor
             cursor = cursor.superclass
         }
-        hierarchy.reversed().forEach { generateClass(it) }
+        hierarchy.reversed().forEach {
+            when (it) {
+                is ClassSchema -> generateClass(it)
+                is InterfaceSchema -> generateInterface(it)
+            }
+        }
         return _loaded[schema.name]!!
     }
 
-    private fun generateClass(schema: Schema): Class<*> {
+    private fun generateClass(schema: ClassSchema): Class<*> {
         val jvmName = schema.name.jvm
         // Lazy: we could compute max locals/max stack ourselves, it'd be faster.
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
@@ -133,6 +152,25 @@ class ClassCarpenter {
             visitEnd()
         }
         val clazz = classloader.load(schema.name, cw.toByteArray())
+        _loaded[schema.name] = clazz
+        return clazz
+    }
+
+    private fun generateInterface(schema: InterfaceSchema): Class<*> {
+        val jvmName = schema.name.jvm
+        // Lazy: we could compute max locals/max stack ourselves, it'd be faster.
+        val cw = ClassWriter (ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
+        with(cw) {
+            val interfaces = schema.interfaces.map { it.name.jvm }.toTypedArray()
+
+            visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, jvmName, null, "java/lang/Object", interfaces)
+
+            generateAbstractGetters(schema)
+
+            visitEnd()
+        }
+        val clazz = classloader.load(schema.name, cw.toByteArray())
+
         _loaded[schema.name] = clazz
         return clazz
     }
@@ -202,6 +240,17 @@ class ClassCarpenter {
         }
     }
 
+    private fun ClassWriter.generateAbstractGetters(schema: InterfaceSchema) {
+        for ((name, type) in schema.fields) {
+            val descriptor = schema.descriptors[name]
+            val opcodes    = ACC_ABSTRACT + ACC_PUBLIC
+            with (visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
+                // abstract method doesn't have any implementation so just end
+                visitEnd()
+            }
+        }
+    }
+
     private fun ClassWriter.generateConstructor(jvmName: String, schema: Schema) {
         with(visitMethod(ACC_PUBLIC, "<init>", "(" + schema.descriptorsIncludingSuperclasses().values.joinToString("") + ")V", null, null)) {
             visitCode()
@@ -262,7 +311,8 @@ class ClassCarpenter {
                     method.name.startsWith("get") -> method.name.substring(3).decapitalize()
                     else -> throw InterfaceMismatch("Requested interfaces must consist only of methods that start with 'get': ${itf.name}.${method.name}")
                 }
-                if (fieldNameFromItf !in allFields)
+
+                if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
                     throw InterfaceMismatch("Interface ${itf.name} requires a field named ${fieldNameFromItf} but that isn't found in the schema or any superclass schemas")
             }
         }
