@@ -31,17 +31,6 @@ abstract class CordaPluginRegistry {
     open val requiredFlows: Map<String, Set<String>> get() = emptyMap()
 
     /**
-     * List of lambdas constructing additional long lived services to be hosted within the node.
-     * They expect a single [PluginServiceHub] parameter as input.
-     * The [PluginServiceHub] will be fully constructed before the plugin service is created and will
-     * allow access to the Flow factory and Flow initiation entry points there.
-     */
-    @Suppress("unused")
-    @Deprecated("This is no longer used. If you need to create your own service, such as an oracle, then use the " +
-        "@CordaService annotation. For flow registrations use @InitiatedBy.", level = DeprecationLevel.ERROR)
-    open val servicePlugins: List<Function<PluginServiceHub, out Any>> get() = emptyList()
-
-    /**
      * Optionally whitelist types for use in object serialization, as we lock down the types that can be serialized.
      *
      * For example, if you add a new [net.corda.core.contracts.ContractState] it needs to be whitelisted.  You can do that
