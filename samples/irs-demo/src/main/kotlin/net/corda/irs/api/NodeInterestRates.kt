@@ -93,7 +93,8 @@ object NodeInterestRates {
             services
         ) {
             // Set some default fixes to the Oracle, so we can smoothly run the IRS Demo without uploading fixes.
-            // TODO: find a more elegant workaround.
+            // This is required to avoid a situation where the runnodes version of the demo isn't in a good state
+            // upon startup.
             addDefaultFixes()
         }
         // DOCEND 3
