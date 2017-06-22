@@ -351,7 +351,7 @@ fun <A> poll(
         executorService.schedule(task@ {
             counter++
             if (counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount).seconds} seconds...")
+                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
             val result = try {
                 check()
