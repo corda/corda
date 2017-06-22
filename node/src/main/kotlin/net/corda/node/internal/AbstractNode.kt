@@ -222,12 +222,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             log.warn("Corda node is running in dev mode.")
             configuration.configureWithDevSSLCertificate()
         }
-        require(hasSSLCertificates()) {
-            "Identity certificate not found. " +
-                    "Please either copy your existing identity key and certificate from another node, " +
-                    "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
-                    "Read more at: https://docs.corda.net/permissioning.html"
-        }
+        validateKeystore()
 
         log.info("Node starting up ...")
 
@@ -594,19 +589,30 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
-    private fun hasSSLCertificates(): Boolean {
-        val (sslKeystore, keystore) = try {
+    private fun validateKeystore() {
+        val containCorrectKeys = try {
             // This will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            Pair(
-                    KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword),
-                    KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword))
-        } catch (e: IOException) {
-            return false
+            val sslKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+            val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.nodeKeystore, configuration.keyStorePassword)
+            sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && identitiesKeystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
         } catch (e: KeyStoreException) {
             log.warn("Certificate key store found but key store password does not match configuration.")
-            return false
+            false
+        } catch (e: IOException) {
+            false
         }
-        return sslKeystore.containsAlias(X509Utilities.CORDA_CLIENT_TLS) && keystore.containsAlias(X509Utilities.CORDA_CLIENT_CA)
+        require(containCorrectKeys) {
+            "Identity certificate not found. " +
+                    "Please either copy your existing identity key and certificate from another node, " +
+                    "or if you don't have one yet, fill out the config file and run corda.jar --initial-registration. " +
+                    "Read more at: https://docs.corda.net/permissioning.html"
+        }
+        val identitiesKeystore = KeyStoreUtilities.loadKeyStore(configuration.sslKeystore, configuration.keyStorePassword)
+        val tlsIdentity = identitiesKeystore.getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
+
+        require(tlsIdentity == configuration.myLegalName) {
+            "Expected '${tlsIdentity.commonName}' but got '${tlsIdentity.commonName}' from the keystore."
+        }
     }
 
     // Specific class so that MockNode can catch it.
