@@ -2,6 +2,7 @@
 
 package net.corda.testing.driver
 
+import com.google.common.base.Stopwatch
 import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.*
 import com.typesafe.config.Config
@@ -515,7 +516,21 @@ class DriverDSL(
 
     override fun shutdown() {
         _shutdownManager?.shutdown()
-        _executorService?.shutdownNow()
+        _executorService?.let {
+            val n = it.shutdownNow().size
+            if (n != 0) log.warn("$n task(s) never started.")
+            val stopwatch = Stopwatch.createStarted()
+            val tolerance = 5.seconds
+            if (!it.awaitTermination(tolerance.toMillis(), MILLISECONDS)) {
+                // Assume hang, blow up now so we don't hog the TC agent:
+                throw TimeoutException("Driver executor still running $tolerance after shutdown, likely due to a hanging task.")
+            }
+            val elapsed = Duration.ofMillis(stopwatch.elapsed(MILLISECONDS))
+            if (elapsed >= 500.millis) {
+                // Something to grep for in TC build logs:
+                log.warn("Driver executor shutdown took a while: $elapsed")
+            }
+        }
     }
 
     private fun establishRpc(nodeAddress: HostAndPort, sslConfig: SSLConfiguration): ListenableFuture<CordaRPCOps> {
