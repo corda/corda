@@ -9,24 +9,27 @@ UNRELEASED
 Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution
 to Corda in M13.
 
-* A new Vault Query service implementation provides the ability to specify advanced queries using criteria specification sets
-  for both vault attributes and custom contract specific attributes. In addition, new queries provide sorting and pagination
-  capabilities. The new API provides two function variants which are exposed for usage within Flows and RPC clients:
-  - ``queryBy()`` for point-in-time snapshot queries
-    (replaces several existing VaultService functions and a number of Kotlin-only extension functions)
-  - ``trackBy()`` for snapshot and streaming updates
-    (replaces the VaultService ``track()`` function and the RPC ``vaultAndUpdates()`` function)
-  Existing VaultService API methods will be maintained as deprecated until the following milestone release.
+* A new Vault Query service
 
-* NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState that extend
-  FungibleAsset and LinearState, such that common attributes of these states are persisted to two new vault tables:
-  vault_fungible_states and vault_linear_states (and thus queryable using the new Vault Query service API).
-  Similarly, two new common JPA superclass schemas (``CommonSchemaV1.FungibleState`` and
-  ``CommonSchemaV1.LinearState``) mirror the associated FungibleAsset and LinearState interface states to enable CorDapp
-  developers to create new custom schemas by extension (rather than duplication of common attribute mappings).
+   * Implemented using JPA and Hibernate, this new service provides the ability to specify advanced queries using criteria
+     specification sets for both vault attributes and custom contract specific attributes. In addition, new queries provide
+     sorting and pagination capabilities.
+     The new API provides two function variants which are exposed for usage within Flows and by RPC clients:
+     - ``queryBy()`` for point-in-time snapshot queries
+       (replaces several existing VaultService functions and a number of Kotlin-only extension functions)
+     - ``trackBy()`` for snapshot and streaming updates
+       (replaces the VaultService ``track()`` function and the RPC ``vaultAndUpdates()`` function)
+     Existing VaultService API methods will be maintained as deprecated until the following milestone release.
 
-* A new configurable field ``requiredSchemas`` has been added to the CordaPluginRegistry to enable CorDapps to register
-  custom contract state schemas they wish to query using the new Vault Query service API (using the ``VaultCustomQueryCriteria``).
+   * NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState that extend
+     FungibleAsset and LinearState, such that common attributes of these states are persisted to two new vault tables:
+     vault_fungible_states and vault_linear_states (and thus queryable using the new Vault Query service API).
+     Similarly, two new common JPA superclass schemas (``CommonSchemaV1.FungibleState`` and
+     ``CommonSchemaV1.LinearState``) mirror the associated FungibleAsset and LinearState interface states to enable CorDapp
+     developers to create new custom schemas by extension (rather than duplication of common attribute mappings).
+
+   * A new configurable field ``requiredSchemas`` has been added to the CordaPluginRegistry to enable CorDapps to register
+     custom contract state schemas they wish to query using the new Vault Query service API (using the ``VaultCustomQueryCriteria``).
 
 * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
   an unambiguous identity by searching the network map.
