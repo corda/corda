@@ -65,10 +65,14 @@ object RPCApi {
     val RPC_SERVER_QUEUE_NAME = "rpc.server"
     val RPC_CLIENT_QUEUE_NAME_PREFIX = "rpc.client"
     val RPC_CLIENT_BINDING_REMOVALS = "rpc.clientqueueremovals"
+    val RPC_CLIENT_BINDING_ADDITIONS = "rpc.clientqueueadditions"
 
     val RPC_CLIENT_BINDING_REMOVAL_FILTER_EXPRESSION =
             "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_REMOVED.name}' AND " +
             "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
+    val RPC_CLIENT_BINDING_ADDITION_FILTER_EXPRESSION =
+            "${ManagementHelper.HDR_NOTIFICATION_TYPE} = '${CoreNotificationType.BINDING_ADDED.name}' AND " +
+                    "${ManagementHelper.HDR_ROUTING_NAME} LIKE '$RPC_CLIENT_QUEUE_NAME_PREFIX.%'"
 
     data class RpcRequestId(val toLong: Long)
     data class ObservableId(val toLong: Long)
