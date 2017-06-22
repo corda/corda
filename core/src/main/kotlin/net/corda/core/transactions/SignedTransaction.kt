@@ -3,6 +3,7 @@ package net.corda.core.transactions
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
@@ -147,7 +148,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
     @JvmOverloads
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
+    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
         checkSignaturesAreValid()
         if (checkSufficientSignatures) verifySignatures()
@@ -166,7 +167,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
     @JvmOverloads
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
+    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
         checkSignaturesAreValid()
         if (checkSufficientSignatures) verifySignatures()

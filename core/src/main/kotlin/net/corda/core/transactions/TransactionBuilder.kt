@@ -9,6 +9,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.SignatureException
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -139,9 +140,6 @@ open class TransactionBuilder(
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
             ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
 
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
-
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
@@ -151,6 +149,14 @@ open class TransactionBuilder(
         }
         val wtx = toWireTransaction()
         return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
+    }
+
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
+
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
+    fun verify(services: ServiceHub) {
+        toLedgerTransaction(services).verify()
     }
 
     open fun addInputState(stateAndRef: StateAndRef<*>) {
