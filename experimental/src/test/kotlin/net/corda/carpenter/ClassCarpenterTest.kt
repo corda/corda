@@ -137,12 +137,12 @@ class ClassCarpenterTest {
         val schema1 = ClassCarpenter.InterfaceSchema("gen.Interface", mapOf("a" to Int::class.java))
         val iface = cc.build(schema1)
 
-        assert (iface.isInterface())
-        assert (iface.constructors.isEmpty())
-        assertEquals (iface.declaredMethods.size, 1)
-        assertEquals (iface.declaredMethods[0].name, "getA")
+        assert(iface.isInterface())
+        assert(iface.constructors.isEmpty())
+        assertEquals(iface.declaredMethods.size, 1)
+        assertEquals(iface.declaredMethods[0].name, "getA")
 
-        val schema2 = ClassCarpenter.ClassSchema("gen.Derived", mapOf("a" to Int::class.java), interfaces = listOf (iface))
+        val schema2 = ClassCarpenter.ClassSchema("gen.Derived", mapOf("a" to Int::class.java), interfaces = listOf(iface))
         val clazz   = cc.build(schema2)
         val testA   = 42
         val i       = clazz.constructors[0].newInstance(testA) as SimpleFieldAccess
@@ -162,7 +162,7 @@ class ClassCarpenterTest {
                 "b" to String::class.java,
                 "c" to Int::class.java,
                 "d" to String::class.java),
-            interfaces = listOf (cc.build (iFace1), cc.build (iFace2)))
+            interfaces = listOf(cc.build(iFace1), cc.build(iFace2)))
 
         val clazz = cc.build(class1)
         val testA   = 42
@@ -181,7 +181,7 @@ class ClassCarpenterTest {
     fun `interface implementing interface`() {
         val iFace1 = ClassCarpenter.InterfaceSchema(
             "gen.Interface1",
-            mapOf (
+            mapOf(
                 "a" to Int::class.java,
                 "b" to String::class.java))
 
@@ -190,7 +190,7 @@ class ClassCarpenterTest {
             mapOf(
                 "c" to Int::class.java,
                 "d" to String::class.java),
-            interfaces = listOf (cc.build (iFace1)))
+            interfaces = listOf(cc.build(iFace1)))
 
         val class1 = ClassCarpenter.ClassSchema(
             "gen.Derived",
@@ -199,7 +199,7 @@ class ClassCarpenterTest {
                 "b" to String::class.java,
                 "c" to Int::class.java,
                 "d" to String::class.java),
-            interfaces = listOf (cc.build (iFace2)))
+            interfaces = listOf(cc.build(iFace2)))
 
         val clazz = cc.build(class1)
         val testA   = 99
