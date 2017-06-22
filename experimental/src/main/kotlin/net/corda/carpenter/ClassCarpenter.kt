@@ -251,7 +251,7 @@ class ClassCarpenter {
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
-        for ((name, type) in schema.fields) {
+        for ((name, _) in schema.fields) {
             val descriptor = schema.descriptors[name]
             val opcodes    = ACC_ABSTRACT + ACC_PUBLIC
             with (visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
@@ -316,14 +316,14 @@ class ClassCarpenter {
         // actually called, which is a bit too dynamic for my tastes.
         val allFields = schema.fieldsIncludingSuperclasses()
         for (itf in schema.interfaces) {
-            for (method in itf.methods) {
+            itf.methods.forEach {
                 val fieldNameFromItf = when {
-                    method.name.startsWith("get") -> method.name.substring(3).decapitalize()
-                    else -> throw InterfaceMismatch("Requested interfaces must consist only of methods that start with 'get': ${itf.name}.${method.name}")
+                    it.name.startsWith("get") -> it.name.substring(3).decapitalize()
+                    else -> throw InterfaceMismatch("Requested interfaces must consist only of methods that start with 'get': ${itf.name}.${it.name}")
                 }
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
-                    throw InterfaceMismatch("Interface ${itf.name} requires a field named ${fieldNameFromItf} but that isn't found in the schema or any superclass schemas")
+                    throw InterfaceMismatch("Interface ${itf.name} requires a field named $fieldNameFromItf but that isn't found in the schema or any superclass schemas")
             }
         }
     }
