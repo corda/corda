@@ -8,6 +8,8 @@ import org.gradle.api.Project
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipInputStream
+import java.io.FileInputStream
 
 /**
  * Represents a node that will be installed.
@@ -179,7 +181,17 @@ class Node extends CordformNode {
         def cordaJar = verifyAndGetCordaJar()
         def webJar = verifyAndGetWebserverJar()
         def depsDir = new File(nodeDir, "dependencies")
-        def coreDeps = project.zipTree(cordaJar).getFiles().collect { it.getName() }
+        def coreDeps = []
+        def zis = new ZipInputStream(openJar(cordaJar))
+        try {
+            while (true) {
+                def entry = zis.nextEntry
+                if (null == entry) break
+                coreDeps.add(entry.name)
+            }
+        } finally {
+            zis.close()
+        }
         def appDeps = project.configurations.runtime.filter {
             (it != cordaJar) && (it != webJar) && !project.configurations.cordapp.contains(it) && !coreDeps.contains(it.getName())
         }
@@ -244,6 +256,20 @@ class Node extends CordformNode {
             def jar = maybeJar.getSingleFile()
             assert(jar.isFile())
             return jar
+        }
+    }
+
+    private BufferedInputStream openJar(File file) {
+        byte[] zipMagic = [0x50, 0x4b, 0x03, 0x04]
+        def buffer = new byte[4]
+        def stream = new BufferedInputStream(new FileInputStream(file))
+        while (true) {
+            stream.mark(buffer.length)
+            stream.read(buffer)
+            if (zipMagic == buffer) {
+                stream.reset()
+                return stream
+            }
         }
     }
 
