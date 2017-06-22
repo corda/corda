@@ -6,10 +6,13 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+Milestone 13
+----------
 Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution
 to Corda in M13.
 
-* A new Vault Query service
+* A new Vault Query service:
 
    * Implemented using JPA and Hibernate, this new service provides the ability to specify advanced queries using
      criteria specification sets for both vault attributes and custom contract specific attributes. In addition, new
@@ -32,17 +35,41 @@ to Corda in M13.
      register custom contract state schemas they wish to query using the new Vault Query service API (using the
      ``VaultCustomQueryCriteria``).
 
-* A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
-  an unambiguous identity by searching the network map.
+* Identity and cryptography related changes:
+
+   * Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone).
+
+   * Added DER encoded format for CompositeKey so they can be used in X.509 certificates.
+
+   * Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential
+     identities are used.
+
+   * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
+     an unambiguous identity by searching the network map.
+
+   * A function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
+     has been implemented to support deterministic ``KeyPair`` derivation using an existing private key and a seed
+     as inputs. This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private
+     -> child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes.
+     Currently, this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and
+     EdDSA ed25519.
+
+* New Cordapp tutorial:
+   * We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
+     to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
+     to allow your node to handle new business processes. It also explains how you can use our contract and
+     flow testing frameworks to massively reduce CorDapp development time.
+
+* A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
+  which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
+  This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
+  the class itself. An ``IllegalStateException`` informs the user if a class is blacklisted and such an exception is
+  returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
+
+* ``TimeWindow`` has a new 5th factory method ``TimeWindow.fromStartAndDuration(fromTime: Instant, duration: Duration)``
+  which takes a start-time and a period-of-validity (after this start-time) as inputs.
 
 * The node driver has moved to net.corda.testing.driver in the test-utils module.
-
-* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone).
-
-* Added DER encoded format for CompositeKey so they can be used in X.509 certificates.
-
-* Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential identities
-  are used.
 
 * Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
   ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
@@ -52,26 +79,6 @@ to Corda in M13.
 * Added a flag to the driver that allows the running of started nodes in-process, allowing easier debugging.
   To enable use `driver(startNodesInProcess = true) { .. }`, or `startNode(startInSameProcess = true, ..)`
   to specify for individual nodes.
-
-* We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
-  to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
-  to allow your node to handle new business processes. It also explains how you can use our contract and
-  flow testing frameworks to massively reduce CorDapp development time.
-
-* ``TimeWindow`` has a new 5th factory method ``TimeWindow.fromStartAndDuration(fromTime: Instant, duration: Duration)``
-  which takes a start-time and a period-of-validity (after this start-time) as inputs.
-
-* A new function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
-  has been implemented to support deterministically generate a ``KeyPair`` using an existing private key and a seed
-  as inputs. This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private ->
-  child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes. Currently,
-  this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and EdDSA ed25519.
-
-* A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
-  which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
-  This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
-  the class itself. An ``IllegalStateException`` informs the user if a class is blacklisted and such an exception is
-  returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
 
 * Dependencies changes:
     * Upgraded Kotlin to v1.1.2.
