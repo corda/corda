@@ -58,7 +58,8 @@ data class FullNodeConfiguration(
         val notaryClusterAddresses: List<HostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,
-        val useTestClock: Boolean = false
+        val useTestClock: Boolean = false,
+        val detectPublicIp: Boolean = true
 ) : NodeConfiguration {
     /** This is not retrieved from the config file but rather from a command line argument. */
     @Suppress("DEPRECATION")
