@@ -54,12 +54,6 @@ in supporting more currencies to the DemoBench and Explorer tools.
      Currently, this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and
      EdDSA ed25519.
 
-* New Cordapp tutorial:
-   * We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
-     to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
-     to allow your node to handle new business processes. It also explains how you can use our contract and
-     flow testing frameworks to massively reduce CorDapp development time.
-
 * A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
   which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
   This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
