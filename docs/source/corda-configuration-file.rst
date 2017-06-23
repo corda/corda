@@ -134,5 +134,9 @@ path to the node's base directory.
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
     and keystore does not exist.
 
+:detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
+    attempt to discover its externally visible IP address first by looking for any public addresses on its network
+    interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
+
 :certificateSigningService: Certificate Signing Server address. It is used by the certificate signing request utility to
     obtain SSL certificate. (See :doc:`permissioning` for more information.)
