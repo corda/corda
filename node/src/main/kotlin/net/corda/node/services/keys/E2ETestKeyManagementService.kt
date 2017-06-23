@@ -5,7 +5,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.keys
 import net.corda.core.crypto.sign
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
@@ -69,6 +68,10 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
             val pk = publicKey.keys.first { keys.containsKey(it) }
             KeyPair(pk, keys[pk]!!)
         }
+    }
+
+    override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return mutex.locked { candidateKeys.filter { it in this.keys } }
     }
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
