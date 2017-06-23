@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
+import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.internal.FlowStateMachine
@@ -42,8 +43,6 @@ open class TransactionBuilder(
         protected var timeWindow: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
-    val time: TimeWindow? get() = timeWindow // TODO: rename using a more descriptive name (i.e. timeWindowGetter) or remove if unused.
-
     /**
      * Creates a copy of the builder.
      */
@@ -58,27 +57,6 @@ open class TransactionBuilder(
                     signers = LinkedHashSet(signers),
                     timeWindow = timeWindow
             )
-
-    /**
-     * Places a [TimeWindow] in this transaction, removing any existing command if there is one.
-     * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
-     * The signature can be obtained using [NotaryFlow].
-     *
-     * The window of time in which the final time-window may lie is defined as [time] +/- [timeTolerance].
-     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
-     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
-     * window of time, taking into account factors such as network latency. Transactions being built by a group of
-     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
-     * node.
-     */
-    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
-
-    fun addTimeWindow(timeWindow: TimeWindow) {
-        check(notary != null) { "Only notarised transactions can have a time-window" }
-        signers.add(notary!!.owningKey)
-        check(currentSigs.isEmpty()) { "Cannot change time-window after signing" }
-        this.timeWindow = timeWindow
-    }
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -97,59 +75,8 @@ open class TransactionBuilder(
     }
     // DOCEND 1
 
-    /** The signatures that have been collected so far - might be incomplete! */
-    protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
-
-    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
-    fun signWith(key: KeyPair): TransactionBuilder {
-        check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
-        val data = toWireTransaction().id
-        addSignatureUnchecked(key.sign(data.bytes))
-        return this
-    }
-
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
-     * adds it.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
-        checkSignature(sig)
-        addSignatureUnchecked(sig)
-    }
-
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    fun checkSignature(sig: DigitalSignature.WithKey) {
-        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
-        sig.verify(toWireTransaction().id)
-    }
-
-    /** Adds the signature directly to the transaction, without checking it for validity. */
-    fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
-        currentSigs.add(sig)
-        return this
-    }
-
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
             ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
-
-    fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
-        if (checkSufficientSignatures) {
-            val gotKeys = currentSigs.map { it.by }.toSet()
-            val missing: Set<PublicKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
-            if (missing.isNotEmpty())
-                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
-        }
-        val wtx = toWireTransaction()
-        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
-    }
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
@@ -188,7 +115,6 @@ open class TransactionBuilder(
     }
 
     fun addCommand(arg: Command) {
-        check(currentSigs.isEmpty())
         // TODO: replace pubkeys in commands with 'pointers' to keys in signers
         signers.addAll(arg.signers)
         commands.add(arg)
@@ -197,10 +123,86 @@ open class TransactionBuilder(
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
+    /**
+     * Places a [TimeWindow] in this transaction, removing any existing command if there is one.
+     * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
+     * The signature can be obtained using [NotaryFlow].
+     *
+     * The window of time in which the final time-window may lie is defined as [time] +/- [timeTolerance].
+     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
+     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
+     * window of time, taking into account factors such as network latency. Transactions being built by a group of
+     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
+     * node.
+     */
+    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
+
+    fun addTimeWindow(timeWindow: TimeWindow) {
+        check(notary != null) { "Only notarised transactions can have a time-window" }
+        signers.add(notary!!.owningKey)
+        check(currentSigs.isEmpty()) { "Cannot change time-window after signing" }
+        this.timeWindow = timeWindow
+    }
+
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)
-
+    fun attachments(): List<SecureHash> = ArrayList(attachments)
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
-    fun attachments(): List<SecureHash> = ArrayList(attachments)
+
+    /** The signatures that have been collected so far - might be incomplete! */
+    @VisibleForTesting
+    protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
+
+    @VisibleForTesting
+    fun signWith(key: KeyPair): TransactionBuilder {
+        check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
+        val data = toWireTransaction().id
+        addSignatureUnchecked(key.sign(data.bytes))
+        return this
+    }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @VisibleForTesting
+    fun checkSignature(sig: DigitalSignature.WithKey) {
+        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
+        sig.verify(toWireTransaction().id)
+    }
+
+    /** Adds the signature directly to the transaction, without checking it for validity. */
+    @VisibleForTesting
+    fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
+        currentSigs.add(sig)
+        return this
+    }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
+     * adds it.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @VisibleForTesting
+    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+        checkSignature(sig)
+        addSignatureUnchecked(sig)
+    }
+
+    @VisibleForTesting
+    fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
+        if (checkSufficientSignatures) {
+            val gotKeys = currentSigs.map { it.by }.toSet()
+            val missing: Set<PublicKey> = signers.filter { !it.isFulfilledBy(gotKeys) }.toSet()
+            if (missing.isNotEmpty())
+                throw IllegalStateException("Missing signatures on the transaction for the public keys: ${missing.joinToString()}")
+        }
+        val wtx = toWireTransaction()
+        return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
+    }
 }
