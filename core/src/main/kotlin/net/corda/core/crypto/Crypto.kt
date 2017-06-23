@@ -587,7 +587,7 @@ object Crypto {
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
      */
-    fun deterministicKeyPair(signatureScheme: SignatureScheme, privateKey: PrivateKey, seed: ByteArray): KeyPair {
+    fun deriveKeyPair(signatureScheme: SignatureScheme, privateKey: PrivateKey, seed: ByteArray): KeyPair {
         require(isSupportedSignatureScheme(signatureScheme)) { "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}" }
         when (signatureScheme) {
             ECDSA_SECP256R1_SHA256, ECDSA_SECP256K1_SHA256 -> return deriveKeyPairECDSA(signatureScheme.algSpec as ECParameterSpec, privateKey, seed)
@@ -605,8 +605,8 @@ object Crypto {
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      * @throws UnsupportedOperationException if deterministic key generation is not supported for this particular scheme.
      */
-    fun deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray): KeyPair {
-        return deterministicKeyPair(findSignatureScheme(privateKey), privateKey, seed)
+    fun deriveKeyPair(privateKey: PrivateKey, seed: ByteArray): KeyPair {
+        return deriveKeyPair(findSignatureScheme(privateKey), privateKey, seed)
     }
 
     // Given the domain parameters, this routine deterministically generates an ECDSA key pair

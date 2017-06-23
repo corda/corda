@@ -39,7 +39,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val criteriaBuilder = sessionFactory.criteriaBuilder
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out ContractState>): Vault.Page<T> {
+    override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
 
         val session = sessionFactory.withOptions().
@@ -102,7 +102,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val mutex = ThreadBox ({ updatesPublisher })
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out ContractState>): Vault.PageAndUpdates<T> {
+    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.PageAndUpdates<T> {
         return mutex.locked {
             val snapshotResults = _queryBy<T>(criteria, paging, sorting, contractType)
             Vault.PageAndUpdates(snapshotResults,

@@ -5,8 +5,9 @@ import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.*
+import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.flows.TxKeyFlow
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -18,6 +19,7 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
+import net.corda.flows.TxKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -166,9 +168,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        // TODO: Specify a CA to validate registration against
-        override fun makeIdentityService(): IdentityService {
-            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(), trustRoot = null as X509Certificate?)
+        override fun makeIdentityService(trustRoot: X509Certificate,
+                                         clientCa: CertificateAndKeyPair?,
+                                         legalIdentity: PartyAndCertificate): IdentityService {
+            val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+                    .filterNotNull()
+                    .toTypedArray()
+            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(),
+                    trustRoot = trustRoot, caCertificates = *caCertificates)
         }
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
