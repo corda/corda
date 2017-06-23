@@ -7,8 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.unconsumedStates
@@ -50,7 +49,7 @@ class CordaRPCOpsImplTest {
     lateinit var mockNet: MockNetwork
     lateinit var aliceNode: MockNode
     lateinit var notaryNode: MockNode
-    lateinit var rpc: CordaRPCOpsImpl
+    lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
     lateinit var vaultUpdates: Observable<Vault.Update>             // TODO: deprecated
@@ -94,6 +93,10 @@ class CordaRPCOpsImplTest {
         val expectedState = Cash.State(Amount(quantity,
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
                 recipient)
+
+        // Query vault via RPC
+        val cash = rpc.vaultQueryBy<Cash.State>()
+        assertEquals(expectedState, cash.states.first().state.data)
 
         var issueSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {

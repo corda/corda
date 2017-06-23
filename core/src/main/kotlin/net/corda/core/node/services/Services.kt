@@ -361,10 +361,10 @@ interface VaultQueryService {
      * Note2: you can also annotate entity fields with JPA OrderBy annotation to achieve the same effect as explicit sorting
      */
     @Throws(VaultQueryException::class)
-    fun <T : ContractState> _queryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
-                                     paging: PageSpecification = PageSpecification(),
-                                     sorting: Sort = Sort(emptySet()),
-                                     contractType: Class<out ContractState>): Vault.Page<T>
+    fun <T : ContractState> _queryBy(criteria: QueryCriteria,
+                                     paging: PageSpecification,
+                                     sorting: Sort,
+                                     contractType: Class<out T>): Vault.Page<T>
     /**
      * Generic vault query function which takes a [QueryCriteria] object to define filters,
      * optional [PageSpecification] and optional [Sort] modification criteria (default unsorted),
@@ -378,25 +378,45 @@ interface VaultQueryService {
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
      */
     @Throws(VaultQueryException::class)
-    fun <T : ContractState> _trackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
-                                    paging: PageSpecification = PageSpecification(),
-                                    sorting: Sort = Sort(emptySet()),
-                                    contractType: Class<out ContractState>): Vault.PageAndUpdates<T>
+    fun <T : ContractState> _trackBy(criteria: QueryCriteria,
+                                     paging: PageSpecification,
+                                     sorting: Sort,
+                                     contractType: Class<out T>): Vault.PageAndUpdates<T>
     // DOCEND VaultQueryAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
-    fun <T : ContractState> queryBy(contractType: Class<out T>): Vault.Page<T> = _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.Page<T> = _queryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> = _queryBy(criteria, paging, Sort(emptySet()), contractType)
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> = _queryBy(criteria, PageSpecification(), sorting, contractType)
-    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> = _queryBy(criteria, paging, sorting, contractType)
+    fun <T : ContractState> queryBy(contractType: Class<out T>): Vault.Page<T> {
+        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.Page<T> {
+        return _queryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
+        return _queryBy(criteria, paging, Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
+        return _queryBy(criteria, PageSpecification(), sorting, contractType)
+    }
+    fun <T : ContractState> queryBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
+        return _queryBy(criteria, paging, sorting, contractType)
+    }
 
-    fun <T : ContractState> trackBy(contractType: Class<out T>): Vault.Page<T> = _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.PageAndUpdates<T> = _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> = _trackBy(criteria, paging, Sort(emptySet()), contractType)
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> = _trackBy(criteria, PageSpecification(), sorting, contractType)
-    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> = _trackBy(criteria, paging, sorting, contractType)
+    fun <T : ContractState> trackBy(contractType: Class<out T>): Vault.Page<T> {
+        return _queryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria): Vault.PageAndUpdates<T> {
+        return _trackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> {
+        return _trackBy(criteria, paging, Sort(emptySet()), contractType)
+    }
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> {
+        return _trackBy(criteria, PageSpecification(), sorting, contractType)
+    }
+    fun <T : ContractState> trackBy(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
+        return _trackBy(criteria, paging, sorting, contractType)
+    }
 }
 
 inline fun <reified T : ContractState> VaultQueryService.queryBy(): Vault.Page<T> {
