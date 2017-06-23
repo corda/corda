@@ -12,7 +12,8 @@ import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.ServiceType;
 import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.vault.QueryCriteria;
+import net.corda.core.node.services.Vault.Page;
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.transactions.LedgerTransaction;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
@@ -26,13 +27,8 @@ import net.corda.flows.ResolveTransactionsFlow;
 import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
-import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import rx.Observable;
-
 import java.security.PublicKey;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -227,12 +223,8 @@ public class FlowCookbookJava {
 
             // For example, we would extract any unconsumed ``DummyState``s
             // from our vault as follows:
-            Vault.StateStatus status = Vault.StateStatus.UNCONSUMED;
-            Set<Class<DummyState>> dummyStateTypes = new HashSet<>(ImmutableList.of(DummyState.class));
-
-            VaultQueryCriteria criteria = new VaultQueryCriteria(status, null, dummyStateTypes);
-            Vault.Page<DummyState> results = getServiceHub().getVaultService().queryBy(criteria);
-
+            VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED);
+            Page<DummyState> results = getServiceHub().getVaultQueryService().queryBy(DummyState.class, criteria);
             List<StateAndRef<DummyState>> dummyStates = results.getStates();
 
             // For a full list of the available ways of extracting states from

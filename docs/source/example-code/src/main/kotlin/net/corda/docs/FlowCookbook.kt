@@ -9,14 +9,18 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceType
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.Vault.Page
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.DUMMY_PUBKEY_1
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Step
+import net.corda.core.utilities.UntrustworthyData
+import net.corda.core.utilities.unwrap
 import net.corda.flows.CollectSignaturesFlow
 import net.corda.flows.FinalityFlow
 import net.corda.flows.ResolveTransactionsFlow
@@ -202,8 +206,8 @@ object FlowCookbook {
 
             // For example, we would extract any unconsumed ``DummyState``s
             // from our vault as follows:
-            val criteria = QueryCriteria.VaultQueryCriteria() // default is UNCONSUMED
-            val results: Vault.Page<DummyState> = serviceHub.vaultService.queryBy<DummyState>(criteria)
+            val criteria: VaultQueryCriteria = VaultQueryCriteria() // default is UNCONSUMED
+            val results: Page<DummyState> = serviceHub.vaultQueryService.queryBy<DummyState>(criteria)
             val dummyStates: List<StateAndRef<DummyState>> = results.states
 
             // For a full list of the available ways of extracting states from
