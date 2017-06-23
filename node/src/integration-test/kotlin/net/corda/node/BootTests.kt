@@ -11,12 +11,12 @@ import net.corda.testing.driver.driver
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.startFlowPermission
 import net.corda.nodeapi.User
+import net.corda.testing.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.*
 import java.nio.file.Files
-import java.nio.file.Paths
 import kotlin.test.assertEquals
 
 class BootTests {
@@ -33,7 +33,7 @@ class BootTests {
 
     @Test
     fun `double node start doesn't write into log file`() {
-        val logConfigFile = Paths.get("..", "config", "dev", "log4j2.xml").toAbsolutePath()
+        val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val alice = startNode(ALICE.name).get()
