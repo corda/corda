@@ -2,12 +2,15 @@ package net.corda.core.node
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.time.Clock
+import java.util.ArrayList
 
 /**
  * Subset of node services that are used for loading transactions from the wire into fully resolved, looked up
@@ -131,11 +134,10 @@ interface ServiceHub : ServicesForResolution {
      * @return Returns a SignedTransaction with the new node signature attached.
      */
     fun signInitialTransaction(builder: TransactionBuilder, publicKey: PublicKey): SignedTransaction {
-        val sig = keyManagementService.sign(builder.toWireTransaction().id.bytes, publicKey)
-        builder.addSignatureUnchecked(sig)
-        return builder.toSignedTransaction(false)
+        val wtx = builder.toWireTransaction()
+        val sig = keyManagementService.sign(wtx.id.bytes, publicKey)
+        return SignedTransaction(wtx.serialize(), listOf(sig))
     }
-
 
     /**
      * Helper method to construct an initial partially signed transaction from a TransactionBuilder
@@ -145,7 +147,6 @@ interface ServiceHub : ServicesForResolution {
      * @return Returns a SignedTransaction with the new node signature attached.
      */
     fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction = signInitialTransaction(builder, legalIdentityKey)
-
 
     /**
      * Helper method to construct an initial partially signed transaction from a [TransactionBuilder]

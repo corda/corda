@@ -151,10 +151,10 @@ open class TransactionBuilder(
     fun commands(): List<Command> = ArrayList(commands)
 
     /** The signatures that have been collected so far - might be incomplete! */
-    @VisibleForTesting
+    @Deprecated("Signatures should be gathered on a SignedTransaction instead.")
     protected val currentSigs = arrayListOf<DigitalSignature.WithKey>()
 
-    @VisibleForTesting
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun signWith(key: KeyPair): TransactionBuilder {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
@@ -168,14 +168,14 @@ open class TransactionBuilder(
      * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
-    @VisibleForTesting
+    @Deprecated("Signature checking should be performed on a SignedTransaction instead.")
     fun checkSignature(sig: DigitalSignature.WithKey) {
         require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
         sig.verify(toWireTransaction().id)
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
-    @VisibleForTesting
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
         currentSigs.add(sig)
         return this
@@ -188,13 +188,13 @@ open class TransactionBuilder(
      * @throws SignatureException if the signature didn't match the transaction contents.
      * @throws IllegalArgumentException if the signature key doesn't appear in any command.
      */
-    @VisibleForTesting
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
         checkSignature(sig)
         addSignatureUnchecked(sig)
     }
 
-    @VisibleForTesting
+    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
