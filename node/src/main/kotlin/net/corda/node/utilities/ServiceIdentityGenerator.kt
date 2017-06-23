@@ -1,6 +1,7 @@
 package net.corda.node.utilities
 
 import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
@@ -37,7 +38,6 @@ object ServiceIdentityGenerator {
         val notaryPartyBytes = notaryParty.serialize()
         val privateKeyFile = "$serviceId-private-key"
         val publicKeyFile = "$serviceId-public"
-
         keyPairs.zip(dirs) { keyPair, dir ->
             Files.createDirectories(dir)
             notaryPartyBytes.writeToFile(dir.resolve(publicKeyFile))
