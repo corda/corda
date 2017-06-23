@@ -14,14 +14,14 @@ from bug fixes and code refactoring, there are also significant improvements mai
 Identity Service, respectively (for more detailed information about what has changed, see :doc:`changelog`).
 More specifically:
 
-The long awaited new **Vault Query** service makes its debut in this release and provides advanced vault query capabilities
-using criteria specifications (see ``QueryCriteria``), sorting, and pagination. Criteria specifications enable selective
-filtering with and/or composition using multiple operator primitives on standard attributes stored in Corda internal
-vault tables (eg. vault_states, vault_fungible_states, vault_linear_states), and also on custom contract state schemas
-defined by CorDapp developers when modelling new contract types. Custom queries are specifiable using a simple but
-sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by RPC
-clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former, provides point-in-time snapshot
-queries whilst the later supplements the snapshot with dynamic streaming of updates.
+The long awaited new **Vault Query** service makes its debut in this release and provides advanced vault query
+capabilities using criteria specifications (see ``QueryCriteria``), sorting, and pagination. Criteria specifications
+enable selective filtering with and/or composition using multiple operator primitives on standard attributes stored in
+Corda internal vault tables (eg. vault_states, vault_fungible_states, vault_linear_states), and also on custom contract
+state schemas defined by CorDapp developers when modelling new contract types. Custom queries are specifiable using a
+simple but sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by
+RPC clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former, provides point-in-time
+snapshot queries whilst the later supplements the snapshot with dynamic streaming of updates.
 See :doc:`vault-query` for full details.
 
 We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
@@ -29,14 +29,14 @@ to finish. The tutorial shows how the core elements of a CorDapp - states, contr
 to allow your node to handle new business processes. It also explains how you can use our contract and
 flow testing frameworks to massively reduce CorDapp development time.
 
-Certificate checks have been enabled for much of the identity service, with additional checks coming targeted at M13.
-These are part of the confidential (anonymous) identities work, and ensure that parties are actually who they claim to
-be by checking their certificate path back to the network trust root (certificate authority).
+Certificate checks have been enabled for much of the identity service. These are part of the confidential (anonymous)
+identities work, and ensure that parties are actually who they claim to be by checking their certificate path back to
+the network trust root (certificate authority).
 
 To deal with anonymized keys, we've also implemented a deterministic key derivation function that combines logic
 from the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) protocol and the BIP32 hardened
 parent-private-key -> child-private-key scheme. This function currently supports the following algorithms:
-ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully support anonymous
+ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully supporting anonymous
 identities so as to increase privacy even against validating notaries.
 
 Before M13, we tried to serialise everything reachable from the stack on each flow checkpoint. As flows are arbitrary
