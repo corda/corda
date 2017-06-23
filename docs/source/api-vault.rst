@@ -28,12 +28,17 @@ and via ``CordaRPCOps`` for use by RPC client applications:
     :start-after: DOCSTART VaultTrackByAPI
     :end-before: DOCEND VaultTrackByAPI
 
-Java helper methods are also provided with default values for arguments:
+Helper methods are also provided with default values for arguments:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
     :language: kotlin
-    :start-after: DOCSTART VaultQueryAPIJavaHelpers
-    :end-before: DOCEND VaultQueryAPIJavaHelpers
+    :start-after: DOCSTART VaultQueryAPIHelpers
+    :end-before: DOCEND VaultQueryAPIHelpers
+
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultTrackAPIHelpers
+    :end-before: DOCEND VaultTrackAPIHelpers
 
 The API provides both static (snapshot) and dynamic (snapshot with streaming updates) methods for a defined set of filter criteria.
 

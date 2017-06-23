@@ -50,7 +50,7 @@ support for more currencies to the DemoBench and Explorer tools.
    * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
      an unambiguous identity by searching the network map.
 
-   * A function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
+   * A function for deterministic key derivation ``Crypto.deriveKeyPair(privateKey: PrivateKey, seed: ByteArray)``
      has been implemented to support deterministic ``KeyPair`` derivation using an existing private key and a seed
      as inputs. This operation is based on the HKDF scheme and it's a variant of the hardened parent-private ->
      child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes.
