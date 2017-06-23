@@ -310,11 +310,11 @@ open class NodeStartup(val args: Array<String>) {
                 messages += "Kind of like a regular database but\nwith emojis, colours and ascii art. ${Emoji.coolGuy}"
             val (msg1, msg2) = messages.randomOrNull()!!.split('\n')
 
-            println(Ansi.ansi().fgBrightRed().a("""
-______               __
-/ ____/     _________/ /___ _
-/ /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
-                    "/ /___  /_/ / /  / /_/ / /_/ /          ").fgBrightBlue().a(msg2).newline().fgBrightRed().a(
+            println(Ansi.ansi().newline().fgBrightRed().a(
+                    """   ______               __""").newline().a(
+                    """  / ____/     _________/ /___ _""").newline().a(
+                    """ / /     __  / ___/ __  / __ `/         """).fgBrightBlue().a(msg1).newline().fgBrightRed().a(
+                    """/ /___  /_/ / /  / /_/ / /_/ /          """).fgBrightBlue().a(msg2).newline().fgBrightRed().a(
                     """\____/     /_/   \__,_/\__,_/""").reset().newline().newline().fgBrightDefault().bold().
                     a("--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) -----------------------------------------------").
                     newline().
