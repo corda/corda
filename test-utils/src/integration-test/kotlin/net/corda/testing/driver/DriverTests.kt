@@ -13,9 +13,9 @@ import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.ArtemisMessagingComponent
+import net.corda.testing.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.nio.file.Paths
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -70,7 +70,7 @@ class DriverTests {
     @Test
     fun `debug mode enables debug logging level`() {
         // Make sure we're using the log4j2 config which writes to the log file
-        val logConfigFile = Paths.get("..", "config", "dev", "log4j2.xml").toAbsolutePath()
+        val logConfigFile = projectRootDir / "config" / "dev" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val baseDirectory = startNode(DUMMY_BANK_A.name).getOrThrow().configuration.baseDirectory
