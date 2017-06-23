@@ -44,7 +44,7 @@ code in which it is convenient to do many things, we ended up pulling in a lot o
 to put in a checkpoint, such as ``Thread`` and ``Connection``. To minimize serialization cost and increase
 security by not allowing certain classes to be serialized, we now support class blacklisting
 that will return an ``IllegalStateException`` if such a class is encountered during a checkpoint. Blacklisting supports
-superclass and superinterface inheritance and always precedes ``@CordaSeriazable`` annotation checking.
+superclass and superinterface inheritance and always precedes ``@CordaSerializable`` annotation checking.
 
 We've also started working on improving user experience when searching, by adding a new RPC to support fuzzy matching
 of X.500 names. Our aim is to extend our work in usability and we are planning to apply AI and ML techniques in the
