@@ -69,7 +69,7 @@ To run from the command line in Windows:
 3. Move to the ``samples\irs-demo\build`` directory
 4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
 
-This demo also has a web app. To use this, run nodes and upload rates, then navigate to
+This demo also has a web app. To use this, run nodes and then navigate to
 http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
