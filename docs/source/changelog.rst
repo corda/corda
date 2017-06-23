@@ -24,9 +24,10 @@ support for more currencies to the DemoBench and Explorer tools.
        (replaces the VaultService ``track()`` function and the RPC ``vaultAndUpdates()`` function)
      Existing VaultService API methods will be maintained as deprecated until the following milestone release.
 
-   * NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState that extend
-     FungibleAsset and LinearState, such that common attributes of these states are persisted to two new vault tables:
-     vault_fungible_states and vault_linear_states (and thus queryable using the new Vault Query service API).
+   * The NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState objects
+     that extend FungibleAsset or LinearState, such that common attributes of those parent states are persisted to
+     two new vault tables: vault_fungible_states and vault_linear_states (and thus queryable using the new Vault Query
+     service API).
      Similarly, two new common JPA superclass schemas (``CommonSchemaV1.FungibleState`` and
      ``CommonSchemaV1.LinearState``) mirror the associated FungibleAsset and LinearState interface states to enable
      CorDapp developers to create new custom schemas by extension (rather than duplication of common attribute mappings)
@@ -34,6 +35,8 @@ support for more currencies to the DemoBench and Explorer tools.
    * A new configurable field ``requiredSchemas`` has been added to the CordaPluginRegistry to enable CorDapps to
      register custom contract state schemas they wish to query using the new Vault Query service API (using the
      ``VaultCustomQueryCriteria``).
+
+   * See :doc:`vault-query` for full details and code samples of using the new Vault Query service.
 
 * Identity and cryptography related changes:
 
