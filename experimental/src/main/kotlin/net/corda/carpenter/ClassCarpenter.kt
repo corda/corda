@@ -76,27 +76,27 @@ class ClassCarpenter {
         val descriptors = fields.map { it.key to Type.getDescriptor(it.value) }.toMap()
 
         fun fieldsIncludingSuperclasses(): Map<String, Class<out Any?>> = (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
-        fun descriptorsIncludingSuperclasses(): Map<String, String> =  (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(descriptors)
+        fun descriptorsIncludingSuperclasses(): Map<String, String> = (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(descriptors)
 
-        val jvmName : String
-            get() = name.replace (".", "/")
+        val jvmName: String
+            get() = name.replace(".", "/")
     }
 
     private val String.jvm: String get() = replace(".", "/")
 
     class ClassSchema(
-        name: String,
-        fields: Map<String, Class<out Any?>>,
-        superclass: Schema? = null,
-        interfaces: List<Class<*>> = emptyList()
-    ) : Schema (name, fields, superclass, interfaces)
+            name: String,
+            fields: Map<String, Class<out Any?>>,
+            superclass: Schema? = null,
+            interfaces: List<Class<*>> = emptyList()
+    ) : Schema(name, fields, superclass, interfaces)
 
     class InterfaceSchema(
-        name: String,
-        fields: Map<String, Class<out Any?>>,
-        superclass: Schema? = null,
-        interfaces: List<Class<*>> = emptyList()
-    ) : Schema (name, fields, superclass, interfaces)
+            name: String,
+            fields: Map<String, Class<out Any?>>,
+            superclass: Schema? = null,
+            interfaces: List<Class<*>> = emptyList()
+    ) : Schema(name, fields, superclass, interfaces)
 
     class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
     class InterfaceMismatch(msg: String) : RuntimeException(msg)
@@ -104,6 +104,7 @@ class ClassCarpenter {
     private class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
         fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
     }
+
     private val classloader = CarpenterClassLoader()
 
     private val _loaded = HashMap<String, Class<*>>()
@@ -132,18 +133,18 @@ class ClassCarpenter {
         hierarchy.reversed().forEach {
             when (it) {
                 is InterfaceSchema -> generateInterface(it)
-                is ClassSchema     -> generateClass(it)
+                is ClassSchema -> generateClass(it)
             }
         }
 
         return _loaded[schema.name]!!
     }
 
-    private fun generateInterface (schema: Schema): Class<*> {
-        return generate (schema) { cw, schema ->
+    private fun generateInterface(schema: Schema): Class<*> {
+        return generate(schema) { cw, schema ->
             val interfaces = schema.interfaces.map { it.name.jvm }.toTypedArray()
 
-            with (cw) {
+            with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_ABSTRACT + ACC_INTERFACE, schema.jvmName, null, "java/lang/Object", interfaces)
 
                 generateAbstractGetters(schema)
@@ -153,12 +154,12 @@ class ClassCarpenter {
         }
     }
 
-    private fun generateClass (schema: Schema): Class<*> {
-        return generate (schema) { cw, schema ->
-            val superName  = schema.superclass?.jvmName ?: "java/lang/Object"
+    private fun generateClass(schema: Schema): Class<*> {
+        return generate(schema) { cw, schema ->
+            val superName = schema.superclass?.jvmName ?: "java/lang/Object"
             val interfaces = arrayOf(SimpleFieldAccess::class.java.name.jvm) + schema.interfaces.map { it.name.jvm }
 
-            with (cw) {
+            with(cw) {
                 visit(V1_8, ACC_PUBLIC + ACC_SUPER, schema.jvmName, null, superName, interfaces)
 
                 generateFields(schema)
@@ -173,11 +174,11 @@ class ClassCarpenter {
         }
     }
 
-    private fun generate(schema: Schema, generator : (ClassWriter, Schema) -> Unit): Class<*> {
+    private fun generate(schema: Schema, generator: (ClassWriter, Schema) -> Unit): Class<*> {
         // Lazy: we could compute max locals/max stack ourselves, it'd be faster.
-        val cw = ClassWriter (ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES or ClassWriter.COMPUTE_MAXS)
 
-        generator (cw, schema)
+        generator(cw, schema)
 
         val clazz = classloader.load(schema.name, cw.toByteArray())
         _loaded[schema.name] = clazz
@@ -252,8 +253,8 @@ class ClassCarpenter {
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
         for ((name, _) in schema.fields) {
             val descriptor = schema.descriptors[name]
-            val opcodes    = ACC_ABSTRACT + ACC_PUBLIC
-            with (visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
+            val opcodes = ACC_ABSTRACT + ACC_PUBLIC
+            with(visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
                 // abstract method doesn't have any implementation so just end
                 visitEnd()
             }

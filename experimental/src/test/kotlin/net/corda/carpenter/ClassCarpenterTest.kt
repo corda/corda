@@ -143,9 +143,9 @@ class ClassCarpenterTest {
         assertEquals(iface.declaredMethods[0].name, "getA")
 
         val schema2 = ClassCarpenter.ClassSchema("gen.Derived", mapOf("a" to Int::class.java), interfaces = listOf(iface))
-        val clazz   = cc.build(schema2)
-        val testA   = 42
-        val i       = clazz.constructors[0].newInstance(testA) as SimpleFieldAccess
+        val clazz = cc.build(schema2)
+        val testA = 42
+        val i = clazz.constructors[0].newInstance(testA) as SimpleFieldAccess
 
         assertEquals(testA, i["a"])
     }
@@ -156,20 +156,20 @@ class ClassCarpenterTest {
         val iFace2 = ClassCarpenter.InterfaceSchema("gen.Interface2", mapOf("c" to Int::class.java, "d" to String::class.java))
 
         val class1 = ClassCarpenter.ClassSchema(
-            "gen.Derived",
-            mapOf(
-                "a" to Int::class.java,
-                "b" to String::class.java,
-                "c" to Int::class.java,
-                "d" to String::class.java),
-            interfaces = listOf(cc.build(iFace1), cc.build(iFace2)))
+                "gen.Derived",
+                mapOf(
+                        "a" to Int::class.java,
+                        "b" to String::class.java,
+                        "c" to Int::class.java,
+                        "d" to String::class.java),
+                interfaces = listOf(cc.build(iFace1), cc.build(iFace2)))
 
         val clazz = cc.build(class1)
-        val testA   = 42
-        val testB   = "don't touch me, I'm scared"
-        val testC   = 0xDEAD
-        val testD   = "wibble"
-        val i       = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
+        val testA = 42
+        val testB = "don't touch me, I'm scared"
+        val testC = 0xDEAD
+        val testD = "wibble"
+        val i = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
 
         assertEquals(testA, i["a"])
         assertEquals(testB, i["b"])
@@ -180,33 +180,33 @@ class ClassCarpenterTest {
     @Test
     fun `interface implementing interface`() {
         val iFace1 = ClassCarpenter.InterfaceSchema(
-            "gen.Interface1",
-            mapOf(
-                "a" to Int::class.java,
-                "b" to String::class.java))
+                "gen.Interface1",
+                mapOf(
+                        "a" to Int::class.java,
+                        "b" to String::class.java))
 
         val iFace2 = ClassCarpenter.InterfaceSchema(
-            "gen.Interface2",
-            mapOf(
-                "c" to Int::class.java,
-                "d" to String::class.java),
-            interfaces = listOf(cc.build(iFace1)))
+                "gen.Interface2",
+                mapOf(
+                        "c" to Int::class.java,
+                        "d" to String::class.java),
+                interfaces = listOf(cc.build(iFace1)))
 
         val class1 = ClassCarpenter.ClassSchema(
-            "gen.Derived",
-            mapOf(
-                "a" to Int::class.java,
-                "b" to String::class.java,
-                "c" to Int::class.java,
-                "d" to String::class.java),
-            interfaces = listOf(cc.build(iFace2)))
+                "gen.Derived",
+                mapOf(
+                        "a" to Int::class.java,
+                        "b" to String::class.java,
+                        "c" to Int::class.java,
+                        "d" to String::class.java),
+                interfaces = listOf(cc.build(iFace2)))
 
         val clazz = cc.build(class1)
-        val testA   = 99
-        val testB   = "green is not a creative colour"
-        val testC   = 7
-        val testD   = "I like jam"
-        val i       = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
+        val testA = 99
+        val testB = "green is not a creative colour"
+        val testC = 7
+        val testD = "I like jam"
+        val i = clazz.constructors[0].newInstance(testA, testB, testC, testD) as SimpleFieldAccess
 
         assertEquals(testA, i["a"])
         assertEquals(testB, i["b"])
