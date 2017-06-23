@@ -351,7 +351,7 @@ fun <A> poll(
         executorService.schedule(task@ {
             counter++
             if (counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
+                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
             val result = try {
                 check()
@@ -400,7 +400,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
-        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
+        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.getOrThrow(1.seconds) } }
         shutdowns.reversed().forEach { errorOrShutdown ->
             errorOrShutdown.match(
                     onValue = { shutdown ->
