@@ -33,11 +33,18 @@ Certificate checks have been enabled for much of the identity service, with addi
 These are part of the confidential (anonymous) identities work, and ensure that parties are actually who they claim to
 be by checking their certificate path back to the network trust root (certificate authority).
 
-To deal with anonymized keys, we've also implemented a deterministic key generation (DKG) function that combines logic
+To deal with anonymized keys, we've also implemented a deterministic key derivation function that combines logic
 from the HMAC-based Extract-and-Expand Key Derivation Function (HKDF) protocol and the BIP32 hardened
 parent-private-key -> child-private-key scheme. This function currently supports the following algorithms:
 ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully support anonymous
 identities so as to increase privacy even against validating notaries.
+
+Before M13, we tried to serialise everything reachable from the stack on each flow checkpoint. As flows are arbitrary
+code in which it is convenient to do many things, we ended up pulling in a lot of objects that didn't make sense
+to put in a checkpoint, such as ``Thread`` and ``Connection``. To minimize serialization cost and increase
+security by not allowing certain classes to be serialized, we now support class blacklisting
+that will return an ``IllegalStateException`` if such a class is encountered during a checkpoint. Blacklisting supports
+superclass and superinterface inheritance and always precedes ``@CordaSeriazable`` annotation checking.
 
 We've also started working on improving user experience when searching, by adding a new RPC to support fuzzy matching
 of X.500 names. Our aim is to extend our work in usability and we are planning to apply AI and ML techniques in the
