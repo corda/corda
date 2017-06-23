@@ -115,6 +115,7 @@ open class TransactionBuilder(
     }
 
     fun addCommand(arg: Command) {
+        check(currentSigs.isEmpty())
         // TODO: replace pubkeys in commands with 'pointers' to keys in signers
         signers.addAll(arg.signers)
         commands.add(arg)
