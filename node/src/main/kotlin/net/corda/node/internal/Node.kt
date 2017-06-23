@@ -169,8 +169,11 @@ open class Node(override val configuration: FullNodeConfiguration,
 
     private fun getAdvertisedAddress(): HostAndPort {
         return with(configuration) {
-            val publicHost = tryDetectIfNotPublicHost(p2pAddress.host)
-            val useHost = publicHost ?: p2pAddress.host
+            val useHost = if (detectPublicIp) {
+                tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+            } else {
+                p2pAddress.host
+            }
             HostAndPort.fromParts(useHost, p2pAddress.port)
         }
     }
