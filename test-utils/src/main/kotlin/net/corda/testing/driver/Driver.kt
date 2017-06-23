@@ -400,7 +400,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
-        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
+        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.getOrThrow(1.seconds) } }
         shutdowns.reversed().forEach { errorOrShutdown ->
             errorOrShutdown.match(
                     onValue = { shutdown ->
