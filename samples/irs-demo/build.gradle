@@ -112,3 +112,7 @@ publishing {
         }
     }
 }
+
+jar {
+    from sourceSets.test.output
+}
