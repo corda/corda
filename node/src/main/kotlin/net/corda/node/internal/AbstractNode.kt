@@ -65,6 +65,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
 import java.net.JarURLConnection
 import java.net.URI
@@ -273,6 +274,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return this
     }
 
+    private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
+
     private fun installCordaServices(scanResult: ScanResult) {
         fun getServiceType(clazz: Class<*>): ServiceType? {
             return try {
@@ -300,6 +303,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     } catch (e: NoSuchMethodException) {
                         log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
                                 "of type ${PluginServiceHub::class.java.name}")
+                    } catch (e: ServiceInstantiationException) {
+                        log.error("Corda service ${it.name} failed to instantiate", e.cause)
                     } catch (e: Exception) {
                         log.error("Unable to install Corda service ${it.name}", e)
                     }
@@ -310,13 +315,17 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Use this method to install your Corda services in your tests. This is automatically done by the node when it
      * starts up for all classes it finds which are annotated with [CordaService].
      */
-    fun <T : SerializeAsToken> installCordaService(clazz: Class<T>): T {
-        clazz.requireAnnotation<CordaService>()
-        val ctor = clazz.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
-        val service = ctor.newInstance(services)
-        cordappServices.putInstance(clazz, service)
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
+        serviceClass.requireAnnotation<CordaService>()
+        val constructor = serviceClass.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val service = try {
+            constructor.newInstance(services)
+        } catch (e: InvocationTargetException) {
+            throw ServiceInstantiationException(e.cause)
+        }
+        cordappServices.putInstance(serviceClass, service)
         smm.tokenizableServices += service
-        log.info("Installed ${clazz.name} Corda service")
+        log.info("Installed ${serviceClass.name} Corda service")
         return service
     }
 
