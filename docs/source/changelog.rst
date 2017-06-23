@@ -9,8 +9,8 @@ UNRELEASED
 
 Milestone 13
 ----------
-Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution
-in supporting more currencies to the DemoBench and Explorer tools.
+Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution which adds
+support for more currencies to the DemoBench and Explorer tools.
 
 * A new Vault Query service:
 
@@ -49,8 +49,8 @@ in supporting more currencies to the DemoBench and Explorer tools.
 
    * A function for deterministic key derivation ``Crypto.deterministicKeyPair(privateKey: PrivateKey, seed: ByteArray)``
      has been implemented to support deterministic ``KeyPair`` derivation using an existing private key and a seed
-     as inputs. This operation is based on the HKDF scheme and it's actually a variant of the hardened parent-private
-     -> child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes.
+     as inputs. This operation is based on the HKDF scheme and it's a variant of the hardened parent-private ->
+     child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes.
      Currently, this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and
      EdDSA ed25519.
 
