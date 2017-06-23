@@ -3,7 +3,9 @@ package net.corda.carpenter
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
 import org.junit.Test
-import kotlin.test.assertEquals
+import net.corda.carpenter.test.*
+import net.corda.carpenter.MetaCarpenter
+import kotlin.test.*
 
 /*******************************************************************************************************/
 
@@ -38,42 +40,11 @@ interface IIII {
 
 /*******************************************************************************************************/
 
-class InheritanceSchemaToClassCarpenterTests {
-    private var factory = SerializerFactory()
-
-    fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
-
-    fun curruptName(name: String) = "${name}__carpenter"
-
-    /* given a list of class names work through the amqp envelope schema and alter any that
-       match in the fashion defined above */
-    fun curruptName (schema: Schema, names: List<String>) : Schema {
-        val types = schema.types
-
-        val newTypes : MutableList<TypeNotation> = mutableListOf()
-
-        for (type in types) {
-            val newName = if (type.name in names) curruptName (type.name) else type.name
-
-            val newProvides = type.provides.map {
-                it -> if (it in names) curruptName (it) else it
-            }
-
-            val newFields = (type as CompositeType).fields.map {
-                it -> if ( it.requires.isNotEmpty() && it.requires[0] in names)
-                    it.copy (requires=listOf (curruptName (it.requires[0]))) else it
-            }
-
-            newTypes.add (type.copy (name=newName, provides=newProvides, fields=newFields))
-        }
-
-        return Schema (types=newTypes)
-    }
+class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun interfaceParent1() {
         val testJ = 20
-        val testName = "interfaceParent1"
 
         class A(override val j: Int) : J
 
@@ -95,17 +66,20 @@ class InheritanceSchemaToClassCarpenterTests {
            it's extremely unlikely we'd need to carpent any classes */
         assertEquals(0, l1.size)
 
-        val curruptSchema = curruptName (serSchema, listOf ("${this.javaClass.name}\$$testName\$A"))
+        val curruptSchema = serSchema.curruptName (listOf (classTestName ("A")))
 
         val l2 = curruptSchema.carpenterSchema()
 
         assertEquals(1, l2.size)
+        val aSchema = l2.carpenterSchemas.find { it.name == curruptName(classTestName("A")) }
 
-        assertEquals(curruptName("${this.javaClass.name}\$$testName\$A"), l2[0].name)
-        assertEquals(1, l2[0].interfaces.size)
-        assertEquals(net.corda.carpenter.J::class.java, l2[0].interfaces[0])
+        assertNotEquals (null, aSchema)
 
-        val aBuilder = ClassCarpenter().build(l2[0])
+        assertEquals(curruptName(classTestName("A")), aSchema!!.name)
+        assertEquals(1, aSchema.interfaces.size)
+        assertEquals(net.corda.carpenter.J::class.java, aSchema.interfaces[0])
+
+        val aBuilder = ClassCarpenter().build(aSchema)
 
         val objJ = aBuilder.constructors[0].newInstance(testJ)
         val j = objJ as J
@@ -119,7 +93,6 @@ class InheritanceSchemaToClassCarpenterTests {
     fun interfaceParent2() {
         val testJ = 20
         val testJJ = 40
-        val testName = "interfaceParent2"
 
         class A(override val j: Int, val jj: Int) : J
 
@@ -142,17 +115,22 @@ class InheritanceSchemaToClassCarpenterTests {
            it's extremely unlikely we'd need to carpent any classes */
         assertEquals(0, l1.size)
 
-        val curruptSchema = curruptName (serSchema, listOf ("${this.javaClass.name}\$$testName\$A"))
+        val curruptSchema = serSchema.curruptName (listOf (classTestName("A")))
+        val aName = curruptName(classTestName("A"))
 
         val l2 = curruptSchema.carpenterSchema()
 
         assertEquals(1, l2.size)
 
-        assertEquals(curruptName("${this.javaClass.name}\$$testName\$A"), l2[0].name)
-        assertEquals(1, l2[0].interfaces.size)
-        assertEquals(net.corda.carpenter.J::class.java, l2[0].interfaces[0])
+        val aSchema = l2.carpenterSchemas.find { it.name == aName }
 
-        val aBuilder = ClassCarpenter().build(l2[0])
+        assertNotEquals(null, aSchema)
+
+        assertEquals(aName, aSchema!!.name)
+        assertEquals(1, aSchema.interfaces.size)
+        assertEquals(net.corda.carpenter.J::class.java, aSchema.interfaces[0])
+
+        val aBuilder = ClassCarpenter().build(aSchema)
 
         val objJ = aBuilder.constructors[0].newInstance(testJ, testJJ)
         val j = objJ as J
@@ -167,7 +145,6 @@ class InheritanceSchemaToClassCarpenterTests {
     fun multipleInterfaces() {
         val testI  = 20
         val testII = 40
-        val testName = "multipleInterfaces"
 
         class A(override val i: Int, override val ii: Int) : I, II
 
@@ -189,17 +166,22 @@ class InheritanceSchemaToClassCarpenterTests {
         /* pretend we don't know the class we've been sent, i.e. it's unknown to the class loader, and thus
            needs some carpentry */
 
-        val curruptSchema = curruptName (serSchema, listOf ("${this.javaClass.name}\$$testName\$A"))
-        val l2 = curruptSchema.carpenterSchema()
+        val curruptSchema = serSchema.curruptName (listOf (classTestName ("A")))
+        val l2    = curruptSchema.carpenterSchema()
+        val aName = curruptName(classTestName("A"))
 
         assertEquals(1, l2.size)
 
-        assertEquals(curruptName("${this.javaClass.name}\$$testName\$A"), l2[0].name)
-        assertEquals(2, l2[0].interfaces.size)
-        assert (net.corda.carpenter.I::class.java in l2[0].interfaces)
-        assert (net.corda.carpenter.II::class.java in l2[0].interfaces)
+        val aSchema = l2.carpenterSchemas.find { it.name == aName }
 
-        val aBuilder = ClassCarpenter().build(l2[0])
+        assertNotEquals(null, aSchema)
+
+        assertEquals(aName, aSchema!!.name)
+        assertEquals(2, aSchema.interfaces.size)
+        assert (net.corda.carpenter.I::class.java in aSchema.interfaces)
+        assert (net.corda.carpenter.II::class.java in aSchema.interfaces)
+
+        val aBuilder = ClassCarpenter().build(aSchema)
 
         val objA = aBuilder.constructors[0].newInstance(testI, testII)
         val i  = objA as I
@@ -216,7 +198,6 @@ class InheritanceSchemaToClassCarpenterTests {
     fun nestedInterfaces() {
         val testI    = 20
         val testIII  = 60
-        val testName = "nestedInterfaces"
 
         class A(override val i: Int, override val iii : Int) : III
 
@@ -235,17 +216,22 @@ class InheritanceSchemaToClassCarpenterTests {
            it's extremely unlikely we'd need to carpent any classes */
         assertEquals(0, l1.size)
 
-        val curruptSchema = curruptName (serSchema, listOf ("${this.javaClass.name}\$$testName\$A"))
+        val curruptSchema = serSchema.curruptName (listOf (classTestName ("A")))
         val l2 = curruptSchema.carpenterSchema()
+        val aName = curruptName(classTestName("A"))
 
         assertEquals(1, l2.size)
 
-        assertEquals(curruptName("${this.javaClass.name}\$$testName\$A"), l2[0].name)
-        assertEquals(2, l2[0].interfaces.size)
-        assert (net.corda.carpenter.I::class.java in l2[0].interfaces)
-        assert (net.corda.carpenter.III::class.java in l2[0].interfaces)
+        val aSchema = l2.carpenterSchemas.find { it.name == aName }
 
-        val aBuilder = ClassCarpenter().build(l2[0])
+        assertNotEquals(null, aSchema)
+
+        assertEquals(aName, aSchema!!.name)
+        assertEquals(2, aSchema.interfaces.size)
+        assert (net.corda.carpenter.I::class.java in aSchema.interfaces)
+        assert (net.corda.carpenter.III::class.java in aSchema.interfaces)
+
+        val aBuilder = ClassCarpenter().build(aSchema)
 
         val objA = aBuilder.constructors[0].newInstance(testI, testIII)
         val i   = objA as I
@@ -263,7 +249,6 @@ class InheritanceSchemaToClassCarpenterTests {
     fun memberInterface() {
         val testI     = 25
         val testIIII  = 50
-        val testName = "memberInterface"
 
         class A(override val i: Int) : I
         class B(override val i : I, override val iiii : Int) : IIII
@@ -285,17 +270,18 @@ class InheritanceSchemaToClassCarpenterTests {
          */
         assertEquals(4, serSchema.types.size)
 
-        val curruptSchema = curruptName (serSchema, listOf ("${this.javaClass.name}\$$testName\$A",
-                "${this.javaClass.name}\$$testName\$B"))
+        val curruptSchema = serSchema.curruptName (listOf (classTestName ("A"), classTestName ("B")))
+        val cSchema       = curruptSchema.carpenterSchema()
+        val aName         = curruptName(classTestName("A"))
+        val bName         = curruptName(classTestName("B"))
 
-        val cSchema = curruptSchema.carpenterSchema()
         assertEquals(2, cSchema.size)
 
-        val aCarpenterSchema = cSchema.find { it.name == curruptName("${this.javaClass.name}\$$testName\$A") }
-        val bCarpenterSchema = cSchema.find { it.name == curruptName("${this.javaClass.name}\$$testName\$B") }
+        val aCarpenterSchema = cSchema.carpenterSchemas.find { it.name == aName }
+        val bCarpenterSchema = cSchema.carpenterSchemas.find { it.name == bName }
 
-        assert(aCarpenterSchema != null)
-        assert(bCarpenterSchema != null)
+        assertNotEquals (null, aCarpenterSchema)
+        assertNotEquals (null, bCarpenterSchema)
 
         val cc  = ClassCarpenter()
         val cc2 = ClassCarpenter()
@@ -317,13 +303,12 @@ class InheritanceSchemaToClassCarpenterTests {
         bBuilder.constructors[0].newInstance(objA2, testIIII)
     }
 
-    /* this time remove the nested interface from out set of known classes forcing us
-       to whittle it */
-    @Test
+    /* if we remove the neted interface we should get an error as it's impossible
+        to have a concrete class loaded without having access to all of it's elements */
+    @Test(expected = UncarpentableException::class)
     fun memberInterface2() {
         val testI     = 25
         val testIIII  = 50
-        val testName = "memberInterface2"
 
         class A(override val i: Int) : I
         class B(override val i : I, override val iiii : Int) : IIII
@@ -346,44 +331,185 @@ class InheritanceSchemaToClassCarpenterTests {
          */
         assertEquals(4, serSchema.types.size)
 
-        val curruptSchema = curruptName (serSchema, listOf (
-                "${this.javaClass.name}\$$testName\$A",
-                "${this.javaClass.getPackage().name}.I"))
-
-
-        val carpenterSchema = curruptSchema.carpenterSchema()
-
-        val aCarpenterSchema = carpenterSchema.find { it.name == curruptName("${this.javaClass.name}\$$testName\$A") }
-//        val bCarpenterSchema = carpenterSchema.find { it.name == curruptName("${this.javaClass.getPackage().name}.I") }
-
-        val cc = ClassCarpenter()
-
-        val aBuilder = cc.build (aCarpenterSchema!!)
-        aBuilder.constructors[0].newInstance(testI)
-
-
-        /*
-
-        var cc2 = ClassCarpenter()
-
-        var bBuilder = cc.build(bCarpenterSchema!!)
-        val objB = bBuilder.constructors[0].newInstance(a, testIIII)
-
-        var aBuilder = cc.build(aCarpenterSchema!!)
-        val objA = aBuilder.constructors[0].newInstance(testI)
-
-        /* build a second B this time using our constructed instane of A and not the
-           local one we pre defined */
-        val objB2 = bBuilder.constructors[0].newInstance(objA, testIIII)
-
-        /* whittle and instantiate a different A with a new class loader */
-        var aBuilder2 = cc2.build(aCarpenterSchema!!)
-        val objA2 = aBuilder2.constructors[0].newInstance(testI)
-
-        val objB3 = bBuilder.constructors[0].newInstance(objA2, testIIII)
-        */
+        /* ignore the return as we expect this to throw */
+        serSchema.curruptName (listOf (
+                classTestName("A"), "${this.javaClass.`package`.name}.I")).carpenterSchema()
     }
 
+    @Test
+    fun interfaceAndImplementation() {
+        val testI     = 25
+
+        class A(override val i: Int) : I
+
+        val a = A(testI)
+
+        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+
+        assert(obj.first is A)
+
+        val serSchema = obj.second.schema
+
+        /*
+         * The classes we're expecting to find:
+         *   class A
+         *   class A's interface (class I)
+         */
+        assertEquals(2, serSchema.types.size)
+
+        val amqpSchema = serSchema.curruptName (listOf (classTestName("A"), "${this.javaClass.`package`.name}.I"))
+
+        val aName = curruptName (classTestName("A"))
+        val iName = curruptName ("${this.javaClass.`package`.name}.I")
+
+        val carpenterSchema = amqpSchema.carpenterSchema()
+
+        /* whilst there are two unknown classes within the envelope A depends on I so we can't construct a
+           schema for A until we have for I */
+        assertEquals (1, carpenterSchema.size)
+        assertNotEquals (null, carpenterSchema.carpenterSchemas.find { it.name == iName })
+
+        /* since we can't build A it should list I as a dependency*/
+        assert (aName in carpenterSchema.dependencies)
+        assertEquals (1, carpenterSchema.dependencies[aName]!!.second.size)
+        assertEquals (iName, carpenterSchema.dependencies[aName]!!.second[0])
+
+        /* and conversly I should have A listed as a dependent */
+        assert(iName in carpenterSchema.dependsOn)
+        assertEquals(1, carpenterSchema.dependsOn[iName]!!.size)
+        assertEquals(aName, carpenterSchema.dependsOn[iName]!![0])
+
+        val mc = MetaCarpenter (carpenterSchema)
+
+        mc.build()
+
+        assertEquals (0, mc.schemas.carpenterSchemas.size)
+        assertEquals (0, mc.schemas.dependencies.size)
+        assertEquals (0, mc.schemas.dependsOn.size)
+        assertEquals (2, mc.objects.size)
+        assert (aName in mc.objects)
+        assert (iName in mc.objects)
+
+        mc.objects[aName]!!.constructors[0].newInstance(testI)
+    }
+
+    @Test
+    fun twoInterfacesAndImplementation() {
+        val testI = 69
+        val testII = 96
+
+        class A(override val i: Int, override val ii: Int) : I, II
+
+        val a = A(testI, testII)
+
+        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+
+        val amqpSchema = obj.second.schema.curruptName(listOf(
+                classTestName("A"),
+                "${this.javaClass.`package`.name}.I",
+                "${this.javaClass.`package`.name}.II"))
+
+        val aName  = curruptName (classTestName("A"))
+        val iName  = curruptName ("${this.javaClass.`package`.name}.I")
+        val iiName = curruptName ("${this.javaClass.`package`.name}.II")
+
+        val carpenterSchema = amqpSchema.carpenterSchema()
+
+        /* there is nothing preventing us from carpenting up the two interfaces so
+           our initial list should contain both interface with A being dependent on both
+           and each having A as a dependent */
+        assertEquals (2, carpenterSchema.carpenterSchemas.size)
+        assertNotNull (carpenterSchema.carpenterSchemas.find { it.name == iName })
+        assertNotNull (carpenterSchema.carpenterSchemas.find { it.name == iiName })
+        assertNull (carpenterSchema.carpenterSchemas.find { it.name == aName })
+
+        assert (iName in carpenterSchema.dependsOn)
+        assertEquals (1, carpenterSchema.dependsOn[iName]?.size)
+        assertNotNull (carpenterSchema.dependsOn[iName]?.find ( { it == aName }))
+
+        assert (iiName in carpenterSchema.dependsOn)
+        assertEquals (1, carpenterSchema.dependsOn[iiName]?.size)
+        assertNotNull (carpenterSchema.dependsOn[iiName]?.find { it == aName })
+
+        assert (aName in carpenterSchema.dependencies)
+        assertEquals (2, carpenterSchema.dependencies[aName]!!.second.size)
+        assertNotNull (carpenterSchema.dependencies[aName]!!.second.find { it == iName })
+        assertNotNull (carpenterSchema.dependencies[aName]!!.second.find { it == iiName })
+
+        val mc = MetaCarpenter (carpenterSchema)
+
+        mc.build()
+        assertEquals (0, mc.schemas.carpenterSchemas.size)
+        assertEquals (0, mc.schemas.dependencies.size)
+        assertEquals (0, mc.schemas.dependsOn.size)
+        assertEquals (3, mc.objects.size)
+        assert (aName in mc.objects)
+        assert (iName in mc.objects)
+        assert (iiName in mc.objects)
+    }
+
+    @Test
+    fun nestedInterfacesAndImplementation() {
+        val testI   = 7
+        val testIII = 11
+
+        class A(override val i: Int, override val iii : Int) : III
+
+        val a = A(testI, testIII)
+
+        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+
+        val amqpSchema = obj.second.schema.curruptName(listOf(
+                classTestName("A"),
+                "${this.javaClass.`package`.name}.I",
+                "${this.javaClass.`package`.name}.III"))
+
+        val aName  = curruptName (classTestName("A"))
+        val iName  = curruptName ("${this.javaClass.`package`.name}.I")
+        val iiiName = curruptName ("${this.javaClass.`package`.name}.III")
+
+        val carpenterSchema = amqpSchema.carpenterSchema()
+
+        /* Since A depends on III and III extends I we will have to construct them
+         * in that reverse order (I -> III -> A) */
+        assertEquals (1, carpenterSchema.carpenterSchemas.size)
+        assertNotNull (carpenterSchema.carpenterSchemas.find { it.name == iName })
+        assertNull (carpenterSchema.carpenterSchemas.find { it.name == iiiName })
+        assertNull (carpenterSchema.carpenterSchemas.find { it.name == aName })
+
+        /* I has III as a direct dependent and A as an indirect one */
+        assert (iName in carpenterSchema.dependsOn)
+        assertEquals (2, carpenterSchema.dependsOn[iName]?.size)
+        assertNotNull (carpenterSchema.dependsOn[iName]?.find ( { it == iiiName }))
+        assertNotNull (carpenterSchema.dependsOn[iName]?.find ( { it == aName }))
+
+        /* III has A as a dependent */
+        assert (iiiName in carpenterSchema.dependsOn)
+        assertEquals (1, carpenterSchema.dependsOn[iiiName]?.size)
+        assertNotNull (carpenterSchema.dependsOn[iiiName]?.find { it == aName })
+
+        /* converly III depends on I */
+        assert (iiiName in carpenterSchema.dependencies)
+        assertEquals (1, carpenterSchema.dependencies[iiiName]!!.second.size)
+        assertNotNull (carpenterSchema.dependencies[iiiName]!!.second.find { it == iName })
+
+        /* and A depends on III and I*/
+        assert (aName in carpenterSchema.dependencies)
+        assertEquals (2, carpenterSchema.dependencies[aName]!!.second.size)
+        assertNotNull (carpenterSchema.dependencies[aName]!!.second.find { it == iiiName })
+        assertNotNull (carpenterSchema.dependencies[aName]!!.second.find { it == iName })
+
+        val mc = MetaCarpenter (carpenterSchema)
+
+        mc.build()
+        assertEquals (0, mc.schemas.carpenterSchemas.size)
+        assertEquals (0, mc.schemas.dependencies.size)
+        assertEquals (0, mc.schemas.dependsOn.size)
+        assertEquals (3, mc.objects.size)
+        assert (aName in mc.objects)
+        assert (iName in mc.objects)
+        assert (iiiName in mc.objects)
+    }
 }
 
 

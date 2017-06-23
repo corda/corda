@@ -1,14 +1,14 @@
 package net.corda.carpenter
 
+import net.corda.carpenter.test.AmqpCarpenterBase
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
+import net.corda.core.serialization.carpenter.CarpenterSchemas
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
-class MultiMemberCompositeSchemaToClassCarpenterTests {
-    private var factory = SerializerFactory()
-
-    fun serialise(clazz: Any) = SerializationOutput(factory).serialize(clazz)
+class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun twoInts() {
@@ -38,7 +38,15 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         assertEquals("b",   amqpSchema.fields[1].name)
         assertEquals("int", amqpSchema.fields[1].type)
 
-        var pinochio = ClassCarpenter().build(amqpSchema.carpenterSchema())
+        val carpenterSchema = CarpenterSchemas.newInstance()
+        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+
+        assertEquals (1, carpenterSchema.size)
+        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName ("A") }
+
+        assertNotEquals (null, aSchema)
+
+        val pinochio = ClassCarpenter().build(aSchema!!)
 
         val p = pinochio.constructors[0].newInstance(testA, testB)
 
@@ -54,7 +62,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         @CordaSerializable
         data class A(val a: Int, val b: String)
 
-        var a = A(testA, testB)
+        val a = A(testA, testB)
 
         val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
 
@@ -66,7 +74,7 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         assertEquals(1, obj.second.schema.types.size)
         assert(obj.second.schema.types[0] is CompositeType)
 
-        var amqpSchema = obj.second.schema.types[0] as CompositeType
+        val amqpSchema = obj.second.schema.types[0] as CompositeType
 
         assertEquals(2,        amqpSchema.fields.size)
         assertEquals("a",      amqpSchema.fields[0].name)
@@ -74,7 +82,15 @@ class MultiMemberCompositeSchemaToClassCarpenterTests {
         assertEquals("b",      amqpSchema.fields[1].name)
         assertEquals("string", amqpSchema.fields[1].type)
 
-        var pinochio = ClassCarpenter().build(amqpSchema.carpenterSchema())
+        val carpenterSchema = CarpenterSchemas.newInstance()
+        amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
+
+        assertEquals (1, carpenterSchema.size)
+        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }
+
+        assertNotEquals(null, aSchema)
+
+        val pinochio = ClassCarpenter().build(aSchema!!)
 
         val p = pinochio.constructors[0].newInstance(testA, testB)
 

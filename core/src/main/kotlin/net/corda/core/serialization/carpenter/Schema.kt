@@ -34,11 +34,23 @@ class ClassSchema(
     fields: Map<String, Class<out Any?>>,
     superclass: Schema? = null,
     interfaces: List<Class<*>> = emptyList()
-) : ClassCarpenter.Schema (name, fields, superclass, interfaces)
+) : Schema (name, fields, superclass, interfaces)
 
 class InterfaceSchema(
     name: String,
     fields: Map<String, Class<out Any?>>,
     superclass: Schema? = null,
     interfaces: List<Class<*>> = emptyList()
-) : ClassCarpenter.Schema (name, fields, superclass, interfaces)
+) : Schema (name, fields, superclass, interfaces)
+
+object CarpenterSchemaFactory {
+    fun newInstance (
+            name: String,
+            fields: Map<String, Class<out Any?>>,
+            superclass: Schema? = null,
+            interfaces: List<Class<*>> = emptyList(),
+            isInterface: Boolean = false
+    ) : Schema =
+            if (isInterface) InterfaceSchema (name, fields, superclass, interfaces)
+            else ClassSchema (name, fields, superclass, interfaces)
+}

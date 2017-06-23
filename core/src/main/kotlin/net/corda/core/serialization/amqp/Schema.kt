@@ -15,7 +15,9 @@ import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.util.*
 
-import net.corda.core.serialization.ClassCarpenterSchema
+import net.corda.core.serialization.carpenter.CarpenterSchemas
+import net.corda.core.serialization.carpenter.Schema as CarpenterSchema
+import net.corda.core.serialization.carpenter.CarpenterSchemaFactory
 
 // TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
@@ -24,6 +26,24 @@ val DESCRIPTOR_DOMAIN: String = "net.corda"
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
+
+private fun List<ClassLoader>.exists (clazz: String) =
+        this.find { try { it.loadClass(clazz); true } catch (e: ClassNotFoundException) { false } } != null
+
+private fun List<ClassLoader>.loadIfExists (clazz: String) : Class<*> {
+    this.forEach {
+        try {
+            return it.loadClass(clazz)
+        } catch (e: ClassNotFoundException) {
+            return@forEach
+        }
+    }
+    throw ClassNotFoundException(clazz)
+}
+
+class UncarpentableException (name: String, field: String, type: String) :
+        Throwable ("Class $name is loadable yet contains field $field of unknown type $type")
+
 
 /**
  * This class wraps all serialized data, so that the schema can be carried along with it.  We will provide various internal utilities
@@ -91,28 +111,12 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun toString(): String = types.joinToString("\n")
 
     fun carpenterSchema(loaders : List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
-            : List<ClassCarpenterSchema>
+            : CarpenterSchemas
     {
-        var rtn = mutableListOf<ClassCarpenterSchema>()
+        var rtn = CarpenterSchemas.newInstance()
 
-        for (type in types) {
-            if (type is CompositeType) {
-                var foundIt = false
-                for (loader in loaders) {
-                    try {
-                        loader.loadClass(type.name)
-                        foundIt = true
-                        break
-                    } catch (e: ClassNotFoundException) {
-                        continue
-                    }
-                }
-
-                if (foundIt) continue
-                else {
-                    rtn.add(type.carpenterSchema())
-                }
-            }
+        types.filterIsInstance<CompositeType>().forEach {
+            it.carpenterSchema(classLoaders = loaders, carpenterSchemas = rtn)
         }
 
         return rtn
@@ -199,17 +203,9 @@ data class Field(var name: String, val type: String, val requires: List<String>,
         return sb.toString()
     }
 
-    inline fun isKnownClass (type : String) : Class<*> {
-        try {
-            return ClassLoader.getSystemClassLoader().loadClass(type)
-        }
-        catch (e: ClassNotFoundException) {
-            // call carpenter
-            throw IllegalArgumentException ("${type} - ${name} - pants")
-        }
-    }
-
-    fun getPrimType() = when (type) {
+    fun getTypeAsClass(
+            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
+    ) = when (type) {
         "int"     -> Int::class.javaPrimitiveType!!
         "string"  -> String::class.java
         "short"   -> Short::class.javaPrimitiveType!!
@@ -217,10 +213,27 @@ data class Field(var name: String, val type: String, val requires: List<String>,
         "char"    -> Char::class.javaPrimitiveType!!
         "boolean" -> Boolean::class.javaPrimitiveType!!
         "double"  -> Double::class.javaPrimitiveType!!
-        "float"   -> Double::class.javaPrimitiveType!!
-        "*"       -> isKnownClass(requires[0])
-        else      -> isKnownClass(type)
+        "float"   -> Float::class.javaPrimitiveType!!
+        "*"       -> classLoaders.loadIfExists(requires[0])
+        else      -> classLoaders.loadIfExists(type)
     }
+
+    fun validateType(
+            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
+    ) = when (type) {
+        "int"     -> Int::class.javaPrimitiveType!!
+        "string"  -> String::class.java
+        "short"   -> Short::class.javaPrimitiveType!!
+        "long"    -> Long::class.javaPrimitiveType!!
+        "char"    -> Char::class.javaPrimitiveType!!
+        "boolean" -> Boolean::class.javaPrimitiveType!!
+        "double"  -> Double::class.javaPrimitiveType!!
+        "float"   -> Float::class.javaPrimitiveType!!
+        "*"       -> if (classLoaders.exists(requires[0])) requires[0] else null
+        else      -> if (classLoaders.exists (type)) type else null
+    }
+
+    fun typeAsString() = if (type =="*") requires[0] else type
 }
 
 sealed class TypeNotation : DescribedType {
@@ -287,32 +300,69 @@ data class CompositeType(override var name: String, override val label: String?,
         return sb.toString()
     }
 
-    fun carpenterSchema(classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())) : ClassCarpenterSchema {
-        var m : MutableMap<String, Class<out Any?>> = mutableMapOf()
+    /** if we can load the class then we MUST know about all of it's sub elements,
+        otherwise we couldn't know about this */
+    private fun validateKnown (
+        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()))
+    {
+        fields.forEach {
+            if (it.validateType(classLoaders) == null) throw UncarpentableException (name, it.name, it.type)
+        }
+    }
 
-        fields.forEach { m[it.name] = it.getPrimType() }
+    fun carpenterSchema(
+            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()),
+            carpenterSchemas : CarpenterSchemas,
+            force : Boolean = false)
+    {
+        /* first question, do we know about this type or not */
+        if (classLoaders.exists(name)) {
+            validateKnown(classLoaders)
 
-        var providesList = mutableListOf<Class<*>>()
-
-        for (iface in provides) {
-            var found = false
-            for (loader in classLoaders) {
-                try {
-                    providesList.add (loader.loadClass(iface))
-                    found = true
-                    break
-                }
-                catch (e: ClassNotFoundException) {
-                    continue
-                }
-            }
-            if (found == false) {
-                println ("This needs to work but it wont - ${iface}")
-            }
-            else println ("found it ${iface}")
+            if (!force) return
         }
 
-        return ClassCarpenterSchema (name, m, interfaces = providesList)
+        val providesList = mutableListOf<Class<*>>()
+
+        var isInterface = false
+        var isCreatable = true
+
+        provides.forEach {
+            if (name.equals(it)) {
+                isInterface = true
+                return@forEach
+            }
+
+            try {
+                providesList.add (classLoaders.loadIfExists(it))
+            }
+            catch (e: ClassNotFoundException) {
+                carpenterSchemas.addDepPair(this, name, it)
+
+                isCreatable = false
+            }
+        }
+
+        val m : MutableMap<String, Class<out Any?>> = mutableMapOf()
+
+        fields.forEach {
+            try {
+                m[it.name] =  it.getTypeAsClass(classLoaders)
+            }
+            catch (e: ClassNotFoundException) {
+                carpenterSchemas.addDepPair(this, name, it.typeAsString())
+
+                isCreatable = false
+            }
+        }
+
+        if (isCreatable) {
+            carpenterSchemas.carpenterSchemas.add (CarpenterSchemaFactory.newInstance(
+                    name = name,
+                    fields = m,
+                    interfaces = providesList,
+                    isInterface = isInterface))
+        }
     }
 }
 
