@@ -57,7 +57,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     @CordaSerializable
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
+    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 

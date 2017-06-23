@@ -273,11 +273,11 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // subscribers
         when (change.type) {
             ADD -> {
-                logger.info("Added node ${node.addresses.first()} to network map")
+                logger.info("Added node ${node.addresses} to network map")
                 services.networkMapCache.addNode(change.node)
             }
             REMOVE -> {
-                logger.info("Removed node ${node.addresses.first()} from network map")
+                logger.info("Removed node ${node.addresses} from network map")
                 services.networkMapCache.removeNode(change.node)
             }
         }

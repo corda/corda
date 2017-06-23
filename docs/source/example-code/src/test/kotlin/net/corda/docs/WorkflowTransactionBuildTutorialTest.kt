@@ -43,8 +43,8 @@ class WorkflowTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.info.addresses.first())
-        nodeB = mockNet.createPartyNode(notaryNode.info.addresses.first())
+        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeA.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 

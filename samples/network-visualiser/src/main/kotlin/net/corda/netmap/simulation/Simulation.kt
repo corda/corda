@@ -80,7 +80,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         fun createAll(): List<SimulatedNode> {
             return bankLocations.mapIndexed { i, _ ->
                 // Use deterministic seeds so the simulation is stable. Needed so that party owning keys are stable.
-                mockNet.createNode(networkMap.info.addresses.first(), start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
+                mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = this, entropyRoot = BigInteger.valueOf(i.toLong())) as SimulatedNode
             }
         }
     }
@@ -158,10 +158,10 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val networkMap: SimulatedNode
             = mockNet.createNode(null, nodeFactory = NetworkMapNodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type)) as SimulatedNode
     val notary: SimulatedNode
-            = mockNet.createNode(networkMap.info.addresses.first(), nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type)) as SimulatedNode
-    val regulators: List<SimulatedNode> = listOf(mockNet.createNode(networkMap.info.addresses.first(), start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
+            = mockNet.createNode(networkMap.network.myAddress, nodeFactory = NotaryNodeFactory, advertisedServices = ServiceInfo(SimpleNotaryService.type)) as SimulatedNode
+    val regulators: List<SimulatedNode> = listOf(mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RegulatorFactory) as SimulatedNode)
     val ratesOracle: SimulatedNode
-            = mockNet.createNode(networkMap.info.addresses.first(), start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type)) as SimulatedNode
+            = mockNet.createNode(networkMap.network.myAddress, start = false, nodeFactory = RatesOracleFactory, advertisedServices = ServiceInfo(NodeInterestRates.Oracle.type)) as SimulatedNode
 
     // All nodes must be in one of these two lists for the purposes of the visualiser tool.
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)

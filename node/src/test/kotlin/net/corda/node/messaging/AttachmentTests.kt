@@ -114,7 +114,7 @@ class AttachmentTests {
                 }
             }
         }, true, null, null, ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type))
-        val n1 = mockNet.createNode(n0.info.addresses.first())
+        val n1 = mockNet.createNode(n0.network.myAddress)
 
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.

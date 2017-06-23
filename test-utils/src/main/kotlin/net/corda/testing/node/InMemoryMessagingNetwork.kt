@@ -82,6 +82,8 @@ class InMemoryMessagingNetwork(
 
     // Holds the mapping from services to peers advertising the service.
     private val serviceToPeersMapping = HashMap<ServiceHandle, LinkedHashSet<PeerHandle>>()
+    // Holds the mapping from node's X500Name to PeerHandle.
+    private val peersMapping = HashMap<X500Name, PeerHandle>()
 
     @Suppress("unused") // Used by the visualiser tool.
             /** A stream of (sender, message, recipients) triples */
@@ -130,7 +132,9 @@ class InMemoryMessagingNetwork(
             description: X500Name? = null,
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        return Builder(manuallyPumped, PeerHandle(id, description ?: X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null)), advertisedServices.map(::ServiceHandle), executor, database = database)
+        val peerHandle = PeerHandle(id, description ?: X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null))
+        peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
+        return Builder(manuallyPumped, peerHandle, advertisedServices.map(::ServiceHandle), executor, database = database)
     }
 
     interface LatencyCalculator {
@@ -330,7 +334,7 @@ class InMemoryMessagingNetwork(
 
         override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
             return when (partyInfo) {
-                is PartyInfo.Node -> partyInfo.node.addresses.first()
+                is PartyInfo.Node -> peersMapping[partyInfo.party.name] ?: throw IllegalArgumentException("No MockNode for party ${partyInfo.party.name}")
                 is PartyInfo.Service -> ServiceHandle(partyInfo.service)
             }
         }

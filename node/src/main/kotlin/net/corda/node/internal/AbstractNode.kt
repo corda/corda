@@ -3,6 +3,7 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
@@ -58,6 +59,7 @@ import net.corda.node.utilities.AddOrRemove.ADD
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
+import net.corda.nodeapi.ArtemisMessagingComponent
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
@@ -547,10 +549,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val legalIdentity = obtainLegalIdentity() //todo merge legalIdentity and advertisedServices identities
-        // TODO take network.myAddress addresses from configs?
-        // TODO add legalIdentities from services
-        return NodeInfo(listOf(network.myAddress), setOf(legalIdentity), platformVersion, advertisedServiceEntries, findMyLocation())
+        val legalIdentity = obtainLegalIdentity()
+        val allIdentitiesSet = advertisedServiceEntries.map { it.identity }.toSet() + legalIdentity
+        val addr = network.myAddress // There is no support for multiple IP addresses yet.
+        val myAddress =  when (addr) {
+            is ArtemisMessagingComponent.ArtemisPeerAddress -> addr.hostAndPort
+            else -> HostAndPort.fromHost("mockHost")
+        }
+        return NodeInfo(listOf(myAddress), legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -643,8 +649,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
-        // TODO single message recipient
-        val address = networkMapAddress ?: info.addresses.first() // TODO for now it's the first address from a list
+        val address = networkMapAddress ?: network.getAddressOfParty(services.networkMapCache.getPartyInfo(info.legalIdentity)!!) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
