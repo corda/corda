@@ -4,14 +4,14 @@ Release notes
 Here are release notes for each snapshot release from M9 onwards.
 
 Unreleased
-------------
+----------
 
 Milestone 13
 ------------
 
 Following our first public beta in M12, this release continues the work on API stability and user friendliness. Apart
-from bug fixes and code refactoring, there are also significant improvements mainly in the Vault Query and the
-Identity Service, respectively (for more detailed information about what has changed, see :doc:`changelog`).
+from bug fixes and code refactoring, there are also significant improvements in the Vault Query and the
+Identity Service (for more detailed information about what has changed, see :doc:`changelog`).
 More specifically:
 
 The long awaited new **Vault Query** service makes its debut in this release and provides advanced vault query
@@ -20,7 +20,7 @@ enable selective filtering with and/or composition using multiple operator primi
 Corda internal vault tables (eg. vault_states, vault_fungible_states, vault_linear_states), and also on custom contract
 state schemas defined by CorDapp developers when modelling new contract types. Custom queries are specifiable using a
 simple but sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by
-RPC clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former, provides point-in-time
+RPC clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former provides point-in-time
 snapshot queries whilst the later supplements the snapshot with dynamic streaming of updates.
 See :doc:`vault-query` for full details.
 
@@ -39,16 +39,15 @@ parent-private-key -> child-private-key scheme. This function currently supports
 ECDSA secp256K1, ECDSA secpR1 (NIST P-256) and EdDSA ed25519. We are now very close to fully supporting anonymous
 identities so as to increase privacy even against validating notaries.
 
-Before M13, we tried to serialise everything reachable from the stack on each flow checkpoint. As flows are arbitrary
-code in which it is convenient to do many things, we ended up pulling in a lot of objects that didn't make sense
-to put in a checkpoint, such as ``Thread`` and ``Connection``. To minimize serialization cost and increase
-security by not allowing certain classes to be serialized, we now support class blacklisting
+We have further tightened the set of objects which Corda will attempt to serialise from the stack during flow
+checkpointing. As flows are arbitrary code in which it is convenient to do many things, we ended up pulling in a lot of
+objects that didn't make sense to put in a checkpoint, such as ``Thread`` and ``Connection``. To minimize serialization
+cost and increase security by not allowing certain classes to be serialized, we now support class blacklisting
 that will return an ``IllegalStateException`` if such a class is encountered during a checkpoint. Blacklisting supports
 superclass and superinterface inheritance and always precedes ``@CordaSerializable`` annotation checking.
 
 We've also started working on improving user experience when searching, by adding a new RPC to support fuzzy matching
-of X.500 names. Our aim is to extend our work in usability and we are planning to apply AI and ML techniques in the
-near future.
+of X.500 names.
 
 Milestone 12 - First Public Beta
 --------------------------------
