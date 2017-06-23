@@ -343,7 +343,7 @@ fun <A> poll(
         var counter = -1
         override fun run() {
             if (++counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.seconds * warnCount} seconds...")
+                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
             ErrorOr.catch(check).match({
                 if (it != null) {
@@ -390,7 +390,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
-        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.get(1, SECONDS) } }
+        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.getOrThrow(1.seconds) } }
         shutdowns.reversed().forEach { errorOrShutdown ->
             errorOrShutdown.match(
                     onValue = { shutdown ->
