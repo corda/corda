@@ -2,14 +2,12 @@ package net.corda.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.cert
 import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.getTestPartyAndCertificate
+import net.corda.core.utilities.*
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -24,8 +22,8 @@ import net.corda.testing.node.SimpleNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509CertificateHolder
 import org.junit.Test
+import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.concurrent.TimeoutException
 
@@ -46,7 +44,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `register with the network map service using a legal name different from the TLS CN`() {
-        startSimpleNode(DUMMY_BANK_A.name).use {
+        startSimpleNode(DUMMY_BANK_A.name, DUMMY_CA.certificate.cert).use {
             // Register with the network map using a different legal name
             val response = it.registerWithNetworkMap(DUMMY_BANK_B.name)
             // We don't expect a response because the network map's host verification will prevent a connection back
@@ -58,7 +56,7 @@ class P2PSecurityTest : NodeBasedTest() {
     }
 
     private fun startSimpleNode(legalName: X500Name,
-                                trustRoot: X509CertificateHolder? = null): SimpleNode {
+                                trustRoot: X509Certificate): SimpleNode {
         val config = TestNodeConfiguration(
                 baseDirectory = baseDirectory(legalName),
                 myLegalName = legalName,
