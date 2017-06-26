@@ -3,7 +3,7 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d %highlight{%level %c{1}.%M - %msg%n}{INFO=white,WARN=red,FATAL=bright red}"/>
+            <PatternLayout pattern="%date %highlight{%level %c{1}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}"/>
         </Console>
     </Appenders>
 
