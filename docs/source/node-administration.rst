@@ -39,6 +39,9 @@ not require any particular network protocol for export. So this data can be expo
 some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends
 them out to a statistics collector over the network. For those systems, follow the instructions provided by the vendor.
 
+.. warning:: As of Corda M11, Java serialisation in Corda node has been restricted, meaning mbean access via JMX port
+will no longer work. Please use java agents instead.
+
 Sometimes though, you just want raw access to the data and operations itself. So nodes export them over HTTP on the
 ``/monitoring/json`` HTTP endpoint, using a program called `Jolokia <https://jolokia.org/>`_. Jolokia defines the JSON
 and REST formats for accessing MBeans, and provides client libraries to work with that protocol as well.
@@ -51,12 +54,11 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
 * `JMXTrans <https://github.com/jmxtrans/jmxtrans>`_ is another tool for Graphite, this time, it's got its own agent
   (JVM plugin) which reads a custom config file and exports only the named data. It's more configurable than
   JMX2Graphite and doesn't require a separate process, as the JVM will write directly to Graphite.
-* *Java Mission Control* is a desktop app that can connect to a target JVM that has the right command line flags set
-  (or always, if running locally). You can explore what data is available, create graphs of those metrics, and invoke
-  management operations like forcing a garbage collection.
-* *VisualVM* is another desktop app that can do fine grained JVM monitoring and sampling. Very useful during development.
 * Cloud metrics services like New Relic also understand JMX, typically, by providing their own agent that uploads the
   data to their service on a regular schedule.
+* `Telegraf <https://github.com/influxdata/telegraf>`_ is a tool to collecting, processing, aggregating, and writing
+  metrics. It can bridge different data input to different output using their plugin system, for example, Telegraf can
+  be configured to collect data from Jolokia and write to DataDog web api.
 
 Memory usage and tuning
 -----------------------
