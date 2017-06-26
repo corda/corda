@@ -56,8 +56,8 @@ Here are a few ways to build dashboards and extract monitoring data for a node:
   JMX2Graphite and doesn't require a separate process, as the JVM will write directly to Graphite.
 * Cloud metrics services like New Relic also understand JMX, typically, by providing their own agent that uploads the
   data to their service on a regular schedule.
-* `Telegraf <https://github.com/influxdata/telegraf>`_ is a tool to collecting, processing, aggregating, and writing
-  metrics. It can bridge different data input to different output using their plugin system, for example, Telegraf can
+* `Telegraf <https://github.com/influxdata/telegraf>`_ is a tool to collect, process, aggregate, and write metrics.
+  It can bridge any data input to any output using their plugin system, for example, Telegraf can
   be configured to collect data from Jolokia and write to DataDog web api.
 
 Memory usage and tuning
