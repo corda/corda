@@ -15,7 +15,6 @@ import net.corda.core.serialization.amqp.SerializerFactory
  * Currently this writes a variable length integer to the stream indicating how many bytes of AMQP encoded bytes follow
  * and then that many raw bytes.
  */
-// TODO: Consider setting the immutable flag on the `Serializer` if we make all AMQP types immutable.
 object KryoAMQPSerializer : Serializer<Any>() {
     internal fun registerCustomSerializers(factory: SerializerFactory) {
         factory.apply {
@@ -28,14 +27,15 @@ object KryoAMQPSerializer : Serializer<Any>() {
         }
     }
 
-    // TODO: need to sort out the whitelist...
+    // TODO: need to sort out the whitelist... we currently do not apply the whitelist attached to the [Kryo]
+    // instance to the factory.  We need to do this before turning on AMQP serialization.
     private val serializerFactory = SerializerFactory().apply {
         registerCustomSerializers(this)
     }
 
-    override fun write(kryo: Kryo, output: Output, `object`: Any) {
+    override fun write(kryo: Kryo, output: Output, obj: Any) {
         val amqpOutput = SerializationOutput(serializerFactory)
-        val bytes = amqpOutput.serialize(`object`).bytes
+        val bytes = amqpOutput.serialize(obj).bytes
         output.writeVarInt(bytes.size, true)
         output.write(bytes)
     }

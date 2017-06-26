@@ -7,7 +7,7 @@ import java.lang.reflect.Type
 import java.security.PublicKey
 
 /**
- * A serializer that writes out a public key as the encoded bytes and deserializes those encoded bytes.
+ * A serializer that writes out a public key in X.509 format.
  */
 object PublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::class.java) {
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = emptyList()

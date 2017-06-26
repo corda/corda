@@ -110,7 +110,7 @@ internal fun interfacesForSerialization(type: Type): List<Type> {
 }
 
 private fun exploreType(type: Type?, interfaces: MutableSet<Type>) {
-    val clazz = type?.asClass() //type as? Class<*>) ?: (type as? ParameterizedType)?.rawType as? Class<*>
+    val clazz = type?.asClass()
     if (clazz != null) {
         if (clazz.isInterface) interfaces += type!!
         for (newInterface in clazz.genericInterfaces) {
@@ -147,7 +147,7 @@ fun Data.withList(block: Data.() -> Unit) {
     exit() // exit list
 }
 
-fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
+private fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     val resolvedType = if (contextType != null) TypeToken.of(contextType).resolveType(actualType).type else actualType
     // TODO: surely we check it is concrete at this point with no TypeVariables
     return if (resolvedType is TypeVariable<*>) {
@@ -158,7 +158,7 @@ fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
     }
 }
 
-fun Type.asClass(): Class<*>? {
+internal fun Type.asClass(): Class<*>? {
     return if (this is Class<*>) {
         this
     } else if (this is ParameterizedType) {
@@ -168,7 +168,7 @@ fun Type.asClass(): Class<*>? {
     } else null
 }
 
-fun Type.asArray(): Type? {
+internal fun Type.asArray(): Type? {
     return if (this is Class<*>) {
         this.arrayClass()
     } else if (this is ParameterizedType) {
@@ -176,20 +176,20 @@ fun Type.asArray(): Type? {
     } else null
 }
 
-fun Class<*>.arrayClass(): Class<*> = java.lang.reflect.Array.newInstance(this, 0).javaClass
+internal fun Class<*>.arrayClass(): Class<*> = java.lang.reflect.Array.newInstance(this, 0).javaClass
 
-fun Type.isArray(): Boolean = (this is Class<*> && this.isArray) || (this is GenericArrayType)
+internal fun Type.isArray(): Boolean = (this is Class<*> && this.isArray) || (this is GenericArrayType)
 
-fun Type.componentType(): Type {
+internal fun Type.componentType(): Type {
     check(this.isArray()) { "$this is not an array type." }
     return (this as? Class<*>)?.componentType ?: (this as GenericArrayType).genericComponentType
 }
 
-fun Class<*>.asParameterizedType(): ParameterizedType {
+internal fun Class<*>.asParameterizedType(): ParameterizedType {
     return DeserializedParameterizedType(this, this.typeParameters)
 }
 
-fun Type.asParameterizedType(): ParameterizedType {
+internal fun Type.asParameterizedType(): ParameterizedType {
     return when (this) {
         is Class<*> -> this.asParameterizedType()
         is ParameterizedType -> this
@@ -197,6 +197,6 @@ fun Type.asParameterizedType(): ParameterizedType {
     }
 }
 
-fun Type.isSubClassOf(type: Type): Boolean {
+internal fun Type.isSubClassOf(type: Type): Boolean {
     return TypeToken.of(this).isSubtypeOf(type)
 }

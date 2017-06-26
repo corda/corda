@@ -74,6 +74,9 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
 
     override fun registerImplicit(type: Class<*>): Registration {
         val hasAnnotation = checkForAnnotation(type)
+        // If something is not annotated, or AMQP is disabled, we stay serializing with Kryo.  This will typically be the
+        // case for flow checkpoints (ingoring the case where AMQP is disabled) since our top level messaging data structures
+        // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
         if (!hasAnnotation || !amqpEnabled) {
             // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
             val references = kryo.references

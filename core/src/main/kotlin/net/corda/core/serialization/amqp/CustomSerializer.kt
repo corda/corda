@@ -16,7 +16,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
     abstract val additionalSerializers: Iterable<CustomSerializer<out Any>>
 
     /**
-     * This method should return true if the custom serializer can serialize and instance of the class passed as
+     * This method should return true if the custom serializer can serialize an instance of the class passed as the
      * parameter.
      */
     abstract fun isSerializerFor(clazz: Class<*>): Boolean
@@ -50,7 +50,7 @@ abstract class CustomSerializer<T> : AMQPSerializer<T> {
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
-        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${fingerprintForStrings(superClassSerializer.typeDescriptor, nameForType(clazz))}"
+        override val typeDescriptor: String = "$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor, nameForType(clazz))}"
         private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(clazz), null, emptyList(), SerializerFactory.nameForType(superClassSerializer.type), Descriptor(typeDescriptor, null), emptyList())
         override fun writeClassInfo(output: SerializationOutput) {
             output.writeTypeNotations(typeNotation)

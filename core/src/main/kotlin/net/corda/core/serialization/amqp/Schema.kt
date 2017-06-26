@@ -2,7 +2,7 @@ package net.corda.core.serialization.amqp
 
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
-import net.corda.core.crypto.Base58
+import net.corda.core.crypto.toBase64
 import net.corda.core.serialization.OpaqueBytes
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
@@ -13,6 +13,7 @@ import java.lang.reflect.GenericArrayType
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
+import java.util.*
 
 // TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
@@ -311,7 +312,7 @@ private val ALREADY_SEEN_HASH: String = "Already seen = true"
 private val NULLABLE_HASH: String = "Nullable = true"
 private val NOT_NULLABLE_HASH: String = "Nullable = false"
 private val ANY_TYPE_HASH: String = "Any type = true"
-private val TYPE_VARIABLE_HASH: String = "Any type = true"
+private val TYPE_VARIABLE_HASH: String = "Type variable = true"
 
 /**
  * The method generates a fingerprint for a given JVM [Type] that should be unique to the schema representation.
@@ -323,15 +324,15 @@ private val TYPE_VARIABLE_HASH: String = "Any type = true"
  */
 // TODO: write tests
 internal fun fingerprintForType(type: Type, factory: SerializerFactory): String {
-    return Base58.encode(fingerprintForType(type, null, HashSet(), Hashing.murmur3_128().newHasher(), factory).hash().asBytes())
+    return fingerprintForType(type, null, HashSet(), Hashing.murmur3_128().newHasher(), factory).hash().asBytes().toBase64()
 }
 
-internal fun fingerprintForStrings(vararg typeDescriptors: String): String {
+internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String {
     val hasher = Hashing.murmur3_128().newHasher()
     for (typeDescriptor in typeDescriptors) {
         hasher.putUnencodedChars(typeDescriptor)
     }
-    return Base58.encode(hasher.hash().asBytes())
+    return hasher.hash().asBytes().toBase64()
 }
 
 private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
@@ -347,7 +348,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                     fingerprintForType(type.componentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
                 } else if (SerializerFactory.isPrimitive(type)) {
                     hasher.putUnencodedChars(type.name)
-                } else if (Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)) {
+                } else if (isCollectionOrMap(type)) {
                     hasher.putUnencodedChars(type.name)
                 } else {
                     // Need to check if a custom serializer is applicable
@@ -366,7 +367,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
             } else if (type is ParameterizedType) {
                 // Hash the rawType + params
                 val clazz = type.rawType as Class<*>
-                val startingHash = if (Collection::class.java.isAssignableFrom(clazz) || Map::class.java.isAssignableFrom(clazz)) {
+                val startingHash = if (isCollectionOrMap(clazz)) {
                     hasher.putUnencodedChars(clazz.name)
                 } else {
                     fingerprintForObject(type, type, alreadySeen, hasher, factory)
@@ -377,7 +378,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                 fingerprintForType(type.genericComponentType, contextType, alreadySeen, hasher, factory).putUnencodedChars(ARRAY_HASH)
             } else if (type is TypeVariable<*>) {
                 // TODO: include bounds
-                hasher.putUnencodedChars(type.name)
+                hasher.putUnencodedChars(type.name).putUnencodedChars(TYPE_VARIABLE_HASH)
             } else {
                 throw NotSerializableException("Don't know how to hash")
             }
@@ -386,6 +387,8 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
         }
     }
 }
+
+private fun isCollectionOrMap(type: Class<*>) = Collection::class.java.isAssignableFrom(type) || Map::class.java.isAssignableFrom(type)
 
 private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     // Hash the class + properties + interfaces
