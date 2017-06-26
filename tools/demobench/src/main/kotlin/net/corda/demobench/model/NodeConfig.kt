@@ -56,11 +56,12 @@ class NodeConfig(
             .withValue("rpcUsers", valueFor(users.map(User::toMap).toList()))
             .withValue("h2port", valueFor(h2Port))
             .withValue("useTestClock", valueFor(true))
+            .withValue("detectPublicIp", valueFor(false))
 
     fun toText(): String = toFileConfig().root().render(renderOptions)
 
     fun moveTo(baseDir: Path) = NodeConfig(
-            baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
+        baseDir, legalName, p2pPort, rpcPort, webPort, h2Port, extraServices, users, networkMap
     )
 
     fun install(plugins: Collection<Path>) {
