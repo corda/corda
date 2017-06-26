@@ -1,4 +1,3 @@
-
 buildscript {
     // For sharing constants between builds
     Properties constants = new Properties()
@@ -75,6 +74,7 @@ plugins {
     // but the DSL has some restrictions e.g can't be used on the allprojects section. So we should revisit this if there are improvements in Gradle.
     // Version 1.0.2 of this plugin uses capsule:1.0.1
     id "us.kirchmeier.capsule" version "1.0.2"
+    id "com.jfrog.artifactory" version "4.4.18"
 }
 
 ext {
@@ -85,6 +85,7 @@ apply plugin: 'project-report'
 apply plugin: 'com.github.ben-manes.versions'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.cordformation'
+apply plugin: 'maven-publish'
 
 // We need the following three lines even though they're inside an allprojects {} block below because otherwise
 // IntelliJ gets confused when importing the project and ends up erasing and recreating the .idea directory, along
@@ -272,4 +273,18 @@ task buildCordappDependenciesZip(type: Zip) {
     from buildscript.configurations.classpath
     from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+artifactory {
+    publish {
+        contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
+        repository {
+            repoKey = 'corda-releases'
+            username = 'teamcity'
+            password = System.getenv('CORDA_ARTIFACTORY_PASSWORD')
+        }
+        defaults {
+            publications('corda-jfx', 'corda-mock', 'corda-rpc', 'corda-core', 'corda', 'cordform-common', 'corda-finance', 'corda-node', 'corda-node-api', 'corda-node-schemas', 'corda-test-utils', 'corda-jackson', 'corda-verifier', 'corda-webserver-impl', 'corda-webserver')
+        }
+    }
 }
