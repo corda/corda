@@ -2,11 +2,14 @@ package net.corda.docs
 
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.getOrThrow
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.and
 import net.corda.core.toFuture
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -26,10 +29,10 @@ class WorkflowTransactionBuildTutorialTest {
     lateinit var nodeB: MockNetwork.MockNode
 
     // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
-    private inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
-        val linearHeads = vaultService.linearHeadsOfType<T>()
-        val original = storageService.validatedTransactions.getTransaction(ref.txhash)!!.tx.outRef<T>(ref.index)
-        return linearHeads[original.state.data.linearId]!!
+    private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
+        val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(linearId = listOf(ref))
+                                                  .and(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)))
+        return linearHeads.states.first()
     }
 
     @Before
@@ -59,14 +62,15 @@ class WorkflowTransactionBuildTutorialTest {
         val flow1 = nodeA.services.startFlow(SubmitTradeApprovalFlow("1234", nodeB.info.legalIdentity))
         // Wait for the flow to finish
         val proposalRef = flow1.resultFuture.getOrThrow()
+        val proposalLinearId = proposalRef.state.data.linearId
         // Wait for NodeB to include it's copy in the vault
         nodeBVaultUpdate.get()
         // Fetch the latest copy of the state from both nodes
         val latestFromA = nodeA.database.transaction {
-            nodeA.services.latest<TradeApprovalContract.State>(proposalRef.ref)
+            nodeA.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         val latestFromB = nodeB.database.transaction {
-            nodeB.services.latest<TradeApprovalContract.State>(proposalRef.ref)
+            nodeB.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         // Confirm the state as as expected
         assertEquals(WorkflowState.NEW, proposalRef.state.data.state)
@@ -87,10 +91,10 @@ class WorkflowTransactionBuildTutorialTest {
         secondNodeBVaultUpdate.get()
         // Fetch the latest copies from the vault
         val finalFromA = nodeA.database.transaction {
-            nodeA.services.latest<TradeApprovalContract.State>(proposalRef.ref)
+            nodeA.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         val finalFromB = nodeB.database.transaction {
-            nodeB.services.latest<TradeApprovalContract.State>(proposalRef.ref)
+            nodeB.services.latest<TradeApprovalContract.State>(proposalLinearId)
         }
         // Confirm the state is as expected
         assertEquals(WorkflowState.APPROVED, completedRef.state.data.state)
