@@ -13,7 +13,7 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{%level{length=1} %d{HH:mm:ss} [%t] %c{2}.%M - %msg%n}{INFO=white,WARN=red,FATAL=bright red}" />
+            <PatternLayout pattern="%highlight{%level{length=1} %date{HH:mm:ss} [%t] %c{2}.%method - %msg%n}{INFO=white,WARN=red,FATAL=bright red}" />
         </Console>
 
         <!-- Required for printBasicInfo -->
@@ -25,9 +25,9 @@
              those that are older than 60 days, but keep the most recent 10 GB -->
         <RollingFile name="RollingFile-Appender"
                      fileName="${sys:log-path}/${log-name}.log"
-                     filePattern="${archive}/${log-name}.%d{yyyy-MM-dd}-%i.log.gz">
+                     filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout pattern="[%-5level] %d{ISO8601}{GMT+0} [%t] %c{2}.%M - %msg%n"/>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{GMT+0} [%t] %c{2}.%method - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>

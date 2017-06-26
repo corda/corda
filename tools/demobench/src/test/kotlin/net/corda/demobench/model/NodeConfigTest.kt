@@ -142,6 +142,7 @@ class NodeConfigTest {
                 users = listOf(user("jenny"))
         )
         assertEquals(prettyPrint("{"
+                + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
@@ -169,6 +170,7 @@ class NodeConfigTest {
         config.networkMap = NetworkMapConfig(DUMMY_NOTARY.name, 12345)
 
         assertEquals(prettyPrint("{"
+                + "\"detectPublicIp\":false,"
                 + "\"extraAdvertisedServiceIds\":[\"my.service\"],"
                 + "\"h2port\":30001,"
                 + "\"myLegalName\":\"CN=My Name,OU=Corda QA Department,O=R3 CEV,L=New York,C=US\","
@@ -210,6 +212,7 @@ class NodeConfigTest {
         assertEquals(NetworkMapInfo(localPort(12345), DUMMY_NOTARY.name), fullConfig.networkMapService)
         assertTrue((fullConfig.dataSourceProperties["dataSource.url"] as String).contains("AUTO_SERVER_PORT=30001"))
         assertTrue(fullConfig.useTestClock)
+        assertFalse(fullConfig.detectPublicIp)
     }
 
     @Test
