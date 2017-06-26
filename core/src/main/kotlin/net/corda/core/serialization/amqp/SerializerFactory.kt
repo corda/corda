@@ -100,7 +100,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
             return null
         } else if (declaredClass.isAssignableFrom(actualClass)) {
             return if (actualClass.typeParameters.isNotEmpty()) {
-                // The actual class can never have type variables resolved, so let's try and resolve them
+                // The actual class can never have type variables resolved, due to the JVM's use of type erasure, so let's try and resolve them
                 // Search for declared type in the inheritance hierarchy and then see if that fills in all the variables
                 val implementationChain: List<Type>? = findPathToDeclared(actualClass, declaredType, mutableListOf<Type>())
                 if (implementationChain != null) {
@@ -193,7 +193,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
             // TODO: class loader logic, and compare the schema.
             val type = typeForName(typeNotation.name)
-            get(type as? Class<*> ?: (type as? ParameterizedType)?.rawType as? Class<*> ?: throw NotSerializableException("Unable to build composite type for $type"), type)
+            get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
         }
     }
 
@@ -202,8 +202,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
             if (isPrimitive(clazz)) {
                 AMQPPrimitiveSerializer(clazz)
             } else {
-                // TODO: the custom serializer, if it supports subclasses, should output a RestrictedType to map from sub- to super-class to the schema
-                findCustomSerializer(clazz, declaredType) ?: {
+                findCustomSerializer(clazz, declaredType) ?: run {
                     if (type.isArray()) {
                         whitelisted(type.componentType())
                         ArraySerializer(type, this)
@@ -214,7 +213,7 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                         whitelisted(type)
                         ObjectSerializer(type, this)
                     }
-                }()
+                }
             }
         }
     }
@@ -237,11 +236,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         return null
     }
 
-    private fun whitelisted(type: Type): Boolean {
+    private fun whitelisted(type: Type) {
         val clazz = type.asClass()!!
-        if (whitelist.hasListed(clazz) || hasAnnotationInHierarchy(clazz)) {
-            return true
-        } else {
+        if (!whitelist.hasListed(clazz) && !hasAnnotationInHierarchy(clazz)) {
             throw NotSerializableException("Class $type is not on the whitelist or annotated with @CordaSerializable.")
         }
     }

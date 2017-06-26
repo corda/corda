@@ -5,16 +5,14 @@ import java.lang.reflect.Type
 
 /**
  * A custom serializer that transports nothing on the wire (except a boolean "false", since AMQP does not support
- * absolutely nothing, or null) when we have a singleton within the node that we just
+ * absolutely nothing, or null as a described type) when we have a singleton within the node that we just
  * want converting back to that singleton instance on the receiving JVM.
  */
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
-    private val interfaces = interfacesForSerialization(type) // TODO maybe this proves too much and we need annotations to restrict.
+    private val interfaces = interfacesForSerialization(type)
 
-    private fun generateProvides(): List<String> {
-        return interfaces.map { it.typeName }
-    }
+    private fun generateProvides(): List<String> = interfaces.map { it.typeName }
 
     internal val typeNotation: TypeNotation = RestrictedType(type.typeName, "Singleton", generateProvides(), "boolean", Descriptor(typeDescriptor, null), emptyList())
 
