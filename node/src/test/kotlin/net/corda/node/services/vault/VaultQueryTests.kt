@@ -1,8 +1,6 @@
 package net.corda.node.services.vault
 
-import net.corda.contracts.CommercialPaper
-import net.corda.contracts.Commodity
-import net.corda.contracts.DealState
+import net.corda.contracts.*
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
@@ -1382,6 +1380,27 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             val results = vaultQuerySvc.queryBy<LinearState>(LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL))
             assertThat(results.statesMetadata).hasSize(4)
             assertThat(results.states).hasSize(4)
+        }
+    }
+
+    @Test
+    fun `DEPRECATED DealState dealsWith helper method`() {
+        database.transaction {
+
+            val parties = listOf(MEGA_CORP)
+
+            services.fillWithSomeTestLinearStates(2, "TEST")
+            services.fillWithSomeTestDeals(listOf("456"), parties)
+            services.fillWithSomeTestDeals(listOf("123", "789"))
+
+            // DOCSTART VaultQueryExample11
+            val criteria = LinearStateQueryCriteria(participants = parties)
+            val results = vaultQuerySvc.queryBy<DealState>(criteria)
+            // DOCEND
+            assertThat(results.states).hasSize(1)
+
+            val states = vaultSvc.dealsWith<DummyDealContract.State>(MEGA_CORP)
+            assertThat(states).hasSize(1)
         }
     }
 

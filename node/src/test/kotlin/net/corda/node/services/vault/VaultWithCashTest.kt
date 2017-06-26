@@ -6,15 +6,22 @@ import net.corda.contracts.getCashBalance
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultQueryService
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.consumedStates
-import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.*
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.LogHelper
+import net.corda.node.services.database.HibernateConfiguration
+import net.corda.node.services.schema.NodeSchemaService
+import net.corda.testing.MEGA_CORP
+import net.corda.testing.MEGA_CORP_KEY
 import net.corda.schemas.CommercialPaperSchemaV1
 import net.corda.testing.*
 import net.corda.testing.contracts.*
@@ -37,6 +44,7 @@ import kotlin.test.assertEquals
 class VaultWithCashTest : TestDependencyInjectionBase() {
     lateinit var services: MockServices
     val vault: VaultService get() = services.vaultService
+    val vaultQuery: VaultQueryService get() = services.vaultQueryService
     lateinit var database: CordaPersistence
     val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
@@ -46,8 +54,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
         val dataSourceProps = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProps, makeTestDatabaseProperties())
         database.transaction {
-            val customSchemas = setOf(CommercialPaperSchemaV1, DummyLinearStateSchemaV1)
-            val hibernateConfig = HibernateConfiguration(NodeSchemaService(customSchemas), makeTestDatabaseProperties())
+            val hibernateConfig = HibernateConfiguration(NodeSchemaService())
             services = object : MockServices() {
                 override val vaultService: VaultService = makeVaultService(dataSourceProps, hibernateConfig)
 
@@ -58,8 +65,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
-
-                override val vaultQueryService: VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
+                override val vaultQueryService : VaultQueryService = HibernateVaultQueryImpl(hibernateConfig, vaultService.updatesPublisher)
             }
         }
     }
@@ -76,7 +82,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             // Fix the PRNG so that we get the same splits every time.
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
 
-            val w = vault.unconsumedStates<Cash.State>().toList()
+            val w = vaultQuery.queryBy<Cash.State>().states
             assertEquals(3, w.size)
 
             val state = w[0].state.data
@@ -139,7 +145,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
                     ownedBy = AnonymousParty(freshKey))
             println("Cash balance: ${services.getCashBalance(USD)}")
 
-            assertThat(vault.unconsumedStates<Cash.State>()).hasSize(10)
+            assertThat(vaultQuery.queryBy<Cash.State>().states).hasSize(10)
             assertThat(vault.softLockedStates<Cash.State>()).hasSize(0)
         }
 
@@ -154,16 +160,20 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
                     val ptxn1 = notaryServices.signInitialTransaction(txn1Builder)
                     val txn1 = services.addSignature(ptxn1, freshKey)
                     println("txn1: ${txn1.id} spent ${((txn1.tx.outputs[0].data) as Cash.State).amount}")
+                    val unconsumedStates1 = vaultQuery.queryBy<Cash.State>()
+                    val consumedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
                     println("""txn1 states:
-                                UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
-                                CONSUMED: ${vault.consumedStates<Cash.State>().count()} : ${vault.consumedStates<Cash.State>()},
+                                UNCONSUMED: ${unconsumedStates1.totalStatesAvailable} : $unconsumedStates1,
+                                CONSUMED: ${consumedStates1.totalStatesAvailable} : $consumedStates1,
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     services.recordTransactions(txn1)
                     println("txn1: Cash balance: ${services.getCashBalance(USD)}")
+                    val unconsumedStates2 = vaultQuery.queryBy<Cash.State>()
+                    val consumedStates2 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
                     println("""txn1 states:
-                                UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
-                                CONSUMED: ${vault.consumedStates<Cash.State>().count()} : ${vault.consumedStates<Cash.State>()},
+                                UNCONSUMED: ${unconsumedStates2.totalStatesAvailable} : $unconsumedStates2,
+                                CONSUMED: ${consumedStates2.totalStatesAvailable} : $consumedStates2,
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     txn1
@@ -184,16 +194,20 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
                     val ptxn2 = notaryServices.signInitialTransaction(txn2Builder)
                     val txn2 = services.addSignature(ptxn2, freshKey)
                     println("txn2: ${txn2.id} spent ${((txn2.tx.outputs[0].data) as Cash.State).amount}")
+                    val unconsumedStates1 = vaultQuery.queryBy<Cash.State>()
+                    val consumedStates1 = vaultQuery.queryBy<Cash.State>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
                     println("""txn2 states:
-                                UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
-                                CONSUMED: ${vault.consumedStates<Cash.State>().count()} : ${vault.consumedStates<Cash.State>()},
+                                UNCONSUMED: ${unconsumedStates1.totalStatesAvailable} : $unconsumedStates1,
+                                CONSUMED: ${consumedStates1.totalStatesAvailable} : $consumedStates1,
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     services.recordTransactions(txn2)
                     println("txn2: Cash balance: ${services.getCashBalance(USD)}")
+                    val unconsumedStates2 = vaultQuery.queryBy<Cash.State>()
+                    val consumedStates2 = vaultQuery.queryBy<Cash.State>()
                     println("""txn2 states:
-                                UNCONSUMED: ${vault.unconsumedStates<Cash.State>().count()} : ${vault.unconsumedStates<Cash.State>()},
-                                CONSUMED: ${vault.consumedStates<Cash.State>().count()} : ${vault.consumedStates<Cash.State>()},
+                                UNCONSUMED: ${unconsumedStates2.totalStatesAvailable} : $unconsumedStates2,
+                                CONSUMED: ${consumedStates2.totalStatesAvailable} : $consumedStates2,
                                 LOCKED: ${vault.softLockedStates<Cash.State>().count()} : ${vault.softLockedStates<Cash.State>()}
                     """)
                     txn2
@@ -250,7 +264,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyIssue)
-            assertThat(vault.unconsumedStates<DummyLinearContract.State>()).hasSize(1)
+            assertThat(vaultQuery.queryBy<DummyLinearContract.State>().states).hasSize(1)
 
             // Move the same state
             val dummyMoveBuilder = TransactionBuilder(notary = DUMMY_NOTARY).apply {
@@ -263,7 +277,7 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             dummyIssue.toLedgerTransaction(services).verify()
 
             services.recordTransactions(dummyMove)
-            assertThat(vault.unconsumedStates<DummyLinearContract.State>()).hasSize(1)
+            assertThat(vaultQuery.queryBy<DummyLinearContract.State>().states).hasSize(1)
         }
     }
 
@@ -275,11 +289,11 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L), ownedBy = AnonymousParty(freshKey))
             services.fillWithSomeTestCash(100.SWISS_FRANCS, DUMMY_NOTARY, 2, 2, Random(0L))
             services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-            val cash = vault.unconsumedStates<Cash.State>()
+            val cash = vaultQuery.queryBy<Cash.State>().states
             cash.forEach { println(it.state.data.amount) }
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-            val deals = vault.unconsumedStates<DummyDealContract.State>()
+            val deals = vaultQuery.queryBy<DummyDealContract.State>().states
             deals.forEach { println(it.state.data.ref) }
         }
 
@@ -291,10 +305,10 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             val spendTX = services.addSignature(spendPTX, freshKey)
             services.recordTransactions(spendTX)
 
-            val consumedStates = vault.consumedStates<ContractState>()
+            val consumedStates =vaultQuery.queryBy<ContractState>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)).states
             assertEquals(3, consumedStates.count())
 
-            val unconsumedStates = vault.unconsumedStates<ContractState>()
+            val unconsumedStates = vaultQuery.queryBy<ContractState>().states
             assertEquals(7, unconsumedStates.count())
         }
     }
@@ -307,11 +321,11 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
         database.transaction {
 
             services.fillWithSomeTestDeals(listOf("123", "456", "789"))
-            val deals = vault.unconsumedStates<DummyDealContract.State>().toList()
+            val deals = vaultQuery.queryBy<DummyDealContract.State>().states
             deals.forEach { println(it.state.data.ref) }
 
             services.fillWithSomeTestLinearStates(3)
-            val linearStates = vault.unconsumedStates<DummyLinearContract.State>().toList()
+            val linearStates = vaultQuery.queryBy<DummyLinearContract.State>().states
             linearStates.forEach { println(it.state.data.linearId) }
 
             // Create a txn consuming different contract types
@@ -327,10 +341,10 @@ class VaultWithCashTest : TestDependencyInjectionBase() {
             dummyMove.toLedgerTransaction(services).verify()
             services.recordTransactions(dummyMove)
 
-            val consumedStates = vault.consumedStates<ContractState>()
+            val consumedStates = vaultQuery.queryBy<ContractState>(VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)).states
             assertEquals(2, consumedStates.count())
 
-            val unconsumedStates = vault.unconsumedStates<ContractState>()
+            val unconsumedStates =vaultQuery.queryBy<ContractState>().states
             assertEquals(6, unconsumedStates.count())
         }
     }

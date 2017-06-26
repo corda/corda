@@ -40,11 +40,3 @@ inline fun <reified T : ContractState> List<StateRef>.toStateAndRef(rpc: CordaRP
     val stateRefs = vault.associateBy { it.ref }
     return mapNotNull { stateRefs[it] }.filterStatesOfType<T>()
 }
-
-// TODO: This should probably have its generics fixed and moved into the core platform API.
-@Suppress("UNCHECKED_CAST")
-fun <T : ContractState> List<StateRef>.toStateAndRef(services: ServiceHub): List<StateAndRef<T>> {
-    return services.vaultService.statesForRefs(this).map {
-        StateAndRef(it.value as TransactionState<T>, it.key)
-    }
-}

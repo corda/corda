@@ -5,7 +5,8 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.SchedulableFlow
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.vega.contracts.PortfolioState
 import java.time.LocalDate
 
@@ -19,7 +20,7 @@ object SimmRevaluation {
     class Initiator(val curStateRef: StateRef, val valuationDate: LocalDate) : FlowLogic<Unit>() {
         @Suspendable
         override fun call(): Unit {
-            val stateAndRef = serviceHub.vaultService.linearHeadsOfType<PortfolioState>().values.first { it.ref == curStateRef }
+            val stateAndRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.first()
             val curState = stateAndRef.state.data
             val myIdentity = serviceHub.myInfo.legalIdentity
             if (myIdentity == curState.participants[0]) {

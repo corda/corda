@@ -16,6 +16,9 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
+import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -67,14 +70,16 @@ object SimmFlow {
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             myIdentity = serviceHub.myInfo.legalIdentity
 
-            val trades = serviceHub.vaultService.dealsWith<IRSState>(otherParty)
+            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(LinearStateQueryCriteria(participants = listOf(otherParty))).states
+
             val portfolio = Portfolio(trades, valuationDate)
             if (existing == null) {
                 agreePortfolio(portfolio)
             } else {
                 updatePortfolio(portfolio, existing)
             }
-            val portfolioStateRef = serviceHub.vaultService.dealsWith<PortfolioState>(otherParty).first()
+            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(LinearStateQueryCriteria(participants = listOf(otherParty))).states.first()
+
             val state = updateValuation(portfolioStateRef)
             logger.info("SimmFlow done")
             return state
@@ -104,7 +109,8 @@ object SimmFlow {
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>): RevisionedState<PortfolioState.Update> {
             logger.info("Agreeing valuations")
             val state = stateRef.state.data
-            val portfolio = state.portfolio.toStateAndRef<IRSState>(serviceHub).toPortfolio()
+            val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = state.portfolio)).states.toPortfolio()
+
             val valuer = serviceHub.identityService.partyFromAnonymous(state.valuer)
             require(valuer != null) { "Valuer party must be known to this node" }
             val valuation = agreeValuation(portfolio, valuationDate, valuer!!)
@@ -190,7 +196,7 @@ object SimmFlow {
         @Suspendable
         override fun call() {
             ownParty = serviceHub.myInfo.legalIdentity
-            val trades = serviceHub.vaultService.dealsWith<IRSState>(replyToParty)
+            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(LinearStateQueryCriteria(participants = listOf(replyToParty))).states
             val portfolio = Portfolio(trades)
             logger.info("SimmFlow receiver started")
             offer = receive<OfferMessage>(replyToParty).unwrap { it }
@@ -199,7 +205,7 @@ object SimmFlow {
             } else {
                 updatePortfolio(portfolio)
             }
-            val portfolioStateRef = serviceHub.vaultService.dealsWith<PortfolioState>(replyToParty).first()
+            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(LinearStateQueryCriteria(participants = listOf(replyToParty))).states.first()
             updateValuation(portfolioStateRef)
         }
 
@@ -308,7 +314,7 @@ object SimmFlow {
 
         @Suspendable
         private fun updateValuation(stateRef: StateAndRef<PortfolioState>) {
-            val portfolio = stateRef.state.data.portfolio.toStateAndRef<IRSState>(serviceHub).toPortfolio()
+            val portfolio = serviceHub.vaultQueryService.queryBy<IRSState>(VaultQueryCriteria(stateRefs = stateRef.state.data.portfolio)).states.toPortfolio()
             val valuer = serviceHub.identityService.partyFromAnonymous(stateRef.state.data.valuer) ?: throw IllegalStateException("Unknown valuer party ${stateRef.state.data.valuer}")
             val valuation = agreeValuation(portfolio, offer.valuationDate, valuer)
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {

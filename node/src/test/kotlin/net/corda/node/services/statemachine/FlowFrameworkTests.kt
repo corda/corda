@@ -19,7 +19,8 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.unconsumedStates
+import net.corda.core.node.services.queryBy
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.toFuture
@@ -920,7 +921,7 @@ class FlowFrameworkTests {
     private class VaultAccessFlow : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            serviceHub.vaultService.unconsumedStates<Cash.State>().filter { true }
+            serviceHub.vaultQueryService.queryBy<Cash.State>().states.filter { true }
             waitForLedgerCommit(SecureHash.zeroHash)
         }
     }

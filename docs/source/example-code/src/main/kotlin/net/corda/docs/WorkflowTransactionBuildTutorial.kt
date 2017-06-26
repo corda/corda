@@ -12,7 +12,9 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.linearHeadsOfType
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -24,9 +26,9 @@ import java.security.PublicKey
 // DOCSTART 1
 // Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
 inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
-    val linearHeads = vaultService.linearHeadsOfType<T>()
-    val original = toStateAndRef<T>(ref)
-    return linearHeads[original.state.data.linearId]!!
+    val linearHeads = vaultQueryService.queryBy<T>(VaultQueryCriteria(stateRefs = listOf(ref),
+                                                                      status = Vault.StateStatus.UNCONSUMED))
+    return linearHeads.states.first()
 }
 // DOCEND 1
 
