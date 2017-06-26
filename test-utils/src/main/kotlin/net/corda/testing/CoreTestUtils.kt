@@ -167,30 +167,6 @@ fun testNodeConfiguration(
     return nc
 }
 
-fun testConfiguration(baseDirectory: Path, legalName: X500Name, basePort: Int): FullNodeConfiguration {
-    return FullNodeConfiguration(
-            basedir = baseDirectory,
-            myLegalName = legalName,
-            networkMapService = null,
-            emailAddress = "",
-            keyStorePassword = "cordacadevpass",
-            trustStorePassword = "trustpass",
-            dataSourceProperties = makeTestDataSourceProperties(legalName.commonName),
-            certificateSigningService = URL("http://localhost"),
-            rpcUsers = emptyList(),
-            verifierType = VerifierType.InMemory,
-            useHTTPS = false,
-            p2pAddress = HostAndPort.fromParts("localhost", basePort),
-            rpcAddress = HostAndPort.fromParts("localhost", basePort + 1),
-            messagingServerAddress = null,
-            extraAdvertisedServiceIds = emptyList(),
-            bftReplicaId = null,
-            notaryNodeAddress = null,
-            notaryClusterAddresses = emptyList(),
-            certificateChainCheckPolicies = emptyList(),
-            devMode = true)
-}
-
 @JvmOverloads
 fun configureTestSSL(legalName: X500Name = MEGA_CORP.name): SSLConfiguration = object : SSLConfiguration {
     override val certificatesDirectory = Files.createTempDirectory("certs")

@@ -27,6 +27,7 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val verifierType: VerifierType
     val messageRedeliveryDelaySeconds: Int
     val bftReplicaId: Int?
+    val notaryNodeAddress: HostAndPort?
     val notaryClusterAddresses: List<HostAndPort>
 }
 
@@ -56,7 +57,7 @@ data class FullNodeConfiguration(
         val messagingServerAddress: HostAndPort?,
         val extraAdvertisedServiceIds: List<String>,
         override val bftReplicaId: Int?,
-        val notaryNodeAddress: HostAndPort?,
+        override val notaryNodeAddress: HostAndPort?,
         override val notaryClusterAddresses: List<HostAndPort>,
         override val certificateChainCheckPolicies: List<CertChainPolicyConfig>,
         override val devMode: Boolean = false,

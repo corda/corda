@@ -278,7 +278,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overriden to cause nodes to have stable or colliding identity/service keys.
+     * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+     * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
