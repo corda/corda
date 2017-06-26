@@ -1,5 +1,6 @@
 package net.corda.core
 
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.utilities.loggerFor
@@ -15,7 +16,9 @@ object MoreFutures {
     fun <S, T> firstOf(vararg futures: ListenableFuture<out S>, handler: (ListenableFuture<out S>) -> T) = firstOf(futures, defaultLog, handler)
 
     private val defaultLog = loggerFor<MoreFutures>()
+    @VisibleForTesting
     internal val shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
+
     internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Logger, handler: (ListenableFuture<out S>) -> T): ListenableFuture<T> {
         val resultFuture = SettableFuture.create<T>()
         val permit = Semaphore(1)

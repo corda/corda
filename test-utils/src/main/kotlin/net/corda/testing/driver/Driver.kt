@@ -345,15 +345,15 @@ fun <A> poll(
             if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
-            ErrorOr.catch(check).match({
+            ErrorOr.catch(check).match(onValue = {
                 if (it != null) {
                     resultFuture.set(it)
                 } else {
                     executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
                 }
-            }) {
+            }, onError = {
                 resultFuture.setException(it)
-            }
+            })
         }
     }
     executorService.submit(task) // The check may be expensive, so always run it in the background even the first time.
