@@ -32,7 +32,7 @@ class WorkflowTransactionBuildTutorialTest {
     private inline fun <reified T : LinearState> ServiceHub.latest(ref: UniqueIdentifier): StateAndRef<T> {
         val linearHeads = vaultQueryService.queryBy<T>(QueryCriteria.LinearStateQueryCriteria(linearId = listOf(ref))
                                                   .and(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)))
-        return linearHeads.states.first()
+        return linearHeads.states.single()
     }
 
     @Before
