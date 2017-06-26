@@ -1387,7 +1387,8 @@ class VaultQueryTests : TestDependencyInjectionBase() {
     fun `DEPRECATED DealState dealsWith helper method`() {
         database.transaction {
 
-            val parties = listOf(MEGA_CORP)
+            // specify a different participant to the node owner (MEGA_CORP)
+            val parties = listOf(MINI_CORP)
 
             services.fillWithSomeTestLinearStates(2, "TEST")
             services.fillWithSomeTestDeals(listOf("456"), parties)
@@ -1399,7 +1400,7 @@ class VaultQueryTests : TestDependencyInjectionBase() {
             // DOCEND
             assertThat(results.states).hasSize(1)
 
-            val states = vaultSvc.dealsWith<DummyDealContract.State>(MEGA_CORP)
+            val states = vaultSvc.dealsWith<DummyDealContract.State>(MINI_CORP)
             assertThat(states).hasSize(1)
         }
     }
