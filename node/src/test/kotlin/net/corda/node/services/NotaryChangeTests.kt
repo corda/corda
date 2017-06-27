@@ -37,9 +37,9 @@ class NotaryChangeTests {
         oldNotaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(SimpleNotaryService.type)))
-        clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
-        clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address)
-        newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.info.address, advertisedServices = ServiceInfo(SimpleNotaryService.type))
+        clientNodeA = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
+        clientNodeB = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress)
+        newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
         mockNet.runNetwork() // Clear network map registration messages
     }

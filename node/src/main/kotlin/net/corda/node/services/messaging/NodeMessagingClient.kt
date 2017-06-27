@@ -568,11 +568,10 @@ class NodeMessagingClient(override val config: NodeConfiguration,
         }
     }
 
-
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.Node -> partyInfo.node.address
-            is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
+            is PartyInfo.Node -> getArtemisPeerAddress(partyInfo.node)
+            is PartyInfo.Service -> ServiceAddress(partyInfo.service.identity.owningKey)
         }
     }
 }

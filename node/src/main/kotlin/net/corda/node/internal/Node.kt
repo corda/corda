@@ -32,6 +32,7 @@ import net.corda.node.services.transactions.RaftUniquenessProvider
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
+import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.IP_REQUEST_PREFIX
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.NetworkMapAddress
@@ -272,6 +273,11 @@ open class Node(override val configuration: FullNodeConfiguration,
             }
             else -> PersistentUniquenessProvider()
         }
+    }
+
+    override fun myAddresses(): List<HostAndPort> {
+        val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
+        return listOf(address.hostAndPort)
     }
 
     /**
