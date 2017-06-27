@@ -6,6 +6,9 @@ repositories {
     mavenCentral()
 }
 
+// This tracks the gradle plugins version and not Corda
+version gradle_plugins_version
+
 dependencies {
     // TypeSafe Config: for simple and human friendly config files.
     compile "com.typesafe:config:$typesafe_config_version"
