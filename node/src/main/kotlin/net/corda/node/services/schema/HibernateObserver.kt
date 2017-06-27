@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.schemas.QueryableState
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
@@ -34,13 +33,11 @@ class HibernateObserver(vaultUpdates: Observable<Vault.Update>, val config: Hibe
 
     private fun persistState(stateAndRef: StateAndRef<ContractState>) {
         val state = stateAndRef.state.data
-        if (state is QueryableState) {
-            logger.debug { "Asked to persist state ${stateAndRef.ref}" }
-            config.schemaService.selectSchemas(state).forEach { persistStateWithSchema(state, stateAndRef.ref, it) }
-        }
+        logger.debug { "Asked to persist state ${stateAndRef.ref}" }
+        config.schemaService.selectSchemas(state).forEach { persistStateWithSchema(state, stateAndRef.ref, it) }
     }
 
-    fun persistStateWithSchema(state: QueryableState, stateRef: StateRef, schema: MappedSchema) {
+    fun persistStateWithSchema(state: ContractState, stateRef: StateRef, schema: MappedSchema) {
         val sessionFactory = config.sessionFactoryForSchema(schema)
         val session = sessionFactory.withOptions().
                 connection(TransactionManager.current().connection).
