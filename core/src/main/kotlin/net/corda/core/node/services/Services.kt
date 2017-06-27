@@ -141,9 +141,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                              val notaryKey: String,
                              val lockId: String?,
                              val lockUpdateTime: Instant?)
-
-    @CordaSerializable
-    data class PageAndUpdates<out T : ContractState>(val current: Vault.Page<T>, val future: Observable<Vault.Update>)
 }
 
 /**
