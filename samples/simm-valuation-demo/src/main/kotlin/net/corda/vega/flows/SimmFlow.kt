@@ -297,7 +297,7 @@ object SimmFlow {
         @Suspendable
         private fun updatePortfolio(portfolio: Portfolio) {
             logger.info("Handshake finished, awaiting Simm update")
-            send(replyToParty, Ack) // Hack to state that this party is ready
+            send(replyToParty, Ack) // Hack to state that this party is ready.
             subFlow(object : StateRevisionFlow.Receiver<PortfolioState.Update>(replyToParty) {
                 override fun verifyProposal(proposal: Proposal<PortfolioState.Update>) {
                     super.verifyProposal(proposal)
@@ -320,5 +320,6 @@ object SimmFlow {
         }
     }
 
+    @CordaSerializable
     private object Ack
 }

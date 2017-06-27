@@ -9,9 +9,13 @@ API: Flows
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-flows`.
 
+.. contents::
+
 An example flow
 ---------------
-Let's imagine a flow for agreeing a basic ledger update between Alice and Bob. This flow will have two sides:
+Before we discuss the API offered by the flow, let's consider what a standard flow may look like.
+
+Imagine a flow for agreeing a basic ledger update between Alice and Bob. This flow will have two sides:
 
 * An ``Initiator`` side, that will initiate the request to update the ledger
 * A ``Responder`` side, that will respond to the request to update the ledger
@@ -76,23 +80,42 @@ To respond to these actions, the responder takes the following steps:
 
 FlowLogic
 ---------
-In practice, a flow is implemented as one or more communicating ``FlowLogic`` subclasses. Each ``FlowLogic`` subclass
-must override ``FlowLogic.call()``, which describes the actions it will take as part of the flow.
+In practice, a flow is implemented as one or more communicating ``FlowLogic`` subclasses. The ``FlowLogic``
+subclass's constructor can take any number of arguments of any type. The generic of ``FlowLogic`` (e.g.
+``FlowLogic<SignedTransaction>``) indicates the flow's return type.
 
-So in the example above, we would have an ``Initiator`` ``FlowLogic`` subclass and a ``Responder`` ``FlowLogic``
-subclass. The actions of the initiator's side of the flow would be defined in ``Initiator.call``, and the actions
-of the responder's side of the flow would be defined in ``Responder.call``.
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        class Initiator(val arg1: Boolean,
+                        val arg2: Int,
+                        val counterparty: Party): FlowLogic<SignedTransaction>() { }
+
+        class Responder(val otherParty: Party) : FlowLogic<Unit>() { }
+
+   .. sourcecode:: java
+
+        public static class Initiator extends FlowLogic<SignedTransaction> {
+            private final boolean arg1;
+            private final int arg2;
+            private final Party counterparty;
+
+            public Initiator(boolean arg1, int arg2, Party counterparty) {
+                this.arg1 = arg1;
+                this.arg2 = arg2;
+                this.counterparty = counterparty;
+            }
+
+        }
+
+        public static class Responder extends FlowLogic<Void> { }
 
 FlowLogic annotations
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 Any flow that you wish to start either directly via RPC or as a subflow must be annotated with the
 ``@InitiatingFlow`` annotation. Additionally, if you wish to start the flow via RPC, you must annotate it with the
-``@StartableByRPC`` annotation.
-
-Any flow that responds to a message from another flow must be annotated with the ``@InitiatedBy`` annotation.
-``@InitiatedBy`` takes the class of the flow it is responding to as its single parameter.
-
-So in our example, we would have:
+``@StartableByRPC`` annotation:
 
 .. container:: codeset
 
@@ -100,74 +123,145 @@ So in our example, we would have:
 
         @InitiatingFlow
         @StartableByRPC
-        class Initiator(): FlowLogic<Unit>() {
-
-        ...
-
-        @InitiatedBy(Initiator::class)
-        class Responder(val otherParty: Party) : FlowLogic<Unit>() {
+        class Initiator(): FlowLogic<Unit>() { }
 
    .. sourcecode:: java
 
         @InitiatingFlow
         @StartableByRPC
-        public static class Initiator extends FlowLogic<Unit> {
+        public static class Initiator extends FlowLogic<Unit> { }
 
-        ...
+Meanwhile, any flow that responds to a message from another flow must be annotated with the ``@InitiatedBy`` annotation.
+``@InitiatedBy`` takes the class of the flow it is responding to as its single parameter:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+        @InitiatedBy(Initiator::class)
+        class Responder(val otherParty: Party) : FlowLogic<Unit>() { }
+
+   .. sourcecode:: java
 
         @InitiatedBy(Initiator.class)
-        public static class Responder extends FlowLogic<Void> {
+        public static class Responder extends FlowLogic<Void> { }
 
 Additionally, any flow that is started by a ``SchedulableState`` must be annotated with the ``@SchedulableFlow``
 annotation.
 
-ServiceHub
-----------
-Within ``FlowLogic.call``, the flow developer has access to the node's ``ServiceHub``, which provides access to the
-various services the node provides. See :doc:`api-service-hub` for information about the services the ``ServiceHub``
-offers.
+Call
+----
+Each ``FlowLogic`` subclass must override ``FlowLogic.call()``, which describes the actions it will take as part of
+the flow. For example, the actions of the initiator's side of the flow would be defined in ``Initiator.call``, and the
+actions of the responder's side of the flow would be defined in ``Responder.call``.
 
-Some common tasks performed using the ``ServiceHub`` are:
-
-* Looking up your own identity or the identity of a counterparty using the ``networkMapCache``
-* Identifying the providers of a given service (e.g. a notary service) using the ``networkMapCache``
-* Retrieving states to use in a transaction using the ``vaultService``
-* Retrieving attachments and past transactions to use in a transaction using the ``storageService``
-* Creating a timestamp using the ``clock``
-* Signing a transaction using the ``keyManagementService``
-
-Common flow tasks
------------------
-There are a number of common tasks that you will need to perform within ``FlowLogic.call`` in order to agree ledger
-updates. This section details the API for the most common tasks.
-
-Retrieving information about other nodes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-We use the network map to retrieve information about other nodes on the network:
+In order for nodes to be able to run multiple flows concurrently, and to allow flows to survive node upgrades and
+restarts, flows need to be checkpointable and serializable to disk. This is achieved by marking ``FlowLogic.call()``,
+as well as any function invoked from within ``FlowLogic.call()``, with an ``@Suspendable`` annotation.
 
 .. container:: codeset
 
    .. sourcecode:: kotlin
 
-        val networkMap = serviceHub.networkMapCache
-
-        val allNodes = networkMap.partyNodes
-        val allNotaryNodes = networkMap.notaryNodes
-        val randomNotaryNode = networkMap.getAnyNotary()
-
-        val alice = networkMap.getNodeByLegalName(X500Name("CN=Alice,O=Alice,L=London,C=GB"))
-        val bob = networkMap.getNodeByLegalIdentityKey(bobsKey)
+        class Initiator(val counterparty: Party): FlowLogic<Unit>() {
+            @Suspendable
+            override fun call() { }
+        }
 
    .. sourcecode:: java
 
-        final NetworkMapCache networkMap = getServiceHub().getNetworkMapCache();
+        public static class InitiatorFlow extends FlowLogic<Void> {
+            private final Party counterparty;
 
-        final List<NodeInfo> allNodes = networkMap.getPartyNodes();
-        final List<NodeInfo> allNotaryNodes = networkMap.getNotaryNodes();
-        final Party randomNotaryNode = networkMap.getAnyNotary(null);
+            public Initiator(Party counterparty) {
+                this.counterparty = counterparty;
+            }
 
-        final NodeInfo alice = networkMap.getNodeByLegalName(new X500Name("CN=Alice,O=Alice,L=London,C=GB"));
-        final NodeInfo bob = networkMap.getNodeByLegalIdentityKey(bobsKey);
+            @Suspendable
+            @Override
+            public Void call() throws FlowException { }
+
+        }
+
+ServiceHub
+----------
+Within ``FlowLogic.call``, the flow developer has access to the node's ``ServiceHub``, which provides access to the
+various services the node provides. We will use the ``ServiceHub`` extensively in the examples that follow. You can
+also see :doc:`api-service-hub` for information about the services the ``ServiceHub`` offers.
+
+Common flow tasks
+-----------------
+There are a number of common tasks that you will need to perform within ``FlowLogic.call`` in order to agree ledger
+updates. This section details the API for common tasks.
+
+Transaction building
+^^^^^^^^^^^^^^^^^^^^
+The majority of the work performed during a flow will be to build, verify and sign a transaction. We cover this in
+:doc:`api-transactions`.
+
+Retrieving information about other nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We can retrieve information about other nodes on the network and the services they offer using
+``ServiceHub.networkMapCache``.
+
+Notaries
+~~~~~~~~
+Remember that a transaction generally needs a notary to:
+
+* Prevent double-spends if the transaction has inputs
+* Serve as a timestamping authority if the transaction has a time-window
+
+There are several ways to retrieve a notary from the network map:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
+        :dedent: 12
+
+Specific counterparties
+~~~~~~~~~~~~~~~~~~~~~~~
+We can also use the network map to retrieve a specific counterparty:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
+        :dedent: 12
+
+Specific services
+~~~~~~~~~~~~~~~~~
+Finally, we can use the map to identify nodes providing a specific service (e.g. a regulator or an oracle):
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 3
+        :end-before: DOCEND 3
+        :dedent: 12
 
 Communication between parties
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -180,50 +274,121 @@ Communication between parties
 * ``sendAndReceive(receiveType: Class<R>, otherParty: Party, payload: Any)``
     * Sends the ``payload`` object to the ``otherParty``, and receives an object of type ``receiveType`` back
 
-Each ``FlowLogic`` subclass can be annotated to respond to messages from a given *counterparty* flow using the
-``@InitiatedBy`` annotation. When a node first receives a message from a given ``FlowLogic.call()`` invocation, it
-responds as follows:
-
-* The node checks whether they have a ``FlowLogic`` subclass that is registered to respond to the ``FlowLogic`` that
-  is sending the message:
-
-    a. If yes, the node starts an instance of this ``FlowLogic`` by invoking ``FlowLogic.call()``
-    b. Otherwise, the node ignores the message
-
-* The counterparty steps through their ``FlowLogic.call()`` method until they encounter a call to ``receive()``, at
-  which point they process the message from the initiator
-
-Upon calling ``receive()``/``sendAndReceive()``, the ``FlowLogic`` is suspended until it receives a response.
-
-UntrustworthyData
-~~~~~~~~~~~~~~~~~
-``send()`` and ``sendAndReceive()`` return a payload wrapped in an ``UntrustworthyData`` instance. This is a
-reminder that any data received off the wire is untrustworthy and must be verified.
-
-We verify the ``UntrustworthyData`` and retrieve its payload by calling ``unwrap``:
+Send
+~~~~
+We can send arbitrary data to a counterparty:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 12
 
-        val partSignedTx = receive<SignedTransaction>(otherParty).unwrap { partSignedTx ->
-                val wireTx = partSignedTx.verifySignatures(keyPair.public, notaryPubKey)
-                wireTx.toLedgerTransaction(serviceHub).verify()
-                partSignedTx
-            }
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 4
+        :end-before: DOCEND 4
+        :dedent: 12
 
-   .. sourcecode:: java
+If this is the first ``send``, the counterparty will either:
 
-        final SignedTransaction partSignedTx = receive(SignedTransaction.class, otherParty)
-            .unwrap(tx -> {
-                try {
-                    final WireTransaction wireTx = tx.verifySignatures(keyPair.getPublic(), notaryPubKey);
-                    wireTx.toLedgerTransaction(getServiceHub()).verify();
-                } catch (SignatureException ex) {
-                    throw new FlowException(tx.getId() + " failed signature checks", ex);
-                }
-                return tx;
-            });
+1. Ignore the message if they are not registered to respond to messages from this flow.
+2. Start the flow they have registered to respond to this flow, and run the flow until the first call to ``receive``,
+   at which point they process the message. In other words, we are assuming that the counterparty is registered to
+   respond to this flow, and has a corresponding ``receive`` call.
+
+Receive
+~~~~~~~
+We can also wait to receive arbitrary data of a specific type from a counterparty. Again, this implies a corresponding
+``send`` call in the counterparty's flow. A few scenarios:
+
+* We never receive a message back. In the current design, the flow is paused until the node's owner kills the flow.
+* Instead of sending a message back, the counterparty throws a ``FlowException``. This exception is propagated back
+  to us, and we can use the error message to establish what happened.
+* We receive a message back, but it's of the wrong type. In this case, a ``FlowException`` is thrown.
+* We receive back a message of the correct type. All is good.
+
+Upon calling ``receive`` (or ``sendAndReceive``), the ``FlowLogic`` is suspended until it receives a response.
+
+We receive the data wrapped in an ``UntrustworthyData`` instance. This is a reminder that the data we receive may not
+be what it appears to be! We must unwrap the ``UntrustworthyData`` using a lambda:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 5
+        :end-before: DOCEND 5
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 5
+        :end-before: DOCEND 5
+        :dedent: 12
+
+We're not limited to sending to and receiving from a single counterparty. A flow can send messages to as many parties
+as it likes, and each party can invoke a different response flow:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 6
+        :end-before: DOCEND 6
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 6
+        :end-before: DOCEND 6
+        :dedent: 12
+
+SendAndReceive
+~~~~~~~~~~~~~~
+We can also use a single call to send data to a counterparty and wait to receive data of a specific type back. The
+type of data sent doesn't need to match the type of the data received back:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 7
+        :end-before: DOCEND 7
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 7
+        :end-before: DOCEND 7
+        :dedent: 12
+
+Counterparty response
+~~~~~~~~~~~~~~~~~~~~~
+Suppose we're now on the ``Responder`` side of the flow. We just received the following series of messages from the
+``Initiator``:
+
+1. They sent us an ``Any`` instance
+2. They waited to receive an ``Integer`` instance back
+3. They sent a ``String`` instance and waited to receive a ``Boolean`` instance back
+
+Our side of the flow must mirror these calls. We could do this as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 8
+        :end-before: DOCEND 8
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 8
+        :end-before: DOCEND 8
+        :dedent: 12
 
 Subflows
 --------
@@ -236,27 +401,118 @@ Corda provides a number of built-in flows that should be used for handling commo
 * ``NotaryChangeFlow``, which should be used to change a state's notary
 
 These flows are designed to be used as building blocks in your own flows. You invoke them by calling
-``FlowLogic.subFlow`` from within your flow's ``call`` method. Here is an example from ``TwoPartyDealFlow.kt``:
+``FlowLogic.subFlow`` from within your flow's ``call`` method. Let's look at three very common examples.
+
+FinalityFlow
+^^^^^^^^^^^^
+``FinalityFlow`` allows us to notarise the transaction and get it recorded in the vault of the participants of all
+the transaction's states:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/flows/TwoPartyDealFlow.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
         :dedent: 12
 
-In this example, we are starting a ``CollectSignaturesFlow``, passing in a partially signed transaction, and
-receiving back a fully-signed version of the same transaction.
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 9
+        :end-before: DOCEND 9
+        :dedent: 12
 
-Subflows in our example flow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In practice, many of the actions in our example flow would be automated using subflows:
+We can also choose to send the transaction to additional parties who aren't one of the state's participants:
 
-* Parts 2-4 of ``Initiator.call`` should be automated by invoking ``CollectSignaturesFlow``
-* Part 5 of ``Initiator.call`` should be automated by invoking ``FinalityFlow``
-* Part 1 of ``Responder.call`` should be automated by invoking ``SignTransactionFlow``
-* Part 2 of ``Responder.call`` will be handled automatically when the counterparty invokes ``FinalityFlow``
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 10
+        :end-before: DOCEND 10
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 10
+        :end-before: DOCEND 10
+        :dedent: 12
+
+Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It does
+**not** need to be called by each participant individually.
+
+CollectSignaturesFlow/SignTransactionFlow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The list of parties who need to sign a transaction is dictated by the transaction's commands. Once we've signed a
+transaction ourselves, we can automatically gather the signatures of the other required signers using
+``CollectSignaturesFlow``:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 15
+        :end-before: DOCEND 15
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 15
+        :end-before: DOCEND 15
+        :dedent: 12
+
+Each required signer will need to respond by invoking its own ``SignTransactionFlow`` subclass to check the
+transaction and provide their signature if they are satisfied:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 16
+        :end-before: DOCEND 16
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 16
+        :end-before: DOCEND 16
+        :dedent: 12
+
+ResolveTransactionsFlow
+^^^^^^^^^^^^^^^^^^^^^^^
+Verifying a transaction will also verify every transaction in the transaction's dependency chain. So if we receive a
+transaction from a counterparty and it has any dependencies, we'd need to download all of these dependencies
+using``ResolveTransactionsFlow`` before verifying it:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 13
+        :end-before: DOCEND 13
+        :dedent: 12
+
+We can also resolve a `StateRef` dependency chain:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 14
+        :end-before: DOCEND 14
+        :dedent: 12
 
 FlowException
 -------------
@@ -283,18 +539,38 @@ There are many scenarios in which throwing a ``FlowException`` would be appropri
 * The transaction does not match the parameters of the deal as discussed
 * You are reneging on a deal
 
-Suspending flows
-----------------
-In order for nodes to be able to run multiple flows concurrently, and to allow flows to survive node upgrades and
-restarts, flows need to be checkpointable and serializable to disk.
+ProgressTracker
+---------------
+We can give our flow a progress tracker. This allows us to see the flow's progress visually in our node's CRaSH shell.
 
-This is achieved by marking any function invoked from within ``FlowLogic.call()`` with an ``@Suspendable`` annotation.
-
-We can see an example in ``CollectSignaturesFlow``:
+To provide a progress tracker, we have to override ``FlowLogic.progressTracker`` in our flow:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/flows/CollectSignaturesFlow.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
         :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
+        :start-after: DOCSTART 17
+        :end-before: DOCEND 17
+        :dedent: 8
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 17
+        :end-before: DOCEND 17
+        :dedent: 8
+
+We then update the progress tracker's current step as we progress through the flow as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART 18
+        :end-before: DOCEND 18
+        :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+        :language: java
+        :start-after: DOCSTART 18
+        :end-before: DOCEND 18
+        :dedent: 12

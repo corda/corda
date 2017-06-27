@@ -1,4 +1,4 @@
-package net.corda.node.services.persistence.schemas
+package net.corda.node.services.persistence.schemas.requery
 
 import io.requery.*
 import net.corda.core.crypto.SecureHash

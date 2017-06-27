@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -57,18 +58,20 @@ class CordaRPCOpsImpl(
 
     override fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
-                                                  sorting: Sort): Vault.Page<T> {
+                                                  sorting: Sort,
+                                                  contractType: Class<out T>): Vault.Page<T> {
         return database.transaction {
-            services.vaultService.queryBy<T>(criteria, paging, sorting)
+            services.vaultQueryService._queryBy(criteria, paging, sorting, contractType)
         }
     }
 
     @RPCReturnsObservables
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
-                                                  sorting: Sort): Vault.PageAndUpdates<T> {
+                                                  sorting: Sort,
+                                                  contractType: Class<out T>): Vault.PageAndUpdates<T> {
         return database.transaction {
-            services.vaultService.trackBy<T>(criteria, paging, sorting)
+            services.vaultQueryService._trackBy<T>(criteria, paging, sorting, contractType)
         }
     }
 
@@ -194,3 +197,4 @@ class CordaRPCOpsImpl(
     }
 
 }
+

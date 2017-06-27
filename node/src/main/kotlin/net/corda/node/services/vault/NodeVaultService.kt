@@ -20,13 +20,7 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.Vault
-import net.corda.core.node.services.VaultService
-import net.corda.core.node.services.unconsumedStates
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.*
 import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
@@ -35,7 +29,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.services.vault.schemas.*
+import net.corda.node.services.vault.schemas.requery.*
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
 import rx.Observable
@@ -173,6 +167,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override val updates: Observable<Vault.Update>
         get() = mutex.locked { _updatesInDbTx }
 
+    override val updatesPublisher: PublishSubject<Vault.Update>
+        get() = mutex.locked { _updatesPublisher }
+
     override fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>> {
         return mutex.locked {
             Pair(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
@@ -220,26 +217,6 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                 }
 
         return stateAndRefs.associateBy({ it.ref }, { it.state })
-    }
-
-    override fun <T : ContractState> queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.Page<T> {
-
-        TODO("Under construction")
-
-        // If [VaultQueryCriteria.PageSpecification] specified
-        // must return (CloseableIterator) result.get().iterator(skip, take)
-        // where
-        //  skip = Max[(pageNumber - 1),0] * pageSize
-        //  take = pageSize
-    }
-
-    override fun <T : ContractState> trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort): Vault.PageAndUpdates<T> {
-        TODO("Under construction")
-
-//        return mutex.locked {
-//            Vault.PageAndUpdates(queryBy(criteria),
-//                              _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
-//        }
     }
 
     override fun notifyAll(txns: Iterable<WireTransaction>) {

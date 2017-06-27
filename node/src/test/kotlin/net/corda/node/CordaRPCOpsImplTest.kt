@@ -7,8 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.StateMachineUpdate
-import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.unconsumedStates
@@ -50,10 +49,11 @@ class CordaRPCOpsImplTest {
     lateinit var mockNet: MockNetwork
     lateinit var aliceNode: MockNode
     lateinit var notaryNode: MockNode
-    lateinit var rpc: CordaRPCOpsImpl
+    lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultUpdates: Observable<Vault.Update>
+    lateinit var vaultUpdates: Observable<Vault.Update>             // TODO: deprecated
+    lateinit var vaultTrackCash: Observable<Vault.Update>
 
     @Before
     fun setup() {
@@ -71,6 +71,7 @@ class CordaRPCOpsImplTest {
             stateMachineUpdates = rpc.stateMachinesAndUpdates().second
             transactions = rpc.verifiedTransactions().second
             vaultUpdates = rpc.vaultAndUpdates().second
+            vaultTrackCash = rpc.vaultTrackBy<Cash.State>().future
         }
     }
 
@@ -93,6 +94,10 @@ class CordaRPCOpsImplTest {
                 Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
                 recipient)
 
+        // Query vault via RPC
+        val cash = rpc.vaultQueryBy<Cash.State>()
+        assertEquals(expectedState, cash.states.first().state.data)
+
         var issueSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {
             sequence(
@@ -112,7 +117,15 @@ class CordaRPCOpsImplTest {
             }
         }
 
+        // TODO: deprecated
         vaultUpdates.expectEvents {
+            expect { update ->
+                val actual = update.produced.single().state.data
+                assertEquals(expectedState, actual)
+            }
+        }
+
+        vaultTrackCash.expectEvents {
             expect { update ->
                 val actual = update.produced.single().state.data
                 assertEquals(expectedState, actual)
@@ -180,7 +193,23 @@ class CordaRPCOpsImplTest {
             )
         }
 
+        // TODO: deprecated
         vaultUpdates.expectEvents {
+            sequence(
+                    // ISSUE
+                    expect { update ->
+                        require(update.consumed.isEmpty()) { update.consumed.size }
+                        require(update.produced.size == 1) { update.produced.size }
+                    },
+                    // MOVE
+                    expect { update ->
+                        require(update.consumed.size == 1) { update.consumed.size }
+                        require(update.produced.size == 1) { update.produced.size }
+                    }
+            )
+        }
+
+        vaultTrackCash.expectEvents {
             sequence(
                     // ISSUE
                     expect { update ->

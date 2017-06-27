@@ -29,9 +29,9 @@ import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
+import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.events.NodeSchedulerService
 import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -51,6 +51,7 @@ import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.statemachine.flowVersionAndInitiatingClass
 import net.corda.node.services.transactions.*
 import net.corda.node.services.vault.CashBalanceAsMetricsObserver
+import net.corda.node.services.vault.HibernateVaultQueryImpl
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSoftLockManager
 import net.corda.node.utilities.AddOrRemove.ADD
@@ -63,6 +64,7 @@ import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
 import java.net.JarURLConnection
 import java.net.URI
@@ -121,6 +123,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
         override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
+        override val vaultQueryService: VaultQueryService get() = vaultQuery
         override val keyManagementService: KeyManagementService get() = keyManagement
         override val identityService: IdentityService get() = identity
         override val schedulerService: SchedulerService get() = scheduler
@@ -164,6 +167,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var vault: VaultService
+    lateinit var vaultQuery: VaultQueryService
     lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var txVerifierService: TransactionVerifierService
@@ -216,7 +220,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val tokenizableServices = makeServices()
+            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            val tokenizableServices = makeServices(keyStoreWrapper)
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -269,6 +274,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return this
     }
 
+    private class ServiceInstantiationException(cause: Throwable?) : Exception(cause)
+
     private fun installCordaServices(scanResult: ScanResult) {
         fun getServiceType(clazz: Class<*>): ServiceType? {
             return try {
@@ -296,6 +303,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                     } catch (e: NoSuchMethodException) {
                         log.error("${it.name}, as a Corda service, must have a constructor with a single parameter " +
                                 "of type ${PluginServiceHub::class.java.name}")
+                    } catch (e: ServiceInstantiationException) {
+                        log.error("Corda service ${it.name} failed to instantiate", e.cause)
                     } catch (e: Exception) {
                         log.error("Unable to install Corda service ${it.name}", e)
                     }
@@ -306,13 +315,17 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Use this method to install your Corda services in your tests. This is automatically done by the node when it
      * starts up for all classes it finds which are annotated with [CordaService].
      */
-    fun <T : SerializeAsToken> installCordaService(clazz: Class<T>): T {
-        clazz.requireAnnotation<CordaService>()
-        val ctor = clazz.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
-        val service = ctor.newInstance(services)
-        cordappServices.putInstance(clazz, service)
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
+        serviceClass.requireAnnotation<CordaService>()
+        val constructor = serviceClass.getDeclaredConstructor(PluginServiceHub::class.java).apply { isAccessible = true }
+        val service = try {
+            constructor.newInstance(services)
+        } catch (e: InvocationTargetException) {
+            throw ServiceInstantiationException(e.cause)
+        }
+        cordappServices.putInstance(serviceClass, service)
         smm.tokenizableServices += service
-        log.info("Installed ${clazz.name} Corda service")
+        log.info("Installed ${serviceClass.name} Corda service")
         return service
     }
 
@@ -439,7 +452,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(): MutableList<Any> {
+    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
+        val keyStore = keyStoreWrapper.keyStore
         val storageServices = initialiseStorageService(configuration.baseDirectory)
         storage = storageServices.first
         checkpointStorage = storageServices.second
@@ -447,11 +461,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         network = makeMessagingService()
         schemas = makeSchemaService()
         vault = makeVaultService(configuration.dataSourceProperties)
+        vaultQuery = makeVaultQueryService(schemas)
         txVerifierService = makeTransactionVerifierService()
         auditService = DummyAuditService()
 
         info = makeInfo()
-        identity = makeIdentityService()
+        identity = makeIdentityService(keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
+                keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                info.legalIdentityAndCert)
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
@@ -525,7 +542,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         VaultSoftLockManager(vault, smm)
         CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(vault.rawUpdates, schemas)
+        HibernateObserver(vault.rawUpdates, HibernateConfiguration(schemas))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -668,7 +685,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             ValidatingNotaryService.type -> ValidatingNotaryService(timeWindowChecker, uniquenessProvider)
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
-            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
+            BFTNonValidatingNotaryService.type -> with(configuration) {
                 val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
                 BFTSMaRtConfig(notaryClusterAddresses).use { config ->
                     BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database).also {
@@ -687,10 +704,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract fun makeUniquenessProvider(type: ServiceType): UniquenessProvider
 
-    protected open fun makeIdentityService(): IdentityService {
-        val keyStore = KeyStoreUtilities.loadKeyStore(configuration.trustStoreFile, configuration.trustStorePassword)
-        val trustRoot = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as? X509Certificate
-        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot)
+    protected open fun makeIdentityService(trustRoot: X509Certificate,
+                                           clientCa: CertificateAndKeyPair?,
+                                           legalIdentity: PartyAndCertificate): IdentityService {
+        val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+                .filterNotNull()
+                .toTypedArray()
+        val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
         netMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
@@ -704,7 +724,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     // TODO: sort out ordering of open & protected modifiers of functions in this class.
     protected open fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
-    protected open fun makeSchemaService(): SchemaService = NodeSchemaService()
+    protected open fun makeVaultQueryService(schemas: SchemaService): VaultQueryService = HibernateVaultQueryImpl(HibernateConfiguration(schemas), vault.updatesPublisher)
+
+    protected open fun makeSchemaService(): SchemaService = NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet())
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
 

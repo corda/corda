@@ -31,45 +31,6 @@ import java.security.cert.X509Certificate
 
 // This file implements the functionality of the SGX transaction verification enclave.
 
-private class ServicesForVerification(dependenciesList: List<WireTransaction>, attachments: Array<ByteArray>) : ServicesForResolution, IdentityService, AttachmentsStorageService, AttachmentStorage {
-    override val attachmentsClassLoaderEnabled: Boolean
-        get() = TODO("not implemented")
-    override var automaticallyExtractAttachments: Boolean
-        get() = throw UnsupportedOperationException()
-        set(value) = throw UnsupportedOperationException()
-    override var storePath: Path
-        get() = throw UnsupportedOperationException()
-        set(value) = throw UnsupportedOperationException()
-
-    override fun getAllIdentities() = emptyList<PartyAndCertificate>()
-    private val dependencies = dependenciesList.associateBy { it.id }
-
-    override val identityService: IdentityService = this
-    override val storageService: AttachmentsStorageService = this
-
-    override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val dep = dependencies[stateRef.txhash] ?: throw TransactionResolutionException(stateRef.txhash)
-        return dep.outputs[stateRef.index]
-    }
-
-    // Identities: this stuff will all change in future so we don't bother implementing it now.
-    override fun assertOwnership(party: Party, anonymousParty: AnonymousParty) = TODO("not implemented")
-    override fun registerIdentity(party: PartyAndCertificate) = TODO("not implemented")
-    override fun registerAnonymousIdentity(anonymousParty: AnonymousParty, party: Party, path: CertPath) = TODO("not implemented")
-    override fun certificateFromParty(party: Party): PartyAndCertificate? = TODO("not implemented")
-    override fun requirePartyFromAnonymous(party: AbstractParty): Party = TODO("not implemented")
-    override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = TODO("not implemented")
-    override fun partyFromKey(key: PublicKey): net.corda.core.identity.Party? = null
-    override fun partyFromName(name: String): net.corda.core.identity.Party? = null
-    override fun partyFromX500Name(principal: X500Name): net.corda.core.identity.Party? = null
-    override fun partyFromAnonymous(party: AbstractParty): Party? = null
-    override fun pathForAnonymous(anonymousParty: AnonymousParty): CertPath? = null
-
-    // TODO: Implement attachments.
-    override val attachments: AttachmentStorage = this
-    override fun openAttachment(id: SecureHash): Attachment? = null
-    override fun importAttachment(jar: InputStream): SecureHash = throw UnsupportedOperationException("not implemented")
-}
 
 /** This is just used to simplify marshalling across the enclave boundary (EDL is a bit awkward) */
 @CordaSerializable
@@ -92,8 +53,12 @@ fun verifyInEnclave(reqBytes: ByteArray) {
     val kryo = createTestKryo()
     val req = reqBytes.deserialize<TransactionVerificationRequest>(kryo)
     val wtxToVerify = req.wtxToVerify.deserialize(kryo)
-    val services = ServicesForVerification(req.dependencies.map { it.deserialize(kryo) }, req.attachments)
-    val ltx = wtxToVerify.toLedgerTransaction(services)
+    val dependencies = req.dependencies.map { it.deserialize(kryo) }.associateBy { it.id }
+    val ltx = wtxToVerify.toLedgerTransaction(
+            resolveIdentity = { null },
+            resolveAttachment = { null },
+            resolveStateRef = { dependencies[it.txhash]?.outputs?.get(it.index) }
+    )
     ltx.verify()
 }
 

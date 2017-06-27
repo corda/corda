@@ -22,7 +22,7 @@ buildscript {
     ext.capsule_version = '1.0.1'
 
     ext.asm_version = '0.5.3'
-    ext.artemis_version = '1.5.3'
+    ext.artemis_version = '2.1.0'
     ext.jackson_version = '2.8.5'
     ext.jetty_version = '9.3.9.v20160517'
     ext.jersey_version = '2.25'
@@ -44,7 +44,7 @@ buildscript {
     ext.hibernate_version = '5.2.6.Final'
     ext.h2_version = '1.4.194'
     ext.rxjava_version = '1.2.4'
-    ext.requery_version = '1.2.1'
+    ext.requery_version = '1.3.1'
     ext.dokka_version = '0.9.14'
     ext.eddsa_version = '0.2.0'
 
