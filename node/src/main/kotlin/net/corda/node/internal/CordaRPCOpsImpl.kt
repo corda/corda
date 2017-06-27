@@ -68,9 +68,9 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): Vault.PageAndUpdates<T> {
+                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
         return database.transaction {
-            services.vaultQueryService._trackBy<T>(criteria, paging, sorting, contractType)
+            services.vaultQueryService._trackBy(criteria, paging, sorting, contractType)
         }
     }
 
