@@ -472,7 +472,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         keyManagement = makeKeyManagementService(identity)
         scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
-        val tokenizableServices = mutableListOf(storage, network, vault, keyManagement, identity, platformClock, scheduler)
+        val tokenizableServices = mutableListOf(storage, network, vault, vaultQuery, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
         return tokenizableServices
     }
