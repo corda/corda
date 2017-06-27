@@ -78,7 +78,6 @@ support for more currencies to the DemoBench and Explorer tools.
   to specify for individual nodes.
 
 * Dependencies changes:
-    * Upgraded Kotlin to v1.1.2.
     * Upgraded Dokka to v0.9.14.
     * Upgraded Gradle Plugins to 0.12.4.
     * Upgraded Apache ActiveMQ Artemis to v2.1.0.
