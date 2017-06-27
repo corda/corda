@@ -598,8 +598,16 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `access vault query service within a flow`() {
-        val result = node2.services.startFlow(VaultQueryFlow()).resultFuture
+    fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
+        val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
+        ptx.addOutputState(DummyState())
+        val stx = node1.services.signInitialTransaction(ptx)
+
+        node1.registerFlowFactory(VaultQueryFlow::class) {
+            WaitingFlows.Committer(it)
+        }.map { it.stateMachine }
+        val result = node2.services.startFlow(VaultQueryFlow(stx, node1.info.legalIdentity)).resultFuture
+
         mockNet.runNetwork()
         assertThat(result.getOrThrow()).isEmpty()
     }
@@ -870,10 +878,16 @@ class FlowFrameworkTests {
         }
     }
 
-    private class VaultQueryFlow : FlowLogic<List<StateAndRef<ContractState>>>() {
+    @InitiatingFlow
+    private class VaultQueryFlow(val stx: SignedTransaction, val otherParty: Party) : FlowLogic<List<StateAndRef<ContractState>>>() {
         @Suspendable
         override fun call(): List<StateAndRef<ContractState>> {
-            return serviceHub.vaultQueryService.queryBy<ContractState>().states
+            send(otherParty, stx)
+            // hold onto reference here to force checkpoint of vaultQueryService and thus
+            // prove it is registered as a tokenizableService in the node
+            val vaultQuerySvc = serviceHub.vaultQueryService
+            waitForLedgerCommit(stx.id)
+            return vaultQuerySvc.queryBy<ContractState>().states
         }
     }
 
