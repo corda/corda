@@ -37,8 +37,8 @@ class IssuerFlowTest {
     fun start() {
         mockNet = MockNetwork(threadPerNode = true)
         notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
-        bankOfCordaNode = mockNet.createPartyNode(notaryNode.info.address, BOC.name)
-        bankClientNode = mockNet.createPartyNode(notaryNode.info.address, MEGA_CORP.name)
+        bankOfCordaNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
+        bankClientNode = mockNet.createPartyNode(notaryNode.network.myAddress, MEGA_CORP.name)
     }
 
     @After

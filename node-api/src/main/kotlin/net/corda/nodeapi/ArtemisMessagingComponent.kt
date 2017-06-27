@@ -6,6 +6,8 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -34,18 +36,6 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
         const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
-
-        /**
-         * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
-         * only be used in unit tests and the internals of the messaging services to keep addressing opaque for the future.
-         * N.B. Marked as JvmStatic to allow use in the inherited classes.
-         */
-        @JvmStatic
-        @VisibleForTesting
-        fun toHostAndPort(target: MessageRecipients): HostAndPort {
-            val addr = target as? ArtemisMessagingComponent.ArtemisPeerAddress ?: throw IllegalArgumentException("Not an Artemis address")
-            return addr.hostAndPort
-        }
     }
 
     interface ArtemisAddress : MessageRecipients {
@@ -57,7 +47,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     @CordaSerializable
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
+    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 
@@ -114,6 +104,14 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         }
         config.trustStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
+        }
+    }
+
+    fun getArtemisPeerAddress(nodeInfo: NodeInfo): ArtemisPeerAddress {
+        return if (nodeInfo.advertisedServices.any { it.info.type == ServiceType.networkMap }) {
+            NetworkMapAddress(nodeInfo.addresses.first())
+        } else {
+            NodeAddress.asPeer(nodeInfo.legalIdentity.owningKey, nodeInfo.addresses.first())
         }
     }
 }
