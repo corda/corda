@@ -6,6 +6,12 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+* Changes in ``NodeInfo``:
+
+   * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
+     location of the node server.
+   * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
+     ``SingleMessageRecipient``, but of ``HostAndPort``.
 
 Milestone 13
 ----------

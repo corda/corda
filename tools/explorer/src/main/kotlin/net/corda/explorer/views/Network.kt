@@ -98,7 +98,7 @@ class Network : CordaView() {
                         copyableLabel(SimpleObjectProperty(node.legalIdentity.owningKey.toBase58String())).apply { minWidth = 400.0 }
                     }
                     row("Services :") { label(node.advertisedServices.map { it.info }.joinToString(", ")) }
-                    node.physicalLocation?.apply { row("Location :") { label(this@apply.description) } }
+                    node.worldMapLocation?.apply { row("Location :") { label(this@apply.description) } }
                 }
             }
             setOnMouseClicked {
@@ -122,7 +122,7 @@ class Network : CordaView() {
             contentDisplay = ContentDisplay.TOP
             val coordinate = Bindings.createObjectBinding({
                 // These coordinates are obtained when we generate the map using TileMill.
-                node.physicalLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: Pair(0.0, 0.0)
+                node.worldMapLocation?.coordinate?.project(mapPane.width, mapPane.height, 85.0511, -85.0511, -180.0, 180.0) ?: Pair(0.0, 0.0)
             }, arrayOf(mapPane.widthProperty(), mapPane.heightProperty()))
             // Center point of the label.
             layoutXProperty().bind(coordinate.map { it.first - width / 2 })
