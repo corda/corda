@@ -4,6 +4,7 @@ import com.google.common.base.Throwables
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.Type
@@ -19,6 +20,41 @@ import java.util.*
 class DeserializationInput(internal val serializerFactory: SerializerFactory = SerializerFactory()) {
     // TODO: we're not supporting object refs yet
     private val objectHistory: MutableList<Any> = ArrayList()
+
+    internal companion object {
+        val BYTES_NEEDED_TO_PEEK: Int = 23
+
+        private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {
+            if (aOffset + length > a.size || bOffset + length > b.size) throw IndexOutOfBoundsException()
+            var bytesRemaining = length
+            var aPos = aOffset
+            var bPos = bOffset
+            while (bytesRemaining-- > 0) {
+                if (a[aPos++] != b[bPos++]) return false
+            }
+            return true
+        }
+
+        fun peekSize(bytes: ByteArray): Int {
+            // There's an 8 byte header, and then a 0 byte plus descriptor followed by constructor
+            val eighth = bytes[8].toInt()
+            check(eighth == 0x0) { "Expected to find a descriptor in the AMQP stream" }
+            // We should always have an Envelope, so the descriptor should be a 64-bit long (0x80)
+            val ninth = UnsignedByte.valueOf(bytes[9]).toInt()
+            check(ninth == 0x80) { "Expected to find a ulong in the AMQP stream" }
+            // Skip 8 bytes
+            val eighteenth = UnsignedByte.valueOf(bytes[18]).toInt()
+            check(eighteenth == 0xd0 || eighteenth == 0xc0) { "Expected to find a list8 or list32 in the AMQP stream" }
+            val size = if (eighteenth == 0xc0) {
+                // Next byte is size
+                UnsignedByte.valueOf(bytes[19]).toInt() - 3 // Minus three as PEEK_SIZE assumes 4 byte unsigned integer.
+            } else {
+                // Next 4 bytes is size
+                UnsignedByte.valueOf(bytes[19]).toInt().shl(24) + UnsignedByte.valueOf(bytes[20]).toInt().shl(16) + UnsignedByte.valueOf(bytes[21]).toInt().shl(8) + UnsignedByte.valueOf(bytes[22]).toInt()
+            }
+            return size + BYTES_NEEDED_TO_PEEK
+        }
+    }
 
     @Throws(NotSerializableException::class)
     inline fun <reified T : Any> deserialize(bytes: SerializedBytes<T>): T = deserialize(bytes, T::class.java)
@@ -72,16 +108,5 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
         } else {
             return obj
         }
-    }
-
-    private fun subArraysEqual(a: ByteArray, aOffset: Int, length: Int, b: ByteArray, bOffset: Int): Boolean {
-        if (aOffset + length > a.size || bOffset + length > b.size) throw IndexOutOfBoundsException()
-        var bytesRemaining = length
-        var aPos = aOffset
-        var bPos = bOffset
-        while (bytesRemaining-- > 0) {
-            if (a[aPos++] != b[bPos++]) return false
-        }
-        return true
     }
 }

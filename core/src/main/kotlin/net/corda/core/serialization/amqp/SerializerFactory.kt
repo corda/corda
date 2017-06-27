@@ -33,7 +33,7 @@ import javax.annotation.concurrent.ThreadSafe
 // TODO: apply class loader logic and an "app context" throughout this code.
 // TODO: schema evolution solution when the fingerprints do not line up.
 // TODO: allow definition of well known types that are left out of the schema.
-// TODO: generally map Object to '*' all over the place in the schema
+// TODO: generally map Object to '*' all over the place in the schema and make sure use of '*' amd '?' is consistent and documented in generics.
 // TODO: found a document that states textual descriptors are Symbols.  Adjust schema class appropriately.
 // TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
 // TODO: type name prefixes for interfaces and abstract classes?  Or use label?

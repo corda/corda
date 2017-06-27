@@ -36,14 +36,17 @@ object KryoAMQPSerializer : Serializer<Any>() {
     override fun write(kryo: Kryo, output: Output, obj: Any) {
         val amqpOutput = SerializationOutput(serializerFactory)
         val bytes = amqpOutput.serialize(obj).bytes
-        output.writeVarInt(bytes.size, true)
+        // No need to write out the size since it's encoded within the AMQP.
         output.write(bytes)
     }
 
     override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any {
         val amqpInput = DeserializationInput(serializerFactory)
-        @Suppress("UNCHECKED_CAST")
-        val size = input.readVarInt(true)
-        return amqpInput.deserialize(SerializedBytes<Any>(input.readBytes(size)), type)
+        // Use our helper functions to peek the size of the serialized object out of the AMQP byte stream.
+        val peekedBytes = input.readBytes(DeserializationInput.BYTES_NEEDED_TO_PEEK)
+        val size = DeserializationInput.peekSize(peekedBytes)
+        val allBytes = peekedBytes.copyOf(size)
+        input.readBytes(allBytes, peekedBytes.size, size - peekedBytes.size)
+        return amqpInput.deserialize(SerializedBytes<Any>(allBytes), type)
     }
 }
