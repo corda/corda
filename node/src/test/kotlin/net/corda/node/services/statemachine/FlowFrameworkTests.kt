@@ -5,18 +5,18 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
 import net.corda.core.*
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.DummyState
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSessionException
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.serialization.deserialize
@@ -598,6 +598,13 @@ class FlowFrameworkTests {
     }
 
     @Test
+    fun `access vault query service within a flow`() {
+        val result = node2.services.startFlow(VaultQueryFlow()).resultFuture
+        mockNet.runNetwork()
+        assertThat(result.getOrThrow()).isEmpty()
+    }
+
+    @Test
     fun `customised client flow`() {
         val receiveFlowFuture = node2.registerFlowFactory(SendFlow::class) { ReceiveFlow(it) }
         node1.services.startFlow(CustomSendFlow("Hello", node2.info.legalIdentity)).resultFuture
@@ -860,6 +867,13 @@ class FlowFrameworkTests {
         override fun call() {
             serviceHub.vaultService.unconsumedStates<Cash.State>().filter { true }
             waitForLedgerCommit(SecureHash.zeroHash)
+        }
+    }
+
+    private class VaultQueryFlow : FlowLogic<List<StateAndRef<ContractState>>>() {
+        @Suspendable
+        override fun call(): List<StateAndRef<ContractState>> {
+            return serviceHub.vaultQueryService.queryBy<ContractState>().states
         }
     }
 
