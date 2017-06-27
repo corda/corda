@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.identity.Party
 import net.corda.core.map
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -71,9 +72,9 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
 
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
 
-    override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
+    override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
-            return Pair(partyNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            return DataFeed(partyNodes, _changed.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

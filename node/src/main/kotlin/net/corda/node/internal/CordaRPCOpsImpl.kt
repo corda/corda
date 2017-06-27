@@ -14,7 +14,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -43,16 +42,16 @@ class CordaRPCOpsImpl(
         private val smm: StateMachineManager,
         private val database: Database
 ) : CordaRPCOps {
-    override fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>> {
+    override fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange> {
         return database.transaction {
             services.networkMapCache.track()
         }
     }
 
-    override fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>> {
+    override fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update> {
         return database.transaction {
             val (vault, updates) = services.vaultService.track()
-            Pair(vault.states.toList(), updates)
+            DataFeed(vault.states.toList(), updates)
         }
     }
 
@@ -75,23 +74,23 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+    override fun verifiedTransactionFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.storageService.validatedTransactions.track()
         }
     }
 
-    override fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>> {
+    override fun stateMachinesAndUpdates(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
-            Pair(
+            DataFeed(
                     allStateMachines.map { stateMachineInfoFromFlowLogic(it.logic) },
                     changes.map { stateMachineUpdateFromStateMachineChange(it) }
             )
         }
     }
 
-    override fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
+    override fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
         return database.transaction {
             services.storageService.stateMachineRecordedTransactionMapping.track()
         }
@@ -178,6 +177,7 @@ class CordaRPCOpsImpl(
     @Suppress("DEPRECATION")
     @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
+
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
 
