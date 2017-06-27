@@ -16,7 +16,7 @@ class InMemoryNetworkMapCacheTest {
     @Test
     fun registerWithNetwork() {
         val (n0, n1) = mockNet.createTwoNodes()
-        val future = n1.services.networkMapCache.addMapService(n1.network, n0.info.address, false, null)
+        val future = n1.services.networkMapCache.addMapService(n1.network, n0.network.myAddress, false, null)
         mockNet.runNetwork()
         future.getOrThrow()
     }

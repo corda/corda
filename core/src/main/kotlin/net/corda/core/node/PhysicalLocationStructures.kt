@@ -43,15 +43,15 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
  * The [countryCode] field is a two letter ISO country code.
  */
 @CordaSerializable
-data class PhysicalLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
+data class WorldMapLocation(val coordinate: WorldCoordinate, val description: String, val countryCode: String)
 
 /**
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.
  */
 object CityDatabase {
     private val matcher = Regex("^([a-zA-Z- ]*) \\((..)\\)$")
-    private val caseInsensitiveLookups = HashMap<String, PhysicalLocation>()
-    val cityMap = HashMap<String, PhysicalLocation>()
+    private val caseInsensitiveLookups = HashMap<String, WorldMapLocation>()
+    val cityMap = HashMap<String, WorldMapLocation>()
 
     init {
         javaClass.getResourceAsStream("cities.txt").bufferedReader().useLines { lines ->
@@ -60,7 +60,7 @@ object CityDatabase {
                 val (name, lng, lat) = line.split('\t')
                 val matchResult = matcher.matchEntire(name) ?: throw Exception("Could not parse line: $line")
                 val (city, country) = matchResult.destructured
-                val location = PhysicalLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
+                val location = WorldMapLocation(WorldCoordinate(lat.toDouble(), lng.toDouble()), city, country)
                 caseInsensitiveLookups[city.toLowerCase()] = location
                 cityMap[city] = location
             }

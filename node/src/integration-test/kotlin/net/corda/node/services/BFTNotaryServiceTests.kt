@@ -49,7 +49,7 @@ class BFTNotaryServiceTests {
         val notaryClusterAddresses = replicaIds.map { HostAndPort.fromParts("localhost", 11000 + it * 10) }
         replicaIds.forEach { replicaId ->
             mockNet.createNode(
-                    node.info.address,
+                    node.network.myAddress,
                     advertisedServices = bftNotaryService,
                     configOverrides = {
                         whenever(it.bftReplicaId).thenReturn(replicaId)
