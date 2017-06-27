@@ -80,7 +80,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun stateMachinesAndUpdates(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
+    override fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate> {
         return database.transaction {
             val (allStateMachines, changes) = smm.track()
             DataFeed(

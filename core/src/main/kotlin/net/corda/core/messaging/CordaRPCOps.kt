@@ -63,7 +63,10 @@ interface CordaRPCOps : RPCOps {
      * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables
-    fun stateMachinesAndUpdates(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
+    fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
+
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("stateMachinesFeed()"))
+    fun stateMachinesAndUpdates() = stateMachinesFeed()
 
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
