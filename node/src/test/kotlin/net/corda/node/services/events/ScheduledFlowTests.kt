@@ -132,10 +132,12 @@ class ScheduledFlowTests {
         }
         mockNet.waitQuiescent()
         val statesFromA = nodeA.database.transaction {
-            nodeA.services.vaultQueryService.queryBy<ScheduledState>().states
+            val states = nodeA.services.vaultQueryService.queryBy<ScheduledState>().states
+            states.sortedBy { it.state.hashCode() }
         }
         val statesFromB = nodeB.database.transaction {
-            nodeB.services.vaultQueryService.queryBy<ScheduledState>().states
+            val states = nodeB.services.vaultQueryService.queryBy<ScheduledState>().states
+            states.sortedBy { it.state.hashCode() }
         }
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")
         assertEquals(statesFromA, statesFromB, "Expect identical data on both nodes")
