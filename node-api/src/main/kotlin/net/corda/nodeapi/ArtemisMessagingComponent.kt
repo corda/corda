@@ -6,6 +6,8 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -114,6 +116,14 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         }
         config.trustStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
+        }
+    }
+
+    fun getArtemisPeerAddress(nodeInfo: NodeInfo): ArtemisPeerAddress {
+        return if (ServiceType.networkMap in nodeInfo.advertisedServices.map { it.info.type }) {
+            NetworkMapAddress(nodeInfo.addresses.first())
+        } else {
+            NodeAddress.asPeer(nodeInfo.legalIdentity.owningKey, nodeInfo.addresses.first())
         }
     }
 }

@@ -129,10 +129,10 @@ class InMemoryMessagingNetwork(
             id: Int,
             executor: AffinityExecutor,
             advertisedServices: List<ServiceEntry>,
-            description: X500Name? = null,
+            description: X500Name = X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null),
             database: Database)
             : MessagingServiceBuilder<InMemoryMessaging> {
-        val peerHandle = PeerHandle(id, description ?: X509Utilities.getX509Name("In memory node $id","London","demo@r3.com",null))
+        val peerHandle = PeerHandle(id, description)
         peersMapping[peerHandle.description] = peerHandle // Assume that the same name - the same entity in MockNetwork.
         return Builder(manuallyPumped, peerHandle, advertisedServices.map(::ServiceHandle), executor, database = database)
     }

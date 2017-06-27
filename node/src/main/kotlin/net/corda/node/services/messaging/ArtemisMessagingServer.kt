@@ -20,7 +20,6 @@ import net.corda.node.services.messaging.NodeLoginModule.Companion.NODE_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.PEER_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.RPC_ROLE
 import net.corda.node.services.messaging.NodeLoginModule.Companion.VERIFIER_ROLE
-import net.corda.node.services.network.NetworkMapService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.PEER_USER
@@ -339,9 +338,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      */
     private fun updateBridgesOnNetworkChange(change: MapChange) {
         fun gatherAddresses(node: NodeInfo): Sequence<ArtemisPeerAddress> {
-            val peerAddress = if (NetworkMapService.type in node.advertisedServices.map { it.info.type })
-                NetworkMapAddress(node.addresses.first())
-            else NodeAddress.asPeer(node.legalIdentity.owningKey, node.addresses.first())
+            val peerAddress = getArtemisPeerAddress(node)
             val addresses = mutableListOf(peerAddress)
             node.advertisedServices.mapTo(addresses) { NodeAddress.asService(it.identity.owningKey, peerAddress.hostAndPort) }
             return addresses.asSequence()

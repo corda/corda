@@ -135,8 +135,8 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
         // Fetch the network map and register for updates at the same time
         val req = NetworkMapService.SubscribeRequest(false, network.myAddress)
         // `network.getAddressOfParty(partyInfo)` is a work-around for MockNetwork and InMemoryMessaging to get rid of SingleMessageRecipient in NodeInfo.
-        val partyInfo = PartyInfo.Node(service)
-        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, network.getAddressOfParty(partyInfo)).map {
+        val address = network.getAddressOfParty(PartyInfo.Node(service))
+        val future = network.sendRequest<SubscribeResponse>(NetworkMapService.SUBSCRIPTION_TOPIC, req, address).map {
             if (it.confirmed) Unit else throw NetworkCacheError.DeregistrationFailed()
         }
         _registrationFuture.setFuture(future)

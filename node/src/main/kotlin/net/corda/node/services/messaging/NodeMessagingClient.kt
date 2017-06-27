@@ -20,7 +20,6 @@ import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
-import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.OutOfProcessTransactionVerifierService
@@ -567,13 +566,8 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
     override fun getAddressOfParty(partyInfo: PartyInfo): MessageRecipients {
         return when (partyInfo) {
-            is PartyInfo.Node -> {
-                if (NetworkMapService.type in partyInfo.node.advertisedServices.map { it.info.type })
-                    NetworkMapAddress(partyInfo.node.addresses.first())
-                else
-                    ArtemisMessagingComponent.NodeAddress.asPeer(partyInfo.party.owningKey, partyInfo.node.addresses.first())
-            }
-            is PartyInfo.Service -> ArtemisMessagingComponent.ServiceAddress(partyInfo.service.identity.owningKey)
+            is PartyInfo.Node -> getArtemisPeerAddress(partyInfo.node)
+            is PartyInfo.Service -> ServiceAddress(partyInfo.service.identity.owningKey)
         }
     }
 }

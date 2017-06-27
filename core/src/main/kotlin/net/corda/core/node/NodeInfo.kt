@@ -20,7 +20,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
 data class NodeInfo(val addresses: List<HostAndPort>,
-                    val legalIdentityAndCert: PartyAndCertificate, // This field will be removed in future PR which gets rid of services.
+                    val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
                     val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,
                     var advertisedServices: List<ServiceEntry> = emptyList(),

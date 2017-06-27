@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
@@ -227,6 +228,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
+
+        override fun myAddresses(): List<HostAndPort> = listOf(HostAndPort.fromHost("mockHost"))
 
         override fun start(): MockNode {
             super.start()

@@ -551,12 +551,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val advertisedServiceEntries = makeServiceEntries()
         val legalIdentity = obtainLegalIdentity()
         val allIdentitiesSet = advertisedServiceEntries.map { it.identity }.toSet() + legalIdentity
-        val addr = network.myAddress // There is no support for multiple IP addresses yet.
-        val myAddress =  when (addr) {
-            is ArtemisMessagingComponent.ArtemisPeerAddress -> addr.hostAndPort
-            else -> HostAndPort.fromHost("mockHost")
-        }
-        return NodeInfo(listOf(myAddress), legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
+        val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
+        return NodeInfo(addresses, legalIdentity, allIdentitiesSet, platformVersion, advertisedServiceEntries, findMyLocation())
     }
 
     /**
@@ -649,7 +645,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         require(networkMapAddress != null || NetworkMapService.type in advertisedServices.map { it.type }) {
             "Initial network map address must indicate a node that provides a network map service"
         }
-        val address = networkMapAddress ?: network.getAddressOfParty(services.networkMapCache.getPartyInfo(info.legalIdentity)!!) as SingleMessageRecipient
+        val address: SingleMessageRecipient = networkMapAddress ?:
+                network.getAddressOfParty(PartyInfo.Node(info)) as SingleMessageRecipient
         // Register for updates, even if we're the one running the network map.
         return sendNetworkMapRegistration(address).flatMap { (error) ->
             check(error == null) { "Unable to register with the network map service: $error" }
@@ -667,6 +664,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val request = NetworkMapService.RegistrationRequest(reg.toWire(keyManagement, legalIdentityKey.public), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
+
+    /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */
+    protected abstract fun myAddresses(): List<HostAndPort>
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): ListenableFuture<Unit> {
