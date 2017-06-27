@@ -36,18 +36,6 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
         const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
-
-        /**
-         * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
-         * only be used in unit tests and the internals of the messaging services to keep addressing opaque for the future.
-         * N.B. Marked as JvmStatic to allow use in the inherited classes.
-         */
-        @JvmStatic
-        @VisibleForTesting
-        fun toHostAndPort(target: MessageRecipients): HostAndPort {
-            val addr = target as? ArtemisMessagingComponent.ArtemisPeerAddress ?: throw IllegalArgumentException("Not an Artemis address")
-            return addr.hostAndPort
-        }
     }
 
     interface ArtemisAddress : MessageRecipients {
@@ -120,7 +108,7 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     fun getArtemisPeerAddress(nodeInfo: NodeInfo): ArtemisPeerAddress {
-        return if (ServiceType.networkMap in nodeInfo.advertisedServices.map { it.info.type }) {
+        return if (nodeInfo.advertisedServices.any { it.info.type == ServiceType.networkMap }) {
             NetworkMapAddress(nodeInfo.addresses.first())
         } else {
             NodeAddress.asPeer(nodeInfo.legalIdentity.owningKey, nodeInfo.addresses.first())
