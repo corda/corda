@@ -22,10 +22,10 @@ import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.MOCK_VERSION_INFO
-import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
@@ -70,10 +70,9 @@ class ArtemisMessagingTests {
     fun setUp() {
         val baseDirectory = temporaryFolder.root.toPath()
         userService = RPCUserServiceImpl(emptyList())
-        config = TestNodeConfiguration(
+        config = testNodeConfiguration(
                 baseDirectory = baseDirectory,
-                myLegalName = ALICE.name,
-                networkMapService = null)
+                myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
