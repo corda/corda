@@ -29,7 +29,6 @@ import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
-import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.database.HibernateConfiguration
@@ -686,7 +685,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             ValidatingNotaryService.type -> ValidatingNotaryService(timeWindowChecker, uniquenessProvider)
             RaftNonValidatingNotaryService.type -> RaftNonValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
             RaftValidatingNotaryService.type -> RaftValidatingNotaryService(timeWindowChecker, uniquenessProvider as RaftUniquenessProvider)
-            BFTNonValidatingNotaryService.type -> with(configuration as FullNodeConfiguration) {
+            BFTNonValidatingNotaryService.type -> with(configuration) {
                 val replicaId = bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
                 BFTSMaRtConfig(notaryClusterAddresses).use { config ->
                     BFTNonValidatingNotaryService(config, services, timeWindowChecker, replicaId, database).also {
