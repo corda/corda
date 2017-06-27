@@ -160,9 +160,10 @@ object Crypto {
             SPHINCS256_SHA256
     ).associateBy { it.schemeCodeName }
 
-    // We need to group signature schemes per algorithm, so to quickly identify them during decoding.
-    // Please note there are schemes with the same algorithm, e.g. EC (or ECDSA) keys are used for both ECDSA_SECP256K1_SHA256 and ECDSA_SECP256R1_SHA256.
-    private val algorithmGroups: Map<AlgorithmIdentifier, SignatureScheme>
+    /**
+     * Map of algorithm identifiers to signature schemes Corda recognises.
+     */
+    private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
             = (supportedSignatureSchemes.values.flatMap { scheme -> scheme.alternativeOIDs.map { oid -> Pair(oid, scheme) } }
             + supportedSignatureSchemes.values.map { Pair(it.signatureOID, it) })
             .toMap()
@@ -198,7 +199,7 @@ object Crypto {
     }
 
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
-        return algorithmGroups[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
+        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
     }
 
     /**
@@ -209,6 +210,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @Throws(IllegalArgumentException::class)
     fun findSignatureScheme(schemeCodeName: String): SignatureScheme = supportedSignatureSchemes[schemeCodeName] ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeCodeName")
 
     /**
@@ -219,6 +221,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
+    @Throws(IllegalArgumentException::class)
     fun findSignatureScheme(key: PublicKey): SignatureScheme {
         val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.algorithm)
@@ -232,6 +235,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
+    @Throws(IllegalArgumentException::class)
     fun findSignatureScheme(key: PrivateKey): SignatureScheme {
         val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
         return findSignatureScheme(keyInfo.privateKeyAlgorithm)
