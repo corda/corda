@@ -21,6 +21,7 @@ import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.flows.FixingFlow
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.utilities.transaction
 import net.corda.testing.node.InMemoryMessagingNetwork
 import rx.Observable
 import java.security.PublicKey
@@ -80,7 +81,10 @@ class IRSSimulation(networkSendManuallyPumped: Boolean, runAsync: Boolean, laten
         val node1: SimulatedNode = banks[i]
         val node2: SimulatedNode = banks[j]
 
-        val swaps = node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+        val swaps =
+                node1.database.transaction {
+                    node1.services.vaultQueryService.queryBy<InterestRateSwap.State>().states
+                }
         val theDealRef: StateAndRef<InterestRateSwap.State> = swaps.single()
 
         // Do we have any more days left in this deal's lifetime? If not, return.
