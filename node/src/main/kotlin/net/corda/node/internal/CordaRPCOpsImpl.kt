@@ -177,7 +177,6 @@ class CordaRPCOpsImpl(
     @Suppress("DEPRECATION")
     @Deprecated("Use partyFromX500Name instead")
     override fun partyFromName(name: String) = services.identityService.partyFromName(name)
-
     override fun partyFromX500Name(x500Name: X500Name) = services.identityService.partyFromX500Name(x500Name)
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> = services.identityService.partiesFromName(query, exactMatch)
 

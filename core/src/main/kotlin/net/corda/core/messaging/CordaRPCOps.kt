@@ -94,15 +94,12 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultQuery(contractType: Class<out T>): Vault.Page<T> {
         return vaultQueryBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractType: Class<out T>): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultQueryByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T> {
         return vaultQueryBy(criteria, paging, Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultQueryByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T> {
         return vaultQueryBy(criteria, PageSpecification(), sorting, contractType)
     }
@@ -135,15 +132,12 @@ interface CordaRPCOps : RPCOps {
     fun <T : ContractState> vaultTrack(contractType: Class<out T>): Vault.PageAndUpdates<T> {
         return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultTrackByCriteria(contractType: Class<out T>, criteria: QueryCriteria): Vault.PageAndUpdates<T> {
         return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultTrackByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> {
         return vaultTrackBy(criteria, paging, Sort(emptySet()), contractType)
     }
-
     fun <T : ContractState> vaultTrackByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> {
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractType)
     }
