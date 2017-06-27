@@ -20,11 +20,11 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.transaction
-import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.setTo
+import net.corda.testing.testNodeConfiguration
 import org.bouncycastle.asn1.x500.X500Name
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -71,10 +71,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
             val letter = 'A' + counter
             val (city, country) = bankLocations[counter++ % bankLocations.size]
 
-            val cfg = TestNodeConfiguration(
+            val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=$city,C=$country"),
-                    networkMapService = null)
+                    myLegalName = X500Name("CN=Bank $letter,O=Bank $letter,L=$city,C=$country"))
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
 
@@ -93,10 +92,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             require(advertisedServices.containsType(NetworkMapService.type))
-            val cfg = TestNodeConfiguration(
+            val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_MAP.name,
-                    networkMapService = null)
+                    myLegalName = DUMMY_MAP.name)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {}
         }
     }
@@ -106,10 +104,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             require(advertisedServices.containsType(SimpleNotaryService.type))
-            val cfg = TestNodeConfiguration(
+            val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_NOTARY.name,
-                    networkMapService = null)
+                    myLegalName = DUMMY_NOTARY.name)
             return SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot)
         }
     }
@@ -122,10 +119,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
             require(advertisedServices.containsType(NodeInterestRates.Oracle.type))
-            val cfg = TestNodeConfiguration(
+            val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = RATES_SERVICE_NAME,
-                    networkMapService = null)
+                    myLegalName = RATES_SERVICE_NAME)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 override fun start(): MockNetwork.MockNode {
                     super.start()
@@ -146,10 +142,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?,
                             advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?,
                             entropyRoot: BigInteger): MockNetwork.MockNode {
-            val cfg = TestNodeConfiguration(
+            val cfg = testNodeConfiguration(
                     baseDirectory = config.baseDirectory,
-                    myLegalName = DUMMY_REGULATOR.name,
-                    networkMapService = null)
+                    myLegalName = DUMMY_REGULATOR.name)
             return object : SimulatedNode(cfg, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                 // TODO: Regulatory nodes don't actually exist properly, this is a last minute demo request.
                 //       So we just fire a message at a node that doesn't know how to handle it, and it'll ignore it.
