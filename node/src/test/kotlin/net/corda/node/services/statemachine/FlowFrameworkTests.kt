@@ -605,7 +605,7 @@ class FlowFrameworkTests {
 
         node1.registerFlowFactory(VaultQueryFlow::class) {
             WaitingFlows.Committer(it)
-        }.map { it.stateMachine }
+        }
         val result = node2.services.startFlow(VaultQueryFlow(stx, node1.info.legalIdentity)).resultFuture
 
         mockNet.runNetwork()
