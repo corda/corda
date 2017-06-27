@@ -2,6 +2,7 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
@@ -14,7 +15,7 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.PhysicalLocation
+import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
@@ -222,11 +223,13 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun noNetworkMapConfigured(): ListenableFuture<Unit> = Futures.immediateFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
-        override fun findMyLocation(): PhysicalLocation? = null
+        override fun findMyLocation(): WorldMapLocation? = null
 
         override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
+
+        override fun myAddresses(): List<HostAndPort> = listOf(HostAndPort.fromHost("mockHost"))
 
         override fun start(): MockNode {
             super.start()
@@ -242,7 +245,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
-        @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
+        @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
 
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
             return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
@@ -351,7 +354,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             null
         return Pair(
                 createNode(null, -1, nodeFactory, true, firstNodeName, notaryOverride, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), notaryServiceInfo),
-                createNode(nodes[0].info.address, -1, nodeFactory, true, secondNodeName)
+                createNode(nodes[0].network.myAddress, -1, nodeFactory, true, secondNodeName)
         )
     }
 
@@ -374,11 +377,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         else
             null
         val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
-        val notaryNode = createNode(mapNode.info.address, nodeFactory = nodeFactory, overrideServices = notaryOverride,
+        val mapAddress = mapNode.network.myAddress
+        val notaryNode = createNode(mapAddress, nodeFactory = nodeFactory, overrideServices = notaryOverride,
                 advertisedServices = notaryServiceInfo)
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
-            nodes += createPartyNode(mapNode.info.address)
+            nodes += createPartyNode(mapAddress)
         }
         nodes.forEach { itNode ->
             nodes.map { it.info.legalIdentityAndCert }.forEach(itNode.services.identityService::registerIdentity)
