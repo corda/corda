@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
-import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
 
 object MoreFutures {
     /**
@@ -21,10 +21,10 @@ object MoreFutures {
 
     internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Logger, handler: (ListenableFuture<out S>) -> T): ListenableFuture<T> {
         val resultFuture = SettableFuture.create<T>()
-        val permit = Semaphore(1)
+        val winnerChosen = AtomicBoolean()
         futures.forEach {
             it.then {
-                if (permit.tryAcquire()) {
+                if (winnerChosen.compareAndSet(false, true)) {
                     resultFuture.catch { handler(it) }
                 } else if (!it.isCancelled) {
                     it.failure { log.error(shortCircuitedTaskFailedMessage, it) }
