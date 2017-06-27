@@ -5,10 +5,12 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.commonName
 import net.corda.node.utilities.instant
 import net.corda.node.utilities.transaction
+import org.apache.commons.io.IOUtils
 import org.bouncycastle.pkcs.PKCS10CertificationRequest
 import org.jetbrains.exposed.sql.*
 import java.security.cert.Certificate
 import java.time.Instant
+import javax.sql.rowset.serial.SerialBlob
 
 // TODO Relax the uniqueness requirement to be on the entire X.500 subject rather than just the legal name
 class DBCertificateRequestStorage(private val database: Database) : CertificationRequestStorage {
@@ -18,10 +20,10 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         val ipAddress = varchar("ip_address", 15)
         val legalName = varchar("legal_name", 256)
         // TODO : Do we need to store this in column? or is it ok with blob.
-        val request = binary("request", 256)
+        val request = blob("request")
         val requestTimestamp = instant("request_timestamp")
         val processTimestamp = instant("process_timestamp").nullable()
-        val certificate = binary("certificate", 1024).nullable()
+        val certificate = blob("certificate").nullable()
         val rejectReason = varchar("reject_reason", 256).nullable()
     }
 
@@ -54,7 +56,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
                 it[hostName] = certificationData.hostName
                 it[ipAddress] = certificationData.ipAddress
                 it[this.legalName] = legalName
-                it[request] = certificationData.request.encoded
+                it[request] = SerialBlob(certificationData.request.encoded)
                 it[requestTimestamp] = now
                 if (rejectReason != null) {
                     it[this.rejectReason] = rejectReason
@@ -69,7 +71,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
         return database.transaction {
             val response = DataTable
                     .select { DataTable.requestId eq requestId and DataTable.processTimestamp.isNotNull() }
-                    .map { Pair(it[DataTable.certificate], it[DataTable.rejectReason]) }
+                    .map { Pair(it[DataTable.certificate]?.let { IOUtils.toByteArray(it.binaryStream) }, it[DataTable.rejectReason]) }
                     .singleOrNull()
             if (response == null) {
                 CertificateResponse.NotReady
@@ -89,7 +91,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
             val request = singleRequestWhere { DataTable.requestId eq requestId and DataTable.processTimestamp.isNull() }
             if (request != null) {
                 DataTable.update({ DataTable.requestId eq requestId }) {
-                    it[certificate] = request.generateCertificate().encoded
+                    it[certificate] = SerialBlob(request.generateCertificate().encoded)
                     it[processTimestamp] = Instant.now()
                 }
             }
@@ -125,7 +127,7 @@ class DBCertificateRequestStorage(private val database: Database) : Certificatio
     private fun singleRequestWhere(where: SqlExpressionBuilder.() -> Op<Boolean>): CertificationRequestData? {
         return DataTable
                 .select(where)
-                .map { CertificationRequestData(it[DataTable.hostName], it[DataTable.ipAddress], PKCS10CertificationRequest(it[DataTable.request])) }
+                .map { CertificationRequestData(it[DataTable.hostName], it[DataTable.ipAddress], PKCS10CertificationRequest(IOUtils.toByteArray(it[DataTable.request].binaryStream))) }
                 .singleOrNull()
     }
 }
