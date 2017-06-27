@@ -55,7 +55,7 @@ class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boo
     fun waitUntilReplicaWillNotPrintStackTrace(contextReplicaId: Int) {
         replicaAddresses.subList(0, contextReplicaId).forEachIndexed { otherId, baseAddress ->
             // The printStackTrace we want to avoid is in replica-replica communication code:
-            val address = BFTSMaRtPort.forReplicas.ofReplica(baseAddress)
+            val address = BFTSMaRtPort.FOR_REPLICAS.ofReplica(baseAddress)
             log.debug("Waiting for replica $otherId to start listening on: $address")
             while (!isOpen(address)) MILLISECONDS.sleep(200)
             log.debug("Replica $otherId is ready for P2P.")
@@ -69,7 +69,8 @@ class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boo
 }
 
 private enum class BFTSMaRtPort(private val off: Int) {
-    forClients(0), forReplicas(1);
+    FOR_CLIENTS(0),
+    FOR_REPLICAS(1);
 
     fun ofReplica(base: HostAndPort) = HostAndPort.fromParts(base.host, base.port + off)
 }
