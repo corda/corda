@@ -64,6 +64,7 @@ class SwapPricingCcpExample {
      * The location of the data files.
      */
     private val resourcesUri = run {
+        // Find src/main/resources by walking up the directory tree starting at a classpath root:
         var module = Paths.get(javaClass.getResource("/").toURI())
         val relative = "src" / "main" / "resources"
         var path: Path
