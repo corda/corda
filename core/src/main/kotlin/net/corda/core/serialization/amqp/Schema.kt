@@ -355,7 +355,8 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                     val customSerializer = factory.findCustomSerializer(type, type)
                     if (customSerializer == null) {
                         if (type.kotlin.objectInstance != null) {
-                            // TODO: name collision is too likely for kotlin objects
+                            // TODO: name collision is too likely for kotlin objects, we need to introduce some reference
+                            // to the CorDapp but maybe reference to the JAR in the short term.
                             hasher.putUnencodedChars(type.name)
                         } else {
                             fingerprintForObject(type, contextType, alreadySeen, hasher, factory)
@@ -392,7 +393,7 @@ private fun isCollectionOrMap(type: Class<*>) = Collection::class.java.isAssigna
 
 private fun fingerprintForObject(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     // Hash the class + properties + interfaces
-    val name = (type as? Class<*>)?.name ?: ((type as? ParameterizedType)?.rawType as? Class<*>)?.name ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
+    val name = type.asClass()?.name ?: throw NotSerializableException("Expected only Class or ParameterizedType but found $type")
     propertiesForSerialization(constructorForDeserialization(type), contextType ?: type, factory).fold(hasher.putUnencodedChars(name)) { orig, prop ->
         fingerprintForType(prop.resolvedType, type, alreadySeen, orig, factory).putUnencodedChars(prop.name).putUnencodedChars(if (prop.mandatory) NOT_NULLABLE_HASH else NULLABLE_HASH)
     }
