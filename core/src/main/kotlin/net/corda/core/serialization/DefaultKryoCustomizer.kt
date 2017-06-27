@@ -73,7 +73,7 @@ object DefaultKryoCustomizer {
 
             noReferencesWithin<WireTransaction>()
 
-            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
+            register(sun.security.ec.ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
             register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
             register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
 

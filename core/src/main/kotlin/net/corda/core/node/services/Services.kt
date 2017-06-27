@@ -21,6 +21,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -486,7 +487,7 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
-    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath>
+    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity
 
     /**
      * Filter some keys down to the set that this node owns (has private keys for).

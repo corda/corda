@@ -387,6 +387,20 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     }
 }
 
+/** For serialising an ed25519 public key */
+@ThreadSafe
+object ECPublicKeyImplSerializer : Serializer<sun.security.ec.ECPublicKeyImpl>() {
+    override fun write(kryo: Kryo, output: Output, obj: sun.security.ec.ECPublicKeyImpl) {
+        output.writeBytesWithLength(obj.encoded)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<sun.security.ec.ECPublicKeyImpl>): sun.security.ec.ECPublicKeyImpl {
+        val A = input.readBytesWithLength()
+        val der = sun.security.util.DerValue(A)
+        return sun.security.ec.ECPublicKeyImpl.parse(der) as sun.security.ec.ECPublicKeyImpl
+    }
+}
+
 // TODO Implement standardized serialization of CompositeKeys. See JIRA issue: CORDA-249.
 @ThreadSafe
 object CompositeKeySerializer : Serializer<CompositeKey>() {

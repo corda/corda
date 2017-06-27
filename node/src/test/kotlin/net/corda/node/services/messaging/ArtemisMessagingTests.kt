@@ -60,6 +60,7 @@ class ArtemisMessagingTests {
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
 
+    // TODO: We should have a dummy service hub rather than change behaviour in tests
     val networkMapCache = InMemoryNetworkMapCache(serviceHub = null)
 
     val rpcOps = object : RPCOps {

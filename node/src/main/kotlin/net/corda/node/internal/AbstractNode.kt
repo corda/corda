@@ -260,6 +260,8 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 rpcFlows = emptyList()
             }
 
+            // TODO: Investigate having class path scanning find this flow
+            registerInitiatedFlow(TxKeyFlow.Provider::class.java)
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 

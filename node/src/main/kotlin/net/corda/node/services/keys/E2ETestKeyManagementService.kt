@@ -9,6 +9,7 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
@@ -57,7 +58,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService,
         return keyPair.public
     }
 
-    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath> {
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey), revocationEnabled)
     }
 

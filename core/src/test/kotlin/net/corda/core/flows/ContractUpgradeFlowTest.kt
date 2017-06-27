@@ -173,9 +173,11 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary)).resultFuture
+        val anonymous = false
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary, anonymous)).resultFuture
         mockNet.runNetwork()
-        val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
+        val stx = result.getOrThrow().stx
+        val stateAndRef = stx.tx.outRef<Cash.State>(0)
         val baseState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
         // Starts contract upgrade flow.
