@@ -12,8 +12,7 @@ import net.corda.core.serialization.amqp.SerializerFactory
  * This [Kryo] custom [Serializer] switches the object graph of anything annotated with `@CordaSerializable`
  * to using the AMQP serialization wire format, and simply writes that out as bytes to the wire.
  *
- * Currently this writes a variable length integer to the stream indicating how many bytes of AMQP encoded bytes follow
- * and then that many raw bytes.
+ * There is no need to write out the length, since this can be peeked out of the first few bytes of the stream.
  */
 object KryoAMQPSerializer : Serializer<Any>() {
     internal fun registerCustomSerializers(factory: SerializerFactory) {
