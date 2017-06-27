@@ -342,6 +342,7 @@ fun <A> poll(
     val task = object : Runnable {
         var counter = -1
         override fun run() {
+            if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
             if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
