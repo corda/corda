@@ -599,13 +599,6 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `lazy db iterator left on stack during checkpointing`() {
-        val result = node2.services.startFlow(VaultAccessFlow()).resultFuture
-        mockNet.runNetwork()
-        assertThatThrownBy { result.getOrThrow() }.hasMessageContaining("Vault").hasMessageContaining("private method")
-    }
-
-    @Test
     fun `verify vault query service is tokenizable by force checkpointing within a flow`() {
         val ptx = TransactionBuilder(notary = notary1.info.notaryIdentity)
         ptx.addOutputState(DummyState())
@@ -915,14 +908,6 @@ class FlowFrameworkTests {
                 if (throwException != null) throw throwException.invoke()
                 return subFlow(FinalityFlow(stx, setOf(otherParty))).single()
             }
-        }
-    }
-
-    private class VaultAccessFlow : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            serviceHub.vaultQueryService.queryBy<Cash.State>().states.filter { true }
-            waitForLedgerCommit(SecureHash.zeroHash)
         }
     }
 
