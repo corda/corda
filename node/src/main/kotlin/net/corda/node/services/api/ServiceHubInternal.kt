@@ -1,6 +1,7 @@
 package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
+import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic

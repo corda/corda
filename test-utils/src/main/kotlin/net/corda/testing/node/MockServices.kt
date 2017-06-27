@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import com.google.common.net.HostAndPort
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
@@ -73,7 +74,10 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val vaultQueryService: VaultQueryService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
     override val clock: Clock get() = Clock.systemUTC()
-    override val myInfo: NodeInfo get() = NodeInfo(object : SingleMessageRecipient {}, getTestPartyAndCertificate(MEGA_CORP.name, key.public), MOCK_VERSION_INFO.platformVersion)
+    override val myInfo: NodeInfo get() {
+        val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
+        return NodeInfo(listOf(HostAndPort.fromHost("localhost")), identity, setOf(identity), MOCK_VERSION_INFO.platformVersion)
+    }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
     fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService())): VaultService {

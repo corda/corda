@@ -90,6 +90,7 @@ val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTAR
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
+val MOCK_HOST_AND_PORT = HostAndPort.fromParts("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
