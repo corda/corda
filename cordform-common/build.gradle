@@ -7,6 +7,7 @@ repositories {
 }
 
 // This tracks the gradle plugins version and not Corda
+group 'net.corda.plugins'
 version gradle_plugins_version
 
 dependencies {
