@@ -12,6 +12,7 @@ import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
+import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
 import org.bouncycastle.asn1.sec.SECObjectIdentifiers
@@ -115,6 +116,7 @@ object Crypto {
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
+            // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
             AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
             emptyList(),
             // We added EdDSA to bouncy castle for certificate signing.
@@ -130,12 +132,12 @@ object Crypto {
      * SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers
      * at the cost of larger key sizes and loss of compatibility.
      */
-    val SHA512_256 = ASN1ObjectIdentifier("2.16.840.1.101.3.4.2.6")
+    val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
             "SPHINCS-256_SHA512",
-            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), DLSequence(arrayOf(SHA512_256))))),
-            listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), DLSequence(arrayOf(SHA512_256)))))),
+            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), SHA512_256))),
+            listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
             "BCPQC",
             "SPHINCS256",
             "SHA512WITHSPHINCS256",
