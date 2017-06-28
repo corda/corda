@@ -39,12 +39,13 @@ not require any particular network protocol for export. So this data can be expo
 some monitoring systems provide a "Java Agent", which is essentially a JVM plugin that finds all the MBeans and sends
 them out to a statistics collector over the network. For those systems, follow the instructions provided by the vendor.
 
-.. warning:: As of Corda M11, Java serialisation in Corda node has been restricted, meaning mbean access via JMX port
-will no longer work. Please use java agents instead.
+.. warning:: As of Corda M11, Java serialisation in the Corda node has been restricted, meaning MBeans access via the JMX
+             port will no longer work. Please use java agents instead, you can find details on how to use Jolokia JVM
+             agent `here <https://jolokia.org/agent/jvm.html>`_.
 
-Sometimes though, you just want raw access to the data and operations itself. So nodes export them over HTTP on the
-``/monitoring/json`` HTTP endpoint, using a program called `Jolokia <https://jolokia.org/>`_. Jolokia defines the JSON
-and REST formats for accessing MBeans, and provides client libraries to work with that protocol as well.
+`Jolokia <https://jolokia.org/>`_ allows you to access the raw data and operations without connecting to the JMX port
+directly. The nodes export the data over HTTP on the ``/jolokia`` HTTP endpoint, Jolokia defines the JSON and REST
+formats for accessing MBeans, and provides client libraries to work with that protocol as well.
 
 Here are a few ways to build dashboards and extract monitoring data for a node:
 
