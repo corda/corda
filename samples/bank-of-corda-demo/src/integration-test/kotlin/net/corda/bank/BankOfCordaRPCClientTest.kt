@@ -39,25 +39,28 @@ class BankOfCordaRPCClientTest {
             val vaultUpdatesBigCorp = bigCorpProxy.vaultAndUpdates().second
 
             // Kick-off actual Issuer Flow
+            // TODO: Update checks below to reflect states consumed/produced under anonymisation
+            val anonymous = false
             bocProxy.startFlow(
                     ::IssuanceRequester,
                     1000.DOLLARS,
                     nodeBigCorporation.nodeInfo.legalIdentity,
                     BIG_CORP_PARTY_REF,
-                    nodeBankOfCorda.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                    nodeBankOfCorda.nodeInfo.legalIdentity,
+                    anonymous).returnValue.getOrThrow()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
                 sequence(
                         // ISSUE
                         expect { update ->
-                            require(update.consumed.isEmpty()) { update.consumed.size }
-                            require(update.produced.size == 1) { update.produced.size }
+                            require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
+                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
                         },
                         // MOVE
                         expect { update ->
-                            require(update.consumed.size == 1) { update.consumed.size }
-                            require(update.produced.isEmpty()) { update.produced.size }
+                            require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
+                            require(update.produced.isEmpty()) { "Expected 0 produced states, actual: $update" }
                         }
                 )
             }

@@ -43,7 +43,8 @@ class SimpleNode(val config: NodeConfiguration, val address: HostAndPort = freeL
     val identityService: IdentityService = InMemoryIdentityService(trustRoot = trustRoot)
     val keyService: KeyManagementService = E2ETestKeyManagementService(identityService, setOf(identity))
     val executor = ServiceAffinityExecutor(config.myLegalName.commonName, 1)
-    val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(), userService)
+    // TODO: We should have a dummy service hub rather than change behaviour in tests
+    val broker = ArtemisMessagingServer(config, address.port, rpcAddress.port, InMemoryNetworkMapCache(serviceHub = null), userService)
     val networkMapRegistrationFuture: SettableFuture<Unit> = SettableFuture.create<Unit>()
     val network = database.transaction {
         NodeMessagingClient(

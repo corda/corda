@@ -9,7 +9,6 @@ import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -22,16 +21,20 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow(progressTracker) {
+class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
 
     companion object {
         fun tracker() = ProgressTracker(GENERATING_TX, SIGNING_TX, FINALISING_TX)
     }
 
+    /**
+     * @return the signed transaction, and a mapping of parties to new anonymous identities generated
+     * (for this flow this map is always empty).
+     */
     @Suspendable
     @Throws(CashException::class)
-    override fun call(): SignedTransaction {
+    override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = null as Party?)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
@@ -67,6 +70,6 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(participants, tx, "Unable to notarise exit")
-        return tx
+        return Result(tx, TxKeyFlow.TxIdentities())
     }
 }

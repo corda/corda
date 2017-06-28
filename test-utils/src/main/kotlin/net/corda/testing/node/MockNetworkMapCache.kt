@@ -5,6 +5,7 @@ import com.google.common.net.HostAndPort
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.node.services.network.InMemoryNetworkMapCache
@@ -17,7 +18,7 @@ import java.math.BigInteger
 /**
  * Network map cache with no backing map service.
  */
-class MockNetworkMapCache : InMemoryNetworkMapCache() {
+class MockNetworkMapCache(serviceHub: ServiceHub) : InMemoryNetworkMapCache(serviceHub) {
     private companion object {
         val BANK_C = getTestPartyAndCertificate(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
         val BANK_D = getTestPartyAndCertificate(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)

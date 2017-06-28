@@ -4,12 +4,15 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.DEFAULT_SESSION_ID
+import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -35,9 +38,13 @@ import javax.annotation.concurrent.ThreadSafe
 
 /**
  * Extremely simple in-memory cache of the network map.
+ *
+ * @param serviceHub an optional service hub from which we'll take the identity service. We take a service hub rather
+ * than the identity service directly, as this avoids problems with service start sequence (network map cache
+ * and identity services depend on each other). Should always be provided except for unit test cases.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }
@@ -71,6 +78,17 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
+    override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
+        val wellKnownParty = if (serviceHub != null) {
+            serviceHub.identityService.partyFromAnonymous(party)
+        } else {
+            party
+        }
+
+        return wellKnownParty?.let {
+            getNodeByLegalIdentityKey(it.owningKey)
+        }
+    }
 
     override fun track(): DataFeed<List<NodeInfo>, MapChange> {
         synchronized(_changed) {
