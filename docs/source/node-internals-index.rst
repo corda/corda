@@ -8,4 +8,3 @@ Node internals
    vault
    serialization
    messaging
-   persistence
