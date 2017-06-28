@@ -21,6 +21,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.flows.AnonymisedIdentity
 import org.bouncycastle.cert.X509CertificateHolder
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -486,9 +487,17 @@ interface KeyManagementService {
      * @return X.509 certificate and path to the trust root.
      */
     @Suspendable
-    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): Pair<X509CertificateHolder, CertPath>
+    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): AnonymisedIdentity
 
-    /** Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
+    /**
+     * Filter some keys down to the set that this node owns (has private keys for).
+     *
+     * @param candidateKeys keys which this node may own.
+     */
+    fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey>
+
+    /**
+     * Using the provided signing [PublicKey] internally looks up the matching [PrivateKey] and signs the data.
      * @param bytes The data to sign over using the chosen key.
      * @param publicKey The [PublicKey] partner to an internally held [PrivateKey], either derived from the node's primary identity,
      * or previously generated via the [freshKey] method.

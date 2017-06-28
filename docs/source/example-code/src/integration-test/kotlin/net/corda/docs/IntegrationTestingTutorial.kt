@@ -69,7 +69,8 @@ class IntegrationTestingTutorial {
                             i.DOLLARS,
                             issueRef,
                             bob.nodeInfo.legalIdentity,
-                            notary.nodeInfo.notaryIdentity
+                            notary.nodeInfo.notaryIdentity,
+                            false // Not anonymised
                     ).returnValue)
                 }
             }.forEach(Thread::join) // Ensure the stack of futures is populated.
@@ -92,7 +93,7 @@ class IntegrationTestingTutorial {
 
             // START 5
             for (i in 1..10) {
-                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity).returnValue.getOrThrow()
+                bobProxy.startFlow(::CashPaymentFlow, i.DOLLARS, alice.nodeInfo.legalIdentity, false).returnValue.getOrThrow()
             }
 
             aliceVaultUpdates.expectEvents {

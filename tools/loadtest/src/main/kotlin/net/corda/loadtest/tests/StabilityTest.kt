@@ -19,7 +19,7 @@ object StabilityTest {
                 val nodeMap = simpleNodes.associateBy { it.info.legalIdentity }
                 Generator.sequence(simpleNodes.map { node ->
                     val possibleRecipients = nodeMap.keys.toList()
-                    val moves = 0.5 to generateMove(1, USD, node.info.legalIdentity, possibleRecipients)
+                    val moves = 0.5 to generateMove(1, USD, node.info.legalIdentity, possibleRecipients, anonymous = true)
                     val exits = 0.5 to generateExit(1, USD)
                     val command = Generator.frequency(listOf(moves, exits))
                     command.map { CrossCashCommand(it, nodeMap[node.info.legalIdentity]!!) }
@@ -42,7 +42,7 @@ object StabilityTest {
             "Self issuing cash randomly",
             generate = { _, parallelism ->
                 val generateIssue = Generator.pickOne(simpleNodes).bind { node ->
-                    generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity)).map {
+                    generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity), anonymous = true).map {
                         SelfIssueCommand(it, node)
                     }
                 }

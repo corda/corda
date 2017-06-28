@@ -6,7 +6,7 @@ This section describes the APIs that are available for the development of CorDap
 * :doc:`api-states`
 * :doc:`api-persistence`
 * :doc:`api-contracts`
-* :doc:`api-vault`
+* :doc:`api-vault-query`
 * :doc:`api-transactions`
 * :doc:`api-flows`
 * :doc:`api-core-types`

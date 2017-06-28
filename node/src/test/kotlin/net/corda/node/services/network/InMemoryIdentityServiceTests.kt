@@ -6,6 +6,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.*
+import net.corda.flows.AnonymisedIdentity
 import net.corda.flows.TxKeyFlow
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.ALICE_PUBKEY
@@ -136,14 +137,14 @@ class InMemoryIdentityServiceTests {
         }
     }
 
-    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, TxKeyFlow.AnonymousIdentity> {
+    private fun createParty(x500Name: X500Name, ca: CertificateAndKeyPair): Pair<PartyAndCertificate, AnonymisedIdentity> {
         val certFactory = CertificateFactory.getInstance("X509")
         val issuerKeyPair = generateKeyPair()
         val issuer = getTestPartyAndCertificate(x500Name, issuerKeyPair.public, ca)
         val txKey = Crypto.generateKeyPair()
         val txCert = X509Utilities.createCertificate(CertificateType.IDENTITY, issuer.certificate, issuerKeyPair, x500Name, txKey.public)
         val txCertPath = certFactory.generateCertPath(listOf(txCert.cert) + issuer.certPath.certificates)
-        return Pair(issuer, TxKeyFlow.AnonymousIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
+        return Pair(issuer, AnonymisedIdentity(txCertPath, txCert, AnonymousParty(txKey.public)))
     }
 
     /**

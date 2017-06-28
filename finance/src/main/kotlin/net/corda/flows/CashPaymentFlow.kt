@@ -6,7 +6,6 @@ import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -17,18 +16,34 @@ import java.util.*
  * @param amount the amount of a currency to pay to the recipient.
  * @param recipient the party to pay the currency to.
  * @param issuerConstraint if specified, the payment will be made using only cash issued by the given parties.
+ * @param anonymous whether to anonymous the recipient party. Should be true for normal usage, but may be false
+ * for testing purposes.
  */
 @StartableByRPC
 open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,
+        val anonymous: Boolean,
         progressTracker: ProgressTracker,
-        val issuerConstraint: Set<Party>? = null) : AbstractCashFlow(progressTracker) {
+        val issuerConstraint: Set<Party>? = null) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
-    constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, tracker())
+    constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
+    /** A straightforward constructor that constructs spends using cash states of any issuer. */
+    constructor(amount: Amount<Currency>, recipient: Party, anonymous: Boolean) : this(amount, recipient, anonymous, tracker())
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): AbstractCashFlow.Result {
+        progressTracker.currentStep = GENERATING_ID
+        val txIdentities = if (anonymous) {
+            subFlow(TxKeyFlow.Requester(recipient))
+        } else {
+            TxKeyFlow.TxIdentities(emptyList())
+        }
+        val anonymousRecipient = if (anonymous) {
+            txIdentities.forParty(recipient).identity
+        } else {
+            recipient
+        }
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
@@ -36,8 +51,7 @@ open class CashPaymentFlow(
             serviceHub.vaultService.generateSpend(
                     builder,
                     amount,
-                    // TODO: Get a transaction key, don't just re-use the owning key
-                    recipient,
+                    anonymousRecipient,
                     issuerConstraint)
         } catch (e: InsufficientBalanceException) {
             throw CashException("Insufficient cash for spend: ${e.message}", e)
@@ -48,6 +62,6 @@ open class CashPaymentFlow(
 
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return tx
+        return Result(tx, txIdentities)
     }
 }
