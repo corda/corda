@@ -163,7 +163,8 @@ object Crypto {
     ).associateBy { it.schemeCodeName }
 
     /**
-     * Map of algorithm identifiers to signature schemes Corda recognises.
+     * Map of X.509 algorithm identifiers to signature schemes Corda recognises. See RFC 2459 for the format of
+     * algorithm identifiers.
      */
     private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
             = (supportedSignatureSchemes.values.flatMap { scheme -> scheme.alternativeOIDs.map { oid -> Pair(oid, scheme) } }
