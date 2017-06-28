@@ -14,6 +14,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.*
@@ -670,7 +671,7 @@ class TwoPartyTradeFlowTests {
 
 
     class RecordingTransactionStorage(val database: Database, val delegate: TransactionStorage) : TransactionStorage {
-        override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+        override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()
             }

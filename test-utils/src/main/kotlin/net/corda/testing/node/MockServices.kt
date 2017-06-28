@@ -5,6 +5,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
@@ -157,8 +158,8 @@ class MockStateMachineRecordedTransactionMappingStorage(
 ) : StateMachineRecordedTransactionMappingStorage by storage
 
 open class MockTransactionStorage : TransactionStorage {
-    override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
-        return Pair(txns.values.toList(), _updatesPublisher)
+    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
+        return DataFeed(txns.values.toList(), _updatesPublisher)
     }
 
     private val txns = HashMap<SecureHash, SignedTransaction>()

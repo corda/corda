@@ -19,6 +19,7 @@ import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
 import net.corda.core.serialization.*
@@ -170,9 +171,9 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     override val updatesPublisher: PublishSubject<Vault.Update>
         get() = mutex.locked { _updatesPublisher }
 
-    override fun track(): Pair<Vault<ContractState>, Observable<Vault.Update>> {
+    override fun track(): DataFeed<Vault<ContractState>, Vault.Update> {
         return mutex.locked {
-            Pair(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

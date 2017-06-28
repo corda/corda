@@ -32,7 +32,7 @@ data class StateMachineInfo(
         val id: StateMachineRunId,
         val flowLogicClassName: String,
         val initiator: FlowInitiator,
-        val progressTrackerStepAndUpdates: Pair<String, Observable<String>>?
+        val progressTrackerStepAndUpdates: DataFeed<String, String>?
 ) {
     override fun toString(): String = "${javaClass.simpleName}($id, $flowLogicClassName)"
 }
@@ -52,9 +52,6 @@ sealed class StateMachineUpdate {
  * RPC operations that the node exposes to clients using the Java client library. These can be called from
  * client apps and are implemented by the node in the [net.corda.node.internal.CordaRPCOpsImpl] class.
  */
-
-// TODO: The use of Pairs throughout is unfriendly for Java interop.
-
 interface CordaRPCOps : RPCOps {
     /**
      * Returns the RPC protocol version, which is the same the node's Platform Version. Exists since version 1 so guaranteed
@@ -63,10 +60,13 @@ interface CordaRPCOps : RPCOps {
     override val protocolVersion: Int get() = nodeIdentity().platformVersion
 
     /**
-     * Returns a pair of currently in-progress state machine infos and an observable of future state machine adds/removes.
+     * Returns a data feed of currently in-progress state machine infos and an observable of future state machine adds/removes.
      */
     @RPCReturnsObservables
-    fun stateMachinesAndUpdates(): Pair<List<StateMachineInfo>, Observable<StateMachineUpdate>>
+    fun stateMachinesFeed(): DataFeed<List<StateMachineInfo>, StateMachineUpdate>
+
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("stateMachinesFeed()"))
+    fun stateMachinesAndUpdates() = stateMachinesFeed()
 
     /**
      * Returns a snapshot of vault states for a given query criteria (and optional order and paging specification)
@@ -119,59 +119,69 @@ interface CordaRPCOps : RPCOps {
      *
      * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
      *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
-    */
+     */
     // DOCSTART VaultTrackByAPI
     @RPCReturnsObservables
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                          paging: PageSpecification,
                                          sorting: Sort,
-                                         contractType: Class<out T>): Vault.PageAndUpdates<T>
+                                         contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update>
     // DOCEND VaultTrackByAPI
 
     // Note: cannot apply @JvmOverloads to interfaces nor interface implementations
     // Java Helpers
 
     // DOCSTART VaultTrackAPIHelpers
-    fun <T : ContractState> vaultTrack(contractType: Class<out T>): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> vaultTrack(contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
         return vaultTrackBy(QueryCriteria.VaultQueryCriteria(), PageSpecification(), Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> vaultTrackByCriteria(contractType: Class<out T>, criteria: QueryCriteria): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> vaultTrackByCriteria(contractType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update> {
         return vaultTrackBy(criteria, PageSpecification(), Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> vaultTrackByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> vaultTrackByWithPagingSpec(contractType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update> {
         return vaultTrackBy(criteria, paging, Sort(emptySet()), contractType)
     }
-    fun <T : ContractState> vaultTrackByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.PageAndUpdates<T> {
+    fun <T : ContractState> vaultTrackByWithSorting(contractType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update> {
         return vaultTrackBy(criteria, PageSpecification(), sorting, contractType)
     }
     // DOCEND VaultTrackAPIHelpers
 
     /**
-     * Returns a pair of head states in the vault and an observable of future updates to the vault.
+     * Returns a data feed of head states in the vault and an observable of future updates to the vault.
      */
     @RPCReturnsObservables
     // TODO: Remove this from the interface
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("vaultTrackBy(QueryCriteria())"))
-    fun vaultAndUpdates(): Pair<List<StateAndRef<ContractState>>, Observable<Vault.Update>>
+    fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update>
 
     /**
-     * Returns a pair of all recorded transactions and an observable of future recorded ones.
+     * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
-    fun verifiedTransactions(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
+    fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
+
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("verifiedTransactionFeed()"))
+    fun verifiedTransactions() = verifiedTransactionsFeed()
+
 
     /**
      * Returns a snapshot list of existing state machine id - recorded transaction hash mappings, and a stream of future
      * such mappings as well.
      */
     @RPCReturnsObservables
-    fun stateMachineRecordedTransactionMapping(): Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>>
+    fun stateMachineRecordedTransactionMappingFeed(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
+
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("stateMachineRecordedTransactionMappingFeed()"))
+    fun stateMachineRecordedTransactionMapping() = stateMachineRecordedTransactionMappingFeed()
 
     /**
      * Returns all parties currently visible on the network with their advertised services and an observable of future updates to the network.
      */
     @RPCReturnsObservables
-    fun networkMapUpdates(): Pair<List<NodeInfo>, Observable<NetworkMapCache.MapChange>>
+    fun networkMapFeed(): DataFeed<List<NodeInfo>, NetworkMapCache.MapChange>
+
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("networkMapFeed()"))
+    fun networkMapUpdates() = networkMapFeed()
 
     /**
      * Start the given flow with the given arguments. [logicType] must be annotated with [net.corda.core.flows.StartableByRPC].
@@ -292,7 +302,7 @@ inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryC
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultTrackBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
                                                                 paging: PageSpecification = PageSpecification(),
-                                                                sorting: Sort = Sort(emptySet())): Vault.PageAndUpdates<T> {
+                                                                sorting: Sort = Sort(emptySet())): DataFeed<Vault.Page<T>, Vault.Update> {
     return vaultTrackBy(criteria, paging, sorting, T::class.java)
 }
 
@@ -382,3 +392,18 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrac
         arg2: C,
         arg3: D
 ): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
+
+/**
+ * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
+ */
+@CordaSerializable
+data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>) {
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("snapshot"))
+    val first: A get() = snapshot
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("updates"))
+    val second: Observable<B> get() = updates
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("snapshot"))
+    val current: A get() = snapshot
+    @Deprecated("This function will be removed in a future milestone", ReplaceWith("updates"))
+    val future: Observable<B> get() = updates
+}
