@@ -158,7 +158,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
             check(!started) { "start can't be called twice" }
             started = true
 
-            log.info("Connecting to server: $serverAddress")
+            log.info("Connecting to message broker: $serverAddress")
             // TODO Add broker CN to config for host verification in case the embedded broker isn't used
             val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, config)
             val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport)
