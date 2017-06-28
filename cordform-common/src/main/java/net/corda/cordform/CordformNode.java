@@ -7,7 +7,7 @@ import com.typesafe.config.ConfigValueFactory;
 import java.util.List;
 import java.util.Map;
 
-public class CordformNode {
+public class CordformNode implements NodeDefinition {
     protected static final String DEFAULT_HOST = "localhost";
 
     /**
