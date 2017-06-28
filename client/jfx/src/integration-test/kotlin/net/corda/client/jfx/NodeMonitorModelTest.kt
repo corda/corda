@@ -113,11 +113,13 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue works end to end`() {
+        val anonymous = false
         rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
                 aliceNode.legalIdentity,
-                notaryNode.notaryIdentity
+                notaryNode.notaryIdentity,
+                anonymous
         )
 
         vaultUpdates.expectEvents(isStrict = false) {
@@ -138,8 +140,9 @@ class NodeMonitorModelTest : DriverBasedTest() {
 
     @Test
     fun `cash issue and move`() {
-        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity).returnValue.getOrThrow()
-        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity).returnValue.getOrThrow()
+        val anonymous = false
+        rpc.startFlow(::CashIssueFlow, 100.DOLLARS, OpaqueBytes.of(1), aliceNode.legalIdentity, notaryNode.notaryIdentity, anonymous).returnValue.getOrThrow()
+        rpc.startFlow(::CashPaymentFlow, 100.DOLLARS, bobNode.legalIdentity, anonymous).returnValue.getOrThrow()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null

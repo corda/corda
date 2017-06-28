@@ -44,7 +44,7 @@ class BankOfCordaClientApi(val hostAndPort: HostAndPort) {
             val amount = Amount(params.amount, currency(params.currency))
             val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
 
-            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.getOrThrow()
+            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, params.anonymous).returnValue.getOrThrow().stx
         }
     }
 }

@@ -1,5 +1,5 @@
-API: Vault
-==========
+API: Vault Query
+================
 
 Corda has been architected from the ground up to encourage usage of industry standard, proven query frameworks and libraries for accessing RDBMS backed transactional stores (including the Vault).
 
@@ -66,7 +66,7 @@ There are four implementations of this interface which can be chained together t
 	   
 	   .. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those interfaces common state attributes to the **vault_linear_states** table.
 
-	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the api-persistence_ documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression. The ColumnPredicateExpression allows for specification arbitrary criteria using the previously enumerated operator types. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``.
+	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the :doc:`Persistence </api-persistence>` documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression. The ColumnPredicateExpression allows for specification arbitrary criteria using the previously enumerated operator types. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``.
 
     .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
 
@@ -85,10 +85,9 @@ Examples of these ``QueryCriteria`` objects are presented below for Kotlin and J
 
 .. note:: When specifying the Contract Type as a parameterised type to the QueryCriteria in Kotlin, queries now include all concrete implementations of that type if this is an interface. Previously, it was only possible to query on Concrete types (or the universe of all Contract States).
 
-The Vault Query API leverages the rich semantics of the underlying JPA Hibernate_ based Persistence_ framework adopted by Corda.
+The Vault Query API leverages the rich semantics of the underlying JPA Hibernate_ based :doc:`Persistence </api-persistence>` framework adopted by Corda.
 
 .. _Hibernate: https://docs.jboss.org/hibernate/jpa/2.1/api/
-.. _Persistence: https://docs.corda.net/api-persistence.html
 
 .. note:: Permissioning at the database level will be enforced at a later date to ensure authenticated, role-based, read-only access to underlying Corda tables.
 

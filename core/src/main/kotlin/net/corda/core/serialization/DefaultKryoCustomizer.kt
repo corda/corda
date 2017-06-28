@@ -73,7 +73,7 @@ object DefaultKryoCustomizer {
 
             noReferencesWithin<WireTransaction>()
 
-            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
+            register(sun.security.ec.ECPublicKeyImpl::class.java, ECPublicKeyImplSerializer)
             register(EdDSAPublicKey::class.java, Ed25519PublicKeySerializer)
             register(EdDSAPrivateKey::class.java, Ed25519PrivateKeySerializer)
 
@@ -113,6 +113,7 @@ object DefaultKryoCustomizer {
             register(BCRSAPublicKey::class.java, PublicKeySerializer)
             register(BCSphincs256PrivateKey::class.java, PrivateKeySerializer)
             register(BCSphincs256PublicKey::class.java, PublicKeySerializer)
+            register(sun.security.ec.ECPublicKeyImpl::class.java, PublicKeySerializer)
 
             val customization = KryoSerializationCustomization(this)
             pluginRegistries.forEach { it.customizeSerialization(customization) }

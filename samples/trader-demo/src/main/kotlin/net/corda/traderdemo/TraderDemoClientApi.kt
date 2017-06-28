@@ -43,14 +43,14 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
         return vault.filterStatesOfType<CommercialPaper.State>().size
     }
 
-    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS) {
+    fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = true) {
         val bankOfCordaParty = rpc.partyFromX500Name(BOC.name)
                 ?: throw Exception("Unable to locate ${BOC.name} in Network Map Service")
         val me = rpc.nodeIdentity()
         val amounts = calculateRandomlySizedAmounts(amount, 3, 10, Random())
         // issuer random amounts of currency totaling 30000.DOLLARS in parallel
         val resultFutures = amounts.map { pennies ->
-            rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty).returnValue
+            rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty, anonymous).returnValue
         }
 
         Futures.allAsList(resultFutures).getOrThrow()

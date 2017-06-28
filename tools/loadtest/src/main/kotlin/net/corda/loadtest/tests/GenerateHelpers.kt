@@ -15,13 +15,14 @@ fun generateIssue(
         max: Long,
         currency: Currency,
         notary: Party,
-        possibleRecipients: List<Party>
+        possibleRecipients: List<Party>,
+        anonymous: Boolean
 ): Generator<CashFlowCommand.IssueCash> {
     return generateAmount(1, max, Generator.pure(currency)).combine(
             Generator.pure(OpaqueBytes.of(0)),
             Generator.pickOne(possibleRecipients)
     ) { amount, ref, recipient ->
-        CashFlowCommand.IssueCash(amount, ref, recipient, notary)
+        CashFlowCommand.IssueCash(amount, ref, recipient, notary, anonymous)
     }
 }
 
@@ -29,12 +30,13 @@ fun generateMove(
         max: Long,
         currency: Currency,
         issuer: Party,
-        possibleRecipients: List<Party>
+        possibleRecipients: List<Party>,
+        anonymous: Boolean
 ): Generator<CashFlowCommand.PayCash> {
     return generateAmount(1, max, Generator.pure(Issued(PartyAndReference(issuer, OpaqueBytes.of(0)), currency))).combine(
             Generator.pickOne(possibleRecipients)
     ) { amount, recipient ->
-        CashFlowCommand.PayCash(amount.withoutIssuer(), recipient, issuer)
+        CashFlowCommand.PayCash(amount.withoutIssuer(), recipient, issuer, anonymous)
     }
 }
 
