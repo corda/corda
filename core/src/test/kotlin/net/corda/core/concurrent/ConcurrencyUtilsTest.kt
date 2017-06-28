@@ -1,9 +1,8 @@
-package net.corda.core
+package net.corda.core.concurrent
 
 import com.google.common.util.concurrent.SettableFuture
 import com.nhaarman.mockito_kotlin.*
-import net.corda.core.MoreFutures.firstOf
-import net.corda.core.MoreFutures.shortCircuitedTaskFailedMessage
+import net.corda.core.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
@@ -12,7 +11,7 @@ import java.util.concurrent.CancellationException
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class FuturesTest {
+class ConcurrencyUtilsTest {
     private val f1 = SettableFuture.create<Int>()
     private val f2 = SettableFuture.create<Double>()
     private var invocations = 0

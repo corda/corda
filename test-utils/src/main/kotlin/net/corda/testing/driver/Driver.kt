@@ -11,7 +11,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.cordform.NodeDefinition
 import net.corda.core.*
-import net.corda.core.MoreFutures.firstOf
+import net.corda.core.concurrent.firstOf
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
