@@ -3,6 +3,7 @@ package net.corda.core.node.services
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
 import net.corda.core.identity.Party
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.NodeInfo
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
@@ -48,7 +49,7 @@ interface NetworkMapCache {
      * Atomically get the current party nodes and a stream of updates. Note that the Observable buffers updates until the
      * first subscriber is registered so as to avoid racing with early updates.
      */
-    fun track(): Pair<List<NodeInfo>, Observable<MapChange>>
+    fun track(): DataFeed<List<NodeInfo>, MapChange>
 
     /** Get the collection of nodes which advertise a specific service. */
     fun getNodesWithService(serviceType: ServiceType): List<NodeInfo> {

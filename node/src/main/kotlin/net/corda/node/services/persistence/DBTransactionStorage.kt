@@ -3,6 +3,7 @@ package net.corda.node.services.persistence
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.utilities.*
@@ -61,9 +62,9 @@ class DBTransactionStorage : TransactionStorage {
     val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()
 
-    override fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>> {
+    override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         synchronized(txStorage) {
-            return Pair(txStorage.values.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            return DataFeed(txStorage.values.toList(), updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 

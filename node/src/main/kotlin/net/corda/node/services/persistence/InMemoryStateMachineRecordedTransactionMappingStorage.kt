@@ -4,6 +4,7 @@ import net.corda.core.ThreadBox
 import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage
 import net.corda.core.node.services.StateMachineTransactionMapping
 import rx.Observable
@@ -32,9 +33,9 @@ class InMemoryStateMachineRecordedTransactionMappingStorage : StateMachineRecord
     }
 
     override fun track():
-            Pair<List<StateMachineTransactionMapping>, Observable<StateMachineTransactionMapping>> {
+            DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping> {
         mutex.locked {
-            return Pair(
+            return DataFeed(
                     stateMachineTransactionMap.flatMap { entry ->
                         entry.value.map {
                             StateMachineTransactionMapping(entry.key, it)
