@@ -7,6 +7,7 @@ import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.*;
 import net.corda.core.identity.*;
+import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.*;
@@ -248,7 +249,7 @@ public class VaultQueryJavaTests {
             Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
-            Vault.PageAndUpdates<ContractState> results = vaultQuerySvc.trackBy(ContractState.class, criteria);
+            DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, criteria);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();
             Observable<Vault.Update> updates = results.getFuture();
@@ -289,7 +290,7 @@ public class VaultQueryJavaTests {
             PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
-            Vault.PageAndUpdates<ContractState> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
+            DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getCurrent();
             Observable<Vault.Update> updates = results.getFuture();
