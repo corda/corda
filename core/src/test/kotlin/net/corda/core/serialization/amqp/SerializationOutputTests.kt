@@ -7,10 +7,12 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.EmptyWhitelist
 import net.corda.core.serialization.KryoAMQPSerializer
-import net.corda.core.CordaRuntimeException
+import net.corda.core.serialization.amqp.SerializerFactory.Companion.isPrimitive
+import net.corda.core.utilities.CordaRuntimeException
 import net.corda.nodeapi.RPCException
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY
+import org.apache.qpid.proton.amqp.*
 import org.apache.qpid.proton.codec.DecoderImpl
 import org.apache.qpid.proton.codec.EncoderImpl
 import org.junit.Test
@@ -26,6 +28,14 @@ import kotlin.test.assertTrue
 
 class SerializationOutputTests {
     data class Foo(val bar: String, val pub: Int)
+
+    data class testFloat(val f: Float)
+
+    data class testDouble(val d: Double)
+
+    data class testShort(val s: Short)
+
+    data class testBoolean(val b : Boolean)
 
     interface FooInterface {
         val pub: Int
@@ -160,8 +170,57 @@ class SerializationOutputTests {
     }
 
     @Test
+    fun isPrimitive() {
+        assertTrue(isPrimitive(Character::class.java))
+        assertTrue(isPrimitive(Boolean::class.java))
+        assertTrue(isPrimitive(Byte::class.java))
+        assertTrue(isPrimitive(UnsignedByte::class.java))
+        assertTrue(isPrimitive(Short::class.java))
+        assertTrue(isPrimitive(UnsignedShort::class.java))
+        assertTrue(isPrimitive(Int::class.java))
+        assertTrue(isPrimitive(UnsignedInteger::class.java))
+        assertTrue(isPrimitive(Long::class.java))
+        assertTrue(isPrimitive(UnsignedLong::class.java))
+        assertTrue(isPrimitive(Float::class.java))
+        assertTrue(isPrimitive(Double::class.java))
+        assertTrue(isPrimitive(Decimal32::class.java))
+        assertTrue(isPrimitive(Decimal64::class.java))
+        assertTrue(isPrimitive(Decimal128::class.java))
+        assertTrue(isPrimitive(Char::class.java))
+        assertTrue(isPrimitive(Date::class.java))
+        assertTrue(isPrimitive(UUID::class.java))
+        assertTrue(isPrimitive(ByteArray::class.java))
+        assertTrue(isPrimitive(String::class.java))
+        assertTrue(isPrimitive(Symbol::class.java))
+    }
+
+    @Test
     fun `test foo`() {
         val obj = Foo("Hello World!", 123)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test float`() {
+        val obj = testFloat(10.0F)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test double`() {
+        val obj = testDouble(10.0)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test short`() {
+        val obj = testShort(1)
+        serdes(obj)
+    }
+
+    @Test
+    fun `test bool`() {
+        val obj = testBoolean(true)
         serdes(obj)
     }
 

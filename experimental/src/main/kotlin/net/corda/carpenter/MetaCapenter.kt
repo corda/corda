@@ -5,6 +5,8 @@ import net.corda.core.serialization.carpenter.Schema
 
 import net.corda.core.serialization.amqp.CompositeType
 
+/**********************************************************************************************************************/
+
 abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
 
     private val cc = ClassCarpenter()
@@ -35,6 +37,8 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     abstract fun build()
 }
 
+/**********************************************************************************************************************/
+
 class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
@@ -44,6 +48,8 @@ class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     }
 }
 
+/**********************************************************************************************************************/
+
 class TestMetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     override fun build() {
         println ("TestMetaCarpenter::build")
@@ -51,3 +57,5 @@ class TestMetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schema
         step (schemas.carpenterSchemas.removeAt(0))
     }
 }
+
+/**********************************************************************************************************************/

@@ -32,19 +32,19 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         var amqpSchema = obj.second.schema.types[0] as CompositeType
 
-        assertEquals(2,     amqpSchema.fields.size)
-        assertEquals("a",   amqpSchema.fields[0].name)
+        assertEquals(2, amqpSchema.fields.size)
+        assertEquals("a", amqpSchema.fields[0].name)
         assertEquals("int", amqpSchema.fields[0].type)
-        assertEquals("b",   amqpSchema.fields[1].name)
+        assertEquals("b", amqpSchema.fields[1].name)
         assertEquals("int", amqpSchema.fields[1].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
-        assertEquals (1, carpenterSchema.size)
-        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName ("A") }
+        assertEquals(1, carpenterSchema.size)
+        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }
 
-        assertNotEquals (null, aSchema)
+        assertNotEquals(null, aSchema)
 
         val pinochio = ClassCarpenter().build(aSchema!!)
 
@@ -76,16 +76,16 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         val amqpSchema = obj.second.schema.types[0] as CompositeType
 
-        assertEquals(2,        amqpSchema.fields.size)
-        assertEquals("a",      amqpSchema.fields[0].name)
-        assertEquals("int",    amqpSchema.fields[0].type)
-        assertEquals("b",      amqpSchema.fields[1].name)
+        assertEquals(2, amqpSchema.fields.size)
+        assertEquals("a", amqpSchema.fields[0].name)
+        assertEquals("int", amqpSchema.fields[0].type)
+        assertEquals("b", amqpSchema.fields[1].name)
         assertEquals("string", amqpSchema.fields[1].type)
 
         val carpenterSchema = CarpenterSchemas.newInstance()
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
-        assertEquals (1, carpenterSchema.size)
+        assertEquals(1, carpenterSchema.size)
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }
 
         assertNotEquals(null, aSchema)
