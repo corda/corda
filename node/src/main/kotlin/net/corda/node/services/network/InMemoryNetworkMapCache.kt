@@ -43,9 +43,15 @@ import javax.annotation.concurrent.ThreadSafe
  * and identity services depend on each other). Should always be provided except for unit test cases.
  */
 @ThreadSafe
-open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private val serviceHub: ServiceHub?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
+    }
+
+    init {
+        if (loadNetworkCacheDB) {
+            loadFromDB()
+        }
     }
 
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
@@ -182,5 +188,43 @@ open class InMemoryNetworkMapCache(private val serviceHub: ServiceHub?) : Single
     @VisibleForTesting
     override fun runWithoutMapService() {
         _registrationFuture.set(null)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Changes related to NetworkMap redesign
+
+    /**
+     * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
+     */
+    // TODO in companionObject
+    fun loadFromDB() {
+        // Populate:
+        // * partyNodes: List<NodeInfo>
+        // * val networkMapNodes: List<NodeInfo>
+        // rest should go on init
+
+//        // TODO taken from hibernate tutorial, list of entities
+////        sessionFactory = Persistence.createEntityManagerFactory( "org.hibernate.tutorial.jpa" );
+//        val entityManager = sessionFactory.createEntityManager()
+//        entityManager = sessionFactory.createEntityManager()
+//        entityManager.getTransaction().begin()
+//        val result = entityManager.createQuery("from node_infos", NodeInfoSchema::class.java).getResultList()
+//        for (event in result) {
+//            System.out.println("Event (" + event.getDate() + ") : " + event.getTitle())
+//        }
+//        entityManager.getTransaction().commit()
+//        entityManager.close()
+        TODO()
+    }
+
+    fun updateInfoDB() {
+        //TODO look into HibernateObserver
+//        val entityManager = sessionFactory.createEntityManager()
+//        entityManager.getTransaction().begin()
+//        entityManager.persist(Event("Our very first event!", Date()))
+//        entityManager.persist(Event("A follow up event", Date()))
+//        entityManager.getTransaction().commit()
+//        entityManager.close()
+        TODO()
     }
 }

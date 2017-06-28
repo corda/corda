@@ -4,6 +4,9 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.NodeInfoSchema
+import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.NonEmptySet
@@ -36,5 +39,20 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
     val notaryIdentity: Party get() = advertisedServices.single { it.info.type.isNotary() }.identity.party
     fun serviceIdentities(type: ServiceType): List<Party> {
         return advertisedServices.mapNotNull { if (it.info.type.isSubTypeOf(type)) it.identity.party else null }
+    }
+
+    /** Object Relational Mapping support. */
+    fun generateMappedObject(schema: MappedSchema): NodeInfoSchemaV1.PersistentNodeInfo {
+        return when (schema) {
+            is NodeInfoSchemaV1 -> NodeInfoSchemaV1.PersistentNodeInfo(
+                    addresses = this.addresses.map { NodeInfoSchemaV1.DBHostAndPort(it) },
+                    legalIdentityAndCert = this.legalIdentityAndCert.toString(),
+                    legalIdentitiesAndCerts = this.legalIdentitiesAndCerts.map { it.toString() }.toSet(),
+                    platformVersion = this.platformVersion,
+                    advertisedServices = this.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it) },
+                    worldMapLocation = this.worldMapLocation?.let { NodeInfoSchemaV1.DBWorldMapLocation(it) }
+            )
+            else -> throw IllegalArgumentException("Unrecognised schema $schema")
+        }
     }
 }

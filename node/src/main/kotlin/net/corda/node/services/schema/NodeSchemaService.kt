@@ -5,6 +5,8 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.NodeInfoSchema
+import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -52,6 +54,7 @@ class NodeSchemaService(customSchemas: Set<MappedSchema> = emptySet()) : SchemaS
     val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaService.SchemaOptions()),
                   Pair(VaultSchemaV1, SchemaService.SchemaOptions()),
+                  Pair(NodeInfoSchemaV1, SchemaService.SchemaOptions()),
                   Pair(NodeServicesV1, SchemaService.SchemaOptions()))
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas.plus(customSchemas.map {
