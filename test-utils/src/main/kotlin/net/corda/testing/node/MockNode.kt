@@ -135,7 +135,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         val id: Int,
                         val overrideServices: Map<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
+            AbstractNode(config, advertisedServices, TestClock(), false, mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val platformVersion: Int get() = 1
