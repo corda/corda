@@ -158,10 +158,10 @@ interface CordaRPCOps : RPCOps {
      * Returns a data feed of all recorded transactions and an observable of future recorded ones.
      */
     @RPCReturnsObservables
-    fun verifiedTransactionFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
+    fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction>
 
     @Deprecated("This function will be removed in a future milestone", ReplaceWith("verifiedTransactionFeed()"))
-    fun verifiedTransactions() = verifiedTransactionFeed()
+    fun verifiedTransactions() = verifiedTransactionsFeed()
 
 
     /**
@@ -394,7 +394,7 @@ inline fun <T : Any, A, B, C, D, reified R : FlowLogic<T>> CordaRPCOps.startTrac
 ): FlowProgressHandle<T> = startTrackedFlowDynamic(R::class.java, arg0, arg1, arg2, arg3)
 
 /**
- * The Data feed contains a snapshot of the requested data and a [Observable] for future update.
+ * The Data feed contains a snapshot of the requested data and an [Observable] of future updates.
  */
 @CordaSerializable
 data class DataFeed<out A, B>(val snapshot: A, val updates: Observable<B>) {

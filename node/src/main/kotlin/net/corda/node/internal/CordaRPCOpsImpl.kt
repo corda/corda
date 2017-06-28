@@ -74,7 +74,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun verifiedTransactionFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
+    override fun verifiedTransactionsFeed(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return database.transaction {
             services.storageService.validatedTransactions.track()
         }
