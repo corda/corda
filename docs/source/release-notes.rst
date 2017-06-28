@@ -22,7 +22,7 @@ state schemas defined by CorDapp developers when modelling new contract types. C
 simple but sophisticated builder DSL (see ``QueryCriteriaUtils``). The new Vault Query service is usable by flows and by
 RPC clients alike via two simple API functions: ``queryBy()`` and ``trackBy()``. The former provides point-in-time
 snapshot queries whilst the later supplements the snapshot with dynamic streaming of updates.
-See :doc:`vault-query` for full details.
+See :doc:`api-vault-query` for full details.
 
 We have written a comprehensive Hello, World! tutorial, showing developers how to build a CorDapp from start
 to finish. The tutorial shows how the core elements of a CorDapp - states, contracts and flows - fit together
