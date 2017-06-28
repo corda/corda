@@ -807,7 +807,7 @@ class DriverDSL(
                         "-javaagent:$quasarJarPath"
                 val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
-                ProcessUtilities.startJavaProcess(
+                ProcessUtilities.startCordaProcess(
                         className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                         arguments = listOf(
                                 "--base-directory=${nodeConf.baseDirectory}",
@@ -832,7 +832,7 @@ class DriverDSL(
         ): ListenableFuture<Process> {
             return executorService.submit<Process> {
                 val className = "net.corda.webserver.WebServer"
-                ProcessUtilities.startJavaProcess(
+                ProcessUtilities.startCordaProcess(
                         className = className, // cannot directly get class for this, so just use string
                         arguments = listOf("--base-directory", handle.configuration.baseDirectory.toString()),
                         jdwpPort = debugPort,
