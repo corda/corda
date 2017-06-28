@@ -118,9 +118,6 @@ open class NodeStartup(val args: Array<String>) {
                     logger.error("Shell failed to start", e)
                 }
             }
-        } failure {
-            logger.error("Error during network map registration", it)
-            exitProcess(1)
         }
         node.run()
     }
