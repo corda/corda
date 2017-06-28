@@ -1,6 +1,7 @@
 package net.corda.core.node.services
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.messaging.DataFeed
 import net.corda.core.transactions.SignedTransaction
 import rx.Observable
 
@@ -22,7 +23,7 @@ interface ReadOnlyTransactionStorage {
     /**
      * Returns all currently stored transactions and further fresh ones.
      */
-    fun track(): Pair<List<SignedTransaction>, Observable<SignedTransaction>>
+    fun track(): DataFeed<List<SignedTransaction>, SignedTransaction>
 }
 
 /**
