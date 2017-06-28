@@ -508,8 +508,7 @@ class DriverDSL(
     override fun shutdown() {
         _shutdownManager?.shutdown()
         _executorService?.let {
-            val n = it.shutdownNow().size
-            if (n != 0) log.warn("$n task(s) never started.")
+            it.shutdown() // Avoid shutdownNow as most tasks don't interrupt well.
             val stopwatch = Stopwatch.createStarted()
             val tolerance = 5.seconds
             if (!it.awaitTermination(tolerance.toMillis(), MILLISECONDS)) {
@@ -537,6 +536,7 @@ class DriverDSL(
         }
         return firstOf(connectionFuture, processDeathFuture) {
             if (it == processDeathFuture) {
+                client.dispose()
                 throw processDeathFuture.getOrThrow()
             }
             val connection = connectionFuture.getOrThrow()

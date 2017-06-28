@@ -15,6 +15,7 @@ import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
+import org.apache.activemq.artemis.api.core.client.ServerLocator
 import java.io.Closeable
 import java.lang.reflect.Proxy
 import java.time.Duration
@@ -37,7 +38,7 @@ data class RPCClientConfiguration(
          * duration. If set too low it wastes client side cycles.
          */
         val reapInterval: Duration,
-        /** The number of threads to use for observations (for executing [Observable.onNext]) */
+        /** The number of threads to use for observations (for executing [rx.Observer.onNext]) */
         val observationExecutorPoolSize: Int,
         /** The maximum number of producers to create to handle outgoing messages */
         val producerPoolBound: Int,
@@ -108,6 +109,8 @@ class RPCClient<I : RPCOps>(
         val serverProtocolVersion: Int
     }
 
+    private var open = true
+    private var currentSession: Session? = null
     /**
      * Returns an [RPCConnection] containing a proxy that lets you invoke RPCs on the server. Calls on it block, and if
      * the server throws an exception then it will be rethrown on the client. Proxies are thread safe and may be used to
@@ -115,7 +118,7 @@ class RPCClient<I : RPCOps>(
      *
      * RPC sends and receives are logged on the net.corda.rpc logger.
      *
-     * The [RPCOps] defines what client RPCs are available. If an RPC returns an [Observable] anywhere in the object
+     * The [RPCOps] defines what client RPCs are available. If an RPC returns an [rx.Observable] anywhere in the object
      * graph returned then the server-side observable is transparently forwarded to the client side here.
      * *You are expected to use it*. The server will begin sending messages immediately that will be buffered on the
      * client, you are expected to drain by subscribing to the returned observer. You can opt-out of this by simply
@@ -130,50 +133,67 @@ class RPCClient<I : RPCOps>(
      * @param password The password to authenticate with.
      * @throws RPCException if the server version is too low or if the server isn't reachable within the given time.
      */
-    fun start(
-            rpcOpsClass: Class<I>,
-            username: String,
-            password: String
-    ): RPCConnection<I> {
+    fun start(rpcOpsClass: Class<I>, username: String, password: String): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
-            val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
+            val session = synchronized(this) {
+                check(open) { "This RPCClient is closed." }
+                check(currentSession == null) { "Already connecting or connected." }
+                Session(rpcOpsClass, username, password).also { currentSession = it }
+            }
+            try {
+                session.start()
+            } catch (t: Throwable) {
+                synchronized(this) {
+                    currentSession = null // Allow another start attempt.
+                }
+                session.close()
+                throw t
+            }
+        }
+    }
 
-            val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
+    fun close() = synchronized(this) {
+        open = false
+        currentSession?.close()
+    }
+
+    private inner class Session(private val rpcOpsClass: Class<I>, username: String, password: String) {
+        private val serverLocator: ServerLocator
+        private val proxyHandler: RPCClientProxyHandler
+
+        init {
+            val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
+            serverLocator = ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
                 retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
                 retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
                 maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
                 reconnectAttempts = rpcConfiguration.maxReconnectAttempts
                 minLargeMessageSize = rpcConfiguration.maxFileSize
             }
+            proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass)
+        }
 
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass)
-            try {
-                proxyHandler.start()
-
-                @Suppress("UNCHECKED_CAST")
-                val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
-
-                val serverProtocolVersion = ops.protocolVersion
-                if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
-                    throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
-                            " than the server's supported protocol version ($serverProtocolVersion)")
-                }
-                proxyHandler.setServerProtocolVersion(serverProtocolVersion)
-
-                log.debug("RPC connected, returning proxy")
-                object : RPCConnection<I> {
-                    override val proxy = ops
-                    override val serverProtocolVersion = serverProtocolVersion
-                    override fun close() {
-                        proxyHandler.close()
-                        serverLocator.close()
-                    }
-                }
-            } catch (exception: Throwable) {
-                proxyHandler.close()
-                serverLocator.close()
-                throw exception
+        fun start() = run {
+            proxyHandler.start()
+            @Suppress("UNCHECKED_CAST")
+            val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
+            val serverProtocolVersion = ops.protocolVersion
+            if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
+                throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
+                        " than the server's supported protocol version ($serverProtocolVersion)")
             }
+            proxyHandler.setServerProtocolVersion(serverProtocolVersion)
+            log.debug("RPC connected, returning proxy")
+            object : RPCConnection<I> {
+                override val proxy = ops
+                override val serverProtocolVersion = serverProtocolVersion
+                override fun close() = this@Session.close()
+            }
+        }
+
+        fun close() {
+            proxyHandler.close()
+            serverLocator.close()
         }
     }
 }

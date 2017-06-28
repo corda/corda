@@ -208,7 +208,7 @@ class RPCClientProxyHandler(
                 it.session.commit()
             }
             return replyFuture.getOrThrow()
-        } catch (e: RuntimeException) {
+        } catch (e: RuntimeException) { // TODO: Why not also Error?
             // Already an unchecked exception, so just rethrow it
             throw e
         } catch (e: Exception) {
@@ -279,6 +279,7 @@ class RPCClientProxyHandler(
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
         }
+        rpcReplyMap.values.forEach { it.cancel(false) }
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
