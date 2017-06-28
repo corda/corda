@@ -7,6 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
@@ -86,17 +87,10 @@ class CordaRPCOpsImplTest {
         }
 
         // Tell the monitoring service node to issue some cash
+        val anonymous = false
         val recipient = aliceNode.info.legalIdentity
-        rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity)
+        val result = rpc.startFlow(::CashIssueFlow, Amount(quantity, GBP), ref, recipient, notaryNode.info.notaryIdentity, anonymous)
         mockNet.runNetwork()
-
-        val expectedState = Cash.State(Amount(quantity,
-                Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
-                recipient)
-
-        // Query vault via RPC
-        val cash = rpc.vaultQueryBy<Cash.State>()
-        assertEquals(expectedState, cash.states.first().state.data)
 
         var issueSmId: StateMachineRunId? = null
         stateMachineUpdates.expectEvents {
@@ -111,11 +105,14 @@ class CordaRPCOpsImplTest {
             )
         }
 
-        transactions.expectEvents {
-            expect { tx ->
-                assertEquals(expectedState, tx.tx.outputs.single().data)
-            }
-        }
+        val tx = result.returnValue.getOrThrow()
+        val expectedState = Cash.State(Amount(quantity,
+                Issued(aliceNode.info.legalIdentity.ref(ref), GBP)),
+                recipient)
+
+        // Query vault via RPC
+        val cash = rpc.vaultQueryBy<Cash.State>()
+        assertEquals(expectedState, cash.states.first().state.data)
 
         // TODO: deprecated
         vaultUpdates.expectEvents {
@@ -135,22 +132,24 @@ class CordaRPCOpsImplTest {
 
     @Test
     fun `issue and move`() {
-        rpc.startFlow(::CashIssueFlow,
+        val anonymous = false
+        val result = rpc.startFlow(::CashIssueFlow,
                 Amount(100, USD),
                 OpaqueBytes(ByteArray(1, { 1 })),
                 aliceNode.info.legalIdentity,
-                notaryNode.info.notaryIdentity
+                notaryNode.info.notaryIdentity,
+                false
         )
 
         mockNet.runNetwork()
 
-        rpc.startFlow(::CashPaymentFlow, Amount(100, USD), aliceNode.info.legalIdentity)
+        rpc.startFlow(::CashPaymentFlow, Amount(100, USD), aliceNode.info.legalIdentity, anonymous)
 
         mockNet.runNetwork()
 
         var issueSmId: StateMachineRunId? = null
         var moveSmId: StateMachineRunId? = null
-        stateMachineUpdates.expectEvents {
+        stateMachineUpdates.expectEvents() {
             sequence(
                     // ISSUE
                     expect { add: StateMachineUpdate.Added ->
@@ -169,6 +168,7 @@ class CordaRPCOpsImplTest {
             )
         }
 
+        val tx = result.returnValue.getOrThrow()
         transactions.expectEvents {
             sequence(
                     // ISSUE
@@ -233,7 +233,8 @@ class CordaRPCOpsImplTest {
                     Amount(100, USD),
                     OpaqueBytes(ByteArray(1, { 1 })),
                     aliceNode.info.legalIdentity,
-                    notaryNode.info.notaryIdentity
+                    notaryNode.info.notaryIdentity,
+                    false
             )
         }
     }

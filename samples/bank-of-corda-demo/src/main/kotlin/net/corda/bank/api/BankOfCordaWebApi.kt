@@ -20,7 +20,8 @@ import javax.ws.rs.core.Response
 class BankOfCordaWebApi(val rpc: CordaRPCOps) {
     data class IssueRequestParams(val amount: Long, val currency: String,
                                   val issueToPartyName: X500Name, val issueToPartyRefAsString: String,
-                                  val issuerBankName: X500Name)
+                                  val issuerBankName: X500Name,
+                                  val anonymous: Boolean)
 
     private companion object {
         val logger = loggerFor<BankOfCordaWebApi>()
@@ -48,11 +49,12 @@ class BankOfCordaWebApi(val rpc: CordaRPCOps) {
 
         val amount = Amount(params.amount, currency(params.currency))
         val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
+        val anonymous = params.anonymous
 
         // invoke client side of Issuer Flow: IssuanceRequester
         // The line below blocks and waits for the future to resolve.
         val status = try {
-            rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty).returnValue.getOrThrow()
+            rpc.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, anonymous).returnValue.getOrThrow()
             logger.info("Issue request completed successfully: $params")
             Response.Status.CREATED
         } catch (e: FlowException) {

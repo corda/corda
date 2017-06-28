@@ -38,7 +38,7 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
 
         generate = { _, parallelism ->
             val generateIssue = Generator.pickOne(simpleNodes).bind { node ->
-                generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity)).map {
+                generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity), anonymous = true).map {
                     SelfIssueCommand(it, node)
                 }
             }

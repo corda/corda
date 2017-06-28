@@ -5,10 +5,9 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
-import net.corda.core.identity.Party
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
@@ -26,23 +25,39 @@ class CashIssueFlow(val amount: Amount<Currency>,
                     val issueRef: OpaqueBytes,
                     val recipient: Party,
                     val notary: Party,
-                    progressTracker: ProgressTracker) : AbstractCashFlow(progressTracker) {
+                    val anonymous: Boolean,
+                    progressTracker: ProgressTracker) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     constructor(amount: Amount<Currency>,
                 issueRef: OpaqueBytes,
                 recipient: Party,
-                notary: Party) : this(amount, issueRef, recipient, notary, tracker())
+                notary: Party) : this(amount, issueRef, recipient, notary, true, tracker())
+    constructor(amount: Amount<Currency>,
+                issueRef: OpaqueBytes,
+                recipient: Party,
+                notary: Party,
+                anonymous: Boolean) : this(amount, issueRef, recipient, notary, anonymous, tracker())
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call(): AbstractCashFlow.Result {
+        progressTracker.currentStep = GENERATING_ID
+        val txIdentities = if (anonymous) {
+            subFlow(TxKeyFlow.Requester(recipient))
+        } else {
+            TxKeyFlow.TxIdentities(emptyList())
+        }
+        val anonymousRecipient = if (anonymous) {
+            txIdentities.forParty(recipient).identity
+        } else {
+            recipient
+        }
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = notary)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
-        // TODO: Get a transaction key, don't just re-use the owning key
-        Cash().generateIssue(builder, amount.issuedBy(issuer), recipient, notary)
+        val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), anonymousRecipient, notary)
         progressTracker.currentStep = SIGNING_TX
-        val tx = serviceHub.signInitialTransaction(builder)
+        val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
         subFlow(FinalityFlow(tx))
-        return tx
+        return Result(tx, txIdentities)
     }
 }
