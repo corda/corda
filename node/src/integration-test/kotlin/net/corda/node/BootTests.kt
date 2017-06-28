@@ -42,7 +42,7 @@ class BootTests {
         assertThat(logConfigFile).isRegularFile()
         driver(isDebug = true, systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString())) {
             val alice = startNode(ALICE.name).get()
-            val logFolder = alice.configuration.baseDirectory / "logs"
+            val logFolder = alice.configuration.baseDirectory / NodeStartup.LOGS_DIRECTORY_NAME
             val logFile = logFolder.toFile().listFiles { _, name -> name.endsWith(".log") }.single()
             // Start second Alice, should fail
             assertThatThrownBy {
