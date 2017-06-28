@@ -32,7 +32,9 @@ class CashPaymentFlowTests {
         notary = notaryNode.info.notaryIdentity
         bankOfCorda = bankOfCordaNode.info.legalIdentity
 
-        mockNet.runNetwork()
+        notaryNode.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
+        notaryNode.identity.registerIdentity(bankOfCordaNode.info.legalIdentityAndCert)
+        bankOfCordaNode.identity.registerIdentity(notaryNode.info.legalIdentityAndCert)
         val future = bankOfCordaNode.services.startFlow(CashIssueFlow(initialBalance, ref,
                 bankOfCorda,
                 notary)).resultFuture
@@ -53,11 +55,11 @@ class CashPaymentFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                 payTo)).resultFuture
         mockNet.runNetwork()
-        val paymentTx = future.getOrThrow()
+        val (paymentTx, identities) = future.getOrThrow()
         val states = paymentTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>()
-        val ourState = states.single { it.owner.owningKey != payTo.owningKey }
-        val paymentState = states.single { it.owner.owningKey == payTo.owningKey }
-        assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), ourState.amount)
+        val paymentState: Cash.State = states.single { it.owner == identities.forParty(payTo).identity }
+        val changeState: Cash.State = states.single { it != paymentState }
+        assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
         assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
     }
 

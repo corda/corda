@@ -207,13 +207,15 @@ abstract class OnLedgerAsset<T : Any, C : CommandData, S : FungibleAsset<T>> : C
         @JvmStatic
         fun <S : FungibleAsset<T>, T: Any> generateIssue(tx: TransactionBuilder,
                                                          transactionState: TransactionState<S>,
-                                                         issueCommand: CommandData) {
+                                                         issueCommand: CommandData): Set<PublicKey> {
             check(tx.inputStates().isEmpty())
             check(tx.outputStates().map { it.data }.filterIsInstance(transactionState.javaClass).isEmpty())
             require(transactionState.data.amount.quantity > 0)
             val at = transactionState.data.amount.token.issuer
+            val commandSigner = at.party.owningKey
             tx.addOutputState(transactionState)
-            tx.addCommand(issueCommand, at.party.owningKey)
+            tx.addCommand(issueCommand, commandSigner)
+            return setOf(commandSigner)
         }
     }
 

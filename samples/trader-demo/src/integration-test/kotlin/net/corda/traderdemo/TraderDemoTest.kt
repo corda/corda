@@ -51,7 +51,8 @@ class TraderDemoTest : NodeBasedTest() {
         val expectedBCash = clientB.cashCount + 1
         val expectedPaper = listOf(clientA.commercialPaperCount + 1, clientB.commercialPaperCount)
 
-        clientA.runBuyer(amount = 100.DOLLARS)
+        // TODO: Enable anonymisation
+        clientA.runBuyer(amount = 100.DOLLARS, anonymous = false)
         clientB.runSeller(counterparty = nodeA.info.legalIdentity.name, amount = 5.DOLLARS)
 
         assertThat(clientA.cashCount).isGreaterThan(originalACash)

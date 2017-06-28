@@ -429,7 +429,7 @@ class Obligation<P : Any> : Contract {
     /**
      * Generate a transaction performing close-out netting of two or more states.
      *
-     * @param signer the party who will sign the transaction. Must be one of the obligor or beneficiary.
+     * @param signer the party which will sign the transaction. Must be one of the obligor or beneficiary.
      * @param states two or more states, which must be compatible for bilateral netting (same issuance definitions,
      * and same parties involved).
      */
@@ -458,7 +458,7 @@ class Obligation<P : Any> : Contract {
      * @param amountIssued the amount to be exited, represented as a quantity of issued currency.
      * @param assetStates the asset states to take funds from. No checks are done about ownership of these states, it is
      * the responsibility of the caller to check that they do not exit funds held by others.
-     * @return the public keys who must sign the transaction for it to be valid.
+     * @return the public keys which must sign the transaction for it to be valid.
      */
     @Suppress("unused")
     fun generateExit(tx: TransactionBuilder, amountIssued: Amount<Issued<Terms<P>>>,
