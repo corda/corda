@@ -16,8 +16,12 @@ import com.google.common.util.concurrent.ListenableFuture
 import io.requery.util.CloseableIterator
 import net.corda.core.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowInitiator
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
@@ -88,6 +92,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             }
             throw UnsupportedOperationException(message)
         }
+
         override fun read(kryo: Kryo, input: Input, type: Class<AutoCloseable>) = throw IllegalStateException("Should not reach here!")
     }
 
@@ -107,8 +112,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     sealed class Change {
         abstract val logic: FlowLogic<*>
 
-        data class Add(override val logic: FlowLogic<*>): Change()
-        data class Removed(override val logic: FlowLogic<*>, val result: ErrorOr<*>): Change()
+        data class Add(override val logic: FlowLogic<*>) : Change()
+        data class Removed(override val logic: FlowLogic<*>, val result: ErrorOr<*>) : Change()
     }
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -226,9 +231,9 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
      * Atomic get snapshot + subscribe. This is needed so we don't miss updates between subscriptions to [changes] and
      * calls to [allStateMachines]
      */
-    fun track(): Pair<List<FlowStateMachineImpl<*>>, Observable<Change>> {
+    fun track(): DataFeed<List<FlowStateMachineImpl<*>>, Change> {
         return mutex.locked {
-            Pair(stateMachines.keys.toList(), changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
+            DataFeed(stateMachines.keys.toList(), changesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
     }
 
