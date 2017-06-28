@@ -2,6 +2,7 @@ package net.corda.node.services.transactions
 
 import com.google.common.net.HostAndPort
 import net.corda.core.div
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -53,13 +54,16 @@ class BFTSMaRtConfig(private val replicaAddresses: List<HostAndPort>, debug: Boo
     }
 
     fun waitUntilReplicaWillNotPrintStackTrace(contextReplicaId: Int) {
-        replicaAddresses.subList(0, contextReplicaId).forEachIndexed { otherId, baseAddress ->
-            // The printStackTrace we want to avoid is in replica-replica communication code:
-            val address = BFTSMaRtPort.FOR_REPLICAS.ofReplica(baseAddress)
-            log.debug("Waiting for replica $otherId to start listening on: $address")
-            while (!isOpen(address)) MILLISECONDS.sleep(200)
-            log.debug("Replica $otherId is ready for P2P.")
-        }
+        // A replica will printStackTrace until all lower-numbered replicas are listening.
+        // But we can't probe a replica without it logging EOFException when our probe succeeds.
+        // So to keep logging to a minimum we only check the previous replica:
+        val peerId = contextReplicaId - 1
+        if (peerId < 0) return
+        // The printStackTrace we want to avoid is in replica-replica communication code:
+        val address = BFTSMaRtPort.FOR_REPLICAS.ofReplica(replicaAddresses[peerId])
+        log.debug { "Waiting for replica $peerId to start listening on: $address" }
+        while (!address.isListening()) MILLISECONDS.sleep(200)
+        log.debug { "Replica $peerId is ready for P2P." }
     }
 
     private fun replicaPorts(replicaId: Int): List<HostAndPort> {
@@ -75,8 +79,8 @@ private enum class BFTSMaRtPort(private val off: Int) {
     fun ofReplica(base: HostAndPort) = HostAndPort.fromParts(base.host, base.port + off)
 }
 
-private fun isOpen(address: HostAndPort) = try {
-    Socket(address.host, address.port).use { true } // Will cause one error to be logged in the replica on success.
+private fun HostAndPort.isListening() = try {
+    Socket(host, port).use { true } // Will cause one error to be logged in the replica on success.
 } catch (e: SocketException) {
     false
 }
