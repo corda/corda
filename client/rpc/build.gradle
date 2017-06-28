@@ -36,9 +36,6 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(file("$rootDir/config/test/log4j2.xml")) {
-        rename 'log4j2\\.xml', 'log4j2-test.xml'
-    }
     from(project(':node:capsule').tasks.buildCordaJAR) {
         rename 'corda-(.*)', 'corda.jar'
     }
