@@ -45,10 +45,21 @@ enum class CollectionOperator {
 }
 
 @CordaSerializable
+enum class AggregateFunctionType {
+    COUNT,
+    AVG,
+    MIN,
+    MAX,
+    SUM,
+}
+
+@CordaSerializable
 sealed class CriteriaExpression<O, out T> {
     data class BinaryLogical<O>(val left: CriteriaExpression<O, Boolean>, val right: CriteriaExpression<O, Boolean>, val operator: BinaryLogicalOperator) : CriteriaExpression<O, Boolean>()
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()
     data class ColumnPredicateExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>) : CriteriaExpression<O, Boolean>()
+    data class AggregateFunctionExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>,
+                                                 val groupByColumns: List<Column<O, C>>?) : CriteriaExpression<O, Boolean>()
 }
 
 @CordaSerializable
@@ -65,6 +76,7 @@ sealed class ColumnPredicate<C> {
     data class CollectionExpression<C>(val operator: CollectionOperator, val rightLiteral: Collection<C>) : ColumnPredicate<C>()
     data class Between<C : Comparable<C>>(val rightFromLiteral: C, val rightToLiteral: C) : ColumnPredicate<C>()
     data class NullExpression<C>(val operator: NullOperator) : ColumnPredicate<C>()
+    data class AggregateFunction<C>(val type: AggregateFunctionType) : ColumnPredicate<C>()
 }
 
 fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O, R>): Class<O> {
@@ -72,6 +84,7 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
         is CriteriaExpression.BinaryLogical -> resolveEnclosingObjectFromExpression(expression.left)
         is CriteriaExpression.Not -> resolveEnclosingObjectFromExpression(expression.expression)
         is CriteriaExpression.ColumnPredicateExpression<O, *> -> resolveEnclosingObjectFromColumn(expression.column)
+        is CriteriaExpression.AggregateFunctionExpression<O, *> -> resolveEnclosingObjectFromColumn(expression.column)
     }
 }
 
@@ -187,6 +200,11 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Kotlin(this), predicate)
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Java<Any, R>(this), predicate)
 
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByPredicates: List<ColumnPredicate<*>>?)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByPredicates?.map { Column.Kotlin(this) })
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByPredicates: List<ColumnPredicate<*>>?)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Java<Any, R>(this), predicate, groupByPredicates?.map { Column.Java<Any, R>(this) })
+
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
     fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
 
@@ -229,6 +247,12 @@ object Builder {
     fun Field.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
     fun <O, R> KProperty1<O, R?>.notNull() = predicate(ColumnPredicate.NullExpression(NullOperator.NOT_NULL))
     fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
+
+    fun <O, R> KProperty1<O, R?>.sum() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByPredicates = null)
+    fun Field.sum() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM), groupByPredicates = null)
+
+    fun <O, R> KProperty1<O, R?>.sum(vararg groupByColumns: KProperty1<O, R>) = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByPredicates = null)
+    fun Field.sum(groupByColumns: List<Field>) = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM), groupByPredicates = null)
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)

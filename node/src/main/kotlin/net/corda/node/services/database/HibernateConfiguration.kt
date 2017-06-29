@@ -18,7 +18,7 @@ import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 
 class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLogging: Boolean = false) {
-    constructor(schemaService: SchemaService) : this(schemaService, false)
+    constructor(schemaService: SchemaService) : this(schemaService, true)
 
     companion object {
         val logger = loggerFor<HibernateConfiguration>()

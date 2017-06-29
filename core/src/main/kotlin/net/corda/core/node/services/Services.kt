@@ -128,7 +128,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                                            val statesMetadata: List<StateMetadata>,
                                            val pageable: PageSpecification,
                                            val totalStatesAvailable: Int,
-                                           val stateTypes: StateStatus)
+                                           val stateTypes: StateStatus,
+                                           val otherResults: List<Any>)
 
     @CordaSerializable
     data class StateMetadata(val ref: StateRef,

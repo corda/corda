@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import io.requery.kotlin.sum
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
@@ -553,6 +554,46 @@ class VaultQueryTests {
             val criteria = VaultCustomQueryCriteria(logicalExpression)
             val results = vaultQuerySvc.queryBy<Cash.State>(criteria)
             assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `aggregate functions without group clause`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria)
+
+            assertThat(results.otherResults.first()).isEqualTo(150000L)
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(CashSchemaV1.PersistentCashState::currency) }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val results = vaultQuerySvc.queryBy<Cash.State>(sumCriteria)
+
+            assertThat(results.otherResults[0]).isEqualTo(6000L)
+            assertThat(results.otherResults[1]).isEqualTo(4000L)
+            assertThat(results.otherResults[2]).isEqualTo(5000L)
         }
     }
 
@@ -1171,6 +1212,45 @@ class VaultQueryTests {
             val criteria = VaultCustomQueryCriteria(ccyIndex)
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
             // DOCEND VaultQueryExample12
+
+            assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed cash balance for single currency`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+
+//            val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.sum(USD.currencyCode) }
+            val sum = builder { CashSchemaV1.PersistentCashState::currency.sum() }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
+            val ccyCriteria = VaultCustomQueryCriteria(ccyIndex)
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))
+
+            assertThat(results.states).hasSize(1)
+        }
+    }
+
+    @Test
+    fun `unconsumed cash balances for all currencies`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+            services.fillWithSomeTestCash(600.SWISS_FRANCS, DUMMY_NOTARY, 6, 6, Random(0L))
+
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.sum() }
+            val criteria = VaultCustomQueryCriteria(ccyIndex)
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
 
             assertThat(results.states).hasSize(3)
         }

@@ -35,6 +35,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     private val joinPredicates = mutableListOf<Predicate>()
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>()
+    private val aggregateExpressions = mutableListOf<Expression<*>>()
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
 
@@ -127,6 +128,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                     NullOperator.NOT_NULL -> criteriaBuilder.isNotNull(column)
                 }
             }
+            else -> throw VaultQueryException("Not expecting $columnPredicate")
         }
     }
 
@@ -147,6 +149,36 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             is CriteriaExpression.ColumnPredicateExpression<O, *> -> {
                 val column = root.get<Any?>(getColumnName(expression.column))
                 columnPredicateToPredicate(column, expression.predicate) as Expression<R>
+            }
+            else -> throw VaultQueryException("Not expecting $expression")
+        }
+    }
+
+    private fun <O, R> parseAggregateFunctionExpression(root: Root<O>, expression: CriteriaExpression<O, R>) {
+        if (expression is CriteriaExpression.AggregateFunctionExpression<O,*>) {
+            val column = root.get<Any?>(getColumnName(expression.column))
+            val columnPredicate = expression.predicate
+            when (columnPredicate) {
+                is ColumnPredicate.AggregateFunction -> {
+                    column as Path<Long?>?
+                    val aggregateExpression =
+                        when (columnPredicate.type) {
+                            AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                            AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
+                            AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
+                            AggregateFunctionType.MAX -> criteriaBuilder.max(column)
+                            AggregateFunctionType.MIN -> criteriaBuilder.min(column)
+                            else -> throw VaultQueryException("Not expecting ${columnPredicate.type}")
+                        }
+                    aggregateExpressions.add(aggregateExpression)
+                }
+                else -> throw VaultQueryException("Not expecting $columnPredicate")
+            }
+            // add optional group by clauses
+            expression.groupByColumns?.let { columns ->
+                columns.forEach { column ->
+                    criteriaQuery.groupBy(root.get<Any?>(getColumnName(column)))
+                }
             }
         }
     }
@@ -254,7 +286,14 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
 
-            predicateSet.add(expressionToPredicate(entityRoot, criteria.expression))
+            // resolve general criteria expressions
+            try {
+                predicateSet.add(expressionToPredicate(entityRoot, criteria.expression))
+            }
+            catch(e: Exception) {
+                // resolve any aggregation functions
+                parseAggregateFunctionExpression(entityRoot, criteria.expression)
+            }
         }
         catch (e: Exception) {
             e.message?.let { message ->
@@ -303,7 +342,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 parse(sorting)
         }
 
-        val selections = listOf(vaultStates).plus(rootEntities.map { it.value })
+        val selections =
+            if (aggregateExpressions.isEmpty())
+                listOf(vaultStates).plus(rootEntities.map { it.value })
+            else
+                aggregateExpressions
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())

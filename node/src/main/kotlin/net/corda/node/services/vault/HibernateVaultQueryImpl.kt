@@ -80,17 +80,24 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 val results = query.resultList
                 val statesAndRefs: MutableList<StateAndRef<*>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+                val otherResults: MutableList<Any> = mutableListOf()
 
                 results.asSequence()
                         .forEach { it ->
-                            val it = it[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
-                            val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                            statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
-                            statesAndRefs.add(StateAndRef(state, stateRef))
+                            if (it[0] is VaultSchemaV1.VaultStates) {
+                                val it = it[0] as VaultSchemaV1.VaultStates
+                                val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
+                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
+                                statesAndRefs.add(StateAndRef(state, stateRef))
+                            }
+                            else {
+                                println(it.toArray())
+                                otherResults.addAll(it.toArray().asList())
+                            }
                         }
 
-                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, pageable = paging, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates) as Vault.Page<T>
+                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, pageable = paging, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults) as Vault.Page<T>
 
             } catch (e: Exception) {
                 log.error(e.message)
