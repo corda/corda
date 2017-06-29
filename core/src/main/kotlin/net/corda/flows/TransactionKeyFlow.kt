@@ -55,29 +55,6 @@ object TransactionKeyFlow {
         }
     }
 
-    /**
-     * Flow which waits for a key request from a counterparty, generates a new key and then returns it to the
-     * counterparty and as the result from the flow.
-     */
-    @InitiatedBy(Requester::class)
-    class Provider(otherSide: Party) : AbstractIdentityFlow<TxIdentities>(otherSide, false) {
-        companion object {
-            object SENDING_KEY : ProgressTracker.Step("Sending key")
-        }
-
-        override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
-
-        @Suspendable
-        override fun call(): TxIdentities {
-            val revocationEnabled = false
-            progressTracker.currentStep = SENDING_KEY
-            val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-            val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(it) }
-            return TxIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
-                    Pair(otherSide, otherSideAnonymous))
-        }
-    }
-
     @CordaSerializable
     data class TxIdentities(val identities: List<Pair<Party, AnonymisedIdentity>>) {
         constructor(vararg identities: Pair<Party, AnonymisedIdentity>) : this(identities.toList())

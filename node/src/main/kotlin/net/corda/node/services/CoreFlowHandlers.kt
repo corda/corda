@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.*
 
@@ -123,9 +124,20 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
     }
 }
 
-class TransactionKeyHandler(val otherSide: Party) : FlowLogic<Unit>() {
+class TransactionKeyHandler(otherSide: Party) : TransactionKeyFlow.AbstractIdentityFlow<TransactionKeyFlow.TxIdentities>(otherSide, false) {
+    companion object {
+        object SENDING_KEY : ProgressTracker.Step("Sending key")
+    }
+
+    override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
+
     @Suspendable
-    override fun call() {
-        subFlow(TransactionKeyFlow.Provider(otherSide))
+    override fun call(): TransactionKeyFlow.TxIdentities {
+        val revocationEnabled = false
+        progressTracker.currentStep = SENDING_KEY
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
+        val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(it) }
+        return TransactionKeyFlow.TxIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
+                Pair(otherSide, otherSideAnonymous))
     }
 }
