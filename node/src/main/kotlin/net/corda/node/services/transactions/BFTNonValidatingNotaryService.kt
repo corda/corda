@@ -6,6 +6,7 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -15,7 +16,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
-import org.jetbrains.exposed.sql.Database
 import kotlin.concurrent.thread
 
 /**
@@ -23,40 +23,42 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
-                                    services: ServiceHubInternal,
-                                    timeWindowChecker: TimeWindowChecker,
-                                    replicaId: Int,
-                                    db: Database) : NotaryService {
-    val client = BFTSMaRt.Client(config, replicaId) // (Ab)use replicaId for clientId.
-    private val replicaHolder = SettableFuture.create<Replica>()
-
-    init {
-        // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
-        val configHandle = config.handle()
-        thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
-            configHandle.use {
-                replicaHolder.set(Replica(it, replicaId, db, "bft_smart_notary_committed_states", services, timeWindowChecker))
-                log.info("BFT SMaRt replica $replicaId is running.")
-            }
-        }
-    }
-
-    fun dispose() {
-        replicaHolder.getOrThrow().dispose()
-        client.dispose()
-    }
-
+class BFTNonValidatingNotaryService(override val services: ServiceHubInternal) : NotaryService() {
     companion object {
         val type = SimpleNotaryService.type.getSubType("bft")
         private val log = loggerFor<BFTNonValidatingNotaryService>()
     }
 
-    override val serviceFlowFactory: (Party, Int) -> FlowLogic<Void?> = { otherParty, _ ->
-        ServiceFlow(otherParty, client)
+    private val client: BFTSMaRt.Client
+    private val replicaHolder = SettableFuture.create<Replica>()
+
+    init {
+        val replicaId = services.configuration.bftReplicaId ?: throw IllegalArgumentException("bftReplicaId value must be specified in the configuration")
+        val config = BFTSMaRtConfig(services.configuration.notaryClusterAddresses)
+
+        client = config.use {
+            val configHandle = config.handle()
+            // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
+            thread(name = "BFT SMaRt replica $replicaId init", isDaemon = true) {
+                configHandle.use {
+                    val timeWindowChecker = TimeWindowChecker(services.clock)
+                    val replica = Replica(it, replicaId, "bft_smart_notary_committed_states", services, timeWindowChecker)
+                    replicaHolder.set(replica)
+                    log.info("BFT SMaRt replica $replicaId is running.")
+                }
+            }
+
+            BFTSMaRt.Client(it, replicaId)
+        }
     }
 
-    private class ServiceFlow(val otherSide: Party, val client: BFTSMaRt.Client) : FlowLogic<Void?>() {
+    fun commitTransaction(tx: Any, otherSide: Party) = client.commitTransaction(tx, otherSide)
+
+    override fun createServiceFlow(otherParty: Party, platformVersion: Int): FlowLogic<Void?> {
+        return ServiceFlow(otherParty, this)
+    }
+
+    private class ServiceFlow(val otherSide: Party, val service: BFTNonValidatingNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val stx = receive<FilteredTransaction>(otherSide).unwrap { it }
@@ -66,7 +68,7 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
         }
 
         private fun commit(stx: FilteredTransaction): List<DigitalSignature> {
-            val response = client.commitTransaction(stx, otherSide)
+            val response = service.commitTransaction(stx, otherSide)
             when (response) {
                 is BFTSMaRt.ClusterResponse.Error -> throw NotaryException(response.error)
                 is BFTSMaRt.ClusterResponse.Signatures -> {
@@ -79,10 +81,9 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
 
     private class Replica(config: BFTSMaRtConfig,
                           replicaId: Int,
-                          db: Database,
                           tableName: String,
                           services: ServiceHubInternal,
-                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, db, tableName, services, timeWindowChecker) {
+                          timeWindowChecker: TimeWindowChecker) : BFTSMaRt.Replica(config, replicaId, tableName, services, timeWindowChecker) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
             val request = command.deserialize<BFTSMaRt.CommitRequest>()
@@ -107,5 +108,14 @@ class BFTNonValidatingNotaryService(config: BFTSMaRtConfig,
                 BFTSMaRt.ReplicaResponse.Error(e.error)
             }
         }
+
+    }
+
+    override fun start() {
+    }
+
+    override fun stop() {
+        replicaHolder.getOrThrow().dispose()
+        client.dispose()
     }
 }
