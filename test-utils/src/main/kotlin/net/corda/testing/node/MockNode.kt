@@ -23,7 +23,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.TxKeyFlow
+import net.corda.flows.TransactionKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -302,7 +302,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         if (start) {
             node.setup().start()
             // Register flows that are normally found via plugins
-            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
+            node.registerInitiatedFlow(TransactionKeyFlow.Provider::class.java)
             if (threadPerNode && networkMapAddress != null)
                 node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }

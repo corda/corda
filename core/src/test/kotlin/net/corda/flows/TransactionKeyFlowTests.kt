@@ -14,7 +14,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-class TxKeyFlowTests {
+class TransactionKeyFlowTests {
     lateinit var mockNet: MockNetwork
 
     @Before
@@ -39,7 +39,7 @@ class TxKeyFlowTests {
         bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
 
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bob))
+        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow.Requester(bob))
 
         // Get the results
         val actual: Map<Party, AnonymisedIdentity> = requesterFlow.resultFuture.getOrThrow().toMap()

@@ -14,7 +14,7 @@ import net.corda.core.utilities.unwrap
  * Very basic flow which exchanges transaction key and certificate paths between two parties in a transaction.
  * This is intended for use as a subflow of another flow.
  */
-object TxKeyFlow {
+object TransactionKeyFlow {
     abstract class AbstractIdentityFlow<out T>(val otherSide: Party, val revocationEnabled: Boolean): FlowLogic<T>() {
         fun validateIdentity(untrustedIdentity: AnonymisedIdentity): AnonymisedIdentity {
             val (certPath, theirCert, txIdentity) = untrustedIdentity

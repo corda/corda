@@ -3,9 +3,7 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -40,7 +38,7 @@ abstract class AbstractCashFlow<T>(override val progressTracker: ProgressTracker
      * @param identities a mapping from the original identities of the parties to the anonymised equivalents.
      */
     @CordaSerializable
-    data class Result(val stx: SignedTransaction, val identities: TxKeyFlow.TxIdentities)
+    data class Result(val stx: SignedTransaction, val identities: TransactionKeyFlow.TxIdentities)
 }
 
 class CashException(message: String, cause: Throwable) : FlowException(message, cause)
