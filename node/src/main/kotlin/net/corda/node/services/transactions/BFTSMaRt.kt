@@ -37,7 +37,6 @@ import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica
 import net.corda.node.utilities.JDBCHashMap
 import net.corda.node.utilities.transaction
-import org.jetbrains.exposed.sql.Database
 import java.nio.file.Path
 import java.util.*
 
@@ -170,7 +169,6 @@ object BFTSMaRt {
      */
     abstract class Replica(config: BFTSMaRtConfig,
                            replicaId: Int,
-                           private val db: Database,
                            tableName: String,
                            private val services: ServiceHubInternal,
                            private val timeWindowChecker: TimeWindowChecker) : DefaultRecoverable() {
@@ -180,7 +178,7 @@ object BFTSMaRt {
 
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
-        private val commitLog = db.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
+        private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
         @Suppress("LeakingThis")
         private val replica = CordaServiceReplica(replicaId, config.path, this)
 
@@ -205,7 +203,7 @@ object BFTSMaRt {
         protected fun commitInputStates(states: List<StateRef>, txId: SecureHash, callerIdentity: Party) {
             log.debug { "Attempting to commit inputs for transaction: $txId" }
             val conflicts = mutableMapOf<StateRef, UniquenessProvider.ConsumingTx>()
-            db.transaction {
+            services.database.transaction {
                 states.forEach { state ->
                     commitLog[state]?.let { conflicts[state] = it }
                 }
@@ -231,7 +229,7 @@ object BFTSMaRt {
         }
 
         protected fun sign(bytes: ByteArray): DigitalSignature.WithKey {
-            return db.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
+            return services.database.transaction { services.keyManagementService.sign(bytes, services.notaryIdentityKey) }
         }
 
         // TODO:
@@ -240,7 +238,7 @@ object BFTSMaRt {
         override fun getSnapshot(): ByteArray {
             // LinkedHashMap for deterministic serialisation
             val m = LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>()
-            db.transaction {
+            services.database.transaction {
                 commitLog.forEach { m[it.key] = it.value }
             }
             return m.serialize().bytes
@@ -248,7 +246,7 @@ object BFTSMaRt {
 
         override fun installSnapshot(bytes: ByteArray) {
             val m = bytes.deserialize<LinkedHashMap<StateRef, UniquenessProvider.ConsumingTx>>()
-            db.transaction {
+            services.database.transaction {
                 commitLog.clear()
                 commitLog.putAll(m)
             }

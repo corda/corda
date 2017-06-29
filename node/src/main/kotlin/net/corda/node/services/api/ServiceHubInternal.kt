@@ -15,9 +15,11 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import org.jetbrains.exposed.sql.Database
 
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
@@ -68,6 +70,8 @@ abstract class ServiceHubInternal : PluginServiceHub {
     abstract val auditService: AuditService
     abstract val rpcFlows: List<Class<out FlowLogic<*>>>
     abstract val networkService: MessagingService
+    abstract val database: Database
+    abstract val configuration: NodeConfiguration
 
     /**
      * Given a list of [SignedTransaction]s, writes them to the given storage for validated transactions and then
