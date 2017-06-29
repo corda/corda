@@ -2,22 +2,23 @@ package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.contracts.asset.OnLedgerAsset
+import net.corda.contracts.clause.AbstractConserveAmount
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.LogHelper
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.BOC
-import net.corda.testing.BOC_KEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -31,7 +32,9 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     lateinit var services: MockServices
@@ -420,8 +423,74 @@ class NodeVaultServiceTest {
 
             services.recordTransactions(anotherTX)
 
-            vaultSvc.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
+            vaultSvc.addNoteToTransaction(anotherTX.id, "GBP Sample Note 1")
             assertEquals(1, vaultSvc.getTransactionNotes(anotherTX.id).count())
+        }
+    }
+
+    @Test
+    fun `is ownable state relevant`() {
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+        val wellKnownCash = Cash.State(amount, services.myInfo.legalIdentity)
+        assertTrue { NodeVaultService.isRelevant(wellKnownCash, services.keyManagementService.keys) }
+
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val anonymousCash = Cash.State(amount, anonymousIdentity.identity)
+        assertTrue { NodeVaultService.isRelevant(anonymousCash, services.keyManagementService.keys) }
+
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+        val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
+        assertFalse { NodeVaultService.isRelevant(thirdPartyCash, services.keyManagementService.keys) }
+    }
+
+    // TODO: Unit test the other state types
+
+    /**
+     * Ensure that given an anonymised transaction, the wallet correctly identifies the node's own states and disregards
+     * those it doesn't have keys for.
+     */
+    @Test
+    fun `determine our new states from tx`() {
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+
+        // Assemble a cash transaction and ensure that our output is correctly identified as ours
+        val ourCash = Cash.State(amount, anonymousIdentity.identity)
+        val theirCash = Cash.State(amount, thirdPartyIdentity)
+        val tx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+            addOutputState(ourCash)
+            addOutputState(theirCash)
+            addCommand(Cash.Commands.Issue(random63BitValue()), anonymousIdentity.identity.owningKey)
+        }.toWireTransaction()
+        val ourNewStates = NodeVaultService.ourStates(tx, services.keyManagementService.keys)
+        assertEquals(listOf(ourCash), ourNewStates.map { it.state.data })
+    }
+
+    @Test
+    fun `make update`() {
+        database.transaction {
+            val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+            val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+            val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+
+            // Issue then move some cash
+            val issueTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+                Cash().generateIssue(this,
+                        amount, anonymousIdentity.identity, services.myInfo.legalIdentity)
+            }.toWireTransaction()
+            val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
+            var expected = Vault.Update(emptySet(), setOf(cashState), null)
+            var actual = (services.vaultService as NodeVaultService).makeUpdate(issueTx, setOf(anonymousIdentity.identity.owningKey))
+            assertEquals(expected, actual)
+            services.vaultService.notify(issueTx)
+            val moveTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+                services.vaultService.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
+            }.toWireTransaction()
+
+            expected = Vault.Update(setOf(cashState), emptySet(), null)
+            actual = (services.vaultService as NodeVaultService).makeUpdate(moveTx, setOf(anonymousIdentity.identity.owningKey))
+            assertEquals(expected, actual)
         }
     }
 }
