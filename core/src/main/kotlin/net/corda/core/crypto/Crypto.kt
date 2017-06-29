@@ -1,24 +1,23 @@
 package net.corda.core.crypto
 
 import net.corda.core.random63BitValue
-import net.i2p.crypto.eddsa.*
+import net.i2p.crypto.eddsa.EdDSAEngine
+import net.i2p.crypto.eddsa.EdDSAPrivateKey
+import net.i2p.crypto.eddsa.EdDSAPublicKey
+import net.i2p.crypto.eddsa.EdDSASecurityProvider
 import net.i2p.crypto.eddsa.math.GroupElement
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPrivateKeySpec
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
-import org.bouncycastle.asn1.ASN1EncodableVector
-import org.bouncycastle.asn1.ASN1ObjectIdentifier
-import org.bouncycastle.asn1.ASN1Sequence
-import org.bouncycastle.asn1.DERSequence
+import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.bc.BCObjectIdentifiers
+import org.bouncycastle.asn1.nist.NISTObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
+import org.bouncycastle.asn1.sec.SECObjectIdentifiers
 import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.BasicConstraints
-import org.bouncycastle.asn1.x509.Extension
-import org.bouncycastle.asn1.x509.NameConstraints
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v3CertificateBuilder
@@ -45,13 +44,8 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.bouncycastle.pqc.jcajce.spec.SPHINCS256KeyGenParameterSpec
-import sun.security.pkcs.PKCS8Key
-import sun.security.util.DerValue
-import sun.security.x509.X509Key
 import java.math.BigInteger
 import java.security.*
-import java.security.KeyFactory
-import java.security.KeyPairGenerator
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -80,7 +74,8 @@ object Crypto {
     val RSA_SHA256 = SignatureScheme(
             1,
             "RSA_SHA256",
-            PKCSObjectIdentifiers.id_RSASSA_PSS,
+            AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption, null),
+            emptyList(),
             BouncyCastleProvider.PROVIDER_NAME,
             "RSA",
             "SHA256WITHRSAANDMGF1",
@@ -93,7 +88,8 @@ object Crypto {
     val ECDSA_SECP256K1_SHA256 = SignatureScheme(
             2,
             "ECDSA_SECP256K1_SHA256",
-            X9ObjectIdentifiers.ecdsa_with_SHA256,
+            AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256k1),
+            listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256k1)),
             BouncyCastleProvider.PROVIDER_NAME,
             "ECDSA",
             "SHA256withECDSA",
@@ -106,7 +102,8 @@ object Crypto {
     val ECDSA_SECP256R1_SHA256 = SignatureScheme(
             3,
             "ECDSA_SECP256R1_SHA256",
-            X9ObjectIdentifiers.ecdsa_with_SHA256,
+            AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256, SECObjectIdentifiers.secp256r1),
+            listOf(AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, SECObjectIdentifiers.secp256r1)),
             BouncyCastleProvider.PROVIDER_NAME,
             "ECDSA",
             "SHA256withECDSA",
@@ -119,10 +116,12 @@ object Crypto {
     val EDDSA_ED25519_SHA512 = SignatureScheme(
             4,
             "EDDSA_ED25519_SHA512",
-            ASN1ObjectIdentifier("1.3.101.112"),
+            // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
+            AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112"), null),
+            emptyList(),
             // We added EdDSA to bouncy castle for certificate signing.
             BouncyCastleProvider.PROVIDER_NAME,
-            EdDSAKey.KEY_ALGORITHM,
+            "1.3.101.112",
             EdDSAEngine.SIGNATURE_ALGORITHM,
             EdDSANamedCurveTable.getByName("ED25519"),
             256,
@@ -133,10 +132,12 @@ object Crypto {
      * SPHINCS-256 hash-based signature scheme. It provides 128bit security against post-quantum attackers
      * at the cost of larger key sizes and loss of compatibility.
      */
+    val SHA512_256 = DLSequence(arrayOf(NISTObjectIdentifiers.id_sha512_256))
     val SPHINCS256_SHA256 = SignatureScheme(
             5,
             "SPHINCS-256_SHA512",
-            BCObjectIdentifiers.sphincs256_with_SHA512,
+            AlgorithmIdentifier(BCObjectIdentifiers.sphincs256_with_SHA512, DLSequence(arrayOf(ASN1Integer(0), SHA512_256))),
+            listOf(AlgorithmIdentifier(BCObjectIdentifiers.sphincs256, DLSequence(arrayOf(ASN1Integer(0), SHA512_256)))),
             "BCPQC",
             "SPHINCS256",
             "SHA512WITHSPHINCS256",
@@ -161,9 +162,14 @@ object Crypto {
             SPHINCS256_SHA256
     ).associateBy { it.schemeCodeName }
 
-    // We need to group signature schemes per algorithm, so to quickly identify them during decoding.
-    // Please note there are schemes with the same algorithm, e.g. EC (or ECDSA) keys are used for both ECDSA_SECP256K1_SHA256 and ECDSA_SECP256R1_SHA256.
-    private val algorithmGroups = supportedSignatureSchemes.values.groupBy { it.algorithmName }
+    /**
+     * Map of X.509 algorithm identifiers to signature schemes Corda recognises. See RFC 2459 for the format of
+     * algorithm identifiers.
+     */
+    private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
+            = (supportedSignatureSchemes.values.flatMap { scheme -> scheme.alternativeOIDs.map { oid -> Pair(oid, scheme) } }
+            + supportedSignatureSchemes.values.map { Pair(it.signatureOID, it) })
+            .toMap()
 
     // This map is required to defend against users that forcibly call Security.addProvider / Security.removeProvider
     // that could cause unexpected and suspicious behaviour.
@@ -175,13 +181,28 @@ object Crypto {
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
         putAll(EdDSASecurityProvider())
-        addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID, KeyInfoConverter(EDDSA_ED25519_SHA512))
+        addKeyInfoConverter(EDDSA_ED25519_SHA512.signatureOID.algorithm, KeyInfoConverter(EDDSA_ED25519_SHA512))
     }
 
     init {
         // This registration is needed for reading back EdDSA key from java keystore.
         // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
         Security.addProvider(getBouncyCastleProvider())
+    }
+
+    /**
+     * Normalise an algorithm identifier by converting [DERNull] parameters into a Kotlin null value.
+     */
+    private fun normaliseAlgorithmIdentifier(id: AlgorithmIdentifier): AlgorithmIdentifier {
+        return if (id.parameters is DERNull) {
+            AlgorithmIdentifier(id.algorithm, null)
+        } else {
+            id
+        }
+    }
+
+    fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
+        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
     }
 
     /**
@@ -192,6 +213,7 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
+    @Throws(IllegalArgumentException::class)
     fun findSignatureScheme(schemeCodeName: String): SignatureScheme = supportedSignatureSchemes[schemeCodeName] ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeCodeName: $schemeCodeName")
 
     /**
@@ -202,10 +224,24 @@ object Crypto {
      * @return a currently supported SignatureScheme.
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
-    fun findSignatureScheme(key: Key): SignatureScheme {
-        val algorithm = matchingAlgorithmName(key.algorithm)
-        algorithmGroups[algorithm]?.filter { validateKey(it, key) }?.firstOrNull { return it }
-        throw IllegalArgumentException("Unsupported key algorithm: ${key.algorithm} or invalid key format")
+    @Throws(IllegalArgumentException::class)
+    fun findSignatureScheme(key: PublicKey): SignatureScheme {
+        val keyInfo = SubjectPublicKeyInfo.getInstance(key.encoded)
+        return findSignatureScheme(keyInfo.algorithm)
+    }
+
+    /**
+     * Retrieve the corresponding [SignatureScheme] based on the type of the input [Key].
+     * This function is usually called when requiring to verify signatures and the signing schemes must be defined.
+     * For the supported signature schemes see [Crypto].
+     * @param key either private or public.
+     * @return a currently supported SignatureScheme.
+     * @throws IllegalArgumentException if the requested key type is not supported.
+     */
+    @Throws(IllegalArgumentException::class)
+    fun findSignatureScheme(key: PrivateKey): SignatureScheme {
+        val keyInfo = PrivateKeyInfo.getInstance(key.encoded)
+        return findSignatureScheme(keyInfo.privateKeyAlgorithm)
     }
 
     /**
@@ -217,19 +253,9 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
-        val algorithm = matchingAlgorithmName(PKCS8Key.parseKey(DerValue(encodedKey)).algorithm)
-        // There are cases where the same key algorithm is applied to different signature schemes.
-        // Currently, this occurs with ECDSA as it applies to either secp256K1 or secp256R1 curves.
-        // In such a case, we should try and identify which of the candidate schemes is the correct one so as
-        // to generate the appropriate key.
-        for (signatureScheme in algorithmGroups[algorithm]!!) {
-            try {
-                return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
-            } catch (ikse: InvalidKeySpecException) {
-                // ignore it - only used to bypass the scheme that causes an exception, as it has the same name, but different params.
-            }
-        }
-        throw IllegalArgumentException("This private key cannot be decoded, please ensure it is PKCS8 encoded and the signature scheme is supported.")
+        val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
+        val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
+        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePrivate(PKCS8EncodedKeySpec(encodedKey))
     }
 
     /**
@@ -270,19 +296,9 @@ object Crypto {
      */
     @Throws(IllegalArgumentException::class)
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
-        val algorithm = matchingAlgorithmName(X509Key.parse(DerValue(encodedKey)).algorithm)
-        // There are cases where the same key algorithm is applied to different signature schemes.
-        // Currently, this occurs with ECDSA as it applies to either secp256K1 or secp256R1 curves.
-        // In such a case, we should try and identify which of the candidate schemes is the correct one so as
-        // to generate the appropriate key.
-        for (signatureScheme in algorithmGroups[algorithm]!!) {
-            try {
-                return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
-            } catch (ikse: InvalidKeySpecException) {
-                // ignore it - only used to bypass the scheme that causes an exception, as it has the same name, but different params.
-            }
-        }
-        throw IllegalArgumentException("This public key cannot be decoded, please ensure it is X509 encoded and the signature scheme is supported.")
+        val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
+        val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
+        return KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName]).generatePublic(X509EncodedKeySpec(encodedKey))
     }
 
     /**
@@ -833,16 +849,6 @@ object Crypto {
 
     /** Check if the requested [SignatureScheme] is supported by the system. */
     fun isSupportedSignatureScheme(signatureScheme: SignatureScheme): Boolean = supportedSignatureSchemes[signatureScheme.schemeCodeName] === signatureScheme
-
-    // map algorithm names returned from Keystore (or after encode/decode) to the supported algorithm names.
-    private fun matchingAlgorithmName(algorithm: String): String {
-        return when (algorithm) {
-            "EC" -> "ECDSA"
-            "SPHINCS-256" -> "SPHINCS256"
-            "1.3.6.1.4.1.22554.2.1" -> "SPHINCS256" // Unfortunately, PKCS8Key and X509Key parsing return the OID as the algorithm name and not SPHINCS256.
-            else -> algorithm
-        }
-    }
 
     // validate a key, by checking its algorithmic params.
     private fun validateKey(signatureScheme: SignatureScheme, key: Key): Boolean {
