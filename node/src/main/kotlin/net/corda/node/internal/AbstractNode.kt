@@ -212,8 +212,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 findRPCFlows(scanResult)
             }
 
-            // TODO: Investigate having class path scanning find this flow
-            registerInitiatedFlow(TransactionKeyFlow.Provider::class.java)
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
@@ -413,6 +411,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
         installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
         installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
+        installCoreFlow(TransactionKeyFlow.Requester::class) { otherParty, _ -> TransactionKeyHandler(otherParty) }
     }
 
     /**

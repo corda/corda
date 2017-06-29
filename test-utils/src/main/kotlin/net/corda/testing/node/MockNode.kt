@@ -301,8 +301,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
-            // Register flows that are normally found via plugins
-            node.registerInitiatedFlow(TransactionKeyFlow.Provider::class.java)
             if (threadPerNode && networkMapAddress != null)
                 node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }

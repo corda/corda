@@ -122,3 +122,10 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
         ContractUpgradeFlow.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
     }
 }
+
+class TransactionKeyHandler(val otherSide: Party) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(TransactionKeyFlow.Provider(otherSide))
+    }
+}
