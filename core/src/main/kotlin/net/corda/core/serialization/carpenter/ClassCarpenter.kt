@@ -1,4 +1,4 @@
-package net.corda.carpenter
+package net.corda.core.serialization.carpenter
 
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
@@ -60,23 +60,118 @@ interface SimpleFieldAccess {
  *
  * Equals/hashCode methods are not yet supported.
  */
+
+fun Map<String, ClassCarpenter.Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
+
 class ClassCarpenter {
-    // TODO: Array types.
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
+
+    class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
+    class InterfaceMismatch(msg: String) : RuntimeException(msg)
+    class NullablePrimitive(msg: String) : RuntimeException(msg)
+
+    abstract class Field(val field: Class<out Any?>) {
+        val unsetName = "Unset"
+        var name: String = unsetName
+        abstract val nullabilityAnnotation: String
+
+        val descriptor: String
+            get() = Type.getDescriptor(this.field)
+
+        val type: String
+            get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
+
+        fun generateField(cw: ClassWriter) {
+            val fieldVisitor = cw.visitField(ACC_PROTECTED + ACC_FINAL, name, descriptor, null, null)
+            cw.visitAnnotation(nullabilityAnnotation, false).visitEnd()
+            fieldVisitor.visitEnd()
+        }
+
+        fun addNullabilityAnnotation(mv: MethodVisitor) {
+            mv.visitAnnotation(nullabilityAnnotation, false)
+        }
+
+        abstract fun copy(name: String, field: Class<out Any?>): Field
+        abstract fun nullTest(mv: MethodVisitor, slot: Int)
+        fun visitParameter(mv: MethodVisitor, idx: Int) {
+            with(mv) {
+                visitParameter(name, 0)
+                if (!field.isPrimitive) {
+                    visitParameterAnnotation(idx, nullabilityAnnotation, false).visitEnd()
+                }
+            }
+        }
+    }
+
+    class NonNullableField(field: Class<out Any?>) : Field(field) {
+        override val nullabilityAnnotation = "Lorg/jetbrains/annotations/Nullable;"
+
+        constructor(name: String, field: Class<out Any?>) : this(field) {
+            this.name = name
+        }
+
+        override fun copy(name: String, field: Class<out Any?>) = NonNullableField(name, field)
+
+        override fun nullTest(mv: MethodVisitor, slot: Int) {
+            assert(name != unsetName)
+
+            if (!field.isPrimitive) {
+                with(mv) {
+                    visitVarInsn(ALOAD, 0) // load this
+                    visitVarInsn(ALOAD, slot) // load parameter
+                    visitLdcInsn("param \"$name\" cannot be null")
+                    visitMethodInsn(INVOKESTATIC,
+                            "java/util/Objects",
+                            "requireNonNull",
+                            "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
+                    visitInsn(POP)
+                }
+            }
+        }
+    }
+
+
+    class NullableField(field: Class<out Any?>) : Field(field) {
+        override val nullabilityAnnotation = "Lorg/jetbrains/annotations/NotNull;"
+
+        constructor(name: String, field: Class<out Any?>) : this(field) {
+            if (field.isPrimitive) {
+                throw NullablePrimitive (
+                        "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
+            }
+
+            this.name = name
+        }
+
+        override fun copy(name: String, field: Class<out Any?>) = NullableField(name, field)
+
+        override fun nullTest(mv: MethodVisitor, slot: Int) {
+            assert(name != unsetName)
+        }
+    }
+
     /**
      * A Schema represents a desired class.
      */
-    open class Schema(val name: String, fields: Map<String, Class<out Any?>>, val superclass: Schema? = null, val interfaces: List<Class<*>> = emptyList()) {
-        val fields = LinkedHashMap(fields)  // Fix the order up front if the user didn't.
-        val descriptors = fields.map { it.key to Type.getDescriptor(it.value) }.toMap()
+    abstract class Schema(
+            val name: String,
+            fields: Map<String, Field>,
+            val superclass: Schema? = null,
+            val interfaces: List<Class<*>> = emptyList()) {
+        /* Fix the order up front if the user didn't, inject the name into the field as it's
+           neater when iterating */
+        val fields = LinkedHashMap(fields.mapValues { it.value.copy(it.key, it.value.field) })
 
-        fun fieldsIncludingSuperclasses(): Map<String, Class<out Any?>> = (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
-        fun descriptorsIncludingSuperclasses(): Map<String, String> = (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(descriptors)
+        fun fieldsIncludingSuperclasses(): Map<String, Field> =
+                (superclass?.fieldsIncludingSuperclasses() ?: emptyMap()) + LinkedHashMap(fields)
+
+        fun descriptorsIncludingSuperclasses(): Map<String, String> =
+                (superclass?.descriptorsIncludingSuperclasses() ?: emptyMap()) + fields.descriptors()
 
         val jvmName: String
             get() = name.replace(".", "/")
@@ -86,20 +181,17 @@ class ClassCarpenter {
 
     class ClassSchema(
             name: String,
-            fields: Map<String, Class<out Any?>>,
+            fields: Map<String, Field>,
             superclass: Schema? = null,
             interfaces: List<Class<*>> = emptyList()
     ) : Schema(name, fields, superclass, interfaces)
 
     class InterfaceSchema(
             name: String,
-            fields: Map<String, Class<out Any?>>,
+            fields: Map<String, Field>,
             superclass: Schema? = null,
             interfaces: List<Class<*>> = emptyList()
     ) : Schema(name, fields, superclass, interfaces)
-
-    class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
-    class InterfaceMismatch(msg: String) : RuntimeException(msg)
 
     private class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
         fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
@@ -186,9 +278,7 @@ class ClassCarpenter {
     }
 
     private fun ClassWriter.generateFields(schema: Schema) {
-        for ((name, desc) in schema.descriptors) {
-            visitField(ACC_PROTECTED + ACC_FINAL, name, desc, null, null).visitEnd()
-        }
+        schema.fields.forEach { it.value.generateField(this) }
     }
 
     private fun ClassWriter.generateToString(schema: Schema) {
@@ -199,12 +289,11 @@ class ClassCarpenter {
             visitLdcInsn(schema.name.split('.').last())
             visitMethodInsn(INVOKESTATIC, "com/google/common/base/MoreObjects", "toStringHelper", "(Ljava/lang/String;)L$toStringHelper;", false)
             // Call the add() methods.
-            for ((name, type) in schema.fieldsIncludingSuperclasses().entries) {
+            for ((name, field) in schema.fieldsIncludingSuperclasses().entries) {
                 visitLdcInsn(name)
                 visitVarInsn(ALOAD, 0)  // this
                 visitFieldInsn(GETFIELD, schema.jvmName, name, schema.descriptorsIncludingSuperclasses()[name])
-                val desc = if (type.isPrimitive) schema.descriptors[name] else "Ljava/lang/Object;"
-                visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "add", "(Ljava/lang/String;$desc)L$toStringHelper;", false)
+                visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "add", "(Ljava/lang/String;${field.type})L$toStringHelper;", false)
             }
             // call toString() on the builder and return.
             visitMethodInsn(INVOKEVIRTUAL, toStringHelper, "toString", "()Ljava/lang/String;", false)
@@ -232,12 +321,12 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateGetters(schema: Schema) {
         for ((name, type) in schema.fields) {
-            val descriptor = schema.descriptors[name]
-            with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + descriptor, null, null)) {
+            with(visitMethod(ACC_PUBLIC, "get" + name.capitalize(), "()" + type.descriptor, null, null)) {
+                type.addNullabilityAnnotation(this)
                 visitCode()
                 visitVarInsn(ALOAD, 0)  // Load 'this'
-                visitFieldInsn(GETFIELD, schema.jvmName, name, descriptor)
-                when (type) {
+                visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
+                when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE, TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
@@ -251,8 +340,8 @@ class ClassCarpenter {
     }
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
-        for ((name, _) in schema.fields) {
-            val descriptor = schema.descriptors[name]
+        for ((name, field) in schema.fields) {
+            val descriptor = field.descriptor
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
             with(visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
                 // abstract method doesn't have any implementation so just end
@@ -262,8 +351,18 @@ class ClassCarpenter {
     }
 
     private fun ClassWriter.generateConstructor(schema: Schema) {
-        with(visitMethod(ACC_PUBLIC, "<init>", "(" + schema.descriptorsIncludingSuperclasses().values.joinToString("") + ")V", null, null)) {
+        with(visitMethod(
+                ACC_PUBLIC,
+                "<init>",
+                "(" + schema.descriptorsIncludingSuperclasses().values.joinToString("") + ")V",
+                null,
+                null))
+        {
+            var idx = 0
+            schema.fields.values.forEach { it.visitParameter(this, idx++) }
+
             visitCode()
+
             // Calculate the super call.
             val superclassFields = schema.superclass?.fieldsIncludingSuperclasses() ?: emptyMap()
             visitVarInsn(ALOAD, 0)
@@ -276,14 +375,16 @@ class ClassCarpenter {
                 val superDesc = schema.superclass.descriptorsIncludingSuperclasses().values.joinToString("")
                 visitMethodInsn(INVOKESPECIAL, schema.superclass.name.jvm, "<init>", "($superDesc)V", false)
             }
+
             // Assign the fields from parameters.
             var slot = 1 + superclassFields.size
-            for ((name, type) in schema.fields.entries) {
-                if (type.isArray)
-                    throw UnsupportedOperationException("Array types are not implemented yet")
+
+            for ((name, field) in schema.fields.entries) {
+                field.nullTest(this, slot)
+
                 visitVarInsn(ALOAD, 0)  // Load 'this' onto the stack
-                slot += load(slot, type)  // Load the contents of the parameter onto the stack.
-                visitFieldInsn(PUTFIELD, schema.jvmName, name, schema.descriptors[name])
+                slot += load(slot, field)  // Load the contents of the parameter onto the stack.
+                visitFieldInsn(PUTFIELD, schema.jvmName, name, field.descriptor)
             }
             visitInsn(RETURN)
             visitMaxs(0, 0)
@@ -291,16 +392,15 @@ class ClassCarpenter {
         }
     }
 
-    // Returns how many slots the given type takes up.
-    private fun MethodVisitor.load(slot: Int, type: Class<out Any?>): Int {
-        when (type) {
+    private fun MethodVisitor.load(slot: Int, type: Field): Int {
+        when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE, TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
             else -> visitVarInsn(ALOAD, slot)
         }
-        return when (type) {
+        return when (type.field) {
             java.lang.Long.TYPE, java.lang.Double.TYPE -> 2
             else -> 1
         }
