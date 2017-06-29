@@ -6,6 +6,7 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
 * Changes in ``NodeInfo``:
 
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
@@ -13,8 +14,12 @@ UNRELEASED
    * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
      ``SingleMessageRecipient``, but of ``HostAndPort``.
 
+* ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
+  ``ServiceHub``.
+
 Milestone 13
-----------
+------------
+
 Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution which adds
 support for more currencies to the DemoBench and Explorer tools.
 

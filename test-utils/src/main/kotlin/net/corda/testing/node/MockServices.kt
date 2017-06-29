@@ -6,7 +6,6 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.DataFeed
-import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.*
@@ -16,6 +15,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.AnonymisedIdentity
+import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
@@ -28,7 +28,6 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.MOCK_VERSION_INFO
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -41,11 +40,9 @@ import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.CertPath
 import java.time.Clock
 import java.util.*
 import java.util.jar.JarInputStream
-import javax.annotation.concurrent.ThreadSafe
 
 // TODO: We need a single, rationalised unit testing environment that is usable for everything. Fix this!
 // That means it probably shouldn't be in the 'core' module, which lacks enough code to create a realistic test env.
@@ -61,14 +58,16 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         txs.forEach {
-            storageService.stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
+            stateMachineRecordedTransactionMapping.addMapping(StateMachineRunId.createRandom(), it.id)
         }
         for (stx in txs) {
-            storageService.validatedTransactions.addTransaction(stx)
+            validatedTransactions.addTransaction(stx)
         }
     }
 
-    override val storageService: TxWritableStorageService = MockStorageService()
+    override val attachments: AttachmentStorage = MockAttachmentStorage()
+    override val validatedTransactions: TransactionStorage = MockTransactionStorage()
+    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override final val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
     override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
 
@@ -183,15 +182,6 @@ open class MockTransactionStorage : TransactionStorage {
     }
 
     override fun getTransaction(id: SecureHash): SignedTransaction? = txns[id]
-}
-
-@ThreadSafe
-class MockStorageService(override val attachments: AttachmentStorage = MockAttachmentStorage(),
-                         override val validatedTransactions: TransactionStorage = MockTransactionStorage(),
-                         override val uploaders: List<FileUploader> = listOf<FileUploader>(),
-                         override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage())
-    : SingletonSerializeAsToken(), TxWritableStorageService {
-    override val attachmentsClassLoaderEnabled = false
 }
 
 /**

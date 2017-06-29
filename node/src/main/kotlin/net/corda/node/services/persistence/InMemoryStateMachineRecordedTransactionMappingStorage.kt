@@ -5,9 +5,8 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage
-import net.corda.core.node.services.StateMachineTransactionMapping
-import rx.Observable
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import rx.subjects.PublishSubject
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe

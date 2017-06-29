@@ -17,8 +17,8 @@ import java.time.Clock
  */
 interface ServicesForResolution {
     val identityService: IdentityService
-    val storageService: AttachmentsStorageService
-
+    /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
+    val attachments: AttachmentStorage
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
@@ -40,7 +40,13 @@ interface ServiceHub : ServicesForResolution {
     val vaultService: VaultService
     val vaultQueryService: VaultQueryService
     val keyManagementService: KeyManagementService
-    override val storageService: StorageService
+    /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    val validatedTransactions: ReadOnlyTransactionStorage
+
     val networkMapCache: NetworkMapCache
     val transactionVerifierService: TransactionVerifierService
     val clock: Clock
@@ -77,7 +83,7 @@ interface ServiceHub : ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val definingTx = storageService.validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        val definingTx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
         return definingTx.tx.outputs[stateRef.index]
     }
 
@@ -87,7 +93,7 @@ interface ServiceHub : ServicesForResolution {
      * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
      */
     fun <T : ContractState> toStateAndRef(ref: StateRef): StateAndRef<T> {
-        val definingTx = storageService.validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
+        val definingTx = validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
         return definingTx.tx.outRef<T>(ref.index)
     }
 

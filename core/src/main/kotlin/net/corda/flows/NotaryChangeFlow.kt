@@ -4,10 +4,8 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.security.PublicKey
 
 /**
  * A flow to be used for changing a state's Notary. This is required since all input states to a transaction
@@ -55,7 +53,7 @@ class NotaryChangeFlow<out T : ContractState>(
     private fun resolveEncumbrances(tx: TransactionBuilder): Iterable<AbstractParty> {
         val stateRef = originalState.ref
         val txId = stateRef.txhash
-        val issuingTx = serviceHub.storageService.validatedTransactions.getTransaction(txId)
+        val issuingTx = serviceHub.validatedTransactions.getTransaction(txId)
                 ?: throw StateReplacementException("Transaction $txId not found")
         val outputs = issuingTx.tx.outputs
 

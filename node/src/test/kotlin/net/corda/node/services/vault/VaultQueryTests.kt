@@ -75,7 +75,7 @@ class VaultQueryTests {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -93,9 +93,9 @@ class VaultQueryTests {
     /**
      * Helper method for generating a Persistent H2 test database
      */
-    @Ignore //@Test
+    @Ignore
+    @Test
     fun createPersistentTestDb() {
-
         val dataSourceAndDatabase = configureDatabase(makePersistentDataSourceProperties())
         val dataSource = dataSourceAndDatabase.first
         val database = dataSourceAndDatabase.second

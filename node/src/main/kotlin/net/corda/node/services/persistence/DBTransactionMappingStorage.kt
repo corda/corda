@@ -5,12 +5,11 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.DataFeed
-import net.corda.core.node.services.StateMachineRecordedTransactionMappingStorage
-import net.corda.core.node.services.StateMachineTransactionMapping
+import net.corda.core.messaging.StateMachineTransactionMapping
+import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
-import rx.Observable
 import rx.subjects.PublishSubject
 import javax.annotation.concurrent.ThreadSafe
 
