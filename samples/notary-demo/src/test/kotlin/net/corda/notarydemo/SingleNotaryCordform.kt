@@ -13,7 +13,10 @@ import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
-import net.corda.demorun.util.*
+import net.corda.demorun.util.advertisedServices
+import net.corda.demorun.util.name
+import net.corda.demorun.util.node
+import net.corda.demorun.util.rpcUsers
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 

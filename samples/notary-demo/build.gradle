@@ -14,20 +14,10 @@ configurations {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
-
-    // Corda integration dependencies
     compile project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     compile project(':core')
-    compile project(':client:jfx')
-    compile project(':client:rpc')
-    compile project(':test-utils')
-    compile project(':cordform-common')
-
-    // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
+    testCompile project(':test-utils')
 }
 
 idea {
@@ -51,22 +41,22 @@ publishing {
 
 task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNodesBFT'])
 
-task deployNodesSingle(type: Cordform, dependsOn: 'jar') {
+task deployNodesSingle(type: Cordform, dependsOn: ['jar', 'testClasses']) {
     directory "./build/nodes/nodesSingle"
     definitionClass = 'net.corda.notarydemo.SingleNotaryCordform'
 }
 
-task deployNodesRaft(type: Cordform, dependsOn: 'jar') {
+task deployNodesRaft(type: Cordform, dependsOn: ['jar', 'testClasses']) {
     directory "./build/nodes/nodesRaft"
     definitionClass = 'net.corda.notarydemo.RaftNotaryCordform'
 }
 
-task deployNodesBFT(type: Cordform, dependsOn: 'jar') {
+task deployNodesBFT(type: Cordform, dependsOn: ['jar', 'testClasses']) {
     directory "./build/nodes/nodesBFT"
     definitionClass = 'net.corda.notarydemo.BFTNotaryCordform'
 }
 
 task notarise(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
+    classpath = sourceSets.test.runtimeClasspath
     main = 'net.corda.notarydemo.NotariseKt'
 }

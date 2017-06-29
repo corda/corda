@@ -273,3 +273,5 @@ task buildCordappDependenciesZip(type: Zip) {
     from 'node/capsule/NOTICE' // CDDL notice
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+apply from: 'graphs.gradle'
