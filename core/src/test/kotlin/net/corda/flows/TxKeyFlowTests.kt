@@ -10,7 +10,9 @@ import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class TxKeyFlowTests {
     lateinit var mockNet: MockNetwork
@@ -47,5 +49,15 @@ class TxKeyFlowTests {
         val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
         assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.identity)
         assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.identity)
+
+        // Verify that the anonymous identities look sane
+        assertEquals(alice.name, aliceAnonymousIdentity.certificate.subject)
+        assertEquals(bob.name, bobAnonymousIdentity.certificate.subject)
+
+        // Verify that the nodes have the right anonymous identities
+        assertTrue { aliceAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { bobAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { aliceAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { bobAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
     }
 }

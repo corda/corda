@@ -40,17 +40,17 @@ object TxKeyFlow {
         @Suspendable
         override fun call(): TxIdentities {
             progressTracker.currentStep = AWAITING_KEY
-            val myIdentity = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-            serviceHub.identityService.registerAnonymousIdentity(myIdentity.identity, serviceHub.myInfo.legalIdentity, myIdentity.certPath)
+            val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
+            serviceHub.identityService.registerAnonymousIdentity(legalIdentityAnonymous.identity, serviceHub.myInfo.legalIdentity, legalIdentityAnonymous.certPath)
 
             // Special case that if we're both parties, a single identity is generated
             return if (otherSide == serviceHub.myInfo.legalIdentity) {
-                TxIdentities(Pair(otherSide, myIdentity))
+                TxIdentities(Pair(otherSide, legalIdentityAnonymous))
             } else {
-                val theirIdentity = receive<AnonymisedIdentity>(otherSide).unwrap { validateIdentity(it) }
-                send(otherSide, myIdentity)
-                TxIdentities(Pair(otherSide, myIdentity),
-                        Pair(serviceHub.myInfo.legalIdentity, theirIdentity))
+                val otherSideAnonymous = receive<AnonymisedIdentity>(otherSide).unwrap { validateIdentity(it) }
+                send(otherSide, legalIdentityAnonymous)
+                TxIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
+                        Pair(otherSide, otherSideAnonymous))
             }
         }
     }
@@ -71,11 +71,10 @@ object TxKeyFlow {
         override fun call(): TxIdentities {
             val revocationEnabled = false
             progressTracker.currentStep = SENDING_KEY
-            val myIdentity = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-            send(otherSide, myIdentity)
-            val theirIdentity = receive<AnonymisedIdentity>(otherSide).unwrap { validateIdentity(it) }
-            return TxIdentities(Pair(otherSide, myIdentity),
-                    Pair(serviceHub.myInfo.legalIdentity, theirIdentity))
+            val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
+            val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(it) }
+            return TxIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
+                    Pair(otherSide, otherSideAnonymous))
         }
     }
 
