@@ -124,7 +124,7 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
     }
 }
 
-class TransactionKeyHandler(otherSide: Party) : TransactionKeyFlow.AbstractIdentityFlow<TransactionKeyFlow.TxIdentities>(otherSide, false) {
+class TransactionKeyHandler(otherSide: Party) : AbstractIdentityFlow(otherSide, false) {
     companion object {
         object SENDING_KEY : ProgressTracker.Step("Sending key")
     }
@@ -132,12 +132,12 @@ class TransactionKeyHandler(otherSide: Party) : TransactionKeyFlow.AbstractIdent
     override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
 
     @Suspendable
-    override fun call(): TransactionKeyFlow.TxIdentities {
+    override fun call(): TransactionIdentities {
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
         val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(it) }
-        return TransactionKeyFlow.TxIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
+        return TransactionIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
                 Pair(otherSide, otherSideAnonymous))
     }
 }

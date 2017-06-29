@@ -41,9 +41,9 @@ class CashIssueFlow(val amount: Amount<Currency>,
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
-            subFlow(TransactionKeyFlow.Requester(recipient))
+            subFlow(TransactionKeyFlow(recipient))
         } else {
-            TransactionKeyFlow.TxIdentities(emptyList())
+            TransactionIdentities(emptyList())
         }
         val anonymousRecipient = if (anonymous) {
             txIdentities.forParty(recipient).identity

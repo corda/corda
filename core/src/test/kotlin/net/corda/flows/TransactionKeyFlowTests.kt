@@ -39,7 +39,7 @@ class TransactionKeyFlowTests {
         bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
 
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow.Requester(bob))
+        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
 
         // Get the results
         val actual: Map<Party, AnonymisedIdentity> = requesterFlow.resultFuture.getOrThrow().toMap()
