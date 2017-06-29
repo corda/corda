@@ -23,6 +23,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.loggerFor
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.nodeapi.config.SSLConfiguration
 import org.jetbrains.exposed.sql.Database
 import java.nio.file.Path
@@ -36,26 +37,28 @@ import javax.annotation.concurrent.ThreadSafe
  * The uniqueness provider maintains both a Copycat cluster node (server) and a client through which it can submit
  * requests to the cluster. In Copycat, a client request is first sent to the server it's connected to and then redirected
  * to the cluster leader to be actioned.
- *
- * @param storagePath Directory storing the Raft log and state machine snapshots
- * @param myAddress Address of the Copycat node run by this Corda node
- * @param clusterAddresses List of node addresses in the existing Copycat cluster. At least one active node must be
- * provided to join the cluster. If empty, a new cluster will be bootstrapped.
- * @param db The database to store the state machine state in
- * @param config SSL configuration
  */
 @ThreadSafe
-class RaftUniquenessProvider(
-        val storagePath: Path,
-        val myAddress: HostAndPort,
-        val clusterAddresses: List<HostAndPort>,
-        val db: Database,
-        val config: SSLConfiguration
-) : UniquenessProvider, SingletonSerializeAsToken() {
+class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<RaftUniquenessProvider>()
         private val DB_TABLE_NAME = "notary_committed_states"
     }
+
+    /** Directory storing the Raft log and state machine snapshots */
+    private val storagePath: Path = services.configuration.baseDirectory
+    /** Address of the Copycat node run by this Corda node */
+    private val myAddress: HostAndPort = services.configuration.notaryNodeAddress
+            ?: throw IllegalArgumentException("notaryNodeAddress must be specified in configuration")
+    /**
+     * List of node addresses in the existing Copycat cluster. At least one active node must be
+     * provided to join the cluster. If empty, a new cluster will be bootstrapped.
+     */
+    private val clusterAddresses: List<HostAndPort> = services.configuration.notaryClusterAddresses
+    /** The database to store the state machine state in */
+    private val db: Database = services.database
+    /** SSL configuration */
+    private val transportConfiguration: SSLConfiguration = services.configuration
 
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
@@ -71,13 +74,21 @@ class RaftUniquenessProvider(
         val stateMachineFactory = { DistributedImmutableMap<String, ByteArray>(db, DB_TABLE_NAME) }
         val address = Address(myAddress.host, myAddress.port)
         val storage = buildStorage(storagePath)
-        val transport = buildTransport(config)
+        val transport = buildTransport(transportConfiguration)
         val serializer = Serializer().apply {
             // Add serializers so Catalyst doesn't attempt to fall back on Java serialization for these types, which is disabled process-wide:
             register(DistributedImmutableMap.Commands.PutAll::class.java) {
                 object : TypeSerializer<DistributedImmutableMap.Commands.PutAll<*, *>> {
-                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>, buffer: BufferOutput<out BufferOutput<*>>, serializer: Serializer) = writeMap(obj.entries, buffer, serializer)
-                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>, buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
+                    override fun write(obj: DistributedImmutableMap.Commands.PutAll<*, *>,
+                                       buffer: BufferOutput<out BufferOutput<*>>,
+                                       serializer: Serializer) {
+                        writeMap(obj.entries, buffer, serializer)
+                    }
+                    override fun read(type: Class<DistributedImmutableMap.Commands.PutAll<*, *>>,
+                                      buffer: BufferInput<out BufferInput<*>>,
+                                      serializer: Serializer): DistributedImmutableMap.Commands.PutAll<Any, Any> {
+                        return DistributedImmutableMap.Commands.PutAll(readMap(buffer, serializer))
+                    }
                 }
             }
             register(LinkedHashMap::class.java) {
@@ -170,4 +181,10 @@ private fun writeMap(map: Map<*, *>, buffer: BufferOutput<out BufferOutput<*>>, 
     }
 }
 
-private fun readMap(buffer: BufferInput<out BufferInput<*>>, serializer: Serializer) = LinkedHashMap<Any, Any>().apply { repeat(buffer.readInt()) { put(serializer.readObject(buffer), serializer.readObject(buffer)) } }
+private fun readMap(buffer: BufferInput<out BufferInput<*>>, serializer: Serializer): LinkedHashMap<Any, Any> {
+    return LinkedHashMap<Any, Any>().apply {
+        repeat(buffer.readInt()) {
+            put(serializer.readObject(buffer), serializer.readObject(buffer))
+        }
+    }
+}
