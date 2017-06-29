@@ -28,16 +28,39 @@ class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
-        require (children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
-        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees but having different structures.
+        require(children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
+        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees
+        // but having different structures.
         require(children.size > 1) { "Cannot construct CompositeKey with only one child node." }
+        // We should ensure threshold is positive, because smaller allowable weight for a node key is 1.
+        require(threshold > 0) { "Cannot construct CompositeKey with non-positive threshold." }
+        // If threshold is bigger than total weight, then it will never be satisfied.
+        require(threshold <= totalWeight()) { "Threshold cannot be bigger than total weight."}
+        // TODO: check for cycle detection
+    }
+
+    // Method to check if the total weight overflows.
+    // Unlike similar solutions that use long conversion, this approach takes advantage of the minimum weight being 1.
+    private fun totalWeight(): Int {
+        var sum = 0
+        for (nodeAndWeight in children) {
+            sum += nodeAndWeight.weight // Minimum weight is 1.
+            require(sum < 1) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
+        }
+        return sum
     }
 
     /**
      * Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
+     * Each node should be assigned with a positive weight to avoid certain types of weight underflow attacks.
      */
     @CordaSerializable
     data class NodeAndWeight(val node: PublicKey, val weight: Int): Comparable<NodeAndWeight>, ASN1Object() {
+
+        init {
+            // We don't allow zero or negative weights. Minimum weight = 1.
+            require (weight > 0) { "Trying to construct CompositeKey Node with non-positive weight." }
+        }
         override fun compareTo(other: NodeAndWeight): Int {
             if (weight == other.weight) {
                 return node.hashCode().compareTo(other.node.hashCode())
