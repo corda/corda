@@ -13,7 +13,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.BOB
 import net.corda.notarydemo.flows.DummyIssueAndMove
-import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
+import net.corda.notarydemo.flows.RPCStartableNotarisationFlow
 import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
@@ -68,7 +68,7 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
      */
     private fun notariseTransactions(transactions: List<SignedTransaction>): List<ListenableFuture<List<String>>> {
         return transactions.map {
-            rpc.startFlow(::RPCStartableNotaryFlowClient, it).returnValue.map { it.map { it.by.toStringShort() } }
+            rpc.startFlow(::RPCStartableNotarisationFlow, it).returnValue.map { it.map { it.by.toStringShort() } }
         }
     }
 }

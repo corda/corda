@@ -123,7 +123,7 @@ abstract class AbstractStateReplacementFlow {
         private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
             progressTracker.currentStep = NOTARY
             try {
-                return subFlow(NotaryFlow.Client(stx))
+                return subFlow(NotarisationFlow(stx))
             } catch (e: NotaryException) {
                 throw StateReplacementException("Unable to notarise state change", e)
             }

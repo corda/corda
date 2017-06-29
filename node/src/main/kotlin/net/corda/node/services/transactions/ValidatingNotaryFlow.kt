@@ -16,7 +16,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotaryFlow.Service(otherSide, service) {
+class ValidatingNotaryFlow(otherSide: Party, service: TrustedAuthorityNotaryService) : NotarisationHandler(otherSide, service) {
     /**
      * The received transaction is checked for contract-validity, which requires fully resolving it into a
      * [TransactionForVerification], for which the caller also has to to reveal the whole transaction

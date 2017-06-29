@@ -9,9 +9,9 @@ import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
 import net.corda.core.map
 import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.flows.NotarisationFlow
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest
@@ -38,7 +38,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         val firstTxBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState)
         val firstSpendTx = alice.services.signInitialTransaction(firstTxBuilder)
 
-        val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
+        val firstSpend = alice.services.startFlow(NotarisationFlow(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
         val secondSpendBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
@@ -47,7 +47,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
             this
         }
         val secondSpendTx = alice.services.signInitialTransaction(secondSpendBuilder)
-        val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
+        val secondSpend = alice.services.startFlow(NotarisationFlow(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
         val error = ex.error as NotaryError.Conflict

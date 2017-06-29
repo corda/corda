@@ -11,9 +11,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.flows.NotarisationFlow
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
@@ -85,8 +85,8 @@ class NotaryServiceTests {
             clientNode.services.signInitialTransaction(tx)
         }
 
-        val firstAttempt = NotaryFlow.Client(stx)
-        val secondAttempt = NotaryFlow.Client(stx)
+        val firstAttempt = NotarisationFlow(stx)
+        val secondAttempt = NotarisationFlow(stx)
         val f1 = clientNode.services.startFlow(firstAttempt)
         val f2 = clientNode.services.startFlow(secondAttempt)
 
@@ -107,8 +107,8 @@ class NotaryServiceTests {
             clientNode.services.signInitialTransaction(tx)
         }
 
-        val firstSpend = NotaryFlow.Client(stx)
-        val secondSpend = NotaryFlow.Client(stx2) // Double spend the inputState in a second transaction.
+        val firstSpend = NotarisationFlow(stx)
+        val secondSpend = NotarisationFlow(stx2) // Double spend the inputState in a second transaction.
         clientNode.services.startFlow(firstSpend)
         val future = clientNode.services.startFlow(secondSpend)
 
@@ -121,7 +121,7 @@ class NotaryServiceTests {
     }
 
     private fun runNotaryClient(stx: SignedTransaction): ListenableFuture<List<DigitalSignature.WithKey>> {
-        val flow = NotaryFlow.Client(stx)
+        val flow = NotarisationFlow(stx)
         val future = clientNode.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         return future

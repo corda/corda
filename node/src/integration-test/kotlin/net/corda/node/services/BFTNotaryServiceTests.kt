@@ -8,9 +8,9 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
+import net.corda.flows.NotarisationFlow
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService
@@ -88,7 +88,7 @@ class BFTNotaryServiceTests {
                 }
             }
             assertEquals(spendTxs.size, spendTxs.map { it.id }.distinct().size)
-            val flows = spendTxs.map { NotaryFlow.Client(it) }
+            val flows = spendTxs.map { NotarisationFlow(it) }
             val stateMachines = flows.map { services.startFlow(it) }
             mockNet.runNetwork()
             val results = stateMachines.map { ErrorOr.catch { it.resultFuture.getOrThrow() } }

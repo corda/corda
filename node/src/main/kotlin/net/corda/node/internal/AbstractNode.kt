@@ -341,7 +341,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private fun handleCustomNotaryService(service: NotaryService) {
         runOnStop += service::stop
         service.start()
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+        installCoreFlow(NotarisationFlow::class, { party: Party, version: Int -> service.createHandler(party, version) })
     }
 
     private inline fun <reified A : Annotation> Class<*>.requireAnnotation(): A {
@@ -714,7 +714,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             runOnStop += this::stop
             start()
         }
-        installCoreFlow(NotaryFlow.Client::class, { party: Party, version: Int -> service.createServiceFlow(party, version) })
+        installCoreFlow(NotarisationFlow::class, { party: Party, version: Int -> service.createHandler(party, version) })
     }
 
     protected open fun makeIdentityService(trustRoot: X509Certificate,

@@ -41,7 +41,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
 
     companion object {
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
-            override fun childProgressTracker() = NotaryFlow.Client.tracker()
+            override fun childProgressTracker() = NotarisationFlow.tracker()
         }
 
         object BROADCASTING : ProgressTracker.Step("Broadcasting transaction to participants")
@@ -77,7 +77,7 @@ class FinalityFlow(val transactions: Iterable<SignedTransaction>,
         return stxnsAndParties.map { pair ->
             val stx = pair.first
             val notarised = if (needsNotarySignature(stx)) {
-                val notarySignatures = subFlow(NotaryFlow.Client(stx))
+                val notarySignatures = subFlow(NotarisationFlow(stx))
                 stx + notarySignatures
             } else {
                 stx
