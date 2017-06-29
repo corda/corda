@@ -31,7 +31,7 @@ class MapSerializer(val declaredType: ParameterizedType, factory: SerializerFact
 
     private val concreteBuilder: (Map<*, *>) -> Map<*, *> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(declaredType.toString(), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor, null), emptyList())
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
