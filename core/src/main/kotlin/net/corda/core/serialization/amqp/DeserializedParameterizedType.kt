@@ -1,5 +1,6 @@
 package net.corda.core.serialization.amqp
 
+import com.google.common.primitives.Primitives
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -119,7 +120,9 @@ class DeserializedParameterizedType(private val rawType: Class<*>, private val p
 
         private fun makeType(typeName: String, cl: ClassLoader): Type {
             // Not generic
-            return if (typeName == "?") SerializerFactory.AnyType else Class.forName(typeName, false, cl)
+            return if (typeName == "?") SerializerFactory.AnyType else {
+                Primitives.wrap(SerializerFactory.primitiveType(typeName) ?: Class.forName(typeName, false, cl))
+            }
         }
 
         private fun makeParameterizedType(rawTypeName: String, args: MutableList<Type>, cl: ClassLoader): Type {
