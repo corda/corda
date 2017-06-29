@@ -512,12 +512,12 @@ class DriverDSL(
             val stopwatch = Stopwatch.createStarted()
             val tolerance = 5.seconds
             if (!it.awaitTermination(tolerance.toMillis(), MILLISECONDS)) {
-                // Assume hang, blow up now so we don't hog the TC agent:
+                // Assume hang, blow up now so we don't hog the CI agent:
                 throw TimeoutException("Driver executor still running $tolerance after shutdown, likely due to a hanging task.")
             }
             val elapsed = Duration.ofMillis(stopwatch.elapsed(MILLISECONDS))
             if (elapsed >= 500.millis) {
-                // Something to grep for in TC build logs:
+                // Something to grep for in CI build logs:
                 log.warn("Driver executor shutdown took a while: $elapsed")
             }
         }
