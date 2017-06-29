@@ -335,6 +335,8 @@ internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String {
     return hasher.hash().asBytes().toBase64()
 }
 
+// This method concatentates various elements of the types recursively as unencoded strings into the hasher, effectively
+// creating a unique string for a type which we then hash in the calling function above.
 private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: MutableSet<Type>, hasher: Hasher, factory: SerializerFactory): Hasher {
     return if (type in alreadySeen) {
         hasher.putUnencodedChars(ALREADY_SEEN_HASH)
@@ -373,6 +375,7 @@ private fun fingerprintForType(type: Type, contextType: Type?, alreadySeen: Muta
                 } else {
                     fingerprintForObject(type, type, alreadySeen, hasher, factory)
                 }
+                // ... and concatentate the type data for each parameter type.
                 type.actualTypeArguments.fold(startingHash) { orig, paramType -> fingerprintForType(paramType, type, alreadySeen, orig, factory) }
             } else if (type is GenericArrayType) {
                 // Hash the element type + some array hash
