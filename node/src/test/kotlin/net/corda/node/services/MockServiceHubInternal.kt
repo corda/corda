@@ -10,6 +10,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.api.*
+import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -18,6 +19,7 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.testing.MOCK_IDENTITY_SERVICE
 import net.corda.testing.node.MockNetworkMapCache
 import net.corda.testing.node.MockStorageService
+import org.jetbrains.exposed.sql.Database
 import java.time.Clock
 
 open class MockServiceHubInternal(
@@ -55,7 +57,10 @@ open class MockServiceHubInternal(
         get() = overrideClock ?: throw UnsupportedOperationException()
     override val myInfo: NodeInfo
         get() = throw UnsupportedOperationException()
-
+    override val database: Database
+        get() = throw UnsupportedOperationException()
+    override val configuration: NodeConfiguration
+        get() = throw UnsupportedOperationException()
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>
         get() = throw UnsupportedOperationException()

@@ -11,8 +11,6 @@ import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.ServiceType
-import net.corda.core.node.services.UniquenessProvider
 import net.corda.core.seconds
 import net.corda.core.success
 import net.corda.core.utilities.loggerFor
@@ -26,10 +24,6 @@ import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDete
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
-import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.node.services.transactions.RaftNonValidatingNotaryService
-import net.corda.node.services.transactions.RaftUniquenessProvider
-import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.nodeapi.ArtemisMessagingComponent
@@ -261,18 +255,6 @@ open class Node(override val configuration: FullNodeConfiguration,
     override fun registerWithNetworkMap(): ListenableFuture<Unit> {
         val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: Futures.immediateFuture(Unit)
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
-    }
-
-    override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider {
-        return when (type) {
-            RaftValidatingNotaryService.type, RaftNonValidatingNotaryService.type -> with(configuration) {
-                val provider = RaftUniquenessProvider(baseDirectory, notaryNodeAddress!!, notaryClusterAddresses, database, configuration)
-                provider.start()
-                runOnStop += provider::stop
-                provider
-            }
-            else -> PersistentUniquenessProvider()
-        }
     }
 
     override fun myAddresses(): List<HostAndPort> {
