@@ -26,10 +26,7 @@ import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.NotaryFlow
+import net.corda.flows.*
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.services.transactions.ValidatingNotaryService
@@ -344,7 +341,7 @@ class FlowFrameworkTests {
         sessionTransfers.expectEvents(isStrict = false) {
             sequence(
                     // First Pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotarisationFlow::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -354,7 +351,7 @@ class FlowFrameworkTests {
                         assertEquals(notary1.id, it.from)
                     },
                     // Second pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotarisationFlow::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)
@@ -364,7 +361,7 @@ class FlowFrameworkTests {
                         assertEquals(notary2.id, it.from)
                     },
                     // Third pay
-                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotaryFlow.Client::class.java }) {
+                    expect(match = { it.message is SessionInit && it.message.initiatingFlowClass == NotarisationFlow::class.java }) {
                         it.message as SessionInit
                         assertEquals(node1.id, it.from)
                         assertEquals(notary1Address, it.to)

@@ -16,7 +16,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
-import net.corda.flows.NotaryFlow
+import net.corda.flows.NotarisationFlow
 import net.corda.flows.TwoPartyTradeFlow
 import net.corda.testing.BOC
 import java.time.Instant
@@ -88,7 +88,7 @@ class SellerFlow(val otherParty: Party,
             tx.signWith(keyPair)
 
             // Get the notary to sign the time-window.
-            val notarySigs = subFlow(NotaryFlow.Client(tx.toSignedTransaction(false)))
+            val notarySigs = subFlow(NotarisationFlow(tx.toSignedTransaction(false)))
             notarySigs.forEach { tx.addSignatureUnchecked(it) }
 
             // Commit it to local storage.
@@ -103,7 +103,7 @@ class SellerFlow(val otherParty: Party,
             val builder = TransactionType.General.Builder(notaryNode.notaryIdentity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
             builder.signWith(keyPair)
-            val notarySignature = subFlow(NotaryFlow.Client(builder.toSignedTransaction(false)))
+            val notarySignature = subFlow(NotarisationFlow(builder.toSignedTransaction(false)))
             notarySignature.forEach { builder.addSignatureUnchecked(it) }
             val tx = builder.toSignedTransaction(true)
             serviceHub.recordTransactions(listOf(tx))

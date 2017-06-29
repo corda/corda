@@ -10,14 +10,14 @@ import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
 import net.corda.notarydemo.flows.DummyIssueAndMove
-import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
+import net.corda.notarydemo.flows.RPCStartableNotarisationFlow
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.demorun.util.*
 
 fun main(args: Array<String>) = SingleNotaryCordform.runNodes()
 
-val notaryDemoUser = User("demou", "demop", setOf(startFlowPermission<DummyIssueAndMove>(), startFlowPermission<RPCStartableNotaryFlowClient>()))
+val notaryDemoUser = User("demou", "demop", setOf(startFlowPermission<DummyIssueAndMove>(), startFlowPermission<RPCStartableNotarisationFlow>()))
 
 object SingleNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", DUMMY_NOTARY.name) {
     init {

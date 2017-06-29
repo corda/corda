@@ -22,12 +22,13 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     abstract fun stop()
 
     /**
-     * Produces a notary service flow which has the corresponding sends and receives as [NotaryFlow.Client].
+     * Produces a flow that handles notarisation requests.
+     *
      * The first parameter is the client [Party] making the request and the second is the platform version
      * of the client's node. Use this version parameter to provide backwards compatibility if the notary flow protocol
      * changes.
      */
-    abstract fun createServiceFlow(otherParty: Party, platformVersion: Int): FlowLogic<Void?>
+    abstract fun createHandler(otherParty: Party, platformVersion: Int): FlowLogic<Void?>
 }
 
 /**

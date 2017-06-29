@@ -6,6 +6,8 @@ from the previous milestone release.
 
 UNRELEASED
 ----------
+
+* ``NotaryFlow.Client`` renamed to ``NotarisationFlow``
 * Changes in ``NodeInfo``:
 
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
