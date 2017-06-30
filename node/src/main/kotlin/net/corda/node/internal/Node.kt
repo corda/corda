@@ -40,6 +40,7 @@ import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
+import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.bouncycastle.asn1.x500.X500Name
@@ -171,8 +172,11 @@ open class Node(override val configuration: FullNodeConfiguration,
             if (relay != null) {
                 HostAndPort.fromParts(relay.relayHost, relay.remoteInboundPort)
             } else {
-                val publicHost = tryDetectIfNotPublicHost(p2pAddress.host)
-                val useHost = publicHost ?: p2pAddress.host
+                val useHost = if (detectPublicIp) {
+                    tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
+                } else {
+                    p2pAddress.host
+                }
                 HostAndPort.fromParts(useHost, p2pAddress.port)
             }
         }
@@ -227,7 +231,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         session.start()
 
         val queueName = "$IP_REQUEST_PREFIX$requestId"
-        session.createQueue(queueName, queueName, false)
+        session.createQueue(queueName, RoutingType.MULTICAST, queueName, false)
 
         val consumer = session.createConsumer(queueName)
         val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:

@@ -32,7 +32,7 @@ To run from the command line in Unix:
 
 1. Run ``./gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples/trader-demo/build/nodes``
 2. Run ``./samples/trader-demo/build/nodes/runnodes`` to open up four new terminals with the four nodes
-3. Run ``./gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
+3. Run ``./gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node
 4. Run ``./gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
@@ -41,7 +41,7 @@ To run from the command line in Windows:
 
 1. Run ``gradlew samples:trader-demo:deployNodes`` to create a set of configs and installs under ``samples\trader-demo\build\nodes``
 2. Run ``samples\trader-demo\build\nodes\runnodes`` to open up four new terminals with the four nodes
-3. Run ``gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node.
+3. Run ``gradlew samples:trader-demo:runBuyer`` to instruct the buyer node to request issuance of some cash from the Bank of Corda node
 4. Run ``gradlew samples:trader-demo:runSeller`` to trigger the transaction. If you entered ``flow watch``
 you can see flows running on both sides of transaction. Additionally you should see final trade information displayed
 to your terminal.
@@ -57,16 +57,10 @@ on a simulated clock passes.
 
 To run from the command line in Unix:
 
-1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``.
+1. Run ``./gradlew samples:irs-demo:deployNodes`` to install configs and a command line tool under ``samples/irs-demo/build``
 2. Run ``./gradlew samples:irs-demo:installDist``
 3. Move to the ``samples/irs-demo/build`` directory
 4. Run ``./nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm).
-5. Run ``./install/irs-demo/bin/irs-demo --role UploadRates``. You should see a
-   message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
-   interest rates
-6. Now run ``./install/irs-demo/bin/irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
-   ``flow watch`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
-7. Now run ``./install/irs-demo/bin/irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
 To run from the command line in Windows:
 
@@ -74,21 +68,15 @@ To run from the command line in Windows:
 2. Run ``gradlew samples:irs-demo:installDist``
 3. Move to the ``samples\irs-demo\build`` directory
 4. Run ``nodes\runnodes`` to open up three new terminals with the three nodes.
-5. Run ``install\irs-demo\bin\irs-demo --role UploadRates``. You should see a
-   message be printed to the first node (the notary/oracle/network map node) saying that it has accepted the new
-   interest rates
-6. Now run ``install\irs-demo\bin\irs-demo --role Trade 1``. The number is a trade ID. If you enter in node's terminal
-   ``flow watch`` you should see lots of activity as the nodes set up the deal, notarise it, get it signed by the oracle, and so on
-7. Now run ``install\irs-demo\bin\irs-demo --role Date 2017-12-12`` to roll the simulated clock forward and see some fixings take place
 
-This demo also has a web app. To use this, run nodes and upload rates, then navigate to
+This demo also has a web app. To use this, run nodes and then navigate to
 http://localhost:10007/web/irsdemo and http://localhost:10010/web/irsdemo to see each node's view of the ledger.
 
 To use the web app, click the "Create Deal" button, fill in the form, then click the "Submit" button. You can then
 use the time controls at the top left of the home page to run the fixings. Click any individual trade in the blotter to view it.
 
 .. note:: The IRS web UI currently has a bug when changing the clock time where it may show no numbers or apply fixings inconsistently.
-          The issues will be addressed in M13 milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
+          The issues will be addressed in a future milestone release. Meanwhile, you can take a look at a simpler oracle example https://github.com/corda/oracle-example
 
 Attachment demo
 ---------------

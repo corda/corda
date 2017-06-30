@@ -116,12 +116,14 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
                         issuerParty = this.amount.token.issuer.party.owningKey.toBase58String(),
                         issuerRef = this.amount.token.issuer.reference.bytes
                 )
+                /** Additional schema mappings would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }
 
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CashSchemaV1)
+        /** Additional used schemas would be added here (eg. CashSchemaV2, CashSchemaV3, ...) */
     }
     // DOCEND 1
 

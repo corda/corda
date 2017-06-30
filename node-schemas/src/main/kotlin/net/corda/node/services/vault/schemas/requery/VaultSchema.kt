@@ -1,4 +1,4 @@
-package net.corda.node.services.vault.schemas
+package net.corda.node.services.vault.schemas.requery
 
 import io.requery.*
 import net.corda.core.node.services.Vault
@@ -73,21 +73,5 @@ object VaultSchema {
         /** refers to the last time a lock was taken (reserved) or updated (released, re-reserved) */
         @get:Column(name = "lock_timestamp", nullable = true)
         var lockUpdateTime: Instant?
-    }
-
-    /**
-     * The following entity is for illustration purposes only as used by VaultQueryTests
-     */
-    @Table(name = "vault_linear_states")
-    @Entity(model = "vault")
-    interface VaultLinearState : Persistable {
-
-        @get:Index("external_id_index")
-        @get:Column(name = "external_id")
-        var externalId: String
-
-        @get:Index("uuid_index")
-        @get:Column(name = "uuid", unique = true, nullable = false)
-        var uuid: UUID
     }
 }

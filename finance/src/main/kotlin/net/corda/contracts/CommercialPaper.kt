@@ -84,6 +84,7 @@ class CommercialPaper : Contract {
         // DOCSTART VaultIndexedQueryCriteria
         /** Object Relational Mapping support. */
         override fun supportedSchemas(): Iterable<MappedSchema> = listOf(CommercialPaperSchemaV1)
+        /** Additional used schemas would be added here (eg. CommercialPaperV2, ...) */
 
         /** Object Relational Mapping support. */
         override fun generateMappedObject(schema: MappedSchema): PersistentState {
@@ -98,6 +99,7 @@ class CommercialPaper : Contract {
                         faceValueIssuerParty = this.faceValue.token.issuer.party.owningKey.toBase58String(),
                         faceValueIssuerRef = this.faceValue.token.issuer.reference.bytes
                 )
+                /** Additional schema mappings would be added here (eg. CommercialPaperV2, ...) */
                 else -> throw IllegalArgumentException("Unrecognised schema $schema")
             }
         }

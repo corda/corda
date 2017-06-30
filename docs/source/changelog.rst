@@ -7,25 +7,84 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
-* A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
-  an unambiguous identity by searching the network map.
-
-* The node driver has moved to net.corda.testing.driver in the test-utils module
-
-* Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone)
-
-* Added DER encoded format for CompositeKey so they can be used in X.509 certificates
-
-* Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential identities
-  are used
-
 Milestone 13
-------------
+----------
+Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution which adds
+support for more currencies to the DemoBench and Explorer tools.
 
-    * Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
-    ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
-    Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
-    and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
+* A new Vault Query service:
+
+   * Implemented using JPA and Hibernate, this new service provides the ability to specify advanced queries using
+     criteria specification sets for both vault attributes and custom contract specific attributes. In addition, new
+     queries provide sorting and pagination capabilities.
+     The new API provides two function variants which are exposed for usage within Flows and by RPC clients:
+     - ``queryBy()`` for point-in-time snapshot queries
+       (replaces several existing VaultService functions and a number of Kotlin-only extension functions)
+     - ``trackBy()`` for snapshot and streaming updates
+       (replaces the VaultService ``track()`` function and the RPC ``vaultAndUpdates()`` function)
+     Existing VaultService API methods will be maintained as deprecated until the following milestone release.
+
+   * The NodeSchema service has been enhanced to automatically generate mapped objects for any ContractState objects
+     that extend FungibleAsset or LinearState, such that common attributes of those parent states are persisted to
+     two new vault tables: vault_fungible_states and vault_linear_states (and thus queryable using the new Vault Query
+     service API).
+     Similarly, two new common JPA superclass schemas (``CommonSchemaV1.FungibleState`` and
+     ``CommonSchemaV1.LinearState``) mirror the associated FungibleAsset and LinearState interface states to enable
+     CorDapp developers to create new custom schemas by extension (rather than duplication of common attribute mappings)
+
+   * A new configurable field ``requiredSchemas`` has been added to the CordaPluginRegistry to enable CorDapps to
+     register custom contract state schemas they wish to query using the new Vault Query service API (using the
+     ``VaultCustomQueryCriteria``).
+
+   * See :doc:`vault-query` for full details and code samples of using the new Vault Query service.
+
+* Identity and cryptography related changes:
+
+   * Enable certificate validation in most scenarios (will be enforced in all cases in an upcoming milestone).
+
+   * Added DER encoded format for CompositeKey so they can be used in X.509 certificates.
+
+   * Corrected several tests which made assumptions about counterparty keys, which are invalid when confidential
+     identities are used.
+
+   * A new RPC has been added to support fuzzy matching of X.500 names, for instance, to translate from user input to
+     an unambiguous identity by searching the network map.
+
+   * A function for deterministic key derivation ``Crypto.deriveKeyPair(privateKey: PrivateKey, seed: ByteArray)``
+     has been implemented to support deterministic ``KeyPair`` derivation using an existing private key and a seed
+     as inputs. This operation is based on the HKDF scheme and it's a variant of the hardened parent-private ->
+     child-private key derivation function of the BIP32 protocol, but it doesn't utilize extension chain codes.
+     Currently, this function supports the following schemes: ECDSA secp256r1 (NIST P-256), ECDSA secp256k1 and
+     EdDSA ed25519.
+
+* A new ``ClassWhitelist`` implementation, ``AllButBlacklisted`` is used internally to blacklist classes/interfaces,
+  which are not expected to be serialised during checkpoints, such as ``Thread``, ``Connection`` and ``HashSet``.
+  This implementation supports inheritance and if a superclass or superinterface of a class is blacklisted, so is
+  the class itself. An ``IllegalStateException`` informs the user if a class is blacklisted and such an exception is
+  returned before checking for ``@CordaSerializable``; thus, blacklisting precedes annotation checking.
+
+* ``TimeWindow`` has a new 5th factory method ``TimeWindow.fromStartAndDuration(fromTime: Instant, duration: Duration)``
+  which takes a start-time and a period-of-validity (after this start-time) as inputs.
+
+* The node driver has moved to net.corda.testing.driver in the test-utils module.
+
+* Web API related collections ``CordaPluginRegistry.webApis`` and ``CordaPluginRegistry.staticServeDirs`` moved to
+  ``net.corda.webserver.services.WebServerPluginRegistry`` in ``webserver`` module.
+  Classes serving Web API should now extend ``WebServerPluginRegistry`` instead of ``CordaPluginRegistry``
+  and they should be registered in ``resources/META-INF/services/net.corda.webserver.services.WebServerPluginRegistry``.
+
+* Added a flag to the driver that allows the running of started nodes in-process, allowing easier debugging.
+  To enable use `driver(startNodesInProcess = true) { .. }`, or `startNode(startInSameProcess = true, ..)`
+  to specify for individual nodes.
+
+* Dependencies changes:
+    * Upgraded Kotlin to v1.1.2.
+    * Upgraded Dokka to v0.9.14.
+    * Upgraded Gradle Plugins to 0.12.4.
+    * Upgraded Apache ActiveMQ Artemis to v2.1.0.
+    * Upgraded Netty to v4.1.9.Final.
+    * Upgraded BouncyCastle to v1.57.
+    * Upgraded Requery to v1.3.1.
 
 Milestone 12
 ------------

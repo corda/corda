@@ -4,9 +4,11 @@ import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.*
+import net.corda.core.crypto.CertificateAndKeyPair
+import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.flows.TxKeyFlow
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
@@ -18,6 +20,7 @@ import net.corda.core.node.services.*
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
+import net.corda.flows.TxKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -33,8 +36,8 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.MOCK_VERSION_INFO
-import net.corda.testing.TestNodeConfiguration
 import net.corda.testing.getTestX509Name
+import net.corda.testing.testNodeConfiguration
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
@@ -64,7 +67,9 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                   servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy =
                   InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random(),
                   private val defaultFactory: Factory = MockNetwork.DefaultFactory) {
-    private var nextNodeId = 0
+    val nextNodeId
+        get() = _nextNodeId
+    private var _nextNodeId = 0
     val filesystem: FileSystem = Jimfs.newFileSystem(unix())
     private val busyLatch: ReusableLatch = ReusableLatch()
     val messagingNetwork = InMemoryMessagingNetwork(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
@@ -166,9 +171,14 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .getOrThrow()
         }
 
-        // TODO: Specify a CA to validate registration against
-        override fun makeIdentityService(): IdentityService {
-            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(), trustRoot = null as X509Certificate?)
+        override fun makeIdentityService(trustRoot: X509Certificate,
+                                         clientCa: CertificateAndKeyPair?,
+                                         legalIdentity: PartyAndCertificate): IdentityService {
+            val caCertificates: Array<X509Certificate> = listOf(legalIdentity.certificate.cert, clientCa?.certificate?.cert)
+                    .filterNotNull()
+                    .toTypedArray()
+            return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(),
+                    trustRoot = trustRoot, caCertificates = *caCertificates)
         }
 
         override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
@@ -268,24 +278,27 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
      * @param overrideServices a set of service entries to use in place of the node's default service entries,
      * for example where a node's service is part of a cluster.
      * @param entropyRoot the initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-     * but can be overriden to cause nodes to have stable or colliding identity/service keys.
+     * but can be overridden to cause nodes to have stable or colliding identity/service keys.
+     * @param configOverrides add/override behaviour of the [NodeConfiguration] mock object.
      */
     fun createNode(networkMapAddress: SingleMessageRecipient? = null, forcedID: Int = -1, nodeFactory: Factory = defaultFactory,
                    start: Boolean = true, legalName: X500Name? = null, overrideServices: Map<ServiceInfo, KeyPair>? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                   vararg advertisedServices: ServiceInfo): MockNode {
+                   vararg advertisedServices: ServiceInfo,
+                   configOverrides: (NodeConfiguration) -> Any? = {}): MockNode {
         val newNode = forcedID == -1
-        val id = if (newNode) nextNodeId++ else forcedID
+        val id = if (newNode) _nextNodeId++ else forcedID
 
-        val path = filesystem.getPath("/nodes/$id")
+        val path = baseDirectory(id)
         if (newNode)
             (path / "attachments").createDirectories()
 
-        val config = TestNodeConfiguration(
+        val config = testNodeConfiguration(
                 baseDirectory = path,
-                myLegalName = legalName ?: getTestX509Name("Mock Company $id"),
-                networkMapService = null,
-                dataSourceProperties = makeTestDataSourceProperties("node_${id}_net_$networkId"))
+                myLegalName = legalName ?: getTestX509Name("Mock Company $id")).also {
+            whenever(it.dataSourceProperties).thenReturn(makeTestDataSourceProperties("node_${id}_net_$networkId"))
+            configOverrides(it)
+        }
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
@@ -297,6 +310,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         _nodes.add(node)
         return node
     }
+
+    fun baseDirectory(nodeId: Int) = filesystem.getPath("/nodes/$nodeId")
 
     /**
      * Asks every node in order to process any queued up inbound messages. This may in turn result in nodes
