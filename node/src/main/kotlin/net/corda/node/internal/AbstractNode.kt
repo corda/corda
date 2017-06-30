@@ -611,7 +611,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val tlsIdentity = identitiesKeystore.getX509Certificate(X509Utilities.CORDA_CLIENT_TLS).subject
 
         require(tlsIdentity == configuration.myLegalName) {
-            "Expected '${tlsIdentity.commonName}' but got '${tlsIdentity.commonName}' from the keystore."
+            "Expected '${configuration.myLegalName}' but got '$tlsIdentity' from the keystore."
         }
     }
 
