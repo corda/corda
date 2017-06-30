@@ -7,6 +7,7 @@ import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
 import net.corda.core.testing.PublicKeyGenerator
+import net.corda.testing.TestDependencyInjectionBase
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -15,7 +16,7 @@ import java.util.*
 import kotlin.test.assertEquals
 
 @RunWith(JUnitQuickcheck::class)
-class JacksonSupportTest {
+class JacksonSupportTest : TestDependencyInjectionBase() {
     companion object {
         val mapper = JacksonSupport.createNonRpcMapper()
     }

@@ -6,21 +6,24 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.Party
-import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_PUBKEY_1
-import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import org.junit.Test
 import java.security.PublicKey
 import java.util.function.Predicate
 import kotlin.test.*
 
-class PartialMerkleTreeTest {
+class PartialMerkleTreeTest : TestDependencyInjectionBase() {
     val nodes = "abcdef"
-    val hashed = nodes.map { it.serialize().sha256() }
+    val hashed = nodes.map {
+        initialiseTestSerialization()
+        try {
+            it.serialize().sha256()
+        } finally {
+            resetTestSerialization()
+        }
+    }
     val expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
     val merkleTree = MerkleTree.getMerkleTree(hashed)
 
@@ -215,9 +218,7 @@ class PartialMerkleTreeTest {
     @Test(expected = KryoException::class)
     fun `hash map serialization not allowed`() {
         val hm1 = hashMapOf("a" to 1, "b" to 2, "c" to 3, "e" to 4)
-        p2PKryo().run { kryo ->
-            hm1.serialize(kryo)
-        }
+        hm1.serialize()
     }
 
     private fun makeSimpleCashWtx(notary: Party, timeWindow: TimeWindow? = null, attachments: List<SecureHash> = emptyList()): WireTransaction {

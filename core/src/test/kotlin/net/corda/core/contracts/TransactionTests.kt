@@ -1,9 +1,8 @@
 package net.corda.core.contracts
 
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.sign
 import net.corda.core.identity.Party
@@ -12,13 +11,13 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.*
+import net.corda.testing.contracts.DummyContract
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class TransactionTests {
-
+class TransactionTests : TestDependencyInjectionBase() {
     private fun makeSigned(wtx: WireTransaction, vararg keys: KeyPair): SignedTransaction {
         val bytes: SerializedBytes<WireTransaction> = wtx.serialized
         return SignedTransaction(bytes, keys.map { it.sign(wtx.id.bytes) })

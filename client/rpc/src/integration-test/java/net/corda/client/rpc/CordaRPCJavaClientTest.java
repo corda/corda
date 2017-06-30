@@ -1,30 +1,38 @@
 package net.corda.client.rpc;
 
-import com.google.common.util.concurrent.*;
-import net.corda.client.rpc.internal.*;
-import net.corda.contracts.asset.*;
-import net.corda.core.contracts.*;
-import net.corda.core.messaging.*;
-import net.corda.core.node.services.*;
-import net.corda.core.node.services.vault.*;
-import net.corda.core.utilities.*;
-import net.corda.flows.*;
-import net.corda.node.internal.*;
-import net.corda.node.services.transactions.*;
-import net.corda.nodeapi.*;
-import net.corda.schemas.*;
-import net.corda.testing.node.*;
-import org.junit.*;
+import com.google.common.util.concurrent.ListenableFuture;
+import net.corda.client.rpc.internal.RPCClient;
+import net.corda.contracts.asset.Cash;
+import net.corda.core.contracts.Amount;
+import net.corda.core.messaging.CordaRPCOps;
+import net.corda.core.messaging.FlowHandle;
+import net.corda.core.node.services.ServiceInfo;
+import net.corda.core.node.services.Vault;
+import net.corda.core.node.services.vault.Builder;
+import net.corda.core.node.services.vault.QueryCriteria;
+import net.corda.core.utilities.OpaqueBytes;
+import net.corda.flows.AbstractCashFlow;
+import net.corda.flows.CashIssueFlow;
+import net.corda.flows.CashPaymentFlow;
+import net.corda.node.internal.Node;
+import net.corda.node.services.transactions.ValidatingNotaryService;
+import net.corda.nodeapi.User;
+import net.corda.schemas.CashSchemaV1;
+import net.corda.testing.node.NodeBasedTest;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.io.*;
-import java.lang.reflect.*;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
 
-import static kotlin.test.AssertionsKt.*;
-import static net.corda.client.rpc.CordaRPCClientConfiguration.*;
-import static net.corda.node.services.RPCUserServiceKt.*;
-import static net.corda.testing.TestConstants.*;
+import static kotlin.test.AssertionsKt.assertEquals;
+import static net.corda.client.rpc.CordaRPCClientConfiguration.getDefault;
+import static net.corda.node.services.RPCUserServiceKt.startFlowPermission;
+import static net.corda.testing.TestConstants.getALICE;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     private List<String> perms = Arrays.asList(startFlowPermission(CashPaymentFlow.class), startFlowPermission(CashIssueFlow.class));
@@ -46,7 +54,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
         Set<ServiceInfo> services = new HashSet<>(Collections.singletonList(new ServiceInfo(ValidatingNotaryService.Companion.getType(), null)));
         ListenableFuture<Node> nodeFuture = startNode(getALICE().getName(), 1, services, Arrays.asList(rpcUser), Collections.emptyMap());
         node = nodeFuture.get();
-        client = new CordaRPCClient(node.getConfiguration().getRpcAddress(), null, getDefault());
+        client = new CordaRPCClient(node.getConfiguration().getRpcAddress(), null, getDefault(), false);
     }
 
     @After

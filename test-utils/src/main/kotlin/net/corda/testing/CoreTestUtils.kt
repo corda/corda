@@ -126,11 +126,17 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
  */
 @JvmOverloads fun ledger(
         services: ServiceHub = MockServices(),
+        initialiseSerialization: Boolean = true,
         dsl: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
-    dsl(ledgerDsl)
-    return ledgerDsl
+    if (initialiseSerialization) initialiseTestSerialization()
+    try {
+        val ledgerDsl = LedgerDSL(TestLedgerDSLInterpreter(services))
+        dsl(ledgerDsl)
+        return ledgerDsl
+    } finally {
+        if (initialiseSerialization) resetTestSerialization()
+    }
 }
 
 /**
@@ -141,8 +147,9 @@ fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAnd
 @JvmOverloads fun transaction(
         transactionLabel: String? = null,
         transactionBuilder: TransactionBuilder = TransactionBuilder(notary = DUMMY_NOTARY),
+        initialiseSerialization: Boolean = true,
         dsl: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail
-) = ledger { this.transaction(transactionLabel, transactionBuilder, dsl) }
+) = ledger(initialiseSerialization = initialiseSerialization) { this.transaction(transactionLabel, transactionBuilder, dsl) }
 
 fun testNodeConfiguration(
         baseDirectory: Path,
