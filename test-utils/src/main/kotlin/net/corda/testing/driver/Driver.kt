@@ -54,6 +54,8 @@ import java.util.concurrent.*
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.stream.Collectors
+import java.util.stream.Stream
 import kotlin.concurrent.thread
 
 
@@ -513,6 +515,13 @@ class DriverDSL(
             val tolerance = 5.seconds
             if (!it.awaitTermination(tolerance.toMillis(), MILLISECONDS)) {
                 // Assume hang, blow up now so we don't hog the CI agent:
+                Thread.getAllStackTraces().forEach { thread, stackTrace ->
+                    if (thread.name.startsWith(executorThreadNamePrefix)) {
+                        log.warn(Stream.concat(
+                                Stream.of("$thread still running:"),
+                                Arrays.stream(stackTrace).map { "    $it" }).collect(Collectors.joining(System.lineSeparator())))
+                    }
+                }
                 throw TimeoutException("Driver executor still running $tolerance after shutdown, likely due to a hanging task.")
             }
             val elapsed = Duration.ofMillis(stopwatch.elapsed(MILLISECONDS))
@@ -684,7 +693,7 @@ class DriverDSL(
 
     override fun start() {
         _executorService = MoreExecutors.listeningDecorator(
-                Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
+                Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("$executorThreadNamePrefix%d").build())
         )
         _shutdownManager = ShutdownManager(executorService)
         // We set this property so that in-process nodes find cordapps. Out-of-process nodes need this passed in when started.
@@ -764,6 +773,7 @@ class DriverDSL(
     }
 
     companion object {
+        private val executorThreadNamePrefix = "driver-pool-thread-"
         private val names = arrayOf(
                 ALICE.name,
                 BOB.name,
