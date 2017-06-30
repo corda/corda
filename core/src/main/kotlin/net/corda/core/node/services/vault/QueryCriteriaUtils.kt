@@ -1,5 +1,6 @@
 package net.corda.core.node.services.vault
 
+import net.corda.core.node.services.vault.Builder.predicate
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -200,9 +201,10 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Kotlin(this), predicate)
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Java<Any, R>(this), predicate)
 
-    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByPredicates: List<ColumnPredicate<*>>?)
-            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByPredicates?.map { Column.Kotlin(this) })
-    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByPredicates: List<ColumnPredicate<*>>?)
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns:  List<Column.Kotlin<O, R>>? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByColumns)
+
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByPredicates: List<ColumnPredicate<*>>? = null)
             = CriteriaExpression.AggregateFunctionExpression(Column.Java<Any, R>(this), predicate, groupByPredicates?.map { Column.Java<Any, R>(this) })
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
@@ -248,11 +250,38 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.notNull() = predicate(ColumnPredicate.NullExpression(NullOperator.NOT_NULL))
     fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
 
-    fun <O, R> KProperty1<O, R?>.sum() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByPredicates = null)
-    fun Field.sum() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM), groupByPredicates = null)
+    /** aggregate functions */
+    fun <O, R> KProperty1<O, R?>.sum() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM))
+    fun Field.sum() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM))
 
-    fun <O, R> KProperty1<O, R?>.sum(vararg groupByColumns: KProperty1<O, R>) = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByPredicates = null)
-    fun Field.sum(groupByColumns: List<Field>) = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM), groupByPredicates = null)
+    fun <O, R> KProperty1<O, R?>.sum(vararg groupByColumns: KProperty1<O, R>) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns.map { Column.Kotlin(it) })
+//    fun Field.sum(groupByColumns: List<Field>) =
+//            functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM), groupByColumns.map { Column.Java(it) } )
+
+    fun <O, R> KProperty1<O, R?>.count() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT))
+    fun Field.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
+
+    fun <O, R> KProperty1<O, R?>.count(vararg groupByColumns: KProperty1<O, R>) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT), groupByColumns.map { Column.Kotlin(it) })
+
+    fun <O, R> KProperty1<O, R?>.avg() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG))
+    fun Field.avg() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.AVG))
+
+    fun <O, R> KProperty1<O, R?>.avg(vararg groupByColumns: KProperty1<O, R>) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns.map { Column.Kotlin(it) })
+
+    fun <O, R> KProperty1<O, R?>.min() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN))
+    fun Field.min() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.MIN))
+
+    fun <O, R> KProperty1<O, R?>.min(vararg groupByColumns: KProperty1<O, R>) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns.map { Column.Kotlin(it) })
+
+    fun <O, R> KProperty1<O, R?>.max() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX))
+    fun Field.max() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.MAX))
+
+    fun <O, R> KProperty1<O, R?>.max(vararg groupByColumns: KProperty1<O, R>) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns.map { Column.Kotlin(it) })
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)

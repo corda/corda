@@ -18,19 +18,20 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
 import java.lang.Exception
+import java.util.*
 import javax.persistence.EntityManager
 import javax.persistence.Tuple
 
 
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                               val updatesPublisher: PublishSubject<Vault.Update>) : SingletonSerializeAsToken(), VaultQueryService {
-
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -92,7 +93,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
-                                println(it.toArray())
+                                log.debug { "OtherResults: ${Arrays.toString(it.toArray())}" }
                                 otherResults.addAll(it.toArray().asList())
                             }
                         }

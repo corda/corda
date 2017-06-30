@@ -168,7 +168,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                             AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
                             AggregateFunctionType.MAX -> criteriaBuilder.max(column)
                             AggregateFunctionType.MIN -> criteriaBuilder.min(column)
-                            else -> throw VaultQueryException("Not expecting ${columnPredicate.type}")
                         }
                     aggregateExpressions.add(aggregateExpression)
                 }
@@ -176,9 +175,13 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             }
             // add optional group by clauses
             expression.groupByColumns?.let { columns ->
-                columns.forEach { column ->
-                    criteriaQuery.groupBy(root.get<Any?>(getColumnName(column)))
-                }
+                val groupByExpressions =
+                    columns.map { column ->
+                        val path = root.get<Any?>(getColumnName(column))
+                        aggregateExpressions.add(path)
+                        path
+                    }
+                criteriaQuery.groupBy(groupByExpressions)
             }
         }
     }
