@@ -677,14 +677,14 @@ class VaultQueryTests {
             assertThat(results.otherResults[1]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
             assertThat(results.otherResults[2]).isEqualTo("GBP")
             assertThat(results.otherResults[3]).isEqualTo(40000L)
-            assertThat(results.otherResults[4]).isEqualTo(BOC_KEY.public.toBase58String())
+            assertThat(results.otherResults[4]).isEqualTo(BOC_PUBKEY.toBase58String())
             assertThat(results.otherResults[5]).isEqualTo("GBP")
             // DUMMY_CASH_ISSUER issued
             assertThat(results.otherResults[6]).isEqualTo(10000L)
             assertThat(results.otherResults[7]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
             assertThat(results.otherResults[8]).isEqualTo("USD")
             assertThat(results.otherResults[9]).isEqualTo(20000L)
-            assertThat(results.otherResults[10]).isEqualTo(BOC_KEY.public.toBase58String())
+            assertThat(results.otherResults[10]).isEqualTo(BOC_PUBKEY.toBase58String())
             assertThat(results.otherResults[11]).isEqualTo("USD")
 
         }
