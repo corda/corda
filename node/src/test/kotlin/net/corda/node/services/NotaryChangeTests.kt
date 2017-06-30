@@ -99,7 +99,7 @@ class NotaryChangeTests {
         val newState = future.resultFuture.getOrThrow()
         assertEquals(newState.state.notary, newNotary)
 
-        val notaryChangeTx = clientNodeA.services.storageService.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
+        val notaryChangeTx = clientNodeA.services.validatedTransactions.getTransaction(newState.ref.txhash)!!.tx
 
         // Check that all encumbrances have been propagated to the outputs
         val originalOutputs = issueTx.outputs.map { it.data }

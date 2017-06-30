@@ -13,7 +13,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
@@ -47,6 +46,9 @@ sealed class StateMachineUpdate {
 
     data class Removed(override val id: StateMachineRunId, val result: ErrorOr<*>) : StateMachineUpdate()
 }
+
+@CordaSerializable
+data class StateMachineTransactionMapping(val stateMachineRunId: StateMachineRunId, val transactionId: SecureHash)
 
 /**
  * RPC operations that the node exposes to clients using the Java client library. These can be called from

@@ -317,6 +317,9 @@ class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 /** A serialisation engine that knows how to deserialise code inside a sandbox */
 @ThreadSafe
 object WireTransactionSerializer : Serializer<WireTransaction>() {
+    @VisibleForTesting
+    internal val attachmentsClassLoaderEnabled = "attachments.class.loader.enabled"
+
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
         kryo.writeClassAndObject(output, obj.inputs)
         kryo.writeClassAndObject(output, obj.attachments)
@@ -329,12 +332,12 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
+        kryo.context[attachmentsClassLoaderEnabled] as? Boolean ?: false || return null
         val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
-        serializationContext.serviceHub.storageService.attachmentsClassLoaderEnabled || return null
         val missing = ArrayList<SecureHash>()
         val attachments = ArrayList<Attachment>()
         attachmentHashes.forEach { id ->
-            serializationContext.serviceHub.storageService.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+            serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
         }
         missing.isNotEmpty() && throw MissingAttachmentsException(missing)
         return AttachmentsClassLoader(attachments)
@@ -635,7 +638,7 @@ object X500NameSerializer : Serializer<X500Name>() {
  */
 @ThreadSafe
 object CertPathSerializer : Serializer<CertPath>() {
-    val factory = CertificateFactory.getInstance("X.509")
+    val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
     override fun read(kryo: Kryo, input: Input, type: Class<CertPath>): CertPath {
         return factory.generateCertPath(input)
     }
@@ -646,7 +649,7 @@ object CertPathSerializer : Serializer<CertPath>() {
 }
 
 /**
- * For serialising an [CX509CertificateHolder] in an X.500 standard format.
+ * For serialising an [X509CertificateHolder] in an X.500 standard format.
  */
 @ThreadSafe
 object X509CertificateSerializer : Serializer<X509CertificateHolder>() {

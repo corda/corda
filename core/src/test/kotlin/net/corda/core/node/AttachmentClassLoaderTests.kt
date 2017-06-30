@@ -8,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.StorageService
 import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.DUMMY_NOTARY
@@ -22,7 +21,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.URL
 import java.net.URLClassLoader
-import java.security.PublicKey
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -42,11 +40,9 @@ class AttachmentClassLoaderTests {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentClassLoaderTests::class.java.getResource("isolated.jar")
 
         private fun <T> Kryo.withAttachmentStorage(attachmentStorage: AttachmentStorage, block: () -> T) = run {
+            context.put(WireTransactionSerializer.attachmentsClassLoaderEnabled, true)
             val serviceHub = mock<ServiceHub>()
-            val storageService = mock<StorageService>()
-            whenever(serviceHub.storageService).thenReturn(storageService)
-            whenever(storageService.attachmentsClassLoaderEnabled).thenReturn(true)
-            whenever(storageService.attachments).thenReturn(attachmentStorage)
+            whenever(serviceHub.attachments).thenReturn(attachmentStorage)
             withSerializationContext(SerializeAsTokenContext(serviceHub) {}, block)
         }
     }

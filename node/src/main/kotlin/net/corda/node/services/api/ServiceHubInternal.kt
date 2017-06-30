@@ -1,16 +1,20 @@
 package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.PluginServiceHub
+import net.corda.core.node.services.FileUploader
 import net.corda.core.node.services.NetworkMapCache
-import net.corda.core.node.services.TxWritableStorageService
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.loggerFor
@@ -58,34 +62,38 @@ sealed class NetworkCacheError : Exception() {
     class DeregistrationFailed : NetworkCacheError()
 }
 
-abstract class ServiceHubInternal : PluginServiceHub {
+interface ServiceHubInternal : PluginServiceHub {
     companion object {
         private val log = loggerFor<ServiceHubInternal>()
     }
 
-    abstract val monitoringService: MonitoringService
-    abstract val schemaService: SchemaService
-    abstract override val networkMapCache: NetworkMapCacheInternal
-    abstract val schedulerService: SchedulerService
-    abstract val auditService: AuditService
-    abstract val rpcFlows: List<Class<out FlowLogic<*>>>
-    abstract val networkService: MessagingService
-    abstract val database: Database
-    abstract val configuration: NodeConfiguration
-
     /**
-     * Given a list of [SignedTransaction]s, writes them to the given storage for validated transactions and then
-     * sends them to the vault for further processing. This is intended for implementations to call from
-     * [recordTransactions].
-     *
-     * @param txs The transactions to record.
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
      */
-    internal fun recordTransactionsInternal(writableStorageService: TxWritableStorageService, txs: Iterable<SignedTransaction>) {
+    override val validatedTransactions: TransactionStorage
+    val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
+    val monitoringService: MonitoringService
+    val schemaService: SchemaService
+    override val networkMapCache: NetworkMapCacheInternal
+    val schedulerService: SchedulerService
+    val auditService: AuditService
+    val rpcFlows: List<Class<out FlowLogic<*>>>
+    val networkService: MessagingService
+    val database: Database
+    val configuration: NodeConfiguration
+
+    @Suppress("DEPRECATION")
+    @Deprecated("This service will be removed in a future milestone")
+    val uploaders: List<FileUploader>
+
+    override fun recordTransactions(txs: Iterable<SignedTransaction>) {
         val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
-        val recordedTransactions = txs.filter { writableStorageService.validatedTransactions.addTransaction(it) }
+        val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
         if (stateMachineRunId != null) {
             recordedTransactions.forEach {
-                storageService.stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
+                stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
             }
         } else {
             log.warn("Transactions recorded from outside of a state machine")
@@ -104,7 +112,7 @@ abstract class ServiceHubInternal : PluginServiceHub {
      * Starts an already constructed flow. Note that you must be on the server thread to call this method.
      * @param flowInitiator indicates who started the flow, see: [FlowInitiator].
      */
-    abstract fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
+    fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T>
 
     /**
      * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the flow.
@@ -124,5 +132,14 @@ abstract class ServiceHubInternal : PluginServiceHub {
         return startFlow(logic, flowInitiator)
     }
 
-    abstract fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+    fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+}
+
+/**
+ * This is the interface to storage storing state machine -> recorded tx mappings. Any time a transaction is recorded
+ * during a flow run [addMapping] should be called.
+ */
+interface StateMachineRecordedTransactionMappingStorage {
+    fun addMapping(stateMachineRunId: StateMachineRunId, transactionId: SecureHash)
+    fun track(): DataFeed<List<StateMachineTransactionMapping>, StateMachineTransactionMapping>
 }

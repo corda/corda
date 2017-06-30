@@ -179,8 +179,11 @@ object BFTSMaRt {
         // TODO: Use Requery with proper DB schema instead of JDBCHashMap.
         // Must be initialised before ServiceReplica is started
         private val commitLog = services.database.transaction { JDBCHashMap<StateRef, UniquenessProvider.ConsumingTx>(tableName) }
-        @Suppress("LeakingThis")
-        private val replica = CordaServiceReplica(replicaId, config.path, this)
+        private val replica = run {
+            config.waitUntilReplicaWillNotPrintStackTrace(replicaId)
+            @Suppress("LeakingThis")
+            CordaServiceReplica(replicaId, config.path, this)
+        }
 
         fun dispose() {
             replica.dispose()

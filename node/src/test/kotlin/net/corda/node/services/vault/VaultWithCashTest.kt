@@ -3,7 +3,9 @@ package net.corda.node.services.vault
 import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.*
+import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.contracts.testing.fillWithSomeTestDeals
+import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
@@ -54,7 +56,7 @@ class VaultWithCashTest {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })

@@ -7,9 +7,9 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineInfo
+import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.node.services.StateMachineTransactionMapping
 import net.corda.core.node.services.Vault
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction

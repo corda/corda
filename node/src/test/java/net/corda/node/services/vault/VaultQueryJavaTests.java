@@ -72,10 +72,10 @@ public class VaultQueryJavaTests {
                         @Override
                         public void recordTransactions(@NotNull Iterable<SignedTransaction> txs) {
                             for (SignedTransaction stx : txs) {
-                                getStorageService().getValidatedTransactions().addTransaction(stx);
+                                getValidatedTransactions().addTransaction(stx);
                             }
 
-                            Stream<WireTransaction> wtxn = StreamSupport.stream(txs.spliterator(), false).map(txn -> txn.getTx());
+                            Stream<WireTransaction> wtxn = StreamSupport.stream(txs.spliterator(), false).map(SignedTransaction::getTx);
                             getVaultService().notifyAll(wtxn.collect(Collectors.toList()));
                         }
                     };

@@ -211,8 +211,9 @@ data class TestLedgerDSLInterpreter private constructor(
         }
     }
 
-    internal fun resolveAttachment(attachmentId: SecureHash): Attachment =
-            services.storageService.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
+    internal fun resolveAttachment(attachmentId: SecureHash): Attachment {
+        return services.attachments.openAttachment(attachmentId) ?: throw AttachmentResolutionException(attachmentId)
+    }
 
     private fun <R> interpretTransactionDsl(
             transactionBuilder: TransactionBuilder,
@@ -276,7 +277,7 @@ data class TestLedgerDSLInterpreter private constructor(
             dsl(LedgerDSL(copy()))
 
     override fun attachment(attachment: InputStream): SecureHash {
-        return services.storageService.attachments.importAttachment(attachment)
+        return services.attachments.importAttachment(attachment)
     }
 
     override fun verifies(): EnforceVerifyOrFail {
