@@ -35,9 +35,6 @@ dependencies {
     compile project(':webserver')
     compile project(':finance')
 
-    // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-
     // Cordapp dependencies
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile "com.opengamma.strata:strata-basics:${strata_version}"
