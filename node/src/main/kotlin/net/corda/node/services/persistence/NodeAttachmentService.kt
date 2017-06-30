@@ -14,10 +14,7 @@ import net.corda.core.div
 import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.serialization.*
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.AcceptsFileUpload
 import net.corda.node.services.database.RequeryConfiguration
@@ -38,8 +35,11 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in H2 database.
  */
 @ThreadSafe
-class NodeAttachmentService(override var storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry) : AttachmentStorage, AcceptsFileUpload {
-    private val log = loggerFor<NodeAttachmentService>()
+class NodeAttachmentService(override var storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry)
+    : AttachmentStorage, AcceptsFileUpload, SingletonSerializeAsToken() {
+    companion object {
+        private val log = loggerFor<NodeAttachmentService>()
+    }
 
     val configuration = RequeryConfiguration(dataSourceProperties)
     val session = configuration.sessionForModel(Models.PERSISTENCE)

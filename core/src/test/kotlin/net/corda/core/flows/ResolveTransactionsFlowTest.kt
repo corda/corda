@@ -58,8 +58,8 @@ class ResolveTransactionsFlowTest {
         val results = future.getOrThrow()
         assertEquals(listOf(stx1.id, stx2.id), results.map { it.id })
         b.database.transaction {
-            assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
-            assertEquals(stx2, b.storage.validatedTransactions.getTransaction(stx2.id))
+            assertEquals(stx1, b.services.validatedTransactions.getTransaction(stx1.id))
+            assertEquals(stx2, b.services.validatedTransactions.getTransaction(stx2.id))
         }
     }
     // DOCEND 1
@@ -81,9 +81,9 @@ class ResolveTransactionsFlowTest {
         mockNet.runNetwork()
         future.getOrThrow()
         b.database.transaction {
-            assertEquals(stx1, b.storage.validatedTransactions.getTransaction(stx1.id))
+            assertEquals(stx1, b.services.validatedTransactions.getTransaction(stx1.id))
             // But stx2 wasn't inserted, just stx1.
-            assertNull(b.storage.validatedTransactions.getTransaction(stx2.id))
+            assertNull(b.services.validatedTransactions.getTransaction(stx2.id))
         }
     }
 
@@ -148,7 +148,7 @@ class ResolveTransactionsFlowTest {
         }
         // TODO: this operation should not require an explicit transaction
         val id = a.database.transaction {
-            a.services.storageService.attachments.importAttachment(makeJar())
+            a.services.attachments.importAttachment(makeJar())
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = ResolveTransactionsFlow(stx2, a.info.legalIdentity)
@@ -158,7 +158,7 @@ class ResolveTransactionsFlowTest {
 
         // TODO: this operation should not require an explicit transaction
         b.database.transaction {
-            assertNotNull(b.services.storageService.attachments.openAttachment(id))
+            assertNotNull(b.services.attachments.openAttachment(id))
         }
     }
 

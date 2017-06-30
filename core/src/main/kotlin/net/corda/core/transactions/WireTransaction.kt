@@ -73,7 +73,7 @@ class WireTransaction(
     fun toLedgerTransaction(services: ServicesForResolution): LedgerTransaction {
         return toLedgerTransaction(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
-                resolveAttachment = { services.storageService.attachments.openAttachment(it) },
+                resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRef = { services.loadState(it) }
         )
     }

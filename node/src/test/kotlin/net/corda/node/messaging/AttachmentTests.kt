@@ -11,11 +11,10 @@ import net.corda.flows.FetchDataFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.persistence.schemas.requery.AttachmentEntity
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.testing.node.MockNetwork
 import net.corda.node.utilities.transaction
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
 import org.junit.Before
@@ -61,7 +60,7 @@ class AttachmentTests {
 
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
-            n0.storage.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
+            n0.attachments.importAttachment(ByteArrayInputStream(fakeAttachment()))
         }
 
         // Get node one to run a flow to fetch it and insert it.
@@ -72,7 +71,7 @@ class AttachmentTests {
 
         // Verify it was inserted into node one's store.
         val attachment = n1.database.transaction {
-            n1.storage.attachments.openAttachment(id)!!
+            n1.attachments.openAttachment(id)!!
         }
 
         assertEquals(id, attachment.open().readBytes().sha256())
@@ -108,7 +107,7 @@ class AttachmentTests {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun start(): MockNetwork.MockNode {
                         super.start()
-                        (storage.attachments as NodeAttachmentService).checkAttachmentsOnLoad = false
+                        attachments.checkAttachmentsOnLoad = false
                         return this
                     }
                 }
@@ -119,7 +118,7 @@ class AttachmentTests {
         val attachment = fakeAttachment()
         // Insert an attachment into node zero's store directly.
         val id = n0.database.transaction {
-            n0.storage.attachments.importAttachment(ByteArrayInputStream(attachment))
+            n0.attachments.importAttachment(ByteArrayInputStream(attachment))
         }
 
         // Corrupt its store.
@@ -130,7 +129,7 @@ class AttachmentTests {
         corruptAttachment.attId = id
         corruptAttachment.content = attachment
         n0.database.transaction {
-            (n0.storage.attachments as NodeAttachmentService).session.update(corruptAttachment)
+            n0.attachments.session.update(corruptAttachment)
         }
 
 

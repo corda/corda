@@ -27,14 +27,14 @@ import net.corda.flows.*
  */
 class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
     override fun getData(id: SecureHash): SignedTransaction? {
-        return serviceHub.storageService.validatedTransactions.getTransaction(id)
+        return serviceHub.validatedTransactions.getTransaction(id)
     }
 }
 
 // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
 class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
     override fun getData(id: SecureHash): ByteArray? {
-        return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
+        return serviceHub.attachments.openAttachment(id)?.open()?.readBytes()
     }
 }
 

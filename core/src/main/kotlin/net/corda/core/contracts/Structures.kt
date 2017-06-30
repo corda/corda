@@ -79,8 +79,7 @@ interface ContractState {
      * so that they receive the updated state, and don't end up in a situation where they can no longer use a state
      * they possess, since someone consumed that state during the notary change process.
      *
-     * The participants list should normally be derived from the contents of the state. E.g. for [Cash] the participants
-     * list should just contain the owner.
+     * The participants list should normally be derived from the contents of the state.
      */
     val participants: List<AbstractParty>
 }
@@ -126,7 +125,7 @@ infix fun <T : ContractState> T.withNotary(newNotary: Party) = TransactionState(
  * Definition for an issued product, which can be cash, a cash-like thing, assets, or generally anything else that's
  * quantifiable with integer quantities.
  *
- * @param P the type of product underlying the definition, for example [Currency].
+ * @param P the type of product underlying the definition, for example [java.util.Currency].
  */
 @CordaSerializable
 data class Issued<out P : Any>(val issuer: PartyAndReference, val product: P) {
@@ -159,8 +158,8 @@ interface Scheduled {
 }
 
 /**
- * Represents a contract state (unconsumed output) of type [LinearState] and a point in time that a lifecycle event is expected to take place
- * for that contract state.
+ * Represents a contract state (unconsumed output) of type [LinearState] and a point in time that a lifecycle event is
+ * expected to take place for that contract state.
  *
  * This is effectively the input to a scheduler, which wakes up at that point in time and asks the contract state what
  * lifecycle processing needs to take place.  e.g. a fixing or a late payment etc.
@@ -168,10 +167,11 @@ interface Scheduled {
 data class ScheduledStateRef(val ref: StateRef, override val scheduledAt: Instant) : Scheduled
 
 /**
- * This class represents the lifecycle activity that a contract state of type [LinearState] would like to perform at a given point in time.
- * e.g. run a fixing flow.
+ * This class represents the lifecycle activity that a contract state of type [LinearState] would like to perform at a
+ * given point in time. e.g. run a fixing flow.
  *
- * Note the use of [FlowLogicRef] to represent a safe way to transport a [FlowLogic] out of the contract sandbox.
+ * Note the use of [FlowLogicRef] to represent a safe way to transport a [net.corda.core.flows.FlowLogic] out of the
+ * contract sandbox.
  *
  * Currently we support only flow based activities as we expect there to be a transaction generated off the back of
  * the activity, otherwise we have to start tracking secondary state on the platform of which scheduled activities
@@ -383,9 +383,9 @@ class TimeWindow private constructor(
 // DOCSTART 5
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
- * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
- * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
- * time-window attached to the transaction itself i.e. it is NOT necessarily the current time.
+ * every [net.corda.core.transactions.LedgerTransaction] they see on the network, for every input and output state. All
+ * contracts must accept the transaction for it to be accepted: failure of any aborts the entire thing. The time is taken
+ * from a trusted time-window attached to the transaction itself i.e. it is NOT necessarily the current time.
  *
  * TODO: Contract serialization is likely to change, so the annotation is likely temporary.
  */
@@ -461,9 +461,8 @@ interface Attachment : NamedByHash {
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
-            val storage = serviceHub.storageService.attachments
             return {
-                val a = storage.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
+                val a = serviceHub.attachments.openAttachment(id) ?: throw MissingAttachmentsException(listOf(id))
                 (a as? AbstractAttachment)?.attachmentData ?: a.open().use { it.readBytes() }
             }
         }

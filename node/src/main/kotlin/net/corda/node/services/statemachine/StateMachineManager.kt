@@ -187,7 +187,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun listenToLedgerTransactions() {
         // Observe the stream of committed, validated transactions and resume fibers that are waiting for them.
-        serviceHub.storageService.validatedTransactions.updates.subscribe { stx ->
+        serviceHub.validatedTransactions.updates.subscribe { stx ->
             val hash = stx.id
             val fibers: Set<FlowStateMachineImpl<*>> = mutex.locked { fibersWaitingForLedgerCommit.removeAll(hash) }
             if (fibers.isNotEmpty()) {
@@ -268,7 +268,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         if (waitingForResponse != null) {
             if (waitingForResponse is WaitForLedgerCommit) {
                 val stx = database.transaction {
-                    serviceHub.storageService.validatedTransactions.getTransaction(waitingForResponse.hash)
+                    serviceHub.validatedTransactions.getTransaction(waitingForResponse.hash)
                 }
                 if (stx != null) {
                     fiber.logger.info("Resuming fiber as tx ${waitingForResponse.hash} has committed")
@@ -548,7 +548,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
     private fun processWaitForCommitRequest(ioRequest: WaitForLedgerCommit) {
         // Is it already committed?
         val stx = database.transaction {
-            serviceHub.storageService.validatedTransactions.getTransaction(ioRequest.hash)
+            serviceHub.validatedTransactions.getTransaction(ioRequest.hash)
         }
         if (stx != null) {
             resumeFiber(ioRequest.fiber)

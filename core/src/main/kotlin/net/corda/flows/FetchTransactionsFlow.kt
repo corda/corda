@@ -17,7 +17,5 @@ import net.corda.core.transactions.SignedTransaction
 class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: Party) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide) {
 
-    override fun load(txid: SecureHash): SignedTransaction? {
-        return serviceHub.storageService.validatedTransactions.getTransaction(txid)
-    }
+    override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
 }

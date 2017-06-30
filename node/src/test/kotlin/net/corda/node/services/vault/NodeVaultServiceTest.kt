@@ -6,7 +6,6 @@ import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.TxWritableStorageService
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
@@ -53,7 +52,7 @@ class NodeVaultServiceTest {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -77,17 +76,12 @@ class NodeVaultServiceTest {
             val w1 = vaultSvc.unconsumedStates<Cash.State>()
             assertThat(w1).hasSize(3)
 
-            val originalStorage = services.storageService
             val originalVault = vaultSvc
             val services2 = object : MockServices() {
                 override val vaultService: VaultService get() = originalVault
-
-                // We need to be able to find the same transactions as before, too.
-                override val storageService: TxWritableStorageService get() = originalStorage
-
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                         vaultService.notify(stx.tx)
                     }
                 }
