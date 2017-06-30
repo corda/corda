@@ -72,6 +72,11 @@ UNRELEASED
     * ``stateMachineRecordedTransactionMapping``, replaced by ``stateMachineRecordedTransactionMappingFeed``
     * ``networkMapUpdates``, replaced by ``networkMapFeed``
 
+* Data Vending service has been removed in this release to enhance data security. CorDapp developers should use the new
+  ``SendTransactionFlow`` and ``ReceiveTransactionFlow`` in the flow logic to send and receive ``ResolvableTransactionData``,
+  data vending for the transaction will be enabled on the sender-side and the transaction will be resolved automatically
+  upon receive on the receiver-side.
+
 Milestone 13
 ------------
 

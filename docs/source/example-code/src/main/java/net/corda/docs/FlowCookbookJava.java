@@ -75,13 +75,15 @@ public class FlowCookbookJava {
         private static final Step SIGS_GATHERING = new Step("Gathering a transaction's signatures.") {
             // Wiring up a child progress tracker allows us to see the
             // subflow's progress steps in our flow's progress tracker.
-            @Override public ProgressTracker childProgressTracker() {
+            @Override
+            public ProgressTracker childProgressTracker() {
                 return CollectSignaturesFlow.Companion.tracker();
             }
         };
         private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
-            @Override public ProgressTracker childProgressTracker() {
+            @Override
+            public ProgressTracker childProgressTracker() {
                 return FinalityFlow.Companion.tracker();
             }
         };
@@ -396,12 +398,12 @@ public class FlowCookbookJava {
             // dependencies, we'd need to download all of these dependencies
             // using``ResolveTransactionsFlow`` before verifying it.
             // DOCSTART 13
-            subFlow(new ResolveTransactionsFlow(twiceSignedTx, counterparty));
+            subFlow(new ResolveTransactionsFlow(counterparty, twiceSignedTx));
             // DOCEND 13
 
             // We can also resolve a `StateRef` dependency chain.
             // DOCSTART 14
-            subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
+            subFlow(new ResolveTransactionsFlow(counterparty, ImmutableSet.of(ourStateRef.getTxhash())));
             // DOCEND 14
 
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``

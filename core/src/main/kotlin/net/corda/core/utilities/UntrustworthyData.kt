@@ -15,7 +15,7 @@ import java.io.Serializable
  * - Are any objects *reachable* from this object mismatched or not what you expected?
  * - Is it suspiciously large or small?
  */
-class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
+open class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
     val data: T
         @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
         get() = fromUntrustedWorld

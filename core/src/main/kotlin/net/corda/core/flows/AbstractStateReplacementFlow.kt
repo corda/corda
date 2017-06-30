@@ -115,8 +115,8 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
             val proposal = Proposal(originalState.ref, modification, stx)
-            val response = sendAndReceive<DigitalSignature.WithKey>(party, proposal)
-            return response.unwrap {
+            subFlow(SendTransactionFlow(party, stx, proposal))
+            return receive<DigitalSignature.WithKey>(party).unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
@@ -149,7 +149,7 @@ abstract class AbstractStateReplacementFlow {
         @Throws(StateReplacementException::class)
         override fun call(): Void? {
             progressTracker.currentStep = VERIFYING
-            val maybeProposal: UntrustworthyData<Proposal<T>> = receive(otherSide)
+            val maybeProposal: UntrustworthyData<Proposal<T>> = receiveTransaction(otherSide, verifySignatures = false)
             val stx: SignedTransaction = maybeProposal.unwrap {
                 verifyProposal(it)
                 verifyTx(it.stx)
@@ -162,7 +162,6 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         private fun verifyTx(stx: SignedTransaction) {
             checkMySignatureRequired(stx)
-            checkDependenciesValid(stx)
             // We expect stx to have insufficient signatures here
             stx.verify(serviceHub, checkSufficientSignatures = false)
         }
@@ -210,13 +209,12 @@ abstract class AbstractStateReplacementFlow {
             require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }
 
-        @Suspendable
-        private fun checkDependenciesValid(stx: SignedTransaction) {
-            subFlow(ResolveTransactionsFlow(stx, otherSide))
-        }
-
         private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
             return serviceHub.createSignature(stx)
+        }
+
+        private inline fun <reified T : Any> FlowLogic<*>.receiveTransaction(otherSide: Party, verifySignatures: Boolean): UntrustworthyData<T> {
+            return subFlow(ReceiveTransactionFlow(T::class.java, otherSide, verifySignatures = verifySignatures))
         }
     }
 }

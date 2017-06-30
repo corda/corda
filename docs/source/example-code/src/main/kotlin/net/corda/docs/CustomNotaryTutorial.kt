@@ -46,13 +46,15 @@ class MyValidatingNotaryFlow(otherSide: Party, service: MyCustomValidatingNotary
     override fun receiveAndVerifyTx(): TransactionParts {
         val stx = receive<SignedTransaction>(otherSide).unwrap { it }
         checkSignatures(stx)
-        resolveTransaction(stx)
-        validateTransaction(stx)
         val wtx = stx.tx
+        validateTransaction(wtx)
+        val ltx = validateTransaction(wtx)
+        processTransaction(ltx)
+
         return TransactionParts(wtx.id, wtx.inputs, wtx.timeWindow)
     }
 
-    fun processTransaction(stx: SignedTransaction) {
+    fun processTransaction(ltx: LedgerTransaction) {
         // Add custom transaction processing logic here
     }
 

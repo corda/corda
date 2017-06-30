@@ -78,8 +78,8 @@ object TwoPartyTradeFlow {
             val hello = SellerTradeInfo(assetToSell, price, me)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
-            send(otherParty, hello)
-
+            // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
+            subFlow(SendTransactionFlow(otherParty, setOf(assetToSell.ref.txhash), hello))
             // Verify and sign the transaction.
             progressTracker.currentStep = VERIFYING_AND_SIGNING
             // DOCSTART 5
@@ -113,11 +113,13 @@ object TwoPartyTradeFlow {
                      val typeToBuy: Class<out OwnableState>) : FlowLogic<SignedTransaction>() {
         // DOCSTART 2
         object RECEIVING : ProgressTracker.Step("Waiting for seller trading info")
+
         object VERIFYING : ProgressTracker.Step("Verifying seller assets")
         object SIGNING : ProgressTracker.Step("Generating and signing transaction proposal")
         object COLLECTING_SIGNATURES : ProgressTracker.Step("Collecting signatures from other parties") {
             override fun childProgressTracker() = CollectSignaturesFlow.tracker()
         }
+
         object RECORDING : ProgressTracker.Step("Recording completed transaction") {
             // TODO: Currently triggers a race condition on Team City. See https://github.com/corda/corda/issues/733.
             // override fun childProgressTracker() = FinalityFlow.tracker()
@@ -142,7 +144,6 @@ object TwoPartyTradeFlow {
             // it to the ledger by sending it to the notary.
             progressTracker.currentStep = COLLECTING_SIGNATURES
             val twiceSignedTx = subFlow(CollectSignaturesFlow(partSignedTx, COLLECTING_SIGNATURES.childProgressTracker()))
-
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
             return subFlow(FinalityFlow(twiceSignedTx)).single()
@@ -150,24 +151,15 @@ object TwoPartyTradeFlow {
 
         @Suspendable
         private fun receiveAndValidateTradeRequest(): SellerTradeInfo {
-            val maybeTradeRequest = receive<SellerTradeInfo>(otherParty)
-
-            progressTracker.currentStep = VERIFYING
-            maybeTradeRequest.unwrap {
-                // What is the seller trying to sell us?
+            return subFlow(ReceiveTransactionFlow(SellerTradeInfo::class.java, otherParty)).unwrap {
+                progressTracker.currentStep = VERIFYING
                 val asset = it.assetForSale.state.data
                 val assetTypeName = asset.javaClass.name
-
                 if (it.price > acceptablePrice)
                     throw UnacceptablePriceException(it.price)
                 if (!typeToBuy.isInstance(asset))
                     throw AssetMismatchException(typeToBuy.name, assetTypeName)
-
-                // Check that the state being sold to us is in a valid chain of transactions, i.e. that the
-                // seller has a valid chain of custody proving that they own the thing they're selling.
-                subFlow(ResolveTransactionsFlow(setOf(it.assetForSale.ref.txhash), otherParty))
-
-                return it
+                it
             }
         }
 

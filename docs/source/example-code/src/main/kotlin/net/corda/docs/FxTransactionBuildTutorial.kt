@@ -128,7 +128,9 @@ class ForeignExchangeFlow(val tradeId: String,
 
         // Send the request to the counterparty to verify and call their version of prepareOurInputsAndOutputs
         // Then they can return their candidate states
-        val theirStates = sendAndReceive<FxResponse>(remoteRequestWithNotary.owner, remoteRequestWithNotary).unwrap {
+        send(remoteRequestWithNotary.owner, remoteRequestWithNotary)
+
+        val theirStates = subFlow(ReceiveTransactionFlow(FxResponse::class.java, remoteRequestWithNotary.owner)).unwrap {
             require(it.inputs.all { it.state.notary == notary }) {
                 "notary of remote states must be same as for our states"
             }
@@ -146,10 +148,6 @@ class ForeignExchangeFlow(val tradeId: String,
                     map { it.amount.quantity }.sum() == remoteRequestWithNotary.amount.quantity) {
                 "the provided outputs don't provide the request quantity"
             }
-            // Download their inputs chains to validate that they are OK
-            val dependencyTxIDs = it.inputs.map { it.ref.txhash }.toSet()
-            subFlow(ResolveTransactionsFlow(dependencyTxIDs, remoteRequestWithNotary.owner))
-
             it // return validated response
         }
 
@@ -157,7 +155,9 @@ class ForeignExchangeFlow(val tradeId: String,
         val signedTransaction = buildTradeProposal(ourStates, theirStates)
 
         // pass transaction details to the counterparty to revalidate and confirm with a signature
-        val allPartySignedTx = sendAndReceive<DigitalSignature.WithKey>(remoteRequestWithNotary.owner, signedTransaction).unwrap {
+        // Allow otherParty to access our data to resolve the transaction.
+        subFlow(SendTransactionFlow(remoteRequestWithNotary.owner, signedTransaction))
+        val allPartySignedTx = receive<DigitalSignature.WithKey>(remoteRequestWithNotary.owner).unwrap {
             val withNewSignature = signedTransaction + it
             // check all signatures are present except the notary
             withNewSignature.verifySignaturesExcept(withNewSignature.tx.notary!!.owningKey)
@@ -232,19 +232,17 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
 
         // Send back our proposed states and await the full transaction to verify
         val ourKey = serviceHub.keyManagementService.filterMyKeys(ourResponse.inputs.flatMap { it.state.data.participants }.map { it.owningKey }).single()
-        val proposedTrade = sendAndReceive<SignedTransaction>(source, ourResponse).unwrap {
+        // SendTransactionFlow allows otherParty to access our data to resolve the transaction.
+        subFlow(SendTransactionFlow(source, ourResponse.inputs.map { it.ref.txhash }.toSet(), ourResponse))
+        val proposedTrade = subFlow(ReceiveTransactionFlow(SignedTransaction::class.java, source, verifySignatures = false, verifyTransaction = false)).unwrap {
             val wtx = it.tx
             // check all signatures are present except our own and the notary
             it.verifySignaturesExcept(ourKey, wtx.notary!!.owningKey)
-
-            // We need to fetch their complete input states and dependencies so that verify can operate
-            checkDependencies(it)
 
             // This verifies that the transaction is contract-valid, even though it is missing signatures.
             // In a full solution there would be states tracking the trade request which
             // would be included in the transaction and enforce the amounts and tradeId
             wtx.toLedgerTransaction(serviceHub).verify()
-
             it // return the SignedTransaction
         }
 
@@ -255,13 +253,5 @@ class ForeignExchangeRemoteFlow(val source: Party) : FlowLogic<Unit>() {
         send(source, ourSignature)
         // N.B. The FinalityProtocol will be responsible for Notarising the SignedTransaction
         // and broadcasting the result to us.
-    }
-
-    @Suspendable
-    private fun checkDependencies(stx: SignedTransaction) {
-        // Download and check all the transactions that this transaction depends on, but do not check this
-        // transaction itself.
-        val dependencyTxIDs = stx.tx.inputs.map { it.txhash }.toSet()
-        subFlow(ResolveTransactionsFlow(dependencyTxIDs, source))
     }
 }
