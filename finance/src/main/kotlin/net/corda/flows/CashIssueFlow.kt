@@ -43,9 +43,9 @@ class CashIssueFlow(val amount: Amount<Currency>,
         val txIdentities = if (anonymous) {
             subFlow(TransactionKeyFlow(recipient))
         } else {
-            null
+            TransactionKeyFlow.EMPTY_IDENTITIES
         }
-        val anonymousRecipient = txIdentities?.get(recipient)?.identity ?: recipient
+        val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(notary = notary)
         val issuer = serviceHub.myInfo.legalIdentity.ref(issueRef)
@@ -54,6 +54,6 @@ class CashIssueFlow(val amount: Amount<Currency>,
         val tx = serviceHub.signInitialTransaction(builder, signers)
         progressTracker.currentStep = FINALISING_TX
         subFlow(FinalityFlow(tx))
-        return Result(tx, txIdentities)
+        return Result(tx, anonymousRecipient)
     }
 }

@@ -21,6 +21,7 @@ class TransactionKeyFlow(val otherSide: Party,
 
     companion object {
         object AWAITING_KEY : ProgressTracker.Step("Awaiting key")
+        val EMPTY_IDENTITIES: LinkedHashMap<Party, AnonymisedIdentity> = LinkedHashMap()
 
         fun tracker() = ProgressTracker(AWAITING_KEY)
         fun validateIdentity(otherSide: Party, anonymousOtherSide: AnonymisedIdentity): AnonymisedIdentity {

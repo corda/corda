@@ -54,9 +54,9 @@ class CashPaymentFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                 payTo)).resultFuture
         mockNet.runNetwork()
-        val (paymentTx, identities) = future.getOrThrow()
+        val (paymentTx, receipient) = future.getOrThrow()
         val states = paymentTx.tx.outputs.map { it.data }.filterIsInstance<Cash.State>()
-        val paymentState: Cash.State = states.single { it.owner == identities!!.get(payTo)!!.identity }
+        val paymentState: Cash.State = states.single { it.owner == receipient }
         val changeState: Cash.State = states.single { it != paymentState }
         assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
         assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)

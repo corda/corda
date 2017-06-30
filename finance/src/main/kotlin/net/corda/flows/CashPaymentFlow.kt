@@ -37,9 +37,9 @@ open class CashPaymentFlow(
         val txIdentities = if (anonymous) {
             subFlow(TransactionKeyFlow(recipient))
         } else {
-            null
+            TransactionKeyFlow.EMPTY_IDENTITIES
         }
-        val anonymousRecipient = txIdentities?.get(recipient)?.identity ?: recipient
+        val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
@@ -58,6 +58,6 @@ open class CashPaymentFlow(
 
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return Result(tx, txIdentities)
+        return Result(tx, anonymousRecipient)
     }
 }

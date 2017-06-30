@@ -3,6 +3,7 @@ package net.corda.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -35,10 +36,12 @@ abstract class AbstractCashFlow<T>(override val progressTracker: ProgressTracker
      * Specialised flows for unit tests differ from this.
      *
      * @param stx the signed transaction.
-     * @param identities a mapping from the original identities of the parties to the anonymised equivalents.
+     * @param recipient the identity used for the other side of the transaction, where applicable (i.e. this is
+     * null for exit transactions). For anonymous transactions this is the confidential identity generated for the
+     * transaction, otherwise this is the well known identity.
      */
     @CordaSerializable
-    data class Result(val stx: SignedTransaction, val identities: LinkedHashMap<Party, AnonymisedIdentity>?)
+    data class Result(val stx: SignedTransaction, val recipient: AbstractParty?)
 }
 
 class CashException(message: String, cause: Throwable) : FlowException(message, cause)
