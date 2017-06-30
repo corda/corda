@@ -29,8 +29,6 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class IntegrationTestingTutorial {
-    // TODO: Fix spurious error in this test (see: https://ci-master.corda.r3cev.com/viewLog.html?buildId=6248&buildTypeId=Corda_PullRequests&tab=buildLog)
-    @Ignore
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
@@ -54,7 +52,10 @@ class IntegrationTestingTutorial {
 
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
+
+            Futures.allAsList(aliceProxy.waitUntilRegisteredWithNetworkMap(), bobProxy.waitUntilRegisteredWithNetworkMap()).get()
             // END 2
+
 
             // START 3
             val bobVaultUpdates = bobProxy.vaultAndUpdates().second
