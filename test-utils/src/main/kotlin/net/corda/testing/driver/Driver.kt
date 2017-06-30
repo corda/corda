@@ -519,7 +519,7 @@ class DriverDSL(
                     if (thread.name.startsWith(executorThreadNamePrefix)) {
                         log.warn(Stream.concat(
                                 Stream.of("$thread still running:"),
-                                Arrays.stream(stackTrace).map { "    $it" }).collect(Collectors.joining(System.lineSeparator())))
+                                Arrays.stream(stackTrace).map { "\t$it" }).collect(Collectors.joining(System.lineSeparator())))
                     }
                 }
                 throw TimeoutException("Driver executor still running $tolerance after shutdown, likely due to a hanging task.")
