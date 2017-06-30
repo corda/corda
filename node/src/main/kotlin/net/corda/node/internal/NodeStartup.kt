@@ -72,7 +72,7 @@ open class NodeStartup(val args: Array<String>) {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
         val conf = loadConfigFile(cmdlineOptions)
         banJavaSerialisation(conf)
-        preNetworkRegistration()
+        preNetworkRegistration(conf)
         maybeRegisterWithNetworkAndExit(cmdlineOptions, conf)
         logStartupInfo(versionInfo, cmdlineOptions, conf)
 
@@ -91,7 +91,7 @@ open class NodeStartup(val args: Array<String>) {
         exitProcess(0)
     }
 
-    open protected fun preNetworkRegistration() = Unit
+    open protected fun preNetworkRegistration(conf: FullNodeConfiguration) = Unit
 
     open protected fun createNode(conf: FullNodeConfiguration, versionInfo: VersionInfo, services: Set<ServiceInfo>): Node {
         return Node(conf, services, versionInfo, if (conf.useTestClock) TestClock() else NodeClock())

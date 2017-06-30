@@ -36,7 +36,7 @@ sourceSets {
 }
 
 processSmokeTestResources {
-    from(project(':node:capsule').tasks.buildCordaJAR) {
+    from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
 }

@@ -262,22 +262,18 @@ folder has the following structure:
     . nodes
     ├── controller
     │   ├── corda.jar
-    │   ├── dependencies
     │   ├── node.conf
     │   └── plugins
     ├── nodea
     │   ├── corda.jar
-    │   ├── dependencies
     │   ├── node.conf
     │   └── plugins
     ├── nodeb
     │   ├── corda.jar
-    │   ├── dependencies
     │   ├── node.conf
     │   └── plugins
     ├── nodec
     │   ├── corda.jar
-    │   ├── dependencies
     │   ├── node.conf
     │   └── plugins
     ├── runnodes
@@ -286,7 +282,7 @@ folder has the following structure:
 There will be one folder generated for each node you build (more on later when we get into the detail of the
 ``deployNodes`` Gradle task) and a ``runnodes`` shell script (batch file on Windows).
 
-Each node folder contains the Corda JAR, a folder for dependencies and a folder for plugins (or CorDapps). There is also
+Each node folder contains the Corda JAR and a folder for plugins (or CorDapps). There is also
 a node.conf file. See :doc:`Corda configuration files <corda-configuration-file>`.
 
 **Building from IntelliJ**
@@ -340,7 +336,6 @@ When booted up, the node will generate a bunch of files and directories in addit
   ├── cache
   ├── certificates
   ├── corda.jar
-  ├── dependencies
   ├── identity-private-key
   ├── identity-public
   ├── logs
