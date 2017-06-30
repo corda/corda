@@ -28,6 +28,7 @@ object Emoji {
     @JvmStatic val CODE_SKULL_AND_CROSSBONES: String = codePointsString(0x2620)
     @JvmStatic val CODE_BOOKS: String = codePointsString(0x1F4DA)
     @JvmStatic val CODE_SLEEPING_FACE: String = codePointsString(0x1F634)
+    @JvmStatic val CODE_LIGHTBULB: String = codePointsString(0x1F4A1)
 
     /**
      * When non-null, toString() methods are allowed to use emoji in the output as we're going to render them to a
@@ -44,6 +45,7 @@ object Emoji {
     val coolGuy: String get() = if (emojiMode.get() != null) "$CODE_COOL_GUY  " else ""
     val books: String get() = if (emojiMode.get() != null) "$CODE_BOOKS  " else ""
     val sleepingFace: String get() = if (emojiMode.get() != null) "$CODE_SLEEPING_FACE  " else ""
+    val lightBulb: String get() = if (emojiMode.get() != null) "$CODE_LIGHTBULB  " else ""
 
     // These have old/non-emoji symbols with better platform support.
     val greenTick: String get() = if (emojiMode.get() != null) "$CODE_GREEN_TICK  " else "✓"
