@@ -1,8 +1,6 @@
 package net.corda.loadtest.tests
 
 import net.corda.client.mock.Generator
-import net.corda.client.mock.flatten
-import net.corda.client.mock.replicate
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
 import net.corda.core.failure
@@ -21,8 +19,8 @@ object StabilityTest {
             generate = { _, _ ->
                 val payments = simpleNodes.flatMap { payer -> simpleNodes.map { payer to it } }
                         .filter { it.first != it.second }
-                        .map { (payer, payee) -> CrossCashCommand(CashFlowCommand.PayCash(Amount(1, USD), payee.info.legalIdentity), payer) }
-                Generator.replicate(replication, Generator.pure(payments)).flatten()
+                        .map { (payer, payee) -> CrossCashCommand(CashFlowCommand.PayCash(Amount(1, USD), payee.info.legalIdentity, anonymous = true), payer) }
+                Generator.pure(List(replication) { payments }.flatten())
             },
             interpret = { _, _ -> },
             execute = { command ->
@@ -43,9 +41,9 @@ object StabilityTest {
                 // Self issue cash is fast, its ok to flood the node with this command.
                 val generateIssue =
                         simpleNodes.map { issuer ->
-                            SelfIssueCommand(CashFlowCommand.IssueCash(Amount(100000, USD), OpaqueBytes.of(0), issuer.info.legalIdentity, notary.info.notaryIdentity), issuer)
+                            SelfIssueCommand(CashFlowCommand.IssueCash(Amount(100000, USD), OpaqueBytes.of(0), issuer.info.legalIdentity, notary.info.notaryIdentity, anonymous = true), issuer)
                         }
-                Generator.replicate(replication, Generator.pure(generateIssue)).flatten()
+                Generator.pure(List(replication) { generateIssue }.flatten())
             },
             interpret = { _, _ -> },
             execute = { command ->
