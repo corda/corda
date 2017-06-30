@@ -124,7 +124,8 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
     }
 }
 
-class TransactionKeyHandler(otherSide: Party) : AbstractIdentityFlow(otherSide, false) {
+class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
+    constructor(otherSide: Party) : this(otherSide, false)
     companion object {
         object SENDING_KEY : ProgressTracker.Step("Sending key")
     }
@@ -132,12 +133,14 @@ class TransactionKeyHandler(otherSide: Party) : AbstractIdentityFlow(otherSide, 
     override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
 
     @Suspendable
-    override fun call(): TransactionIdentities {
+    override fun call(): Unit {
         val revocationEnabled = false
         progressTracker.currentStep = SENDING_KEY
         val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
-        val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { validateIdentity(it) }
-        return TransactionIdentities(Pair(serviceHub.myInfo.legalIdentity, legalIdentityAnonymous),
-                Pair(otherSide, otherSideAnonymous))
+        val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
+        val (certPath, theirCert, txIdentity) = otherSideAnonymous
+        // Validate then store their identity so that we can prove the key in the transaction is owned by the
+        // counterparty.
+        serviceHub.identityService.registerAnonymousIdentity(txIdentity, otherSide, certPath)
     }
 }

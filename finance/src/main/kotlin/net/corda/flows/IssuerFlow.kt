@@ -47,11 +47,7 @@ object IssuerFlow {
             val issueRequest = IssuanceRequestState(amount, issueToParty, issueToPartyRef, anonymous)
             return sendAndReceive<AbstractCashFlow.Result>(issuerBankParty, issueRequest).unwrap { res ->
                 val tx = res.stx.tx
-                val recipient = if (anonymous) {
-                    res.identities.forParty(issueToParty).identity
-                } else {
-                    issueToParty
-                }
+                val recipient = res.identities?.get(issueToParty)?.identity ?: issueToParty
                 val expectedAmount = Amount(amount.quantity, Issued(issuerBankParty.ref(issueToPartyRef), amount.token))
                 val cashOutputs = tx.outputs
                         .map { it.data}

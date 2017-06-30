@@ -38,7 +38,7 @@ abstract class AbstractCashFlow<T>(override val progressTracker: ProgressTracker
      * @param identities a mapping from the original identities of the parties to the anonymised equivalents.
      */
     @CordaSerializable
-    data class Result(val stx: SignedTransaction, val identities: TransactionIdentities)
+    data class Result(val stx: SignedTransaction, val identities: LinkedHashMap<Party, AnonymisedIdentity>?)
 }
 
 class CashException(message: String, cause: Throwable) : FlowException(message, cause)

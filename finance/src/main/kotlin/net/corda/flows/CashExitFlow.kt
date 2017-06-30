@@ -70,6 +70,6 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(participants, tx, "Unable to notarise exit")
-        return Result(tx, TransactionIdentities())
+        return Result(tx, null)
     }
 }
