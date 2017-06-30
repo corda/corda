@@ -220,7 +220,7 @@ class CommercialPaperTestsGeneric {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -240,7 +240,7 @@ class CommercialPaperTestsGeneric {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -251,8 +251,8 @@ class CommercialPaperTestsGeneric {
         }
 
         // Propagate the cash transactions to each side.
-        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
-        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.storageService.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        aliceServices.recordTransactions(bigCorpVault.states.map { bigCorpServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
+        bigCorpServices.recordTransactions(alicesVault.states.map { aliceServices.validatedTransactions.getTransaction(it.ref.txhash)!! })
 
         // BigCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER

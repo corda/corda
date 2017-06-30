@@ -42,9 +42,12 @@ private fun createAttachmentData(content: String) = ByteArrayOutputStream().appl
 
 private fun Attachment.extractContent() = ByteArrayOutputStream().apply { extractFile("content", this) }.toString(UTF_8.name())
 
-private fun MockNetwork.MockNode.attachments() = services.storageService.attachments as NodeAttachmentService
-private fun MockNetwork.MockNode.saveAttachment(content: String) = database.transaction { attachments().importAttachment(createAttachmentData(content).inputStream()) }
-private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction { attachments().updateAttachment(attachmentId, createAttachmentData(content)) }
+private fun MockNetwork.MockNode.saveAttachment(content: String) = database.transaction {
+    attachments.importAttachment(createAttachmentData(content).inputStream())
+}
+private fun MockNetwork.MockNode.hackAttachment(attachmentId: SecureHash, content: String) = database.transaction {
+    attachments.updateAttachment(attachmentId, createAttachmentData(content))
+}
 
 /**
  * @see NodeAttachmentService.importAttachment
@@ -122,7 +125,7 @@ class AttachmentSerializationTest {
     private class OpenAttachmentLogic(server: MockNetwork.MockNode, private val attachmentId: SecureHash) : ClientLogic(server) {
         @Suspendable
         override fun getAttachmentContent(): String {
-            val localAttachment = serviceHub.storageService.attachments.openAttachment(attachmentId)!!
+            val localAttachment = serviceHub.attachments.openAttachment(attachmentId)!!
             communicate()
             return localAttachment.extractContent()
         }
@@ -153,7 +156,7 @@ class AttachmentSerializationTest {
             override fun create(config: NodeConfiguration, network: MockNetwork, networkMapAddr: SingleMessageRecipient?, advertisedServices: Set<ServiceInfo>, id: Int, overrideServices: Map<ServiceInfo, KeyPair>?, entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     override fun startMessagingService(rpcOps: RPCOps) {
-                        attachments().checkAttachmentsOnLoad = checkAttachmentsOnLoad
+                        attachments.checkAttachmentsOnLoad = checkAttachmentsOnLoad
                         super.startMessagingService(rpcOps)
                     }
                 }
@@ -180,7 +183,7 @@ class AttachmentSerializationTest {
     @Test
     fun `only the hash of a regular attachment should be saved in checkpoint`() {
         val attachmentId = client.saveAttachment("genuine")
-        client.attachments().checkAttachmentsOnLoad = false // Cached by AttachmentImpl.
+        client.attachments.checkAttachmentsOnLoad = false // Cached by AttachmentImpl.
         launchFlow(OpenAttachmentLogic(server, attachmentId), 1)
         client.hackAttachment(attachmentId, "hacked")
         assertEquals("hacked", rebootClientAndGetAttachmentContent(false)) // Pass in false to allow non-genuine data to be loaded.

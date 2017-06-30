@@ -64,8 +64,8 @@ class ContractUpgradeFlowTest {
         a.services.startFlow(FinalityFlow(stx, setOf(a.info.legalIdentity, b.info.legalIdentity)))
         mockNet.runNetwork()
 
-        val atx = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(stx.id) }
-        val btx = b.database.transaction { b.services.storageService.validatedTransactions.getTransaction(stx.id) }
+        val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
+        val btx = b.database.transaction { b.services.validatedTransactions.getTransaction(stx.id) }
         requireNotNull(atx)
         requireNotNull(btx)
 
@@ -85,13 +85,13 @@ class ContractUpgradeFlowTest {
 
         fun check(node: MockNetwork.MockNode) {
             val nodeStx = node.database.transaction {
-                node.services.storageService.validatedTransactions.getTransaction(result.ref.txhash)
+                node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
             requireNotNull(nodeStx)
 
             // Verify inputs.
             val input = node.database.transaction {
-                node.services.storageService.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
+                node.services.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
             }
             requireNotNull(input)
             assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
@@ -132,8 +132,8 @@ class ContractUpgradeFlowTest {
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
-            val atx = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(stx.id) }
-            val btx = b.database.transaction { b.services.storageService.validatedTransactions.getTransaction(stx.id) }
+            val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
+            val btx = b.database.transaction { b.services.validatedTransactions.getTransaction(stx.id) }
             requireNotNull(atx)
             requireNotNull(btx)
 
@@ -156,11 +156,11 @@ class ContractUpgradeFlowTest {
             val result = resultFuture.getOrThrow()
             // Check results.
             listOf(a, b).forEach {
-                val signedTX = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
+                val signedTX = a.database.transaction { a.services.validatedTransactions.getTransaction(result.ref.txhash) }
                 requireNotNull(signedTX)
 
                 // Verify inputs.
-                val input = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
+                val input = a.database.transaction { a.services.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
                 requireNotNull(input)
                 assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
 

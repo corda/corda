@@ -45,7 +45,10 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.services.network.PersistentNetworkMapService
-import net.corda.node.services.persistence.*
+import net.corda.node.services.persistence.DBCheckpointStorage
+import net.corda.node.services.persistence.DBTransactionMappingStorage
+import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
@@ -70,7 +73,6 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
 import java.net.JarURLConnection
 import java.net.URI
-import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
@@ -120,10 +122,14 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
-    val services = object : ServiceHubInternal() {
+    val services = object : ServiceHubInternal {
+        override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
+        override val uploaders: List<FileUploader> get() = this@AbstractNode.uploaders
+        override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
+            get() = this@AbstractNode.transactionMappings
+        override val validatedTransactions: TransactionStorage get() = this@AbstractNode.transactions
         override val networkService: MessagingService get() = network
         override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
-        override val storageService: TxWritableStorageService get() = storage
         override val vaultService: VaultService get() = vault
         override val vaultQueryService: VaultQueryService get() = vaultQuery
         override val keyManagementService: KeyManagementService get() = keyManagement
@@ -157,7 +163,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         override fun recordTransactions(txs: Iterable<SignedTransaction>) {
             database.transaction {
-                recordTransactionsInternal(storage, txs)
+                super.recordTransactions(txs)
             }
         }
     }
@@ -167,9 +173,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     lateinit var info: NodeInfo
-    lateinit var storage: TxWritableStorageService
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
+    lateinit var attachments: NodeAttachmentService
+    lateinit var transactions: TransactionStorage
+    lateinit var transactionMappings: StateMachineRecordedTransactionMappingStorage
+    lateinit var uploaders: List<FileUploader>
     lateinit var vault: VaultService
     lateinit var vaultQuery: VaultQueryService
     lateinit var keyManagement: KeyManagementService
@@ -469,9 +478,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      */
     private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
         val keyStore = keyStoreWrapper.keyStore
-        val storageServices = initialiseStorageService(configuration.baseDirectory)
-        storage = storageServices.first
-        checkpointStorage = storageServices.second
+        attachments = createAttachmentStorage()
+        transactions = createTransactionStorage()
+        transactionMappings = DBTransactionMappingStorage()
+        checkpointStorage = DBCheckpointStorage()
         netMapCache = InMemoryNetworkMapCache(services)
         network = makeMessagingService()
         schemas = makeSchemaService()
@@ -490,10 +500,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         keyManagement = makeKeyManagementService(identity)
         scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
-        val tokenizableServices = mutableListOf(storage, network, vault, vaultQuery, keyManagement, identity, platformClock, scheduler)
+        val tokenizableServices = mutableListOf(attachments, network, vault, vaultQuery, keyManagement, identity, platformClock, scheduler)
         makeAdvertisedServices(tokenizableServices)
         return tokenizableServices
     }
+
+    protected open fun createTransactionStorage(): TransactionStorage = DBTransactionStorage()
 
     private fun scanCordapps(): ScanResult? {
         val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
@@ -548,9 +560,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun initUploaders() {
-        val uploaders: List<FileUploader> = listOf(storage.attachments as NodeAttachmentService) +
-            cordappServices.values.filterIsInstance(AcceptsFileUpload::class.java)
-        (storage as StorageServiceImpl).initUploaders(uploaders)
+        uploaders = listOf(attachments) + cordappServices.values.filterIsInstance(AcceptsFileUpload::class.java)
     }
 
     private fun makeVaultObservers() {
@@ -625,7 +635,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Run any tasks that are needed to ensure the node is in a correct state before running start().
      */
     open fun setup(): AbstractNode {
-        createNodeDir()
+        configuration.baseDirectory.createDirectories()
         return this
     }
 
@@ -761,22 +771,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected abstract fun startMessagingService(rpcOps: RPCOps)
 
-    protected open fun initialiseStorageService(dir: Path): Pair<TxWritableStorageService, CheckpointStorage> {
-        val attachments = makeAttachmentStorage(dir)
-        val checkpointStorage = DBCheckpointStorage()
-        val transactionStorage = DBTransactionStorage()
-        val stateMachineTransactionMappingStorage = DBTransactionMappingStorage()
-        return Pair(
-                constructStorageService(attachments, transactionStorage, stateMachineTransactionMappingStorage),
-                checkpointStorage
-        )
-    }
-
-    protected open fun constructStorageService(attachments: AttachmentStorage,
-                                               transactionStorage: TransactionStorage,
-                                               stateMachineRecordedTransactionMappingStorage: StateMachineRecordedTransactionMappingStorage) =
-            StorageServiceImpl(attachments, transactionStorage, stateMachineRecordedTransactionMappingStorage)
-
     protected fun obtainLegalIdentity(): PartyAndCertificate = identityKeyPair.first
     protected fun obtainLegalIdentityKey(): KeyPair = identityKeyPair.second
     private val identityKeyPair by lazy { obtainKeyPair("identity", configuration.myLegalName) }
@@ -846,17 +840,9 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()
 
-    protected fun makeAttachmentStorage(dir: Path): AttachmentStorage {
-        val attachmentsDir = dir / "attachments"
-        try {
-            attachmentsDir.createDirectory()
-        } catch (e: FileAlreadyExistsException) {
-        }
+    private fun createAttachmentStorage(): NodeAttachmentService {
+        val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
         return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
-    }
-
-    protected fun createNodeDir() {
-        configuration.baseDirectory.createDirectories()
     }
 }
 

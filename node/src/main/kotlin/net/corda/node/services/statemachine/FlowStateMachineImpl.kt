@@ -205,7 +205,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
         logger.debug { "waitForLedgerCommit($hash) ..." }
         suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
-        val stx = serviceHub.storageService.validatedTransactions.getTransaction(hash)
+        val stx = serviceHub.validatedTransactions.getTransaction(hash)
         if (stx != null) {
             logger.debug { "Transaction $hash committed to ledger" }
             return stx

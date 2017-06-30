@@ -79,7 +79,7 @@ class SellerFlow(val otherParty: Party,
             // TODO: Consider moving these two steps below into generateIssue.
 
             // Attach the prospectus.
-            tx.addAttachment(serviceHub.storageService.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
+            tx.addAttachment(serviceHub.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
 
             // Requesting a time-window to be set, all CP must have a validation window.
             tx.addTimeWindow(Instant.now(), 30.seconds)
