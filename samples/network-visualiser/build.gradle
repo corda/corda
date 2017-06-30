@@ -18,9 +18,6 @@ dependencies {
     compile project(':core')
     compile project(':finance')
 
-    // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-
     // Cordapp dependencies
     // GraphStream: For visualisation
     compile 'co.paralleluniverse:capsule:1.0.3'
