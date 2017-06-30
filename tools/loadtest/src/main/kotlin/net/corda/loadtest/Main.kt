@@ -133,17 +133,17 @@ private fun runLoadTest(loadTestConfiguration: LoadTestConfiguration) {
 
 private fun runStabilityTest(loadTestConfiguration: LoadTestConfiguration) {
     runLoadTests(loadTestConfiguration, listOf(
-            // Self issue cash.
-            StabilityTest.selfIssueTest to LoadTest.RunParameters(
+            // Self issue cash. This is a pre test step to make sure vault have enough cash to work with.
+            StabilityTest.selfIssueTest(100) to LoadTest.RunParameters(
                     parallelism = loadTestConfiguration.parallelism,
-                    generateCount = loadTestConfiguration.generateCount,
+                    generateCount = 1000,
                     clearDatabaseBeforeRun = false,
-                    executionFrequency = loadTestConfiguration.executionFrequency,
+                    executionFrequency = 50,
                     gatherFrequency = 100,
                     disruptionPatterns = listOf(listOf()) // no disruptions
             ),
             // Send cash to a random party or exit cash, commands are generated randomly.
-            StabilityTest.crossCashTest to LoadTest.RunParameters(
+            StabilityTest.crossCashTest(100) to LoadTest.RunParameters(
                     parallelism = loadTestConfiguration.parallelism,
                     generateCount = loadTestConfiguration.generateCount,
                     clearDatabaseBeforeRun = false,
