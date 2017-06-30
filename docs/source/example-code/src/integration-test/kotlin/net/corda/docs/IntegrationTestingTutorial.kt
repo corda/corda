@@ -22,7 +22,6 @@ import net.corda.testing.expect
 import net.corda.testing.expectEvents
 import net.corda.testing.parallel
 import net.corda.testing.sequence
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
@@ -53,9 +52,9 @@ class IntegrationTestingTutorial {
             val bobClient = bob.rpcClientToNode()
             val bobProxy = bobClient.start("bobUser", "testPassword2").proxy
 
-            Futures.allAsList(aliceProxy.waitUntilRegisteredWithNetworkMap(), bobProxy.waitUntilRegisteredWithNetworkMap()).get()
+            aliceProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
+            bobProxy.waitUntilRegisteredWithNetworkMap().getOrThrow()
             // END 2
-
 
             // START 3
             val bobVaultUpdates = bobProxy.vaultAndUpdates().second
