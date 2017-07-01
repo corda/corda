@@ -87,7 +87,6 @@ open class TransactionBuilder(
     }
 
     open fun addInputState(stateAndRef: StateAndRef<*>) {
-        check(currentSigs.isEmpty())
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
@@ -95,12 +94,10 @@ open class TransactionBuilder(
     }
 
     fun addAttachment(attachmentId: SecureHash) {
-        check(currentSigs.isEmpty())
         attachments.add(attachmentId)
     }
 
     fun addOutputState(state: TransactionState<*>): Int {
-        check(currentSigs.isEmpty())
         outputs.add(state)
         return outputs.size - 1
     }
@@ -115,7 +112,6 @@ open class TransactionBuilder(
     }
 
     fun addCommand(arg: Command) {
-        check(currentSigs.isEmpty())
         // TODO: replace pubkeys in commands with 'pointers' to keys in signers
         signers.addAll(arg.signers)
         commands.add(arg)
@@ -141,7 +137,6 @@ open class TransactionBuilder(
     fun addTimeWindow(timeWindow: TimeWindow) {
         check(notary != null) { "Only notarised transactions can have a time-window" }
         signers.add(notary!!.owningKey)
-        check(currentSigs.isEmpty()) { "Cannot change time-window after signing" }
         this.timeWindow = timeWindow
     }
 
@@ -157,22 +152,9 @@ open class TransactionBuilder(
 
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
     fun signWith(key: KeyPair): TransactionBuilder {
-        check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         val data = toWireTransaction().id
         addSignatureUnchecked(key.sign(data.bytes))
         return this
-    }
-
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    @Deprecated("Signature checking should be performed on a SignedTransaction instead.")
-    fun checkSignature(sig: DigitalSignature.WithKey) {
-        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
-        sig.verify(toWireTransaction().id)
     }
 
     /** Adds the signature directly to the transaction, without checking it for validity. */
@@ -180,19 +162,6 @@ open class TransactionBuilder(
     fun addSignatureUnchecked(sig: DigitalSignature.WithKey): TransactionBuilder {
         currentSigs.add(sig)
         return this
-    }
-
-    /**
-     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
-     * adds it.
-     *
-     * @throws SignatureException if the signature didn't match the transaction contents.
-     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
-     */
-    @Deprecated("Use ServiceHub.signInitialTransaction() instead.")
-    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
-        checkSignature(sig)
-        addSignatureUnchecked(sig)
     }
 
     @Deprecated("Use ServiceHub.signInitialTransaction() instead.")

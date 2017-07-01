@@ -231,7 +231,7 @@ class VaultWithCashTest {
                 addOutputState(DummyLinearContract.State(linearId = linearId, participants = listOf(freshIdentity)))
                 signWith(DUMMY_NOTARY_KEY)
             }
-            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder)
+            val dummyIssue = services.signInitialTransaction(dummyIssueBuilder, DUMMY_NOTARY_KEY.public)
 
             assertThatThrownBy {
                 dummyIssue.toLedgerTransaction(services).verify()

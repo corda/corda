@@ -84,15 +84,12 @@ class SellerFlow(val otherParty: Party,
             // Requesting a time-window to be set, all CP must have a validation window.
             tx.addTimeWindow(Instant.now(), 30.seconds)
 
-            // Sign it as ourselves.
-            tx.signWith(keyPair)
-
             // Get the notary to sign the time-window.
-            val notarySigs = subFlow(NotaryFlow.Client(tx.toSignedTransaction(false)))
+            val notarySigs = subFlow(NotaryFlow.Client(serviceHub.signInitialTransaction(tx)))
             notarySigs.forEach { tx.addSignatureUnchecked(it) }
 
             // Commit it to local storage.
-            val stx = tx.toSignedTransaction(true)
+            val stx = serviceHub.signInitialTransaction(tx)
             serviceHub.recordTransactions(listOf(stx))
 
             stx
@@ -102,12 +99,13 @@ class SellerFlow(val otherParty: Party,
         val move: SignedTransaction = run {
             val builder = TransactionType.General.Builder(notaryNode.notaryIdentity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
-            builder.signWith(keyPair)
-            val notarySignature = subFlow(NotaryFlow.Client(builder.toSignedTransaction(false)))
-            notarySignature.forEach { builder.addSignatureUnchecked(it) }
-            val tx = builder.toSignedTransaction(true)
-            serviceHub.recordTransactions(listOf(tx))
-            tx
+            val ptx = serviceHub.signInitialTransaction(builder)
+            val notarySignature = subFlow(NotaryFlow.Client(ptx))
+            var stx = ptx
+            notarySignature.forEach {
+                stx = ptx.withAdditionalSignature(it) }
+            serviceHub.recordTransactions(listOf(stx))
+            stx
         }
 
         return move.tx.outRef(0)

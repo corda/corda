@@ -164,7 +164,8 @@ class NodeInterestRatesTest {
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
             val signature = oracle.sign(ftx)
-            tx.checkAndAddSignature(signature)
+            wtx.checkSignature(signature)
+            tx.addSignatureUnchecked(signature)
         }
     }
 
