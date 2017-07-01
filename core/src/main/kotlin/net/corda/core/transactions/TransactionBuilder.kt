@@ -175,4 +175,29 @@ open class TransactionBuilder(
         val wtx = toWireTransaction()
         return SignedTransaction(wtx.serialize(), ArrayList(currentSigs))
     }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
+     * adds it.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @Deprecated("Use WireTransaction.checkSignature() instead.")
+    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+        checkSignature(sig)
+        addSignatureUnchecked(sig)
+    }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    @Deprecated("Use WireTransaction.checkSignature() instead.")
+    fun checkSignature(sig: DigitalSignature.WithKey) {
+        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
+        sig.verify(toWireTransaction().id)
+    }
 }
