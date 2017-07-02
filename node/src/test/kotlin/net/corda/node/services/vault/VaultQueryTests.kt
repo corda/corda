@@ -1007,7 +1007,7 @@ class VaultQueryTests {
 
             // DOCSTART VaultDeprecatedQueryExample3
             val states = vaultSvc.states(setOf(DummyLinearContract.State::class.java),
-                            EnumSet.of(Vault.StateStatus.CONSUMED, Vault.StateStatus.UNCONSUMED)).filter { it.state.data.linearId == linearId }
+                    EnumSet.of(Vault.StateStatus.CONSUMED, Vault.StateStatus.UNCONSUMED)).filter { it.state.data.linearId == linearId }
             // DOCEND VaultDeprecatedQueryExample3
 
             assertThat(states).hasSize(4)
@@ -1485,31 +1485,31 @@ class VaultQueryTests {
     @Test
     fun trackCashStates_unconsumed() {
         val updates =
-            database.transaction {
+                database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
-                val linearStates = services.fillWithSomeTestLinearStates(10).states
-                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+                    services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                    val linearStates = services.fillWithSomeTestLinearStates(10).states
+                    val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
-                // DOCSTART VaultQueryExample15
-                val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>()  // UNCONSUMED default
-                // DOCEND VaultQueryExample15
+                    // DOCSTART VaultQueryExample15
+                    val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>()  // UNCONSUMED default
+                    // DOCEND VaultQueryExample15
 
-                assertThat(snapshot.states).hasSize(5)
-                assertThat(snapshot.statesMetadata).hasSize(5)
+                    assertThat(snapshot.states).hasSize(5)
+                    assertThat(snapshot.statesMetadata).hasSize(5)
 
-                // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-                // add another deal
-                services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+                    // add more cash
+                    services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                    // add another deal
+                    services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
-                // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                    // consume stuff
+                    services.consumeCash(100.DOLLARS)
+                    services.consumeDeals(dealStates.toList())
+                    services.consumeLinearStates(linearStates.toList())
 
-                updates
-            }
+                    updates
+                }
 
         updates?.expectEvents {
             sequence(
@@ -1530,33 +1530,33 @@ class VaultQueryTests {
     @Test
     fun trackCashStates_consumed() {
         val updates =
-            database.transaction {
+                database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
-                val linearStates = services.fillWithSomeTestLinearStates(10).states
-                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+                    services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                    val linearStates = services.fillWithSomeTestLinearStates(10).states
+                    val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
-                // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-                // add another deal
-                services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+                    // add more cash
+                    services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                    // add another deal
+                    services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
-                // consume stuff
-                services.consumeCash(100.POUNDS)
+                    // consume stuff
+                    services.consumeCash(100.POUNDS)
 
-                val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
-                val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>(criteria)
+                    val criteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+                    val (snapshot, updates)  = vaultQuerySvc.trackBy<Cash.State>(criteria)
 
-                assertThat(snapshot.states).hasSize(1)
-                assertThat(snapshot.statesMetadata).hasSize(1)
+                    assertThat(snapshot.states).hasSize(1)
+                    assertThat(snapshot.statesMetadata).hasSize(1)
 
-                // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                    // consume more stuff
+                    services.consumeCash(100.DOLLARS)
+                    services.consumeDeals(dealStates.toList())
+                    services.consumeLinearStates(linearStates.toList())
 
-                updates
-            }
+                    updates
+                }
 
         updates?.expectEvents {
             sequence(
@@ -1577,33 +1577,33 @@ class VaultQueryTests {
     @Test
     fun trackCashStates_all() {
         val updates =
-            database.transaction {
+                database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
-                val linearStates = services.fillWithSomeTestLinearStates(10).states
-                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+                    services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 5, 5, Random(0L))
+                    val linearStates = services.fillWithSomeTestLinearStates(10).states
+                    val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
-                // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-                // add another deal
-                services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+                    // add more cash
+                    services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                    // add another deal
+                    services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
-                // consume stuff
-                services.consumeCash(99.POUNDS)
+                    // consume stuff
+                    services.consumeCash(99.POUNDS)
 
-                val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-                val (snapshot, updates) = vaultQuerySvc.trackBy<Cash.State>(criteria)
+                    val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+                    val (snapshot, updates) = vaultQuerySvc.trackBy<Cash.State>(criteria)
 
-                assertThat(snapshot.states).hasSize(7)
-                assertThat(snapshot.statesMetadata).hasSize(7)
+                    assertThat(snapshot.states).hasSize(7)
+                    assertThat(snapshot.statesMetadata).hasSize(7)
 
-                // consume more stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                    // consume more stuff
+                    services.consumeCash(100.DOLLARS)
+                    services.consumeDeals(dealStates.toList())
+                    services.consumeLinearStates(linearStates.toList())
 
-                updates
-            }
+                    updates
+                }
 
         updates?.expectEvents {
             sequence(
@@ -1634,32 +1634,32 @@ class VaultQueryTests {
     @Test
     fun trackLinearStates() {
         val updates =
-            database.transaction {
+                database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-                val linearStates = services.fillWithSomeTestLinearStates(10).states
-                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+                    services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+                    val linearStates = services.fillWithSomeTestLinearStates(10).states
+                    val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
-                // DOCSTART VaultQueryExample16
-                val (snapshot, updates)  = vaultQuerySvc.trackBy<LinearState>()
-                // DOCEND VaultQueryExample16
+                    // DOCSTART VaultQueryExample16
+                    val (snapshot, updates)  = vaultQuerySvc.trackBy<LinearState>()
+                    // DOCEND VaultQueryExample16
 
 
-                assertThat(snapshot.states).hasSize(13)
-                assertThat(snapshot.statesMetadata).hasSize(13)
+                    assertThat(snapshot.states).hasSize(13)
+                    assertThat(snapshot.statesMetadata).hasSize(13)
 
-                // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-                // add another deal
-                services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+                    // add more cash
+                    services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                    // add another deal
+                    services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
-                // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                    // consume stuff
+                    services.consumeCash(100.DOLLARS)
+                    services.consumeDeals(dealStates.toList())
+                    services.consumeLinearStates(linearStates.toList())
 
-                updates
-            }
+                    updates
+                }
 
         updates?.expectEvents {
             sequence(
@@ -1685,31 +1685,31 @@ class VaultQueryTests {
     @Test
     fun trackDealStates() {
         val updates =
-            database.transaction {
+                database.transaction {
 
-                services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
-                val linearStates = services.fillWithSomeTestLinearStates(10).states
-                val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
+                    services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+                    val linearStates = services.fillWithSomeTestLinearStates(10).states
+                    val dealStates = services.fillWithSomeTestDeals(listOf("123", "456", "789")).states
 
-                // DOCSTART VaultQueryExample17
-                val (snapshot, updates)  = vaultQuerySvc.trackBy<DealState>()
-                // DOCEND VaultQueryExample17
+                    // DOCSTART VaultQueryExample17
+                    val (snapshot, updates)  = vaultQuerySvc.trackBy<DealState>()
+                    // DOCEND VaultQueryExample17
 
-                assertThat(snapshot.states).hasSize(3)
-                assertThat(snapshot.statesMetadata).hasSize(3)
+                    assertThat(snapshot.states).hasSize(3)
+                    assertThat(snapshot.statesMetadata).hasSize(3)
 
-                // add more cash
-                services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
-                // add another deal
-                services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
+                    // add more cash
+                    services.fillWithSomeTestCash(100.POUNDS, DUMMY_NOTARY, 1, 1, Random(0L))
+                    // add another deal
+                    services.fillWithSomeTestDeals(listOf("SAMPLE DEAL"))
 
-                // consume stuff
-                services.consumeCash(100.DOLLARS)
-                services.consumeDeals(dealStates.toList())
-                services.consumeLinearStates(linearStates.toList())
+                    // consume stuff
+                    services.consumeCash(100.DOLLARS)
+                    services.consumeDeals(dealStates.toList())
+                    services.consumeLinearStates(linearStates.toList())
 
-                updates
-            }
+                    updates
+                }
 
         updates?.expectEvents {
             sequence(

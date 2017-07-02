@@ -97,9 +97,8 @@ class ResolveTransactionsFlowTest {
         val count = 50
         var cursor = stx2
         repeat(count) {
-            val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
-                    .addSignatureUnchecked(NullSignature)
-                    .toSignedTransaction(false)
+            val builder = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
+            val stx = megaCorpServices.signInitialTransaction(builder)
             a.database.transaction {
                 a.services.recordTransactions(stx)
             }
