@@ -74,7 +74,7 @@ object FixingFlow {
 
                     // And add a request for a time-window: it may be that none of the contracts need this!
                     // But it can't hurt to have one.
-                    ptx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
+                    ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
                 }
 
                 @Suspendable

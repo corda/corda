@@ -27,6 +27,7 @@ import net.corda.flows.ResolveTransactionsFlow
 import net.corda.flows.SignTransactionFlow
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 
 // We group our two flows inside a singleton object to indicate that they work
@@ -284,7 +285,10 @@ object FlowCookbook {
             regTxBuilder.addOutputState(ourOutput)
             regTxBuilder.addCommand(ourCommand)
             regTxBuilder.addAttachment(ourAttachment)
-            regTxBuilder.addTimeWindow(ourTimeWindow)
+
+            // We set the time-window within which the transaction must be notarised using either of:
+            regTxBuilder.timeWindow = ourTimeWindow
+            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(30))
 
             /**----------------------
              * TRANSACTION SIGNING *

@@ -40,7 +40,7 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
-        protected var timeWindow: TimeWindow? = null) {
+        window: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
@@ -55,7 +55,7 @@ open class TransactionBuilder(
                     outputs = ArrayList(outputs),
                     commands = ArrayList(commands),
                     signers = LinkedHashSet(signers),
-                    timeWindow = timeWindow
+                    window = timeWindow
             )
 
     // DOCSTART 1
@@ -120,24 +120,27 @@ open class TransactionBuilder(
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
+    var timeWindow: TimeWindow? = window
+        /**
+         * Sets the [TimeWindow] for this transaction, replacing the existing [TimeWindow] if there is one. To be valid, the
+         * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
+         * the Timestamp Authority.
+         */
+        set(value) {
+            check(notary != null) { "Only notarised transactions can have a time-window" }
+            signers.add(notary!!.owningKey)
+            field = value
+        }
+
     /**
-     * Places a [TimeWindow] in this transaction, removing any existing command if there is one.
-     * The command requires a signature from the Notary service, which acts as a Timestamp Authority.
-     * The signature can be obtained using [NotaryFlow].
-     *
-     * The window of time in which the final time-window may lie is defined as [time] +/- [timeTolerance].
-     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
-     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
-     * window of time, taking into account factors such as network latency. Transactions being built by a group of
+     * The [TimeWindow] for the transaction can also be defined as [time] +/- [timeTolerance]. The tolerance should be
+     * chosen such that your code can finish building the transaction and sending it to the Timestamp Authority within
+     * that window of time, taking into account factors such as network latency. Transactions being built by a group of
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    fun addTimeWindow(time: Instant, timeTolerance: Duration) = addTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
-
-    fun addTimeWindow(timeWindow: TimeWindow) {
-        check(notary != null) { "Only notarised transactions can have a time-window" }
-        signers.add(notary!!.owningKey)
-        this.timeWindow = timeWindow
+    fun setTimeWindow(time: Instant, timeTolerance: Duration) {
+        timeWindow = TimeWindow.withTolerance(time, timeTolerance)
     }
 
     // Accessors that yield immutable snapshots.

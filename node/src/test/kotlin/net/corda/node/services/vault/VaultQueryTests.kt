@@ -1217,7 +1217,7 @@ class VaultQueryTests {
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
                     CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        addTimeWindow(TEST_TX_TIME, 30.seconds)
+                        setTimeWindow(TEST_TX_TIME, 30.seconds)
                         signWith(MEGA_CORP_KEY)
                         signWith(DUMMY_NOTARY_KEY)
                     }.toSignedTransaction()
@@ -1227,7 +1227,7 @@ class VaultQueryTests {
             val faceValue2 = 10000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
                     CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        addTimeWindow(TEST_TX_TIME, 30.seconds)
+                        setTimeWindow(TEST_TX_TIME, 30.seconds)
                         signWith(MEGA_CORP_KEY)
                         signWith(DUMMY_NOTARY_KEY)
                     }.toSignedTransaction()
@@ -1254,7 +1254,7 @@ class VaultQueryTests {
             val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper =
                     CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        addTimeWindow(TEST_TX_TIME, 30.seconds)
+                        setTimeWindow(TEST_TX_TIME, 30.seconds)
                         signWith(MEGA_CORP_KEY)
                         signWith(DUMMY_NOTARY_KEY)
                     }.toSignedTransaction()
@@ -1264,7 +1264,7 @@ class VaultQueryTests {
             val faceValue2 = 5000.POUNDS `issued by` DUMMY_CASH_ISSUER
             val commercialPaper2 =
                     CommercialPaper().generateIssue(issuance, faceValue2, TEST_TX_TIME + 30.days, DUMMY_NOTARY).apply {
-                        addTimeWindow(TEST_TX_TIME, 30.seconds)
+                        setTimeWindow(TEST_TX_TIME, 30.seconds)
                         signWith(MEGA_CORP_KEY)
                         signWith(DUMMY_NOTARY_KEY)
                     }.toSignedTransaction()
