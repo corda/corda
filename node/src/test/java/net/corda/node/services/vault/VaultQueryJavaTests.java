@@ -442,11 +442,11 @@ public class VaultQueryJavaTests {
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, currency));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, Arrays.asList(currency)));
                 QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.count(pennies));
-                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.max(pennies, currency));
-                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies, currency));
-                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies, currency));
+                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.max(pennies, Arrays.asList(currency)));
+                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies, Arrays.asList(currency)));
+                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies, Arrays.asList(currency)));
 
                 QueryCriteria criteria = QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(sumCriteria, countCriteria), maxCriteria), minCriteria), avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
@@ -491,7 +491,7 @@ public class VaultQueryJavaTests {
     }
 
     @Test
-    public void aggregateFunctionsSumByOwnerAndCurrency() {
+    public void aggregateFunctionsSumByIssuerAndCurrencyAndSortByAggregateSum() {
         transaction(database, tx -> {
 
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
@@ -509,27 +509,22 @@ public class VaultQueryJavaTests {
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
                 Field issuerParty = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerParty");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, issuerParty, currency));
-                Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Custom(CashSchemaV1.PersistentCashState.class, "currency"), Sort.Direction.ASC);
-                Sort sorting = new Sort(ImmutableSet.of(sortByUid));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
 
-                Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, sumCriteria, sorting);
+                Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, sumCriteria);
                 assertThat(results.getOtherResults()).hasSize(12);
 
-                // BOC issued
-                assertThat(results.getOtherResults().get(0)).isEqualTo(300L);
-
-                assertThat(results.getOtherResults().get(1)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(0)).isEqualTo(400L);
+                assertThat(results.getOtherResults().get(1)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(2)).isEqualTo("GBP");
-                assertThat(results.getOtherResults().get(3)).isEqualTo(400L);
-                assertThat(results.getOtherResults().get(4)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(3)).isEqualTo(300L);
+                assertThat(results.getOtherResults().get(4)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
                 assertThat(results.getOtherResults().get(5)).isEqualTo("GBP");
-                // DUMMY_CASH_ISSUER issued
-                assertThat(results.getOtherResults().get(6)).isEqualTo(100L);
-                assertThat(results.getOtherResults().get(7)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
+                assertThat(results.getOtherResults().get(6)).isEqualTo(200L);
+                assertThat(results.getOtherResults().get(7)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
                 assertThat(results.getOtherResults().get(8)).isEqualTo("USD");
-                assertThat(results.getOtherResults().get(9)).isEqualTo(200L);
-                assertThat(results.getOtherResults().get(10)).isEqualTo(EncodingUtils.toBase58String(getBOC_PUBKEY()));
+                assertThat(results.getOtherResults().get(9)).isEqualTo(100L);
+                assertThat(results.getOtherResults().get(10)).isEqualTo(EncodingUtils.toBase58String(getDUMMY_CASH_ISSUER().getParty().getOwningKey()));
                 assertThat(results.getOtherResults().get(11)).isEqualTo("USD");
 
             } catch (NoSuchFieldException e) {

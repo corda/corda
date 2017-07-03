@@ -606,16 +606,16 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
             services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
 
-            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(CashSchemaV1.PersistentCashState::currency) }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
-            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(CashSchemaV1.PersistentCashState::currency) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
             val maxCriteria = VaultCustomQueryCriteria(max)
 
-            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(CashSchemaV1.PersistentCashState::currency) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
             val minCriteria = VaultCustomQueryCriteria(min)
 
-            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(CashSchemaV1.PersistentCashState::currency) }
+            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
             val avgCriteria = VaultCustomQueryCriteria(avg)
 
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria
@@ -654,7 +654,7 @@ class VaultQueryTests {
     }
 
     @Test
-    fun `aggregate functions sum by owner and currency`() {
+    fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
@@ -662,31 +662,26 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
             services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
 
-            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(CashSchemaV1.PersistentCashState::issuerParty,
-                                                                              CashSchemaV1.PersistentCashState::currency) }
-            val sumCriteria = VaultCustomQueryCriteria(sum)
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::issuerParty,
+                                                                                                      CashSchemaV1.PersistentCashState::currency),
+                                                                              orderBy = Sort.Direction.DESC)
+            }
 
-            val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java,
-                                                                          CashSchemaV1.PersistentCashState::currency.name), Sort.Direction.ASC)))
-
-            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria, sorting = sorting)
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum))
             assertThat(results.otherResults).hasSize(12)
 
-            // BOC issued
-            assertThat(results.otherResults[0]).isEqualTo(30000L)
-            assertThat(results.otherResults[1]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
+            assertThat(results.otherResults[0]).isEqualTo(40000L)
+            assertThat(results.otherResults[1]).isEqualTo(BOC_PUBKEY.toBase58String())
             assertThat(results.otherResults[2]).isEqualTo("GBP")
-            assertThat(results.otherResults[3]).isEqualTo(40000L)
-            assertThat(results.otherResults[4]).isEqualTo(BOC_PUBKEY.toBase58String())
+            assertThat(results.otherResults[3]).isEqualTo(30000L)
+            assertThat(results.otherResults[4]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
             assertThat(results.otherResults[5]).isEqualTo("GBP")
-            // DUMMY_CASH_ISSUER issued
-            assertThat(results.otherResults[6]).isEqualTo(10000L)
-            assertThat(results.otherResults[7]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
+            assertThat(results.otherResults[6]).isEqualTo(20000L)
+            assertThat(results.otherResults[7]).isEqualTo(BOC_PUBKEY.toBase58String())
             assertThat(results.otherResults[8]).isEqualTo("USD")
-            assertThat(results.otherResults[9]).isEqualTo(20000L)
-            assertThat(results.otherResults[10]).isEqualTo(BOC_PUBKEY.toBase58String())
+            assertThat(results.otherResults[9]).isEqualTo(10000L)
+            assertThat(results.otherResults[10]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
             assertThat(results.otherResults[11]).isEqualTo("USD")
-
         }
     }
 
@@ -1317,7 +1312,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
             services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
 
-            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(CashSchemaV1.PersistentCashState::currency) }
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
             val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.equal(USD.currencyCode) }
@@ -1342,7 +1337,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
             services.fillWithSomeTestCash(600.SWISS_FRANCS, DUMMY_NOTARY, 6, 6, Random(0L))
 
-            val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.sum(CashSchemaV1.PersistentCashState::currency) }
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val criteria = VaultCustomQueryCriteria(ccyIndex)
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
 

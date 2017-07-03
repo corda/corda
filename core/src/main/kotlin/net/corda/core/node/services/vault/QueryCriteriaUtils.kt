@@ -1,6 +1,5 @@
 package net.corda.core.node.services.vault
 
-import net.corda.core.node.services.vault.Builder.predicate
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -60,7 +59,8 @@ sealed class CriteriaExpression<O, out T> {
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()
     data class ColumnPredicateExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>) : CriteriaExpression<O, Boolean>()
     data class AggregateFunctionExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>,
-                                                 val groupByColumns: List<Column<O, C>>?) : CriteriaExpression<O, Boolean>()
+                                                 val groupByColumns: List<Column<O, C>>?,
+                                                 val orderBy: Sort.Direction?) : CriteriaExpression<O, Boolean>()
 }
 
 @CordaSerializable
@@ -141,7 +141,7 @@ data class Sort(val columns: Collection<SortColumn>) {
     @CordaSerializable
     enum class Direction {
         ASC,
-        DESC
+        DESC,
     }
 
     @CordaSerializable
@@ -201,10 +201,10 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Kotlin(this), predicate)
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Java<Any, R>(this), predicate)
 
-    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns:  List<Column.Kotlin<O, R>>? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByColumns)
-    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column.Java<Any, R>>? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column.Java<Any, R>(this), predicate, groupByColumns)
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns:  List<Column.Kotlin<O, R>>? = null, orderBy: Sort.Direction? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByColumns, orderBy)
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column.Java<Any, R>>? = null, orderBy: Sort.Direction? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Java<Any, R>(this), predicate, groupByColumns, orderBy)
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
     fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
@@ -253,10 +253,12 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.sum() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM))
     fun Field.sum() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.SUM))
 
-    fun <O, R> KProperty1<O, R?>.sum(vararg groupByColumns: KProperty1<O, R>) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns.map { Column.Kotlin(it) })
-    fun <R> Field.sum(vararg groupByColumns: Field) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns.map { Column.Java<Any,R>(it) })
+    fun <O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns.map { Column.Kotlin(it) }, orderBy)
+    fun <R> Field.sum(groupByColumns: List<Field>) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns.map { Column.Java<Any,R>(it) }, null)
+    fun <R> Field.sum(groupByColumns: List<Field>, orderBy: Sort.Direction) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns.map { Column.Java<Any,R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.count() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT))
     fun Field.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
@@ -264,26 +266,32 @@ object Builder {
     fun <O, R> KProperty1<O, R?>.avg() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG))
     fun Field.avg() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.AVG))
 
-    fun <O, R> KProperty1<O, R?>.avg(vararg groupByColumns: KProperty1<O, R>) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns.map { Column.Kotlin(it) })
-    fun <R> Field.avg(vararg groupByColumns: Field) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns.map { Column.Java<Any,R>(it) })
+    fun <O, R> KProperty1<O, R?>.avg(vararg groupByColumns: KProperty1<O, R>, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns.map { Column.Kotlin(it) }, orderBy)
+    fun <R> Field.avg(groupByColumns: List<Field>) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns.map { Column.Java<Any,R>(it) }, null)
+    fun <R> Field.avg(groupByColumns: List<Field>, orderBy: Sort.Direction) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns.map { Column.Java<Any,R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.min() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN))
     fun Field.min() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.MIN))
 
-    fun <O, R> KProperty1<O, R?>.min(vararg groupByColumns: KProperty1<O, R>) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns.map { Column.Kotlin(it) })
-    fun <R> Field.min(vararg groupByColumns: Field) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns.map { Column.Java<Any,R>(it) })
+    fun <O, R> KProperty1<O, R?>.min(vararg groupByColumns: KProperty1<O, R>, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns.map { Column.Kotlin(it) }, orderBy)
+    fun <R> Field.min(groupByColumns: List<Field>) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns.map { Column.Java<Any,R>(it) }, null)
+    fun <R> Field.min(groupByColumns: List<Field>, orderBy: Sort.Direction) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns.map { Column.Java<Any,R>(it) }, orderBy)
 
     fun <O, R> KProperty1<O, R?>.max() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX))
     fun Field.max() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.MAX))
 
-    fun <O, R> KProperty1<O, R?>.max(vararg groupByColumns: KProperty1<O, R>) =
-            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns.map { Column.Kotlin(it) })
-    fun <R> Field.max(vararg groupByColumns: Field) =
-            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns.map { Column.Java<Any,R>(it) })
+    fun <O, R> KProperty1<O, R?>.max(vararg groupByColumns: KProperty1<O, R>, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns.map { Column.Kotlin(it) }, orderBy)
+    fun <R> Field.max(groupByColumns: List<Field>) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns.map { Column.Java<Any,R>(it) }, null)
+    fun <R> Field.max(groupByColumns: List<Field>, orderBy: Sort.Direction) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns.map { Column.Java<Any,R>(it) }, orderBy)
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)
