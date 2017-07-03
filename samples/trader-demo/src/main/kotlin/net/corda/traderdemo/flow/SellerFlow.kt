@@ -16,6 +16,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.flows.FinalityFlow
 import net.corda.flows.NotaryFlow
 import net.corda.flows.TwoPartyTradeFlow
 import net.corda.testing.BOC
@@ -69,8 +70,7 @@ class SellerFlow(val otherParty: Party,
     @Suspendable
     fun selfIssueSomeCommercialPaper(ownedBy: AbstractParty, notaryNode: NodeInfo): StateAndRef<CommercialPaper.State> {
         // Make a fake company that's issued its own paper.
-        val keyPair = generateKeyPair()
-        val party = Party(BOC.name, keyPair.public)
+        val party = Party(BOC.name, serviceHub.legalIdentityKey)
 
         val issuance: SignedTransaction = run {
             val tx = CommercialPaper().generateIssue(party.ref(1, 2, 3), 1100.DOLLARS `issued by` DUMMY_CASH_ISSUER,
@@ -84,29 +84,18 @@ class SellerFlow(val otherParty: Party,
             // Requesting a time-window to be set, all CP must have a validation window.
             tx.addTimeWindow(Instant.now(), 30.seconds)
 
-            val ptx = serviceHub.signInitialTransaction(tx)
+            // Sign it as ourselves.
+            val stx = serviceHub.signInitialTransaction(tx)
 
-            // Get the notary to sign the time-window.
-            val notarySigs = subFlow(NotaryFlow.Client(ptx))
-
-            // Commit it to local storage.
-            val stx = ptx.withAdditionalSignatures(notarySigs)
-            serviceHub.recordTransactions(listOf(stx))
-
-            stx
+            subFlow(FinalityFlow(stx)).single()
         }
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
         val move: SignedTransaction = run {
             val builder = TransactionType.General.Builder(notaryNode.notaryIdentity)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), ownedBy)
-            val ptx = serviceHub.signInitialTransaction(builder)
-            val notarySignature = subFlow(NotaryFlow.Client(ptx))
-            var stx = ptx
-            notarySignature.forEach {
-                stx = ptx.withAdditionalSignature(it) }
-            serviceHub.recordTransactions(listOf(stx))
-            stx
+            val stx = serviceHub.signInitialTransaction(builder)
+            subFlow(FinalityFlow(stx)).single()
         }
 
         return move.tx.outRef(0)

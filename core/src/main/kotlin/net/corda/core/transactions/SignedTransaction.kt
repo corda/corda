@@ -143,6 +143,10 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      * with the passed in [ServiceHub] to resolve the dependencies, returning an unverified
      * LedgerTransaction.
      *
+     * This allows us to perform validation over the entirety of the transaction's contents.
+     * WireTransaction only contains StateRef for the inputs and hashes for the attachments,
+     * rather than ContractState instances for the inputs and Attachment instances for the attachments.
+     *
      * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      * @throws SignatureException if any signatures were invalid or unrecognised
