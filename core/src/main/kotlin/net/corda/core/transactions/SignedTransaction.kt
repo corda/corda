@@ -3,9 +3,11 @@ package net.corda.core.transactions
 import net.corda.core.contracts.AttachmentResolutionException
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.keys
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -136,17 +138,46 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     operator fun plus(sigList: Collection<DigitalSignature.WithKey>) = withAdditionalSignatures(sigList)
 
     /**
-     * Calls [verifySignatures] to check all required signatures are present, and then calls
-     * [WireTransaction.toLedgerTransaction] with the passed in [ServiceHub] to resolve the dependencies,
-     * returning an unverified LedgerTransaction.
+     * Checks the transaction's signatures are valid, optionally calls [verifySignatures] to check
+     * all required signatures are present, and then calls [WireTransaction.toLedgerTransaction]
+     * with the passed in [ServiceHub] to resolve the dependencies, returning an unverified
+     * LedgerTransaction.
+     *
+     * This allows us to perform validation over the entirety of the transaction's contents.
+     * WireTransaction only contains StateRef for the inputs and hashes for the attachments,
+     * rather than ContractState instances for the inputs and Attachment instances for the attachments.
      *
      * @throws AttachmentResolutionException if a required attachment was not found in storage.
      * @throws TransactionResolutionException if an input points to a transaction not found in storage.
      * @throws SignatureException if any signatures were invalid or unrecognised
      * @throws SignaturesMissingException if any signatures that should have been present are missing.
      */
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class, SignatureException::class)
-    fun toLedgerTransaction(services: ServiceHub) = verifySignatures().toLedgerTransaction(services)
+    @JvmOverloads
+    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(services: ServiceHub, checkSufficientSignatures: Boolean = true): LedgerTransaction {
+        checkSignaturesAreValid()
+        if (checkSufficientSignatures) verifySignatures()
+        return tx.toLedgerTransaction(services)
+    }
+
+    /**
+     * Checks the transaction's signatures are valid, optionally calls [verifySignatures] to check
+     * all required signatures are present, calls [WireTransaction.toLedgerTransaction] with the
+     * passed in [ServiceHub] to resolve the dependencies and return an unverified
+     * LedgerTransaction, then verifies the LedgerTransaction.
+     *
+     * @throws AttachmentResolutionException if a required attachment was not found in storage.
+     * @throws TransactionResolutionException if an input points to a transaction not found in storage.
+     * @throws SignatureException if any signatures were invalid or unrecognised
+     * @throws SignaturesMissingException if any signatures that should have been present are missing.
+     */
+    @JvmOverloads
+    @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
+    fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
+        checkSignaturesAreValid()
+        if (checkSufficientSignatures) verifySignatures()
+        tx.toLedgerTransaction(services).verify()
+    }
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }

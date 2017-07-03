@@ -14,6 +14,7 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MINI_CORP
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -32,6 +33,8 @@ class ResolveTransactionsFlowTest {
     lateinit var a: MockNetwork.MockNode
     lateinit var b: MockNetwork.MockNode
     lateinit var notary: Party
+    val megaCorpServices = MockServices(MEGA_CORP_KEY)
+    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
 
     @Before
     fun setup() {
@@ -94,9 +97,8 @@ class ResolveTransactionsFlowTest {
         val count = 50
         var cursor = stx2
         repeat(count) {
-            val stx = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
-                    .addSignatureUnchecked(NullSignature)
-                    .toSignedTransaction(false)
+            val builder = DummyContract.move(cursor.tx.outRef(0), MINI_CORP)
+            val stx = megaCorpServices.signInitialTransaction(builder)
             a.database.transaction {
                 a.services.recordTransactions(stx)
             }
@@ -114,15 +116,13 @@ class ResolveTransactionsFlowTest {
         val stx1 = makeTransactions().first
 
         val stx2 = DummyContract.move(stx1.tx.outRef(0), MINI_CORP).run {
-            signWith(MEGA_CORP_KEY)
-            signWith(DUMMY_NOTARY_KEY)
-            toSignedTransaction()
+            val ptx = megaCorpServices.signInitialTransaction(this)
+            notaryServices.addSignature(ptx)
         }
 
         val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), MINI_CORP).run {
-            signWith(MEGA_CORP_KEY)
-            signWith(DUMMY_NOTARY_KEY)
-            toSignedTransaction()
+            val ptx = megaCorpServices.signInitialTransaction(this)
+            notaryServices.addSignature(ptx)
         }
 
         a.database.transaction {
@@ -168,15 +168,19 @@ class ResolveTransactionsFlowTest {
         val dummy1: SignedTransaction = DummyContract.generateInitial(0, notary, MEGA_CORP.ref(1)).let {
             if (withAttachment != null)
                 it.addAttachment(withAttachment)
-            if (signFirstTX)
-                it.signWith(MEGA_CORP_KEY)
-            it.signWith(DUMMY_NOTARY_KEY)
-            it.toSignedTransaction(false)
+            when (signFirstTX) {
+                true -> {
+                    val ptx = megaCorpServices.signInitialTransaction(it)
+                    notaryServices.addSignature(ptx)
+                }
+                false ->  {
+                    notaryServices.signInitialTransaction(it)
+                }
+            }
         }
         val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), MINI_CORP).let {
-            it.signWith(MEGA_CORP_KEY)
-            it.signWith(DUMMY_NOTARY_KEY)
-            it.toSignedTransaction()
+            val ptx = megaCorpServices.signInitialTransaction(it)
+            notaryServices.addSignature(ptx)
         }
         a.database.transaction {
             a.services.recordTransactions(dummy1, dummy2)
