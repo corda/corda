@@ -201,6 +201,10 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
 }
 
 class IRSTests {
+    val megaCorpServices = MockServices(MEGA_CORP_KEY)
+    val miniCorpServices = MockServices(MINI_CORP_KEY)
+    val notaryServices = MockServices(DUMMY_NOTARY_KEY)
+
     @Test
     fun ok() {
         trade().verifies()
@@ -224,11 +228,10 @@ class IRSTests {
                     common = dummyIRS.common,
                     notary = DUMMY_NOTARY).apply {
                 addTimeWindow(TEST_TX_TIME, 30.seconds)
-                signWith(MEGA_CORP_KEY)
-                signWith(MINI_CORP_KEY)
-                signWith(DUMMY_NOTARY_KEY)
             }
-            gtx.toSignedTransaction()
+            val ptx1 = megaCorpServices.signInitialTransaction(gtx)
+            val ptx2 = miniCorpServices.addSignature(ptx1)
+            notaryServices.addSignature(ptx2)
         }
         return genTX
     }
@@ -308,13 +311,10 @@ class IRSTests {
                 val tx = TransactionType.General.Builder(DUMMY_NOTARY)
                 val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
-                with(tx) {
-                    addTimeWindow(TEST_TX_TIME, 30.seconds)
-                    signWith(MEGA_CORP_KEY)
-                    signWith(MINI_CORP_KEY)
-                    signWith(DUMMY_NOTARY_KEY)
-                }
-                tx.toSignedTransaction()
+                tx.addTimeWindow(TEST_TX_TIME, 30.seconds)
+                val ptx1 = megaCorpServices.signInitialTransaction(tx)
+                val ptx2 = miniCorpServices.addSignature(ptx1)
+                notaryServices.addSignature(ptx2)
             }
             fixTX.toLedgerTransaction(services).verify()
             services.recordTransactions(fixTX)

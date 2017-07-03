@@ -394,15 +394,16 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        database.transaction {
+        val megaCorpServices = MockServices(MEGA_CORP_KEY)
 
+        database.transaction {
             val freshKey = services.legalIdentityKey
 
             // Issue a txn to Send us some Money
-            val usefulTX = TransactionType.General.Builder(null).apply {
+            val usefulBuilder = TransactionType.General.Builder(null).apply {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
+            }
+            val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
 
             services.recordTransactions(listOf(usefulTX))
 
@@ -412,10 +413,10 @@ class NodeVaultServiceTest {
             assertEquals(3, vaultSvc.getTransactionNotes(usefulTX.id).count())
 
             // Issue more Money (GBP)
-            val anotherTX = TransactionType.General.Builder(null).apply {
+            val anotherBuilder = TransactionType.General.Builder(null).apply {
                 Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
+            }
+            val anotherTX = megaCorpServices.signInitialTransaction(anotherBuilder)
 
             services.recordTransactions(listOf(anotherTX))
 

@@ -117,7 +117,7 @@ open class RatesFixFlow(protected val tx: TransactionBuilder,
             val resp = sendAndReceive<DigitalSignature.LegallyIdentifiable>(oracle, SignRequest(partialMerkleTx))
             return resp.unwrap { sig ->
                 check(sig.signer == oracle)
-                tx.checkSignature(sig)
+                tx.toWireTransaction().checkSignature(sig)
                 sig
             }
         }

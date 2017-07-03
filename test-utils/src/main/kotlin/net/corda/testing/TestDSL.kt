@@ -139,7 +139,6 @@ data class TestTransactionDSLInterpreter private constructor(
         // Verify on a copy of the transaction builder, so if it's then further modified it doesn't error due to
         // the existing signature
         transactionBuilder.copy().apply {
-            signWith(DUMMY_NOTARY_KEY)
             toWireTransaction().toLedgerTransaction(services).verify()
         }
         return EnforceVerifyOrFail.Token
