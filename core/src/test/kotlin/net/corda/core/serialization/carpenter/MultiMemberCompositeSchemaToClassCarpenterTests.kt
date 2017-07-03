@@ -1,9 +1,10 @@
-package net.corda.carpenter
+package net.corda.core.serialization.carpenter
 
-import net.corda.carpenter.test.AmqpCarpenterBase
+import net.corda.core.serialization.carpenter.test.AmqpCarpenterBase
+import net.corda.core.serialization.carpenter.CarpenterSchemas
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
-import net.corda.core.serialization.carpenter.CarpenterSchemas
+
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -20,17 +21,17 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         var a = A(testA, testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        assert(obj.first is A)
-        val amqpObj = obj.first as A
+        assert(obj.obj is A)
+        val amqpObj = obj.obj as A
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)
-        assertEquals(1, obj.second.schema.types.size)
-        assert(obj.second.schema.types[0] is CompositeType)
+        assertEquals(1, obj.envelope.schema.types.size)
+        assert(obj.envelope.schema.types[0] is CompositeType)
 
-        var amqpSchema = obj.second.schema.types[0] as CompositeType
+        var amqpSchema = obj.envelope.schema.types[0] as CompositeType
 
         assertEquals(2, amqpSchema.fields.size)
         assertEquals("a", amqpSchema.fields[0].name)
@@ -64,17 +65,17 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         val a = A(testA, testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
-        assert(obj.first is A)
-        val amqpObj = obj.first as A
+        assert(obj.obj is A)
+        val amqpObj = obj.obj as A
 
         assertEquals(testA, amqpObj.a)
         assertEquals(testB, amqpObj.b)
-        assertEquals(1, obj.second.schema.types.size)
-        assert(obj.second.schema.types[0] is CompositeType)
+        assertEquals(1, obj.envelope.schema.types.size)
+        assert(obj.envelope.schema.types[0] is CompositeType)
 
-        val amqpSchema = obj.second.schema.types[0] as CompositeType
+        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
 
         assertEquals(2, amqpSchema.fields.size)
         assertEquals("a", amqpSchema.fields[0].name)

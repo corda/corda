@@ -1,11 +1,11 @@
-package net.corda.carpenter
+package net.corda.core.serialization.carpenter
 
+import net.corda.core.serialization.carpenter.test.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
 
 import org.junit.Test
 import kotlin.test.assertEquals
-import net.corda.carpenter.test.*
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -32,22 +32,22 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
 
-        val amqpObj = obj.first as B
+        val amqpObj = obj.obj as B
 
         assertEquals(testB, amqpObj.b)
         assertEquals(testA, amqpObj.a.a)
-        assertEquals(2, obj.second.schema.types.size)
-        assert(obj.second.schema.types[0] is CompositeType)
-        assert(obj.second.schema.types[1] is CompositeType)
+        assertEquals(2, obj.envelope.schema.types.size)
+        assert(obj.envelope.schema.types[0] is CompositeType)
+        assert(obj.envelope.schema.types[1] is CompositeType)
 
         var amqpSchemaA: CompositeType? = null
         var amqpSchemaB: CompositeType? = null
 
-        for (type in obj.second.schema.types) {
+        for (type in obj.envelope.schema.types) {
             when (type.name.split ("$").last()) {
                 "A" -> amqpSchemaA = type as CompositeType
                 "B" -> amqpSchemaB = type as CompositeType
@@ -71,7 +71,7 @@ class CompositeMembers : AmqpCarpenterBase() {
         assertEquals("b", amqpSchemaB.fields[1].name)
         assertEquals("int", amqpSchemaB.fields[1].type)
 
-        val metaSchema = obj.second.schema.carpenterSchema()
+        val metaSchema = obj.envelope.schema.carpenterSchema()
 
         /* if we know all the classes there is nothing to really achieve here */
         assert(metaSchema.carpenterSchemas.isEmpty())
@@ -95,10 +95,10 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
-        val amqpSchema = obj.second.schema.curruptName(listOf (classTestName ("A")))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
+        val amqpSchema = obj.envelope.schema.curruptName(listOf (classTestName ("A")))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
 
         amqpSchema.carpenterSchema()
     }
@@ -116,9 +116,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.curruptName(listOf(classTestName("B")))
 
@@ -146,9 +146,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
 
         val amqpSchema = obj.envelope.schema.curruptName(listOf(classTestName("A"), classTestName("B")))
 
@@ -207,9 +207,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val c = C(B(testA, testB), testC)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(c))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.first is C)
+        assert(obj.obj is C)
 
         val amqpSchema = obj.envelope.schema.curruptName(listOf(classTestName("A"), classTestName("B")))
 
@@ -233,9 +233,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val c = C(B(testA, testB), testC)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(c))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.first is C)
+        assert(obj.obj is C)
 
         val amqpSchema = obj.envelope.schema.curruptName(listOf(classTestName("A"), classTestName("B")))
 
@@ -259,9 +259,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val c = C(B(testA, testB), testC)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(c))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(c))
 
-        assert(obj.first is C)
+        assert(obj.obj is C)
 
         val amqpSchema = obj.envelope.schema.curruptName(listOf(classTestName("A"), classTestName("B")))
     }
@@ -284,9 +284,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
     }
 
     @Test
@@ -302,9 +302,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
     }
 
     @Test
@@ -320,9 +320,9 @@ class CompositeMembers : AmqpCarpenterBase() {
 
         val b = B(A(testA), testB)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(b))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(b))
 
-        assert(obj.first is B)
+        assert(obj.obj is B)
     }
 }
 

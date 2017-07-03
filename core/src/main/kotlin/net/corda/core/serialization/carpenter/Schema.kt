@@ -3,6 +3,8 @@ package net.corda.core.serialization.carpenter
 import org.objectweb.asm.Type
 import java.util.LinkedHashMap
 
+/**********************************************************************************************************************/
+
 /**
  * A Schema represents a desired class.
  */
@@ -29,6 +31,8 @@ abstract class Schema(
         get() = name.replace(".", "/")
 }
 
+/**********************************************************************************************************************/
+
 class ClassSchema(
     name: String,
     fields: Map<String, Class<out Any?>>,
@@ -36,12 +40,16 @@ class ClassSchema(
     interfaces: List<Class<*>> = emptyList()
 ) : Schema (name, fields, superclass, interfaces)
 
+/**********************************************************************************************************************/
+
 class InterfaceSchema(
     name: String,
     fields: Map<String, Class<out Any?>>,
     superclass: Schema? = null,
     interfaces: List<Class<*>> = emptyList()
 ) : Schema (name, fields, superclass, interfaces)
+
+/**********************************************************************************************************************/
 
 object CarpenterSchemaFactory {
     fun newInstance (
@@ -54,3 +62,5 @@ object CarpenterSchemaFactory {
             if (isInterface) InterfaceSchema (name, fields, superclass, interfaces)
             else ClassSchema (name, fields, superclass, interfaces)
 }
+
+/**********************************************************************************************************************/

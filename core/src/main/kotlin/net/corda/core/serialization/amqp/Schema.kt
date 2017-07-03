@@ -113,7 +113,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     fun carpenterSchema(loaders : List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
             : CarpenterSchemas
     {
-        var rtn = CarpenterSchemas.newInstance()
+        val rtn = CarpenterSchemas.newInstance()
 
         types.filterIsInstance<CompositeType>().forEach {
             it.carpenterSchema(classLoaders = loaders, carpenterSchemas = rtn)
@@ -250,7 +250,7 @@ sealed class TypeNotation : DescribedType {
         }
     }
 
-    abstract var name: String
+    abstract val name: String
     abstract val label: String?
     abstract val provides: List<String>
     abstract val descriptor: Descriptor
@@ -328,7 +328,7 @@ data class CompositeType(override var name: String, override val label: String?,
         var isCreatable = true
 
         provides.forEach {
-            if (name.equals(it)) {
+            if (name == it) {
                 isInterface = true
                 return@forEach
             }
@@ -366,7 +366,7 @@ data class CompositeType(override var name: String, override val label: String?,
     }
 }
 
-data class RestrictedType(override var name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
+data class RestrictedType(override val name: String, override val label: String?, override val provides: List<String>, val source: String, override val descriptor: Descriptor, val choices: List<Choice>) : TypeNotation() {
     companion object : DescribedTypeConstructor<RestrictedType> {
         val DESCRIPTOR = UnsignedLong(6L or DESCRIPTOR_TOP_32BITS)
 
@@ -409,7 +409,7 @@ data class RestrictedType(override var name: String, override val label: String?
     }
 }
 
-data class Choice(var name: String, val value: String) : DescribedType {
+data class Choice(val name: String, val value: String) : DescribedType {
     companion object : DescribedTypeConstructor<Choice> {
         val DESCRIPTOR = UnsignedLong(7L or DESCRIPTOR_TOP_32BITS)
 

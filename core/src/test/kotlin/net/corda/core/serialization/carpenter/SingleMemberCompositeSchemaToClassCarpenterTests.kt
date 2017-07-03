@@ -1,9 +1,10 @@
-package net.corda.carpenter
+package net.corda.core.serialization.carpenter
 
-import net.corda.carpenter.test.AmqpCarpenterBase
+import net.corda.core.serialization.carpenter.test.AmqpCarpenterBase
+import net.corda.core.serialization.carpenter.CarpenterSchemas
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
-import net.corda.core.serialization.carpenter.CarpenterSchemas
+
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -84,7 +85,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         data class A(val a : Char)
         val a = A(test)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise(a))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
         assert (obj.obj is A)
         val amqpObj  = obj.obj as A
@@ -121,7 +122,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         @CordaSerializable
         data class A(val a: Long)
 
-        var a = A(test)
+        val a = A(test)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -132,7 +133,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals(1, obj.envelope.schema.types.size)
         assert(obj.envelope.schema.types[0] is CompositeType)
 
-        var amqpSchema = obj.envelope.schema.types[0] as CompositeType
+        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
 
         assertEquals(1, amqpSchema.fields.size)
         assertEquals("a", amqpSchema.fields[0].name)
@@ -155,7 +156,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         @CordaSerializable
         data class A(val a: Short)
 
-        var a = A(test)
+        val a = A(test)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -166,7 +167,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assertEquals(1, obj.envelope.schema.types.size)
         assert(obj.envelope.schema.types[0] is CompositeType)
 
-        var amqpSchema = obj.envelope.schema.types[0] as CompositeType
+        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
 
         assertEquals(1, amqpSchema.fields.size)
         assertEquals("a", amqpSchema.fields[0].name)
@@ -192,7 +193,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         var a = A (test)
 
-        val obj = DeserializationInput(factory).deserializeRtnEnvelope(serialise (a))
+        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise (a))
 
         assert (obj.obj is A)
         val amqpObj  = obj.obj as A

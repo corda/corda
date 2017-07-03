@@ -1,4 +1,4 @@
-package net.corda.carpenter.test
+package net.corda.core.serialization.carpenter.test
 
 import net.corda.core.serialization.amqp.CompositeType
 import net.corda.core.serialization.amqp.Field
