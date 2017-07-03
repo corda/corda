@@ -1,6 +1,5 @@
 package net.corda.notarydemo
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.client.rpc.CordaRPCClient
@@ -11,13 +10,14 @@ import net.corda.core.map
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.BOB
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
-    val address = HostAndPort.fromParts("localhost", 10003)
+    val address = Authority("localhost", 10003)
     println("Connecting to the recipient node ($address)")
     CordaRPCClient(address).start(notaryDemoUser.username, notaryDemoUser.password).use {
         NotaryDemoClientApi(it.proxy).notarise(10)

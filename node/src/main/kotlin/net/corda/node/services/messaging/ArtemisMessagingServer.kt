@@ -1,6 +1,5 @@
 package net.corda.node.services.messaging
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import io.netty.handler.ssl.SslHandler
@@ -11,6 +10,7 @@ import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.NetworkMapCache.MapChange
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
@@ -376,7 +376,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     }
 
     private fun createTcpTransport(connectionDirection: ConnectionDirection, host: String, port: Int, enableSSL: Boolean = true) =
-            ArtemisTcpTransport.tcpTransport(connectionDirection, HostAndPort.fromParts(host, port), config, enableSSL = enableSSL)
+            ArtemisTcpTransport.tcpTransport(connectionDirection, Authority(host, port), config, enableSSL = enableSSL)
 
     /**
      * All nodes are expected to have a public facing address called [ArtemisMessagingComponent.P2P_QUEUE] for receiving
@@ -384,7 +384,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
      * as defined by ArtemisAddress.queueName. A bridge is then created to forward messages from this queue to the node's
      * P2P address.
      */
-    private fun deployBridge(queueName: String, target: HostAndPort, legalName: X500Name) {
+    private fun deployBridge(queueName: String, target: Authority, legalName: X500Name) {
         val connectionDirection = ConnectionDirection.Outbound(
                 connectorFactoryClassName = VerifyingNettyConnectorFactory::class.java.name,
                 expectedCommonName = legalName
@@ -420,7 +420,7 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
 
     private val ArtemisPeerAddress.bridgeName: String get() = getBridgeName(queueName, hostAndPort)
 
-    private fun getBridgeName(queueName: String, hostAndPort: HostAndPort): String = "$queueName -> $hostAndPort"
+    private fun getBridgeName(queueName: String, hostAndPort: Authority): String = "$queueName -> $hostAndPort"
 
     // This is called on one of Artemis' background threads
     internal fun hostVerificationFail(expectedLegalName: X500Name, errorMsg: String?) {

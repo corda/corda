@@ -3,7 +3,6 @@
 
 package net.corda.testing
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
@@ -92,7 +91,7 @@ val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTAR
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
-val MOCK_HOST_AND_PORT = HostAndPort.fromParts("mockHost", 30000)
+val MOCK_HOST_AND_PORT = Authority("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -103,7 +102,7 @@ private val freePortCounter = AtomicInteger(30000)
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", freePort())
+fun freeLocalHostAndPort() = Authority("localhost", freePort())
 
 /**
  * Returns a free port.
@@ -119,9 +118,9 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * Unlikely, but in the time between running this function and handing the ports
  * to the Node, some other process else could allocate the returned ports.
  */
-fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
+fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<Authority> {
     val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { HostAndPort.fromParts(hostName, it) }
+    return (freePort .. freePort + numberToAlloc - 1).map { Authority(hostName, it) }
 }
 
 /**

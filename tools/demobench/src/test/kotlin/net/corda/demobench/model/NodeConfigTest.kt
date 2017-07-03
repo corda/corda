@@ -3,10 +3,10 @@ package net.corda.demobench.model
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
@@ -270,5 +270,5 @@ class NodeConfigTest {
             users = users
     )
 
-    private fun localPort(port: Int) = HostAndPort.fromParts("localhost", port)
+    private fun localPort(port: Int) = Authority("localhost", port)
 }

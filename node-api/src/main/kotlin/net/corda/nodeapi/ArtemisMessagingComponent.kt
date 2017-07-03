@@ -1,7 +1,5 @@
 package net.corda.nodeapi
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
@@ -11,6 +9,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.Authority
 import net.corda.nodeapi.config.SSLConfiguration
 import java.security.KeyStore
 import java.security.PublicKey
@@ -43,11 +42,11 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
-        val hostAndPort: HostAndPort
+        val hostAndPort: Authority
     }
 
     @CordaSerializable
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
+    data class NetworkMapAddress(override val hostAndPort: Authority) : ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 
@@ -63,13 +62,13 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      * @param hostAndPort The address of the node.
      */
     @CordaSerializable
-    data class NodeAddress(override val queueName: String, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
+    data class NodeAddress(override val queueName: String, override val hostAndPort: Authority) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(peerIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asPeer(peerIdentity: PublicKey, hostAndPort: Authority): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
 
-            fun asService(serviceIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asService(serviceIdentity: PublicKey, hostAndPort: Authority): NodeAddress {
                 return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }

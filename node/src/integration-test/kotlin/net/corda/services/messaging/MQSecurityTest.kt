@@ -1,7 +1,6 @@
 package net.corda.services.messaging
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String
@@ -13,6 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
 import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
@@ -144,13 +144,13 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: HostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: Authority, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
     }
 
-    fun loginToRPC(target: HostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
+    fun loginToRPC(target: Authority, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
         return CordaRPCClient(target, sslConfiguration).start(rpcUser.username, rpcUser.password).proxy
     }
 

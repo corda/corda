@@ -1,10 +1,10 @@
 package net.corda.smoketesting
 
-import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.createDirectories
 import net.corda.core.div
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.loggerFor
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -60,7 +60,7 @@ class NodeProcess(
             confFile.writeText(config.toText())
 
             val process = startNode(nodeDir)
-            val client = CordaRPCClient(HostAndPort.fromParts("localhost", config.rpcPort))
+            val client = CordaRPCClient(Authority("localhost", config.rpcPort))
             val user = config.users[0]
 
             val setupExecutor = Executors.newSingleThreadScheduledExecutor()

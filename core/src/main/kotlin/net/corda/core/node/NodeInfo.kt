@@ -1,11 +1,11 @@
 package net.corda.core.node
 
-import com.google.common.net.HostAndPort
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Authority
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -19,7 +19,7 @@ data class ServiceEntry(val info: ServiceInfo, val identity: PartyAndCertificate
  */
 // TODO We currently don't support multi-IP/multi-identity nodes, we only left slots in the data structures.
 @CordaSerializable
-data class NodeInfo(val addresses: List<HostAndPort>,
+data class NodeInfo(val addresses: List<Authority>,
                     val legalIdentityAndCert: PartyAndCertificate, //TODO This field will be removed in future PR which gets rid of services.
                     val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
                     val platformVersion: Int,

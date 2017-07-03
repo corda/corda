@@ -1,7 +1,6 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -9,6 +8,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -218,7 +218,7 @@ class ArtemisMessagingTests {
         return messagingClient
     }
 
-    private fun createMessagingClient(server: HostAndPort = HostAndPort.fromParts("localhost", serverPort)): NodeMessagingClient {
+    private fun createMessagingClient(server: Authority = Authority("localhost", serverPort)): NodeMessagingClient {
         return database.transaction {
             NodeMessagingClient(
                     config,

@@ -2,7 +2,6 @@ package net.corda.testing.node
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.nhaarman.mockito_kotlin.whenever
@@ -18,6 +17,7 @@ import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.ServiceEntry
 import net.corda.core.node.services.*
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
@@ -226,7 +226,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
-        override fun myAddresses(): List<HostAndPort> = listOf(HostAndPort.fromHost("mockHost"))
+        override fun myAddresses(): List<Authority> = listOf(Authority("mockHost", -1))
 
         override fun start(): MockNode {
             super.start()

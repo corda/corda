@@ -1,9 +1,9 @@
 package net.corda.demobench.rpc
 
-import com.google.common.net.HostAndPort
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.utilities.Authority
 import net.corda.core.utilities.loggerFor
 import net.corda.demobench.model.NodeConfig
 import java.util.*
@@ -16,7 +16,7 @@ class NodeRPC(config: NodeConfig, start: (NodeConfig, CordaRPCOps) -> Unit, invo
         val oneSecond = SECONDS.toMillis(1)
     }
 
-    private val rpcClient = CordaRPCClient(HostAndPort.fromParts("localhost", config.rpcPort))
+    private val rpcClient = CordaRPCClient(Authority("localhost", config.rpcPort))
     private var rpcConnection: CordaRPCConnection? = null
     private val timer = Timer()
 

@@ -5,12 +5,12 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.*
 import net.corda.core.messaging.RPCOps
+import net.corda.core.utilities.Authority
 import net.corda.testing.driver.poll
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
@@ -77,7 +77,7 @@ class RPCStabilityTests {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                ErrorOr.catch { startRpcClient<RPCOps>(HostAndPort.fromString("localhost:9999")).get() }
+                ErrorOr.catch { startRpcClient<RPCOps>(Authority("localhost", 9999)).get() }
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
                 ErrorOr.catch { startRpcClient<RPCOps>(
                         server.get().broker.hostAndPort!!,

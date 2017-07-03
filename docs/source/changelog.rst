@@ -12,7 +12,7 @@ UNRELEASED
    * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
      location of the node server.
    * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
-     ``SingleMessageRecipient``, but of ``HostAndPort``.
+     ``SingleMessageRecipient``, but of ``Authority``.
 
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
   ``ServiceHub``.

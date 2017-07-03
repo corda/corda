@@ -1,6 +1,6 @@
 package net.corda.irs
 
-import com.google.common.net.HostAndPort
+import net.corda.core.utilities.Authority
 import net.corda.irs.utilities.uploadFile
 import net.corda.testing.http.HttpApi
 import org.apache.commons.io.IOUtils
@@ -9,7 +9,7 @@ import java.net.URL
 /**
  * Interface for communicating with nodes running the IRS demo.
  */
-class IRSDemoClientApi(private val hostAndPort: HostAndPort) {
+class IRSDemoClientApi(private val hostAndPort: Authority) {
     private val api = HttpApi.fromHostAndPort(hostAndPort, apiRoot)
 
     fun runTrade(tradeId: String): Boolean {
