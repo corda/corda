@@ -78,7 +78,7 @@ class CompositeKey private constructor (val threshold: Int,
         for ((_, weight) in children) {
             require (weight > 0) { "Non-positive weight: $weight detected." }
             sum += weight // Minimum weight is 1.
-            require(sum < 1) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
+            require(sum > 0) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
         }
         return sum
     }
