@@ -1,3 +1,5 @@
+@file:JvmName("QueryCriteriaUtils")
+
 package net.corda.core.node.services.vault
 
 import net.corda.core.schemas.PersistentState
