@@ -43,9 +43,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         // state status
         stateTypes = criteria.status
-        if (criteria.status == Vault.StateStatus.ALL)
-            predicateSet.add(vaultStates.get<Vault.StateStatus>("stateStatus").`in`(setOf(Vault.StateStatus.UNCONSUMED, Vault.StateStatus.CONSUMED)))
-        else
+        if (criteria.status != Vault.StateStatus.ALL)
             predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
         // contract State Types
@@ -169,6 +167,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val vaultFungibleStates = criteriaQuery.from(VaultSchemaV1.VaultFungibleStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultFungibleStates::class.java, vaultFungibleStates)
 
+        // state status
+        stateTypes = criteria.status
+        if (criteria.status != Vault.StateStatus.ALL)
+            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
+
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultFungibleStates.get<PersistentStateRef>("stateRef"))
         predicateSet.add(joinPredicate)
 
@@ -217,6 +220,12 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultLinearStates::class.java, vaultLinearStates)
+
+        // state status
+        stateTypes = criteria.status
+        if (criteria.status != Vault.StateStatus.ALL)
+            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
+
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
 
@@ -255,6 +264,12 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         try {
             val entityRoot = criteriaQuery.from(entityClass)
             rootEntities.putIfAbsent(entityClass, entityRoot)
+
+            // state status
+            stateTypes = criteria.status
+            if (criteria.status != Vault.StateStatus.ALL)
+                predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
+
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
 

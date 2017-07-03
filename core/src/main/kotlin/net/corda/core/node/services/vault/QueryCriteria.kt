@@ -48,7 +48,8 @@ sealed class QueryCriteria {
     data class LinearStateQueryCriteria @JvmOverloads constructor(
             val participants: List<AbstractParty>? = null,
             val linearId: List<UniqueIdentifier>? = null,
-            val dealRef: List<String>? = null) : QueryCriteria() {
+            val dealRef: List<String>? = null,
+            val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : QueryCriteria() {
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -67,7 +68,8 @@ sealed class QueryCriteria {
            val owner: List<AbstractParty>? = null,
            val quantity: ColumnPredicate<Long>? = null,
            val issuerPartyName: List<AbstractParty>? = null,
-           val issuerRef: List<OpaqueBytes>? = null) : QueryCriteria() {
+           val issuerRef: List<OpaqueBytes>? = null,
+           val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : QueryCriteria() {
 
        override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
            return parser.parseCriteria(this)
@@ -84,7 +86,9 @@ sealed class QueryCriteria {
      *
      * Refer to [CommercialPaper.State] for a concrete example.
      */
-    data class VaultCustomQueryCriteria<L : PersistentState>(val expression: CriteriaExpression<L, Boolean>) : QueryCriteria() {
+    data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor
+                                    (val expression: CriteriaExpression<L, Boolean>,
+                                     val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) : QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
