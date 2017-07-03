@@ -4,7 +4,7 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-   hello-world-index
+   iou-tut-index
    tutorial-contract
    tutorial-contract-clauses
    tutorial-test-dsl
