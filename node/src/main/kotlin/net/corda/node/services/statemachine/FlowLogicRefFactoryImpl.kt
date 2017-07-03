@@ -26,7 +26,6 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * whitelists.
  *
  * TODO: Align with API related logic for passing in FlowLogic references (FlowRef)
- * TODO: Actual support for AppContext / AttachmentsClassLoader
  * TODO: at some point check whether there is permission, beyond the annotations, to start flows. For example, as a security
  * measure we might want the ability for the node admin to blacklist a flow such that it moves immediately to the "Flow Hospital"
  * in response to a potential malicious use or buggy update to an app etc.
@@ -73,9 +72,7 @@ object FlowLogicRefFactoryImpl : SingletonSerializeAsToken(), FlowLogicRefFactor
      */
     @VisibleForTesting
     internal fun createKotlin(type: Class<out FlowLogic<*>>, args: Map<String, Any?>): FlowLogicRef {
-        // TODO: we need to capture something about the class loader or "application context" into the ref,
-        //       perhaps as some sort of ThreadLocal style object.  For now, just create an empty one.
-        val appContext = AppContext(emptyList())
+        val appContext = AppContext(emptyList(), type.classLoader)
         // Check we can find a constructor and populate the args to it, but don't call it
         createConstructor(type, args)
         return FlowLogicRefImpl(type.name, appContext, args)
