@@ -164,7 +164,7 @@ class NodeInterestRatesTest {
             val wtx = tx.toWireTransaction()
             val ftx = wtx.buildFilteredTransaction(Predicate { x -> fixCmdFilter(x) })
             val signature = oracle.sign(ftx)
-            tx.checkAndAddSignature(signature)
+            wtx.checkSignature(signature)
         }
     }
 
@@ -228,8 +228,8 @@ class NodeInterestRatesTest {
         val future = n1.services.startFlow(flow).resultFuture
         mockNet.runNetwork()
         future.getOrThrow()
-        // We should now have a valid signature over our tx from the oracle.
-        val fix = tx.toSignedTransaction(true).tx.commands.map { it.value as Fix }.first()
+        // We should now have a valid fix of our tx from the oracle.
+        val fix = tx.toWireTransaction().commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
         assertEquals("0.678".bd, fix.value)
     }

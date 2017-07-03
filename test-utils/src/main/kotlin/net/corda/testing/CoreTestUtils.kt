@@ -53,6 +53,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *   - The Int.DOLLARS syntax doesn't work from Java.  Use the DOLLARS(int) function instead.
  */
 
+// TODO: Refactor these dummies to work with the new identities framework.
+
 // A few dummy values for testing.
 val MEGA_CORP_KEY: KeyPair by lazy { generateKeyPair() }
 val MEGA_CORP_PUBKEY: PublicKey get() = MEGA_CORP_KEY.public
