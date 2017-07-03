@@ -84,12 +84,13 @@ class SellerFlow(val otherParty: Party,
             // Requesting a time-window to be set, all CP must have a validation window.
             tx.addTimeWindow(Instant.now(), 30.seconds)
 
+            val ptx = serviceHub.signInitialTransaction(tx)
+
             // Get the notary to sign the time-window.
-            val notarySigs = subFlow(NotaryFlow.Client(serviceHub.signInitialTransaction(tx)))
-            notarySigs.forEach { tx.addSignatureUnchecked(it) }
+            val notarySigs = subFlow(NotaryFlow.Client(ptx))
 
             // Commit it to local storage.
-            val stx = serviceHub.signInitialTransaction(tx)
+            val stx = ptx.withAdditionalSignatures(notarySigs)
             serviceHub.recordTransactions(listOf(stx))
 
             stx
