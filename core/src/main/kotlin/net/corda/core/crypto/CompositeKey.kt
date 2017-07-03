@@ -28,7 +28,7 @@ class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
-        checkConstraints() // TODO: replace with the more extended, but slower, checkValidity() test.
+        checkConstraints() // TODO: replace with the more extensive, but slower, checkValidity() test.
     }
 
     // Check for key duplication, threshold and weight constraints and test for aggregated weight integer overflow.
@@ -45,7 +45,8 @@ class CompositeKey private constructor (val threshold: Int,
                 "child nodes: $totalWeight"}
     }
 
-    // Graph cycle detection in the composite key structure to avoid infinite loops when CompositeKey recursion is used.
+    // Graph cycle detection in the composite key structure to avoid infinite loops on CompositeKey graph traversal and
+    // when recursion is used (i.e. in isFulfilledBy()).
     private fun cycleDetection(root: CompositeKey) {
         for ((node) in children) {
             if (node is CompositeKey) {
@@ -56,9 +57,10 @@ class CompositeKey private constructor (val threshold: Int,
     }
 
     /**
-     * This method will detect graph cycles on the full composite key structure (that could cause infinite loops)
-     * and key duplicates in the each layer. It also checks if the threshold and weight constraint
-     * requirements are met and it finally tests for aggregated-weight integer overflow.
+     * This method will detect graph cycles in the full composite key structure to protect against infinite loops when
+     * traversing the graph and key duplicates in the each layer. It also checks if the threshold and weight constraint
+     * requirements are met, while it tests for aggregated-weight integer overflow.
+     * TODO: Always call this method when deserialising [CompositeKey]s.
      */
     fun checkValidity() {
         cycleDetection(this)
@@ -134,21 +136,27 @@ class CompositeKey private constructor (val threshold: Int,
     }
     override fun getFormat() = ASN1Encoding.DER
 
+    // Extracted method from isFulfilledBy.
+    private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
+        if (keysToCheck.any { it is CompositeKey } ) return false
+        val combinedWeight = children.map { (node, weight) ->
+            if (node is CompositeKey) {
+                if (node.checkFulfilledBy(keysToCheck)) weight else 0
+            } else {
+                if (keysToCheck.contains(node)) weight else 0
+            }
+        }.sum()
+        return combinedWeight >= threshold
+    }
+
     /**
      * Function checks if the public keys corresponding to the signatures are matched against the leaves of the composite
      * key tree in question, and the total combined weight of all children is calculated for every intermediary node.
      * If all thresholds are satisfied, the composite key requirement is considered to be met.
      */
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
-        if (keysToCheck.any { it is CompositeKey } ) return false
-        val combinedWeight = children.map { (node, weight) ->
-            if (node is CompositeKey) {
-                if (node.isFulfilledBy(keysToCheck)) weight else 0
-            } else {
-                if (keysToCheck.contains(node)) weight else 0
-            }
-        }.sum()
-        return combinedWeight >= threshold
+        checkValidity() // TODO: remove when checkValidity() will be eventually invoked during deserialization.
+        return checkFulfilledBy(keysToCheck)
     }
 
     /**
@@ -172,7 +180,7 @@ class CompositeKey private constructor (val threshold: Int,
         return result
     }
 
-    override fun toString() = "(${children.joinToString()})"
+    override fun toString() = "(${children.joinToString()})" // TODO: use PublicKey.toStringShort().
 
     /** A helper class for building a [CompositeKey]. */
     class Builder {
