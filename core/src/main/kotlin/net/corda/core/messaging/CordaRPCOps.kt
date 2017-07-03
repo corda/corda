@@ -80,6 +80,8 @@ interface CordaRPCOps : RPCOps {
      *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
      *  3. the [PageSpecification] used in the query
      *  4. a total number of results available (for subsequent paging if necessary)
+     *  5. status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  6. other results (aggregate functions with/without using value groups)
      *
      * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
      *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].

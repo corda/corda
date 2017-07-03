@@ -567,6 +567,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
             services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
 
+            // DOCSTART VaultQueryExample21
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
@@ -587,6 +588,8 @@ class VaultQueryTests {
                                                              .and(maxCriteria)
                                                              .and(minCriteria)
                                                              .and(avgCriteria))
+            // DOCEND VaultQueryExample21
+
             assertThat(results.otherResults).hasSize(5)
             assertThat(results.otherResults[0]).isEqualTo(150000L)
             assertThat(results.otherResults[1]).isEqualTo(15L)
@@ -606,6 +609,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
             services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
 
+            // DOCSTART VaultQueryExample22
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
@@ -622,6 +626,8 @@ class VaultQueryTests {
                                                              .and(maxCriteria)
                                                              .and(minCriteria)
                                                              .and(avgCriteria))
+            // DOCEND VaultQueryExample22
+
             assertThat(results.otherResults).hasSize(24)
             /** CHF */
             assertThat(results.otherResults[0]).isEqualTo(50000L)
@@ -662,12 +668,15 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
             services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
 
+            // DOCSTART VaultQueryExample23
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::issuerParty,
                                                                                                       CashSchemaV1.PersistentCashState::currency),
                                                                               orderBy = Sort.Direction.DESC)
             }
 
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum))
+            // DOCEND VaultQueryExample23
+
             assertThat(results.otherResults).hasSize(12)
 
             assertThat(results.otherResults[0]).isEqualTo(40000L)
@@ -991,7 +1000,7 @@ class VaultQueryTests {
             // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria and vaultCriteria)
             // DOCEND VaultQueryExample9
             assertThat(results.states).hasSize(4)
         }
