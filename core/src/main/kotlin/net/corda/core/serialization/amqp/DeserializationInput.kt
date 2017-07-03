@@ -1,6 +1,6 @@
 package net.corda.core.serialization.amqp
 
-import com.google.common.base.Throwables
+import net.corda.core.getStackTraceAsString
 import net.corda.core.serialization.SerializedBytes
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
@@ -92,7 +92,7 @@ class DeserializationInput(internal val serializerFactory: SerializerFactory = S
         } catch(nse: NotSerializableException) {
             throw nse
         } catch(t: Throwable) {
-            throw NotSerializableException("Unexpected throwable: ${t.message} ${Throwables.getStackTraceAsString(t)}")
+            throw NotSerializableException("Unexpected throwable: ${t.message} ${t.getStackTraceAsString()}")
         } finally {
             objectHistory.clear()
         }

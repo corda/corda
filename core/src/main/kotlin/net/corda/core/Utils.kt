@@ -3,8 +3,6 @@
 
 package net.corda.core
 
-import com.google.common.base.Throwables
-import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -284,7 +282,7 @@ fun extractZipFile(inputStream: InputStream, toDirectory: Path) {
                 continue
             }
             outPath.write { out ->
-                ByteStreams.copy(it, out)
+                it.copyTo(out)
             }
             it.closeEntry()
         }
@@ -325,7 +323,8 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
 
 // TODO: Generic csv printing utility for clases.
 
-val Throwable.rootCause: Throwable get() = Throwables.getRootCause(this)
+val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
+fun Throwable.getStackTraceAsString() = StringWriter().also { printStackTrace(PrintWriter(it)) }.toString()
 
 /**
  * Returns an Observable that buffers events until subscribed.
@@ -407,3 +406,13 @@ interface DeclaredField<T> {
 
     var value: T
 }
+
+/** The annotated object would have a more restricted visibility were it not needed in tests. */
+@Target(AnnotationTarget.CLASS,
+        AnnotationTarget.PROPERTY,
+        AnnotationTarget.CONSTRUCTOR,
+        AnnotationTarget.FUNCTION,
+        AnnotationTarget.TYPEALIAS)
+@Retention(AnnotationRetention.SOURCE)
+@MustBeDocumented
+annotation class VisibleForTesting

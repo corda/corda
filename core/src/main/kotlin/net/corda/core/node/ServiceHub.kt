@@ -1,6 +1,5 @@
 package net.corda.core.node
 
-import com.google.common.collect.Lists
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.node.services.*
@@ -76,7 +75,7 @@ interface ServiceHub : ServicesForResolution {
      * further processing. This is expected to be run within a database transaction.
      */
     fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
-        recordTransactions(Lists.asList(first, remaining))
+        recordTransactions(listOf(first, *remaining))
     }
 
     /**

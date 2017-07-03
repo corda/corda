@@ -1,6 +1,5 @@
 package net.corda.core.utilities
 
-import com.google.common.collect.Iterators
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Stream
@@ -50,7 +49,7 @@ class NonEmptySet<T> private constructor(private val elements: Set<T>) : Set<T> 
     /** Returns the first element of the set. */
     fun head(): T = elements.iterator().next()
     override fun isEmpty(): Boolean = false
-    override fun iterator(): Iterator<T> = Iterators.unmodifiableIterator(elements.iterator())
+    override fun iterator() = object : Iterator<T> by elements.iterator() {}
 
     // Following methods are not delegated by Kotlin's Class delegation
     override fun forEach(action: Consumer<in T>) = elements.forEach(action)

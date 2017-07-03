@@ -6,7 +6,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoCallback
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.esotericsoftware.kryo.util.MapReferenceResolver
-import com.google.common.annotations.VisibleForTesting
+import net.corda.core.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.composite.CompositeKey

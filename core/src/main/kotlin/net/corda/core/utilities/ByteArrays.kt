@@ -2,10 +2,10 @@
 
 package net.corda.core.utilities
 
-import com.google.common.io.BaseEncoding
 import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.util.*
+import javax.xml.bind.DatatypeConverter
 
 /**
  * A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect.
@@ -39,5 +39,5 @@ open class OpaqueBytes(val bytes: ByteArray) {
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
-fun ByteArray.toHexString(): String = BaseEncoding.base16().encode(this)
-fun String.parseAsHex(): ByteArray = BaseEncoding.base16().decode(this)
+fun ByteArray.toHexString(): String = DatatypeConverter.printHexBinary(this)
+fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
