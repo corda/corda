@@ -46,8 +46,6 @@ import java.util.stream.StreamSupport;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
 import static net.corda.core.contracts.ContractsDSL.USD;
-import static net.corda.core.node.services.vault.QueryCriteriaKt.and;
-import static net.corda.core.node.services.vault.QueryCriteriaKt.or;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.getMAX_PAGE_SIZE;
 import static net.corda.node.utilities.DatabaseSupportKt.configureDatabase;
 import static net.corda.node.utilities.DatabaseSupportKt.transaction;
@@ -188,8 +186,8 @@ public class VaultQueryJavaTests {
             QueryCriteria linearCriteriaAll = new LinearStateQueryCriteria(null, linearIds);
             QueryCriteria dealCriteriaAll = new LinearStateQueryCriteria(null, null, dealIds);
 
-            QueryCriteria compositeCriteria1 = or(dealCriteriaAll, linearCriteriaAll);
-            QueryCriteria compositeCriteria2 = and(vaultCriteria, compositeCriteria1);
+            QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
+            QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);
 
             PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
@@ -231,7 +229,7 @@ public class VaultQueryJavaTests {
                 QueryCriteria customCriteria1 = new VaultCustomQueryCriteria(currencyIndex);
 
 
-                QueryCriteria criteria = QueryCriteriaKt.and(QueryCriteriaKt.and(generalCriteria, customCriteria1), customCriteria2);
+                QueryCriteria criteria = generalCriteria.and(customCriteria1).and(customCriteria2);
                 Vault.Page<ContractState> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample3
 
@@ -297,8 +295,8 @@ public class VaultQueryJavaTests {
             List<AbstractParty> dealParty = Collections.singletonList(getMEGA_CORP());
             QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
             QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, null);
-            QueryCriteria dealOrLinearIdCriteria = or(dealCriteria, linearCriteria);
-            QueryCriteria compositeCriteria = and(dealOrLinearIdCriteria, vaultCriteria);
+            QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
+            QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
             PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
@@ -405,7 +403,7 @@ public class VaultQueryJavaTests {
                 QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies));
                 QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies));
 
-                QueryCriteria criteria = QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(sumCriteria, countCriteria), maxCriteria), minCriteria), avgCriteria);
+                QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample21
 
@@ -450,7 +448,7 @@ public class VaultQueryJavaTests {
                 QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies, Arrays.asList(currency)));
                 QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies, Arrays.asList(currency)));
 
-                QueryCriteria criteria = QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(QueryCriteriaKt.and(sumCriteria, countCriteria), maxCriteria), minCriteria), avgCriteria);
+                QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
                 // DOCEND VaultJavaQueryExample22
 
