@@ -136,7 +136,6 @@ interface ServiceHub : ServicesForResolution {
         return builder.toSignedTransaction(false)
     }
 
-
     /**
      * Helper method to construct an initial partially signed transaction from a TransactionBuilder
      * using the default identity key contained in the node.
@@ -145,7 +144,6 @@ interface ServiceHub : ServicesForResolution {
      * @return Returns a SignedTransaction with the new node signature attached.
      */
     fun signInitialTransaction(builder: TransactionBuilder): SignedTransaction = signInitialTransaction(builder, legalIdentityKey)
-
 
     /**
      * Helper method to construct an initial partially signed transaction from a [TransactionBuilder]

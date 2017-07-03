@@ -14,6 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
+import net.corda.testing.node.MockServices
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("NotaryTest")
@@ -23,16 +24,15 @@ data class NotariseCommand(val issueTx: SignedTransaction, val moveTx: SignedTra
 val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
+            val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
             val generateTx = Generator.pickOne(simpleNodes).bind { node ->
                 Generator.int().map {
-                    val issueTx = DummyContract.generateInitial(it, notary.info.notaryIdentity, DUMMY_CASH_ISSUER).apply {
-                        signWith(DUMMY_CASH_ISSUER_KEY)
-                    }
-                    val asset = issueTx.toWireTransaction().outRef<DummyContract.SingleOwnerState>(0)
-                    val moveTx = DummyContract.move(asset, DUMMY_CASH_ISSUER.party).apply {
-                        signWith(DUMMY_CASH_ISSUER_KEY)
-                    }
-                    NotariseCommand(issueTx.toSignedTransaction(false), moveTx.toSignedTransaction(false), node)
+                    val issueBuilder = DummyContract.generateInitial(it, notary.info.notaryIdentity, DUMMY_CASH_ISSUER)
+                    val issueTx = issuerServices.signInitialTransaction(issueBuilder)
+                    val asset = issueTx.tx.outRef<DummyContract.SingleOwnerState>(0)
+                    val moveBuilder = DummyContract.move(asset, DUMMY_CASH_ISSUER.party)
+                    val moveTx = issuerServices.signInitialTransaction(moveBuilder)
+                    NotariseCommand(issueTx, moveTx, node)
                 }
             }
             Generator.replicate(10, generateTx)

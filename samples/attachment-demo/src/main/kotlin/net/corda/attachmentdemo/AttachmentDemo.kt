@@ -108,11 +108,9 @@ class AttachmentDemoFlow(val otherSide: Party, val hash: SecureHash.SHA256) : Fl
         ptx.addAttachment(hash)
 
         progressTracker.currentStep = SIGNING
-        // Sign with the notary key
-        ptx.signWith(DUMMY_NOTARY_KEY)
 
         // Send the transaction to the other recipient
-        val stx = ptx.toSignedTransaction()
+        val stx = serviceHub.signInitialTransaction(ptx)
 
         return subFlow(FinalityFlow(stx, setOf(otherSide))).single()
     }

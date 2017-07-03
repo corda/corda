@@ -2,8 +2,10 @@ package net.corda.core.transactions
 
 import com.esotericsoftware.kryo.pool.KryoPool
 import net.corda.core.contracts.*
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.indexOfOrThrow
 import net.corda.core.node.ServicesForResolution
@@ -13,6 +15,7 @@ import net.corda.core.serialization.p2PKryo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Emoji
 import java.security.PublicKey
+import java.security.SignatureException
 import java.util.function.Predicate
 
 /**
@@ -133,6 +136,17 @@ class WireTransaction(
                 notNullFalse(type) as TransactionType?,
                 notNullFalse(timeWindow) as TimeWindow?
         )
+    }
+
+    /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents.
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    fun checkSignature(sig: DigitalSignature.WithKey) {
+        require(commands.any { it.signers.any { sig.by in it.keys } }) { "Signature key doesn't match any command" }
+        sig.verify(id)
     }
 
     override fun toString(): String {
