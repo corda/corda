@@ -75,9 +75,8 @@ class CompositeKey private constructor (val threshold: Int,
     // Unlike similar solutions that use long conversion, this approach takes advantage of the minimum weight being 1.
     private fun totalWeight(): Int {
         var sum = 0
-        for (nodeAndWeight in children) {
-            val weight = nodeAndWeight.weight
-            require (weight > 0) { "A non-positive weight was detected. Node info: $nodeAndWeight" }
+        for ((_, weight) in children) {
+            require (weight > 0) { "Non-positive weight: $weight detected." }
             sum += weight // Minimum weight is 1.
             require(sum < 1) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
         }
@@ -201,14 +200,14 @@ class CompositeKey private constructor (val threshold: Int,
 
         /**
          * Builds the [CompositeKey]. If [threshold] is not specified, it will default to
-         * the size of the children, effectively generating an "N of N" requirement.
+         * the total (aggregated) weight of the children, effectively generating an "N of N" requirement.
          * During process removes single keys wrapped in [CompositeKey] and enforces ordering on child nodes.
          */
         @Throws(IllegalArgumentException::class)
         fun build(threshold: Int? = null): PublicKey {
             val n = children.size
             if (n > 1)
-                return CompositeKey(threshold ?: n, children)
+                return CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
             else if (n == 1) {
                 require(threshold == null || threshold == children.first().weight)
                     { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
