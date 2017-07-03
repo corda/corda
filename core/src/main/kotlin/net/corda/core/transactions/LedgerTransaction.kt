@@ -31,10 +31,9 @@ class LedgerTransaction(
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
         notary: Party?,
-        signers: List<PublicKey>,
         timeWindow: TimeWindow?,
         type: TransactionType
-) : BaseTransaction(inputs, outputs, notary, signers, type, timeWindow) {
+) : BaseTransaction(inputs, outputs, notary, type, timeWindow) {
     init {
         checkInvariants()
     }

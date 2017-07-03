@@ -64,14 +64,12 @@ data class GeneratedLedger(
             )
         }
         attachmentsGenerator.combine(outputsGen, commandsGenerator) { txAttachments, outputs, commands ->
-            val signers = commands.flatMap { it.first.signers }
             val newTransaction = WireTransaction(
                     emptyList(),
                     txAttachments.map { it.id },
                     outputs,
                     commands.map { it.first },
                     null,
-                    signers,
                     TransactionType.General,
                     null
             )
@@ -99,14 +97,12 @@ data class GeneratedLedger(
         }
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
         return inputsGen.combine(attachmentsGenerator, outputsGen, commandsGenerator) { inputs, txAttachments, outputs, commands ->
-            val signers = commands.flatMap { it.first.signers } + inputNotary.owningKey
             val newTransaction = WireTransaction(
                     inputs.map { it.ref },
                     txAttachments.map { it.id },
                     outputs,
                     commands.map { it.first },
                     inputNotary,
-                    signers,
                     TransactionType.General,
                     null
             )
@@ -137,7 +133,6 @@ data class GeneratedLedger(
         val newNotaryGen = pickOneOrMaybeNew(identities - inputNotary, partyGenerator)
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
         return inputsGen.bind { inputs ->
-            val signers: List<PublicKey> = (inputs.flatMap { it.state.data.participants } + inputNotary).map { it.owningKey }
             val outputsGen = Generator.sequence(inputs.map { input -> newNotaryGen.map { TransactionState(input.state.data, it, null) } })
             outputsGen.combine(attachmentsGenerator) { outputs, txAttachments ->
                 val newNotaries = outputs.map { it.notary }
@@ -145,9 +140,8 @@ data class GeneratedLedger(
                         inputs.map { it.ref },
                         txAttachments.map { it.id },
                         outputs,
-                        emptyList(),
+                        listOf(Command(ChangeNotary, inputs.flatMap { it.state.data.participants.map { it.owningKey } })),
                         inputNotary,
-                        signers,
                         TransactionType.NotaryChange,
                         null
                 )

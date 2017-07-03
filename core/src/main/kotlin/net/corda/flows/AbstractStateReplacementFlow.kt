@@ -8,8 +8,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -193,7 +191,7 @@ abstract class AbstractStateReplacementFlow {
         private fun checkMySignatureRequired(tx: WireTransaction) {
             // TODO: use keys from the keyManagementService instead
             val myKey = serviceHub.myInfo.legalIdentity.owningKey
-            require(myKey in tx.mustSign) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
+            require(myKey in tx.requiredSigningKeys) { "Party is not a participant for any of the input states of transaction ${tx.id}" }
         }
 
         @Suspendable

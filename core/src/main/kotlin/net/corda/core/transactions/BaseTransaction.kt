@@ -20,16 +20,9 @@ abstract class BaseTransaction(
          */
         val notary: Party?,
         /**
-         * Public keys that need to be fulfilled by signatures in order for the transaction to be valid.
-         * In a [SignedTransaction] this list is used to check whether there are any missing signatures. Note that
-         * there is nothing that forces the list to be the _correct_ list of signers for this transaction until
-         * the transaction is verified by using [LedgerTransaction.verify].
-         *
-         * It includes the notary key, if the notary field is set.
-         */
-        val mustSign: List<PublicKey>,
-        /**
          * Pointer to a class that defines the behaviour of this transaction: either normal, or "notary changing".
+         *
+         * TODO: this field can be removed – transaction type check can be done based on existence of the NotaryChange command
          */
         val type: TransactionType,
         /**
@@ -48,12 +41,11 @@ abstract class BaseTransaction(
         if (other === this) return true
         return other is BaseTransaction &&
                 notary == other.notary &&
-                mustSign == other.mustSign &&
                 type == other.type &&
                 timeWindow == other.timeWindow
     }
 
-    override fun hashCode() = Objects.hash(notary, mustSign, type, timeWindow)
+    override fun hashCode() = Objects.hash(notary, type, timeWindow)
 
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 }
