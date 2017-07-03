@@ -28,23 +28,55 @@ class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
-        require(children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
-        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees
-        // but having different structures.
-        require(children.size > 1) { "Cannot construct CompositeKey with only one child node." }
-        // We should ensure threshold is positive, because smaller allowable weight for a node key is 1.
-        require(threshold > 0) { "Cannot construct CompositeKey with non-positive threshold." }
-        // If threshold is bigger than total weight, then it will never be satisfied.
-        require(threshold <= totalWeight()) { "Threshold cannot be bigger than total weight."}
-        // TODO: check for cycle detection
+        checkConstraints() // TODO: replace with the more extended, but slower, checkValidity() test.
     }
 
-    // Method to check if the total weight overflows.
+    // Check for key duplication, threshold and weight constraints and test for aggregated weight integer overflow.
+    private fun checkConstraints() {
+        require(children.size == children.toSet().size) { "CompositeKey with duplicated child nodes detected." }
+        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees
+        // but having different structures.
+        require(children.size > 1) { "CompositeKey must consist of two or more child nodes." }
+        // We should ensure threshold is positive, because smaller allowable weight for a node key is 1.
+        require(threshold > 0) { "CompositeKey threshold is set to $threshold, but it should be a positive integer." }
+        // If threshold is bigger than total weight, then it will never be satisfied.
+        val totalWeight = totalWeight()
+        require(threshold <= totalWeight) { "CompositeKey threshold: $threshold cannot be bigger than aggregated weight of " +
+                "child nodes: $totalWeight"}
+    }
+
+    // Graph cycle detection in the composite key structure to avoid infinite loops when CompositeKey recursion is used.
+    private fun cycleDetection(root: CompositeKey) {
+        for ((node) in children) {
+            if (node is CompositeKey) {
+                require(root != node) { "Cycle detected for CompositeKey: $root" }
+                node.cycleDetection(root)
+            }
+        }
+    }
+
+    /**
+     * This method will detect graph cycles on the full composite key structure (that could cause infinite loops)
+     * and key duplicates in the each layer. It also checks if the threshold and weight constraint
+     * requirements are met and it finally tests for aggregated-weight integer overflow.
+     */
+    fun checkValidity() {
+        cycleDetection(this)
+        checkConstraints()
+        for ((node) in children) {
+            if (node is CompositeKey)
+                node.checkValidity()
+        }
+    }
+
+    // Method to check if the total (aggregated) weight of child nodes overflows.
     // Unlike similar solutions that use long conversion, this approach takes advantage of the minimum weight being 1.
     private fun totalWeight(): Int {
         var sum = 0
         for (nodeAndWeight in children) {
-            sum += nodeAndWeight.weight // Minimum weight is 1.
+            val weight = nodeAndWeight.weight
+            require (weight > 0) { "A non-positive weight was detected. Node info: $nodeAndWeight" }
+            sum += weight // Minimum weight is 1.
             require(sum < 1) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
         }
         return sum
@@ -59,7 +91,7 @@ class CompositeKey private constructor (val threshold: Int,
 
         init {
             // We don't allow zero or negative weights. Minimum weight = 1.
-            require (weight > 0) { "Trying to construct CompositeKey Node with non-positive weight." }
+            require (weight > 0) { "A non-positive weight was detected. Node info: $this"  }
         }
         override fun compareTo(other: NodeAndWeight): Int {
             if (weight == other.weight) {
@@ -73,6 +105,10 @@ class CompositeKey private constructor (val threshold: Int,
             vector.add(DERBitString(node.encoded))
             vector.add(ASN1Integer(weight.toLong()))
             return DERSequence(vector)
+        }
+
+        override fun toString(): String {
+            return "Public key: ${node.toStringShort()}, weight: $weight"
         }
     }
 
@@ -105,14 +141,14 @@ class CompositeKey private constructor (val threshold: Int,
      */
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
         if (keysToCheck.any { it is CompositeKey } ) return false
-        val totalWeight = children.map { (node, weight) ->
+        val combinedWeight = children.map { (node, weight) ->
             if (node is CompositeKey) {
                 if (node.isFulfilledBy(keysToCheck)) weight else 0
             } else {
                 if (keysToCheck.contains(node)) weight else 0
             }
         }.sum()
-        return totalWeight >= threshold
+        return combinedWeight >= threshold
     }
 
     /**
