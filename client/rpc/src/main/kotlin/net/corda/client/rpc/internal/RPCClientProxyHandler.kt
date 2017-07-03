@@ -279,7 +279,7 @@ class RPCClientProxyHandler(
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
         }
-        rpcReplyMap.values.forEach { it.cancel(false) }
+        rpcReplyMap.values.forEach { it.cancel(false) } // TODO: First ban new additions to map.
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()

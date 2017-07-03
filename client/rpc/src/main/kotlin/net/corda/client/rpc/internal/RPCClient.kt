@@ -138,7 +138,7 @@ class RPCClient<I : RPCOps>(
             val session = synchronized(this) {
                 check(open) { "This RPCClient is closed." }
                 check(currentSession == null) { "Already connecting or connected." }
-                Session(rpcOpsClass, username, password).also { currentSession = it }
+                Session(rpcOpsClass, username, password, Thread.currentThread()).also { currentSession = it }
             }
             try {
                 session.start()
@@ -157,7 +157,7 @@ class RPCClient<I : RPCOps>(
         currentSession?.close()
     }
 
-    private inner class Session(private val rpcOpsClass: Class<I>, username: String, password: String) {
+    private inner class Session(private val rpcOpsClass: Class<I>, username: String, password: String, private var starter: Thread?) {
         private val serverLocator: ServerLocator
         private val proxyHandler: RPCClientProxyHandler
 
@@ -175,6 +175,9 @@ class RPCClient<I : RPCOps>(
 
         fun start() = run {
             proxyHandler.start()
+            synchronized(this) {
+                starter = null
+            }
             @Suppress("UNCHECKED_CAST")
             val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
             val serverProtocolVersion = ops.protocolVersion
@@ -191,9 +194,10 @@ class RPCClient<I : RPCOps>(
             }
         }
 
-        fun close() {
+        fun close(): Unit = synchronized(this) {
             proxyHandler.close()
             serverLocator.close()
+            starter?.interrupt() // Break out of waitForTopology.
         }
     }
 }
