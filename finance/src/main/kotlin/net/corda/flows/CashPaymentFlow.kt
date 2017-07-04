@@ -37,7 +37,7 @@ open class CashPaymentFlow(
         val txIdentities = if (anonymous) {
             subFlow(TransactionKeyFlow(recipient))
         } else {
-            TransactionKeyFlow.EMPTY_IDENTITIES
+            Collections.EMPTY_MAP as Map<Party, AnonymisedIdentity>
         }
         val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
         progressTracker.currentStep = GENERATING_TX
