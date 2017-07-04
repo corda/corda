@@ -76,23 +76,22 @@ define an ``IOUState``:
 
     .. code-block:: kotlin
 
-        package com.template
+        package com.iou
 
         import net.corda.core.contracts.ContractState
         import net.corda.core.identity.Party
 
         class IOUState(val value: Int,
                        val sender: Party,
-                       val recipient: Party,
-                       // TODO: Once we've defined IOUContract, come back and update this.
-                       override val contract: TemplateContract = TemplateContract()) : ContractState {
+                       val recipient: Party) : ContractState {
+            override val contract: IOUContract = IOUContract()
 
             override val participants get() = listOf(sender, recipient)
         }
 
     .. code-block:: java
 
-        package com.template;
+        package com.iou;
 
         import com.google.common.collect.ImmutableList;
         import net.corda.core.contracts.ContractState;
@@ -105,14 +104,12 @@ define an ``IOUState``:
             private final int value;
             private final Party sender;
             private final Party recipient;
-            // TODO: Once we've defined IOUContract, come back and update this.
-            private final TemplateContract contract;
+            private final IOUContract contract = new IOUContract();
 
-            public IOUState(int value, Party sender, Party recipient, IOUContract contract) {
+            public IOUState(int value, Party sender, Party recipient) {
                 this.value = value;
                 this.sender = sender;
                 this.recipient = recipient;
-                this.contract = contract;
             }
 
             public int getValue() {
@@ -129,7 +126,7 @@ define an ``IOUState``:
 
             @Override
             // TODO: Once we've defined IOUContract, come back and update this.
-            public TemplateContract getContract() {
+            public IOUContract getContract() {
                 return contract;
             }
 
@@ -148,8 +145,8 @@ We've made the following changes:
     ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
 
 * We've overridden ``participants`` to return a list of the ``sender`` and ``recipient``
-* This means that actions such as changing the state's contract or its notary will require approval from both the
-  ``sender`` and the ``recipient``
+  * This means that actions such as changing the state's contract or its notary will require approval from both the
+    ``sender`` and the ``recipient``
 
 We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
 ``IOUContract``.
