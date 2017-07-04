@@ -2,10 +2,15 @@ package net.corda.node.services
 
 import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.*
-import net.corda.core.contracts.*
+import net.corda.core.ErrorOr
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
+import net.corda.core.div
+import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.flows.NotaryError
@@ -20,11 +25,12 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
-import org.junit.Ignore
 import org.junit.After
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
-import kotlin.test.*
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class BFTNotaryServiceTests {
     companion object {

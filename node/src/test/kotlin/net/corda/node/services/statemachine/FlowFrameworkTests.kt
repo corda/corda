@@ -7,11 +7,14 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.contracts.DummyState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.testing.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSessionException
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
