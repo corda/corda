@@ -28,7 +28,7 @@ import java.security.PublicKey
 inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
     val linearHeads = vaultQueryService.queryBy<T>(VaultQueryCriteria(stateRefs = listOf(ref),
                                                                       status = Vault.StateStatus.UNCONSUMED))
-    return linearHeads.states.first()
+    return linearHeads.states.single()
 }
 // DOCEND 1
 

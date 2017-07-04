@@ -20,7 +20,7 @@ object SimmRevaluation {
     class Initiator(val curStateRef: StateRef, val valuationDate: LocalDate) : FlowLogic<Unit>() {
         @Suspendable
         override fun call(): Unit {
-            val stateAndRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.first()
+            val stateAndRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(VaultQueryCriteria(stateRefs = listOf(curStateRef))).states.single()
             val curState = stateAndRef.state.data
             val myIdentity = serviceHub.myInfo.legalIdentity
             if (myIdentity == curState.participants[0]) {
