@@ -45,8 +45,8 @@ There are four states the transaction can occupy:
 
 * ``TransactionBuilder``, a mutable transaction-in-construction
 * ``WireTransaction``, an immutable transaction
-* ``SignedTransaction``, a ``WireTransaction`` with 1+ associated signatures
-* ``LedgerTransaction``, a resolved ``WireTransaction`` that can be checked for contract validity
+* ``SignedTransaction``, an immutable transaction with 1+ associated signatures
+* ``LedgerTransaction``, a transaction that can be checked for validity
 
 Here are the possible transitions between transaction states:
 
@@ -56,25 +56,160 @@ TransactionBuilder
 ------------------
 Creating a builder
 ^^^^^^^^^^^^^^^^^^
-The first step when building a transaction is to create a ``TransactionBuilder``:
+The first step when creating a transaction is to instantiate a ``TransactionBuilder``.
+
+We create a builder for the two different transaction types as follows:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 19
+       :end-before: DOCEND 19
+       :dedent: 12
 
-        // A general transaction builder.
-        val generalTxBuilder = TransactionType.General.Builder()
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 19
+       :end-before: DOCEND 19
+       :dedent: 12
 
-        // A notary-change transaction builder.
-        val notaryChangeTxBuilder = TransactionType.NotaryChange.Builder()
+Transaction components
+^^^^^^^^^^^^^^^^^^^^^^
+Input states
+~~~~~~~~~~~~
+The outputs of previous transactions are referenced using a ``StateRef``, which pairs the hash of the transaction that
+generated the state with the state's index in the outputs of that transaction:
 
-   .. sourcecode:: java
+.. container:: codeset
 
-        // A general transaction builder.
-        final TransactionBuilder generalTxBuilder = new TransactionType.General.Builder();
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 20
+       :end-before: DOCEND 20
+       :dedent: 12
 
-        // A notary-change transaction builder.
-        final TransactionBuilder notaryChangeTxBuilder = new TransactionType.NotaryChange.Builder();
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 20
+       :end-before: DOCEND 20
+       :dedent: 12
+
+A ``StateRef`` uniquely identifies an input state, allowing the notary to mark it as historic.
+
+Input states are then added to a transaction as ``StateAndRef`` instances. A ``StateAndRef`` combines a
+``ContractState`` representing the input state with a pointer to the transaction that created it:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 21
+       :end-before: DOCEND 21
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 21
+       :end-before: DOCEND 21
+       :dedent: 12
+
+This series of pointers from the input states back to the transactions that created them is what allows a node to work
+backwards and verify the entirety of the transaction chain.
+
+Output states
+~~~~~~~~~~~~~
+Since a transaction's output states do not exist until the transaction is committed, they cannot be referenced as the
+outputs of previous transactions. Instead, we create the desired output states as ``ContractState`` instances, and
+add them to the transaction:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 22
+       :end-before: DOCEND 22
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 22
+       :end-before: DOCEND 22
+       :dedent: 12
+
+In many cases (e.g. when we have a transaction that's purpose is to update an existing state), we may also want to
+create an output by copying from the input state:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 23
+       :end-before: DOCEND 23
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 23
+       :end-before: DOCEND 23
+       :dedent: 12
+
+Commands
+~~~~~~~~
+Commands are added to the transaction as ``Command`` instances. ``Command`` combines a ``CommandData`` instance
+representing the type of the command with a list of the command's required signers. We define a command as follows:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 24
+       :end-before: DOCEND 24
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 24
+       :end-before: DOCEND 24
+       :dedent: 12
+
+Attachments
+~~~~~~~~~~~
+Attachments are identified by their hash. The attachment with the corresponding hash must have been uploaded ahead of
+time via the node's RPC interface:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 25
+       :end-before: DOCEND 25
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 25
+       :end-before: DOCEND 25
+       :dedent: 12
+
+Time-windows
+~~~~~~~~~~~~
+Time windows represent the period of time during which a transaction must be notarised. They can have a start and an end
+time, or be open at either end:
+
+.. container:: codeset
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
+       :language: kotlin
+       :start-after: DOCSTART 26
+       :end-before: DOCEND 26
+       :dedent: 12
+
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 26
+       :end-before: DOCEND 26
+       :dedent: 12
 
 Adding items
 ^^^^^^^^^^^^
@@ -95,56 +230,37 @@ The transaction builder is mutable. We add items to it using the ``TransactionBu
 
 Passing in objects of any other type will cause an ``IllegalArgumentException`` to be thrown.
 
-You can also add the following items to the transaction:
-
-* ``TimeWindow`` objects, using ``TransactionBuilder.setTime``
-* ``SecureHash`` objects referencing the hash of an attachment stored on the node, using
-  ``TransactionBuilder.addAttachment``
-
-Input states
-~~~~~~~~~~~~
-Input states are added to a transaction as ``StateAndRef`` instances, rather than as ``ContractState`` instances.
-
-A ``StateAndRef`` combines a ``ContractState`` with a pointer to the transaction that created it. This series of
-pointers from the input states back to the transactions that created them is what allows a node to work backwards and
-verify the entirety of the transaction chain. It is defined as:
+Here's an example usage of ``TransactionBuilder.withItems``:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
        :language: kotlin
-       :start-after: DOCSTART 7
-       :end-before: DOCEND 7
+       :start-after: DOCSTART 27
+       :end-before: DOCEND 27
+       :dedent: 12
 
-Where ``StateRef`` is defined as:
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 27
+       :end-before: DOCEND 27
+       :dedent: 12
+
+You can also pass in objects one-by-one. This is required for attachments and time-windows:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/FlowCookbook.kt
        :language: kotlin
-       :start-after: DOCSTART 8
-       :end-before: DOCEND 8
+       :start-after: DOCSTART 28
+       :end-before: DOCEND 28
+       :dedent: 12
 
-``StateRef.index`` is the state's position in the outputs of the transaction that created it. In this way, a
-``StateRef`` allows a notary service to uniquely identify the existing states that a transaction is marking as historic.
-
-Output states
-~~~~~~~~~~~~~
-Since a transaction's output states do not exist until the transaction is committed, they cannot be referenced as the
-outputs of previous transactions. Instead, we create the desired output states as ``ContractState`` instances, and
-add them to the transaction.
-
-Commands
-~~~~~~~~
-Commands are added to the transaction as ``Command`` instances. ``Command`` combines a ``CommandData``
-instance representing the type of the command with a list of the command's required signers. It is defined as:
-
-.. container:: codeset
-
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/contracts/Structures.kt
-       :language: kotlin
-       :start-after: DOCSTART 9
-       :end-before: DOCEND 9
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/FlowCookbookJava.java
+       :language: java
+       :start-after: DOCSTART 28
+       :end-before: DOCEND 28
+       :dedent: 12
 
 Signing the builder
 ^^^^^^^^^^^^^^^^^^^

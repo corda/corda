@@ -220,9 +220,13 @@ object FlowCookbook {
             // ``StateRef`` instances, which pair the hash of the transaction
             // that generated the state with the state's index in the outputs
             // of that transaction.
+            // DOCSTART 20
             val ourStateRef: StateRef = StateRef(SecureHash.sha256("DummyTransactionHash"), 0)
+            // DOCEND 20
             // A ``StateAndRef`` pairs a ``StateRef`` with the state it points to.
+            // DOCSTART 21
             val ourStateAndRef: StateAndRef<DummyState> = serviceHub.toStateAndRef<DummyState>(ourStateRef)
+            // DOCEND 21
 
             /**-----------------------------------------
              * GATHERING OTHER TRANSACTION COMPONENTS *
@@ -230,18 +234,24 @@ object FlowCookbook {
             progressTracker.currentStep = OTHER_TX_COMPONENTS
 
             // Output states are constructed from scratch.
+            // DOCSTART 22
             val ourOutput: DummyState = DummyState()
+            // DOCEND 22
             // Or as copies of other states with some properties changed.
+            // DOCSTART 23
             val ourOtherOutput: DummyState = ourOutput.copy(magicNumber = 77)
+            // DOCEND 23
 
             // Commands pair a ``CommandData`` instance with a list of
             // public keys. To be valid, the transaction requires a signature
             // matching every public key in all of the transaction's commands.
+            // DOCSTART 24
             val commandData: CommandData = DummyContract.Commands.Create()
             val ourPubKey: PublicKey = serviceHub.legalIdentityKey
             val counterpartyPubKey: PublicKey = counterparty.owningKey
             val requiredSigners: List<PublicKey> = listOf(ourPubKey, counterpartyPubKey)
             val ourCommand: Command = Command(commandData, requiredSigners)
+            // DOCEND 24
 
             // ``CommandData`` can either be:
             // 1. Of type ``TypeOnlyCommandData``, in which case it only
@@ -255,12 +265,16 @@ object FlowCookbook {
             // Attachments are identified by their hash.
             // The attachment with the corresponding hash must have been
             // uploaded ahead of time via the node's RPC interface.
+            // DOCSTART 25
             val ourAttachment: SecureHash = SecureHash.sha256("DummyAttachment")
+            // DOCEND 25
 
             // Time windows can have a start and end time, or be open at either end.
+            // DOCSTART 26
             val ourTimeWindow: TimeWindow = TimeWindow.between(Instant.MIN, Instant.MAX)
             val ourAfter: TimeWindow = TimeWindow.fromOnly(Instant.MIN)
             val ourBefore: TimeWindow = TimeWindow.untilOnly(Instant.MAX)
+            // DOCEND 26
 
             /**-----------------------
              * TRANSACTION BUILDING *
@@ -269,28 +283,31 @@ object FlowCookbook {
 
             // There are two types of transaction (notary-change and general),
             // and therefore two types of transaction builder:
+            // DOCSTART 19
             val notaryChangeTxBuilder: TransactionBuilder = TransactionBuilder(NotaryChange, specificNotary)
             val regTxBuilder: TransactionBuilder = TransactionBuilder(General, specificNotary)
+            // DOCEND 19
 
             // We add items to the transaction builder using ``TransactionBuilder.withItems``:
+            // DOCSTART 27
             regTxBuilder.withItems(
-                    // Inputs, as ``StateRef``s that reference to the outputs of previous transactions
-                    ourStateRef,
+                    // Inputs, as ``StateRef``s that reference the outputs of previous transactions
+                    ourStateAndRef,
                     // Outputs, as ``ContractState``s
                     ourOutput,
                     // Commands, as ``Command``s
                     ourCommand
             )
+            // DOCEND 27
 
             // We can also add items using methods for the individual components:
+            // DOCSTART 28
             regTxBuilder.addInputState(ourStateAndRef)
             regTxBuilder.addOutputState(ourOutput)
             regTxBuilder.addCommand(ourCommand)
             regTxBuilder.addAttachment(ourAttachment)
-
-            // We set the time-window within which the transaction must be notarised using either of:
             regTxBuilder.timeWindow = ourTimeWindow
-            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(30))
+            // DOCEND 28
 
             /**----------------------
              * TRANSACTION SIGNING *
@@ -300,11 +317,17 @@ object FlowCookbook {
             // We finalise the transaction by signing it, converting it into a
             // ``SignedTransaction``.
             val onceSignedTx: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder)
+            // We can also sign the transaction using a different public key:
+            val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
+            val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder, otherKey)
 
             // If instead this was a ``SignedTransaction`` that we'd received
             // from a counterparty and we needed to sign it, we would add our
             // signature using:
-            val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx, dummyPubKey)
+            val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx)
+            // Or, if we wanted to use a different public key:
+            val otherKey2: PublicKey = serviceHub.keyManagementService.freshKey()
+            val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherKey2)
 
             // In practice, however, the process of gathering every signature
             // but the first can be automated using ``CollectSignaturesFlow``.
