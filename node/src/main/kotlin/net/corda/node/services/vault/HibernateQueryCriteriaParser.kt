@@ -7,6 +7,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.OpaqueBytes
@@ -40,11 +41,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria) : Collection<Predicate> {
         log.trace { "Parsing VaultQueryCriteria: $criteria" }
         val predicateSet = mutableSetOf<Predicate>()
-
-        // state status
-        stateTypes = criteria.status
-        if (criteria.status != Vault.StateStatus.ALL)
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
         // contract State Types
         val combinedContractTypeTypes = criteria.contractStateTypes?.plus(contractType) ?: setOf(contractType)
@@ -167,11 +163,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val vaultFungibleStates = criteriaQuery.from(VaultSchemaV1.VaultFungibleStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultFungibleStates::class.java, vaultFungibleStates)
 
-        // state status
-        stateTypes = criteria.status
-        if (criteria.status != Vault.StateStatus.ALL)
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
-
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultFungibleStates.get<PersistentStateRef>("stateRef"))
         predicateSet.add(joinPredicate)
 
@@ -221,11 +212,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultLinearStates::class.java, vaultLinearStates)
 
-        // state status
-        stateTypes = criteria.status
-        if (criteria.status != Vault.StateStatus.ALL)
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
-
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
 
@@ -264,11 +250,6 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         try {
             val entityRoot = criteriaQuery.from(entityClass)
             rootEntities.putIfAbsent(entityClass, entityRoot)
-
-            // state status
-            stateTypes = criteria.status
-            if (criteria.status != Vault.StateStatus.ALL)
-                predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
@@ -326,6 +307,18 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
+
+        return predicateSet
+    }
+
+    override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
+        log.trace { "Parsing CommonQueryCriteria: $criteria" }
+        val predicateSet = mutableSetOf<Predicate>()
+
+        // state status
+        stateTypes = criteria.status
+        if (criteria.status != Vault.StateStatus.ALL)
+            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
         return predicateSet
     }
