@@ -128,11 +128,13 @@ path to the node's base directory.
         :password: The password
         :permissions: A list of permission strings which RPC methods can use to control access
 
-    If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
+    If this field is absent or an empty list then RPC is effectively locked down. Alternatively, if it contains the string
+    ``ALL`` then the user is permitted to use *any* RPC method. This value is intended for administrator users and for developers.
 
-:devMode: This flag indicate if the node is running in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
+:devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
     does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
-    and keystore does not exist.
+    and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
+    bugs in the checkpointing process.
 
 :detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
