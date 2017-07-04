@@ -5,6 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.PublicKey
+import java.util.*
 
 /**
  * A tree data structure that enables the representation of composite public keys.
@@ -47,11 +48,15 @@ class CompositeKey private constructor (val threshold: Int,
 
     // Graph cycle detection in the composite key structure to avoid infinite loops on CompositeKey graph traversal and
     // when recursion is used (i.e. in isFulfilledBy()).
-    private fun cycleDetection(root: CompositeKey) {
+    // An IdentityHashMap Vs HashMap is used, because a graph cycle causes infinite loop on the CompositeKey.hashCode().
+    private fun cycleDetection(visitedMap: IdentityHashMap<CompositeKey, Boolean>) {
         for ((node) in children) {
             if (node is CompositeKey) {
-                require(root != node) { "Cycle detected for CompositeKey: $root" }
-                node.cycleDetection(root)
+                val curVisitedMap = IdentityHashMap<CompositeKey, Boolean>()
+                curVisitedMap.putAll(visitedMap)
+                require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey: $node" }
+                curVisitedMap.put(node, true)
+                node.cycleDetection(curVisitedMap)
             }
         }
     }
@@ -60,14 +65,20 @@ class CompositeKey private constructor (val threshold: Int,
      * This method will detect graph cycles in the full composite key structure to protect against infinite loops when
      * traversing the graph and key duplicates in the each layer. It also checks if the threshold and weight constraint
      * requirements are met, while it tests for aggregated-weight integer overflow.
+     * In practice, this method should be always invoked on the root [CompositeKey], as it inherently
+     * validates the child nodes (all the way till the leaves).
      * TODO: Always call this method when deserialising [CompositeKey]s.
      */
     fun checkValidity() {
-        cycleDetection(this)
+        val visitedMap = IdentityHashMap<CompositeKey,Boolean>()
+        visitedMap.put(this, true)
+        cycleDetection(visitedMap) // Graph cycle testing on the root node.
         checkConstraints()
         for ((node) in children) {
-            if (node is CompositeKey)
-                node.checkValidity()
+            if (node is CompositeKey) {
+                // We don't need to check for cycles on the rest of the nodes (testing on the root node is enough).
+                node.checkConstraints()
+            }
         }
     }
 
@@ -77,8 +88,7 @@ class CompositeKey private constructor (val threshold: Int,
         var sum = 0
         for ((_, weight) in children) {
             require (weight > 0) { "Non-positive weight: $weight detected." }
-            sum += weight // Minimum weight is 1.
-            require(sum > 0) { "Integer overflow detected. Total weight surpasses the maximum accepted value." }
+            sum = Math.addExact(sum, weight) // Add and check for integer overflow.
         }
         return sum
     }
@@ -179,7 +189,7 @@ class CompositeKey private constructor (val threshold: Int,
         return result
     }
 
-    override fun toString() = "(${children.joinToString()})" // TODO: use PublicKey.toStringShort().
+    override fun toString() = "(${children.joinToString()})"
 
     /** A helper class for building a [CompositeKey]. */
     class Builder {
