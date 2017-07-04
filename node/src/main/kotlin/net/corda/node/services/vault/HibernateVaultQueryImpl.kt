@@ -64,7 +64,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
             try {
                 // parse criteria and build where predicates
-                criteriaParser.parse(criteria, sorting)
+                val (selections, predicates) = criteriaParser.parse(criteria, sorting)
 
                 // prepare query for execution
                 val query = session.createQuery(criteriaQuery)

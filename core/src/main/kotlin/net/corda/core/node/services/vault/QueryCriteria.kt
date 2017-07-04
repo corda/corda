@@ -14,6 +14,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
+import javax.persistence.criteria.Root
 
 /**
  * Indexing assumptions:
@@ -127,5 +128,5 @@ interface IQueryCriteriaParser {
     fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
     fun parseOr(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
     fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
-    fun parse(criteria: QueryCriteria, sorting: Sort? = null) : Collection<Predicate>
+    fun parse(criteria: QueryCriteria, sorting: Sort? = null) : Pair<List<Root<out Any>>, List<Predicate>>
 }
