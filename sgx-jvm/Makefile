@@ -7,7 +7,7 @@ SHELL=/bin/bash
 JDK_IMAGE=$(PWD)/jdk8u/build/linux-x86_64-normal-server-release/images/j2re-image
 
 .PHONY: all
-all: jvm-enclave/standalone/build/standalone_sgx_verify
+all: jvm-enclave/standalone/build/standalone_sgx_verify linux-sgx-driver/isgx.ko
 
 # The final binary
 jvm-enclave/standalone/build/standalone_sgx_verify: avian linux-sgx/build/linux/aesm_service
@@ -34,6 +34,9 @@ $(JDK_IMAGE): jdk8u
 linux-sgx/external/ippcp_internal/inc:
 	cd linux-sgx && $(SHELL) ./download_prebuilt.sh
 
+linux-sgx-driver/isgx.ko:
+	$(MAKE) -C linux-sgx-driver
+
 build:
 	mkdir -p $@
 
@@ -41,6 +44,7 @@ build:
 clean:
 	$(MAKE) -C jvm-enclave clean
 	$(MAKE) -C linux-sgx clean
+	$(MAKE) -C linux-sgx-driver clean
 	[ ! -d jdk8u ] || $(MAKE) -C jdk8u clean
 	$(MAKE) -C avian clean
 

@@ -140,5 +140,6 @@ int main(int argc, char **argv) {
     if (false == check_sgx_return_value(noop(enclave_id))) {
         return 1;
     }
+    puts("Enclave ran successfully!");
     return 0;
 }
