@@ -3,9 +3,9 @@ package net.corda.flows
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test

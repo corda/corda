@@ -14,8 +14,8 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow

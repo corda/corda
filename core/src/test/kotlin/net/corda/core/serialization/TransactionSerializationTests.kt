@@ -5,7 +5,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Before

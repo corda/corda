@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.DUMMY_NOTARY
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant

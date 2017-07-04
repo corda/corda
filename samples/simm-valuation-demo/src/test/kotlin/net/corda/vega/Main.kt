@@ -3,10 +3,10 @@ package net.corda.vega
 import com.google.common.util.concurrent.Futures
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.DUMMY_BANK_C
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_BANK_C
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.testing.driver.driver
 

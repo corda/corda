@@ -9,9 +9,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.VaultService
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.ALICE_KEY
-import net.corda.core.utilities.DUMMY_CA
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE_KEY
+import net.corda.testing.DUMMY_CA
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.MockServiceHubInternal
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.persistence.DBCheckpointStorage

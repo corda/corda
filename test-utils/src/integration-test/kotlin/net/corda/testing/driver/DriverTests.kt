@@ -6,13 +6,12 @@ import net.corda.core.getOrThrow
 import net.corda.core.list
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.readLines
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_REGULATOR
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_REGULATOR
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.api.RegulatorService
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.nodeapi.ArtemisMessagingComponent
 import net.corda.testing.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test

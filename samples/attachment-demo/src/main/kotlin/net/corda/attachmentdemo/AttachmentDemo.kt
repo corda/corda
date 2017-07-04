@@ -20,6 +20,8 @@ import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.flows.FinalityFlow
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll
 import java.io.InputStream
 import java.net.HttpURLConnection

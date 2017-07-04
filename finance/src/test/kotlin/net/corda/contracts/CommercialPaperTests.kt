@@ -1,7 +1,7 @@
 package net.corda.contracts
 
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.days
 import net.corda.core.identity.AnonymousParty
@@ -10,7 +10,6 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.*

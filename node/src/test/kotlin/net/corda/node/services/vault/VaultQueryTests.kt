@@ -6,7 +6,6 @@ import net.corda.contracts.DealState
 import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.*
 import net.corda.core.contracts.*
 import net.corda.core.contracts.testing.DummyLinearContract
 import net.corda.core.crypto.entropyToKeyPair
@@ -19,9 +18,9 @@ import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.TEST_TX_TIME
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
@@ -32,6 +31,7 @@ import net.corda.schemas.CashSchemaV1.PersistentCashState
 import net.corda.schemas.CommercialPaperSchemaV1
 import net.corda.schemas.SampleCashSchemaV3
 import net.corda.testing.*
+import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions

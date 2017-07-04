@@ -10,7 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockAttachmentStorage
 import org.apache.commons.io.IOUtils

@@ -20,8 +20,6 @@ import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.TransactionKeyFlow
 import net.corda.node.internal.AbstractNode
@@ -36,14 +34,13 @@ import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.testing.MOCK_VERSION_INFO
-import net.corda.testing.getTestX509Name
-import net.corda.testing.testNodeConfiguration
+import net.corda.testing.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import java.util.*
@@ -308,7 +305,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return node
     }
 
-    fun baseDirectory(nodeId: Int) = filesystem.getPath("/nodes/$nodeId")
+    fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
 
     /**
      * Asks every node in order to process any queued up inbound messages. This may in turn result in nodes

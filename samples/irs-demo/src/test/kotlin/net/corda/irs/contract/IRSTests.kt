@@ -4,9 +4,9 @@ import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test

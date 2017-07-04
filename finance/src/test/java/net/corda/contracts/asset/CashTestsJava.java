@@ -8,8 +8,8 @@ import org.junit.Test;
 
 import static net.corda.core.contracts.ContractsDSL.DOLLARS;
 import static net.corda.core.contracts.ContractsDSL.issuedBy;
-import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_1;
-import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_2;
+import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_2;
 import static net.corda.testing.CoreTestUtils.*;
 
 /**

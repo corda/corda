@@ -10,9 +10,9 @@ import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
-import net.corda.core.utilities.DUMMY_MAP
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_REGULATOR
+import net.corda.testing.DUMMY_MAP
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_REGULATOR
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.api.NodeInterestRates
 import net.corda.node.services.config.NodeConfiguration
