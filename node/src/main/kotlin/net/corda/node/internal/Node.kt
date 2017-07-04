@@ -228,14 +228,14 @@ open class Node(override val configuration: FullNodeConfiguration,
         val consumer = session.createConsumer(queueName)
         val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:
                 throw IOException("Did not receive a response from the Network Map Service at $serverAddress")
-        val publicHostAndPort = artemisMessage.getStringProperty(ipDetectResponseProperty).parseAuthority()
+        val publicHostAndPort = artemisMessage.getStringProperty(ipDetectResponseProperty)
         log.info("Detected public address: $publicHostAndPort")
 
         consumer.close()
         session.deleteQueue(queueName)
         clientFactory.close()
 
-        return publicHostAndPort.host.removePrefix("/")
+        return publicHostAndPort.removePrefix("/").parseAuthority().host
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
