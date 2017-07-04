@@ -1,6 +1,7 @@
 package net.corda.client.rpc.internal
 
 import com.google.common.net.HostAndPort
+import net.corda.core.concurrent.AtomicNullable
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.RPCOps
 import net.corda.core.minutes
@@ -157,9 +158,10 @@ class RPCClient<I : RPCOps>(
         currentSession?.close()
     }
 
-    private inner class Session(private val rpcOpsClass: Class<I>, username: String, password: String, private var starter: Thread?) {
+    private inner class Session(private val rpcOpsClass: Class<I>, username: String, password: String, starter: Thread) {
         private val serverLocator: ServerLocator
         private val proxyHandler: RPCClientProxyHandler
+        private val starter = AtomicNullable(starter)
 
         init {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
@@ -175,9 +177,7 @@ class RPCClient<I : RPCOps>(
 
         fun start() = run {
             proxyHandler.start()
-            synchronized(this) {
-                starter = null
-            }
+            starter.clear() // There is no longer a known need to interrupt it.
             @Suppress("UNCHECKED_CAST")
             val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
             val serverProtocolVersion = ops.protocolVersion
@@ -194,10 +194,10 @@ class RPCClient<I : RPCOps>(
             }
         }
 
-        fun close(): Unit = synchronized(this) {
+        fun close() {
             proxyHandler.close()
             serverLocator.close()
-            starter?.interrupt() // Break out of waitForTopology.
+            starter.peekAndClear()?.interrupt() // Break out of waitForTopology.
         }
     }
 }

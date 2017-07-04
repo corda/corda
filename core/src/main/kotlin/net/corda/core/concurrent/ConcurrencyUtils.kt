@@ -9,6 +9,7 @@ import net.corda.core.then
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * As soon as a given future becomes done, the handler is invoked with that future as its argument.
@@ -34,4 +35,11 @@ internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Lo
         }
     }
     return resultFuture
+}
+
+class AtomicNullable<out T>(obj: T) {
+    private val ref = AtomicReference(obj)
+    fun assert(): T = ref.get()
+    fun peekAndClear(): T? = ref.getAndSet(null)
+    fun clear() = ref.set(null)
 }

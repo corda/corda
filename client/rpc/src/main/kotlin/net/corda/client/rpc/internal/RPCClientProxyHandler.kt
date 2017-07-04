@@ -12,6 +12,7 @@ import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.ThreadBox
+import net.corda.core.concurrent.AtomicNullable
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
@@ -91,7 +92,7 @@ class RPCClientProxyHandler(
     }
 
     // Holds the RPC reply futures.
-    private val rpcReplyMap = RpcReplyMap()
+    private val rpcReplyMap = AtomicNullable(RpcReplyMap())
     // Optionally holds RPC call site stack traces to be shown on errors/warnings.
     private val callSiteMap = if (rpcConfiguration.trackRpcCallSites) CallSiteMap() else null
     // Holds the Observables and a reference store to keep Observables alive when subscribed to.
@@ -201,7 +202,7 @@ class RPCClientProxyHandler(
                     "-> RPC($rpcId) -> ${method.name}($argumentsString): ${method.returnType}"
                 }
 
-                require(rpcReplyMap.put(rpcId, replyFuture) == null) {
+                require(rpcReplyMap.assert().put(rpcId, replyFuture) == null) {
                     "Generated several RPC requests with same ID $rpcId"
                 }
                 it.producer.send(message)
@@ -225,7 +226,7 @@ class RPCClientProxyHandler(
         log.debug { "Got message from RPC server $serverToClient" }
         when (serverToClient) {
             is RPCApi.ServerToClient.RpcReply -> {
-                val replyFuture = rpcReplyMap.remove(serverToClient.id)
+                val replyFuture = rpcReplyMap.assert().remove(serverToClient.id)
                 if (replyFuture == null) {
                     log.error("RPC reply arrived to unknown RPC ID ${serverToClient.id}, this indicates an internal RPC error.")
                 } else {
@@ -279,7 +280,7 @@ class RPCClientProxyHandler(
         sessionAndProducerPool.close().forEach {
             it.sessionFactory.close()
         }
-        rpcReplyMap.values.forEach { it.cancel(false) } // TODO: First ban new additions to map.
+        rpcReplyMap.peekAndClear()?.values?.forEach { it.cancel(false) }
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
         val observationExecutors = observationExecutorPool.close()
