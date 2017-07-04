@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(sgx_common)
 
-set(SGX_USE_HARDWARE FALSE CACHE STRING "")
+set(SGX_USE_HARDWARE TRUE CACHE STRING "")
 set(SGX_SDK ${CMAKE_CURRENT_SOURCE_DIR}/../../linux-sgx CACHE STRING "")
 set(SGX_LIBRARY_PATH ${SGX_SDK}/build/linux CACHE STRING "")
 set(SGX_SDK_INCLUDE ${SGX_SDK}/common/inc CACHE STRING "")
@@ -9,6 +9,9 @@ set(GENERATED_RPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/rpc CACHE STRING "")
 set(DEPENDENCIES_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../dependencies/root)
 set(PROGUARD_JAR_PATH ${DEPENDENCIES_ROOT_DIR}/usr/share/java/proguard.jar CACHE STRING "")
 set(DEPENDENCIES_LIBRARY_PATH ${DEPENDENCIES_ROOT_DIR}/usr/lib/x86_64-linux-gnu CACHE STRING "")
+
+# C++11
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 add_executable(edger8r IMPORTED)
 set_target_properties(edger8r PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/sgx_edger8r)

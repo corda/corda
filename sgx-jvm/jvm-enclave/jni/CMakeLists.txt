@@ -16,4 +16,4 @@ set_target_properties(urtslib PROPERTIES IMPORTED_LOCATION ${SGX_LIBRARY_PATH}/l
 
 add_library(untrusted_corda_sgx SHARED jni_sgx_api.cpp ${VERIFY_ENCLAVE_JNI_INCLUDE_DIR}/jni_sgx_api.h $<TARGET_OBJECTS:common>)
 target_link_libraries(untrusted_corda_sgx urtslib)
-add_dependencies(untrusted_corda_sgx enclave)
+add_dependencies(untrusted_corda_sgx enclave common)

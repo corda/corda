@@ -26,6 +26,9 @@ set(AVIAN_PATH ${PROJECT_SOURCE_DIR}/../../avian)
 set(ENCLAVE_JAR_PATH ${PROJECT_SOURCE_DIR}/../../../verify-enclave/build/libs/corda-enclavelet.jar)
 set(AVIAN_PROCESS "-debug-openjdk-src")
 
+# C++11
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 if(NOT JAVA_HOME})
     set(JAVA_HOME $ENV{JAVA_HOME} CACHE STRING "")
 endif()
