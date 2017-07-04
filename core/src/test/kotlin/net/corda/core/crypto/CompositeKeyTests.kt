@@ -235,4 +235,28 @@ class CompositeKeyTests {
         node2.checkValidity()
         node1.checkValidity()
     }
+
+    @Test
+    fun `CompositeKey from multiple signature schemes and signature verification`() {
+        val (privRSA, pubRSA) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val (privK1, pubK1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (privR1, pubR1) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val (privEd, pubEd) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (privSP, pubSP) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+
+        val RSASignature = privRSA.sign(message.bytes, pubRSA)
+        val K1Signature = privK1.sign(message.bytes, pubK1)
+        val R1Signature = privR1.sign(message.bytes, pubR1)
+        val EdSignature = privEd.sign(message.bytes, pubEd)
+        val SPSignature = privSP.sign(message.bytes, pubSP)
+
+        val compositeKey = CompositeKey.Builder().addKeys(pubRSA, pubK1, pubR1, pubEd, pubSP).build() as CompositeKey
+
+        val signatures = listOf(RSASignature, K1Signature, R1Signature, EdSignature, SPSignature)
+        assertTrue { compositeKey.isFulfilledBy(signatures.byKeys()) }
+
+        // One signature is missing.
+        val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature, SPSignature)
+        assertFalse { compositeKey.isFulfilledBy(signaturesWithoutRSA.byKeys()) }
+    }
 }
