@@ -43,6 +43,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import java.util.*
@@ -226,7 +227,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
-        override fun myAddresses(): List<Authority> = listOf(Authority("mockHost", -1))
+        override fun myAddresses() = emptyList<Authority>()
 
         override fun start(): MockNode {
             super.start()
@@ -311,7 +312,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return node
     }
 
-    fun baseDirectory(nodeId: Int) = filesystem.getPath("/nodes/$nodeId")
+    fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
 
     /**
      * Asks every node in order to process any queued up inbound messages. This may in turn result in nodes
