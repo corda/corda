@@ -1,0 +1,3 @@
+[submodule "linux-sgx-driver"]
+	path = sgx-jvm/linux-sgx-driver
+	url = git@github.com:01org/linux-sgx-driver.git
