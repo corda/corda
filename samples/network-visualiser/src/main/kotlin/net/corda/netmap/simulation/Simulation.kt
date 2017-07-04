@@ -167,7 +167,7 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
     val serviceProviders: List<SimulatedNode> = listOf(notary, ratesOracle, networkMap)
     val banks: List<SimulatedNode> = bankFactory.createAll()
 
-    val clocks = (serviceProviders + regulators + banks).map { it.services.clock as TestClock }
+    val clocks = (serviceProviders + regulators + banks).map { it.platformClock as TestClock }
 
     // These are used from the network visualiser tool.
     private val _allFlowSteps = PublishSubject.create<Pair<SimulatedNode, ProgressTracker.Change>>()

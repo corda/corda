@@ -405,7 +405,7 @@ class NodeVaultServiceTest {
             }
             val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
 
-            services.recordTransactions(listOf(usefulTX))
+            services.recordTransactions(usefulTX)
 
             vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 1")
             vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 2")
@@ -418,7 +418,7 @@ class NodeVaultServiceTest {
             }
             val anotherTX = megaCorpServices.signInitialTransaction(anotherBuilder)
 
-            services.recordTransactions(listOf(anotherTX))
+            services.recordTransactions(anotherTX)
 
             vaultSvc.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
             assertEquals(1, vaultSvc.getTransactionNotes(anotherTX.id).count())

@@ -87,11 +87,11 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
                     AffinityExecutor.ServiceAffinityExecutor("test", 1),
                     database)
-            services = object : MockServiceHubInternal(overrideClock = testClock, keyManagement = kms, network = mockMessagingService), TestReference {
+            services = object : MockServiceHubInternal(database, overrideClock = testClock, keyManagement = kms, network = mockMessagingService), TestReference {
                 override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
                 override val testReference = this@NodeSchedulerServiceTest
             }
-            scheduler = NodeSchedulerService(services, database, schedulerGatedExecutor)
+            scheduler = NodeSchedulerService(services, schedulerGatedExecutor)
             smmExecutor = AffinityExecutor.ServiceAffinityExecutor("test", 1)
             val mockSMM = StateMachineManager(services, DBCheckpointStorage(), smmExecutor, database)
             mockSMM.changes.subscribe { change ->

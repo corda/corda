@@ -4,7 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionGraphSearch
-import net.corda.core.div
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.Party
@@ -39,7 +38,7 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
         // This invokes the trading flow and out pops our finished transaction.
         val tradeTX: SignedTransaction = subFlow(buyer)
         // TODO: This should be moved into the flow itself.
-        serviceHub.recordTransactions(listOf(tradeTX))
+        serviceHub.recordTransactions(tradeTX)
 
         println("Purchase complete - we are a happy customer! Final transaction is: " +
                 "\n\n${Emoji.renderIfSupported(tradeTX.tx)}")
@@ -61,18 +60,11 @@ class BuyerFlow(val otherParty: Party) : FlowLogic<Unit>() {
         val cpIssuance = search.call().single()
 
         // Buyer will fetch the attachment from the seller automatically when it resolves the transaction.
-        // For demo purposes just extract attachment jars when saved to disk, so the user can explore them.
-        val attachmentsPath = (serviceHub.attachments).let {
-            it.automaticallyExtractAttachments = true
-            it.storePath
-        }
 
         cpIssuance.attachments.first().let {
-            val p = attachmentsPath / "$it.jar"
             println("""
 
-The issuance of the commercial paper came with an attachment. You can find it expanded in this directory:
-$p
+The issuance of the commercial paper came with an attachment. You can find it in the attachments directory: $it.jar
 
 ${Emoji.renderIfSupported(cpIssuance)}""")
         }
