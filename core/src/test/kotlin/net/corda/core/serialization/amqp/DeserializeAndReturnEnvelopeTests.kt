@@ -3,7 +3,7 @@ package net.corda.core.serialization.amqp
 import org.junit.Test
 import kotlin.test.*
 
-class DeserializeAndReturnEnvelope {
+class DeserializeAndReturnEnvelopeTests {
 
     fun testName() = Thread.currentThread().stackTrace[2].methodName
     inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
