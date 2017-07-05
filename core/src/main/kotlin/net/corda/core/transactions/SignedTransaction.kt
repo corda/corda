@@ -105,7 +105,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
         val sigKeys = sigs.map { it.by }.toSet()
         // TODO Problem is that we can get single PublicKey wrapped as CompositeKey in allowedToBeMissing/mustSign
         //  equals on CompositeKey won't catch this case (do we want to single PublicKey be equal to the same key wrapped in CompositeKey with threshold 1?)
-        val missing = tx.mustSign.filter { !it.isFulfilledBy(sigKeys) }.toSet()
+        val missing = tx.requiredSigningKeys.filter { !it.isFulfilledBy(sigKeys) }.toSet()
         return missing
     }
 

@@ -33,10 +33,9 @@ class WireTransaction(
         /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
         override val commands: List<Command>,
         notary: Party?,
-        signers: List<PublicKey>,
         type: TransactionType,
         timeWindow: TimeWindow?
-) : BaseTransaction(inputs, outputs, notary, signers, type, timeWindow), TraversableTransaction {
+) : BaseTransaction(inputs, outputs, notary, type, timeWindow), TraversableTransaction {
     init {
         checkInvariants()
     }
@@ -52,6 +51,17 @@ class WireTransaction(
             val wtx = data.bytes.deserialize<WireTransaction>(kryo)
             wtx.cachedBytes = data
             return wtx
+        }
+    }
+
+    /** Public keys that need to be fulfilled by signatures in order for the transaction to be valid. */
+    val requiredSigningKeys: Set<PublicKey> get() {
+        val commandKeys = commands.flatMap { it.signers }.toSet()
+        // TODO: prevent notary field from being set if there are no inputs and no timestamp
+        return if (notary != null && (inputs.isNotEmpty() || timeWindow != null)) {
+            commandKeys + notary.owningKey
+        } else {
+            commandKeys
         }
     }
 
@@ -104,7 +114,7 @@ class WireTransaction(
         val resolvedInputs = inputs.map { ref ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, mustSign, timeWindow, type)
+        return LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, type)
     }
 
     /**
@@ -132,7 +142,6 @@ class WireTransaction(
                 outputs.filter { filtering.test(it) },
                 commands.filter { filtering.test(it) },
                 notNullFalse(notary) as Party?,
-                mustSign.filter { filtering.test(it) },
                 notNullFalse(type) as TransactionType?,
                 notNullFalse(timeWindow) as TimeWindow?
         )

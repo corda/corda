@@ -112,7 +112,6 @@ class PartialMerkleTreeTest {
         assertEquals(1, leaves.commands.size)
         assertEquals(1, leaves.outputs.size)
         assertEquals(1, leaves.inputs.size)
-        assertEquals(1, leaves.mustSign.size)
         assertEquals(0, leaves.attachments.size)
         assertTrue(mt.filteredLeaves.timeWindow != null)
         assertEquals(null, mt.filteredLeaves.type)
@@ -227,7 +226,6 @@ class PartialMerkleTreeTest {
                 outputs = testTx.outputs,
                 commands = testTx.commands,
                 notary = notary,
-                signers = listOf(MEGA_CORP_PUBKEY, DUMMY_PUBKEY_1),
                 type = TransactionType.General,
                 timeWindow = timeWindow
         )

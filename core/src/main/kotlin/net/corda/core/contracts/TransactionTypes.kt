@@ -22,20 +22,7 @@ sealed class TransactionType {
         require(tx.notary != null || tx.timeWindow == null) { "Transactions with time-windows must be notarised" }
         val duplicates = detectDuplicateInputs(tx)
         if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates)
-        val missing = verifySigners(tx)
-        if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx.id, missing.toList())
         verifyTransaction(tx)
-    }
-
-    /** Check that the list of signers includes all the necessary keys */
-    fun verifySigners(tx: LedgerTransaction): Set<PublicKey> {
-        val notaryKey = tx.inputs.map { it.state.notary.owningKey }.toSet()
-        if (notaryKey.size > 1) throw TransactionVerificationException.MoreThanOneNotary(tx.id)
-
-        val requiredKeys = getRequiredSigners(tx) + notaryKey
-        val missing = requiredKeys - tx.mustSign
-
-        return missing
     }
 
     /** Check that the inputs are unique. */
@@ -50,12 +37,6 @@ sealed class TransactionType {
         }
         return duplicates
     }
-
-    /**
-     * Return the list of public keys that that require signatures for the transaction type.
-     * Note: the notary key is checked separately for all transactions and need not be included.
-     */
-    abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKey>
 
     /** Implement type specific transaction validation logic */
     abstract fun verifyTransaction(tx: LedgerTransaction)
@@ -133,8 +114,6 @@ sealed class TransactionType {
                 }
             }
         }
-
-        override fun getRequiredSigners(tx: LedgerTransaction) = tx.commands.flatMap { it.signers }.toSet()
     }
 
     /**
@@ -148,7 +127,8 @@ sealed class TransactionType {
          */
         class Builder(notary: Party) : TransactionBuilder(NotaryChange, notary) {
             override fun addInputState(stateAndRef: StateAndRef<*>) {
-                signers.addAll(stateAndRef.state.data.participants.map { it.owningKey })
+                val participantKeys = stateAndRef.state.data.participants.map { it.owningKey }
+                addCommand(ChangeNotary, participantKeys)
                 super.addInputState(stateAndRef)
             }
         }
@@ -161,16 +141,27 @@ sealed class TransactionType {
          */
         override fun verifyTransaction(tx: LedgerTransaction) {
             try {
-                for ((input, output) in tx.inputs.zip(tx.outputs)) {
-                    check(input.state.data == output.data)
-                    check(input.state.notary != output.notary)
-                }
-                check(tx.commands.isEmpty())
+                verifyOnlyNotaryChanged(tx)
+
+                val command = tx.commands.single()
+                check(command.value is ChangeNotary)
+
+                val inputStateParticipants = tx.inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
+                val commandSigningKeys = command.signers.toSet()
+                check(commandSigningKeys == inputStateParticipants)
             } catch (e: IllegalStateException) {
                 throw TransactionVerificationException.InvalidNotaryChange(tx.id)
             }
         }
 
-        override fun getRequiredSigners(tx: LedgerTransaction) = tx.inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()
+        private fun verifyOnlyNotaryChanged(tx: LedgerTransaction) {
+            for ((input, output) in tx.inputs.zip(tx.outputs)) {
+                check(input.state.data == output.data)
+                check(input.state.notary != output.notary)
+            }
+        }
     }
 }
+
+/** A special platform command indicating a notary change operation in the transaction */
+object ChangeNotary : TypeOnlyCommandData()
