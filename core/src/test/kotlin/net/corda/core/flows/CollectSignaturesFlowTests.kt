@@ -2,9 +2,9 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -13,7 +13,6 @@ import net.corda.flows.CollectSignaturesFlow
 import net.corda.flows.FinalityFlow
 import net.corda.flows.SignTransactionFlow
 import net.corda.testing.MINI_CORP_KEY
-import net.corda.testing.MINI_CORP_PUBKEY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import org.junit.After
