@@ -143,7 +143,7 @@ data class Sort(val columns: Collection<SortColumn>) {
     @CordaSerializable
     enum class Direction {
         ASC,
-        DESC,
+        DESC
     }
 
     @CordaSerializable
@@ -156,14 +156,14 @@ data class Sort(val columns: Collection<SortColumn>) {
         STATE_STATUS("stateStatus"),
         RECORDED_TIME("recordedTime"),
         CONSUMED_TIME("consumedTime"),
-        LOCK_ID("lockId"),
+        LOCK_ID("lockId")
     }
 
     enum class LinearStateAttribute(val columnName: String) : Attribute {
         /** Vault Linear States */
         UUID("uuid"),
         EXTERNAL_ID("externalId"),
-        DEAL_REFERENCE("dealReference"),
+        DEAL_REFERENCE("dealReference")
     }
 
     enum class FungibleStateAttribute(val columnName: String) : Attribute {
