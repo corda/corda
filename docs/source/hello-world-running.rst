@@ -162,8 +162,8 @@ The vaults of Node A and Node B should both display the following output:
     - state:
         data:
           value: 99
-          sender: "CN=NodeA,O=NodeA,L=London,C=GB"
-          recipient: "CN=NodeB,O=NodeB,L=New York,C=US"
+          lender: "CN=NodeA,O=NodeA,L=London,C=GB"
+          borrower: "CN=NodeB,O=NodeB,L=New York,C=US"
           contract:
             legalContractReference: "559322B95BCF7913E3113962DC3F3CBD71C818C66977721580C045DC41C813A5"
           participants:

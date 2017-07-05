@@ -70,8 +70,8 @@ transfer them or redeem them for cash. One way to enforce this behaviour would b
 * For the transactions's output IOU state:
 
   * Its value must be non-negative
-  * Its sender and its recipient cannot be the same entity
-  * The IOU's sender must sign the transaction
+  * The lender and the borrower cannot be the same entity
+  * The IOU's borrower must sign the transaction
 
 We can picture this transaction as follows:
 
@@ -109,15 +109,15 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     // IOU-specific constraints.
                     val out = tx.outputs.single() as IOUState
                     "The IOU's value must be non-negative." using (out.value > 0)
-                    "The sender and the recipient cannot be the same entity." using (out.sender != out.recipient)
+                    "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
 
                     // Constraints on the signers.
-                    "The sender must be a signer." using (command.signers.contains(out.sender.owningKey))
+                    "The borrower must be a signer." using (command.signers.contains(out.borrower.owningKey))
                 }
             }
 
             // The legal contract reference - we'll leave this as a dummy hash for now.
-            override val legalContractReference = SecureHash.sha256("Prose contract.")
+            override val legalContractReference = SecureHash.zeroHash
         }
 
     .. code-block:: java
@@ -149,20 +149,20 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
                     // IOU-specific constraints.
                     final IOUState out = (IOUState) tx.getOutputs().get(0);
-                    final Party sender = out.getSender();
-                    final Party recipient = out.getRecipient();
+                    final Party lender = out.getLender();
+                    final Party borrower = out.getBorrower();
                     check.using("The IOU's value must be non-negative.",out.getValue() > 0);
-                    check.using("The sender and the recipient cannot be the same entity.", out.getSender() != out.getRecipient());
+                    check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
                     // Constraints on the signers.
-                    check.using("The sender must be a signer.", command.getSigners().contains(out.getSender().getOwningKey()));
+                    check.using("The borrower must be a signer.", command.getSigners().contains(borrower.getOwningKey()));
 
                     return null;
                 });
             }
 
             // The legal contract reference - we'll leave this as a dummy hash for now.
-            private final SecureHash legalContractReference = SecureHash.sha256("Prose contract.");
+            private final SecureHash legalContractReference = SecureHash.Companion.getZeroHash();
             @Override public final SecureHash getLegalContractReference() { return legalContractReference; }
         }
 
@@ -179,8 +179,8 @@ The first thing we add to our contract is a *command*. Commands serve two functi
 
 * They allow us to define the required signers for the transaction
 
-  * For example, IOU creation might require signatures from the sender alone, whereas the transfer of an IOU might
-    require signatures from both the IOU's sender and recipient
+  * For example, IOU creation might require signatures from the borrower alone, whereas the transfer of an IOU might
+    require signatures from both the IOU's borrower and lender
 
 Our contract has one command, a ``Create`` command. All commands must implement the ``CommandData`` interface.
 
@@ -220,7 +220,7 @@ following are true:
 * The transaction has inputs
 * The transaction doesn't have exactly one output
 * The IOU itself is invalid
-* The transaction doesn't require the sender's signature
+* The transaction doesn't require the borrower's signature
 
 Command constraints
 ~~~~~~~~~~~~~~~~~~~
@@ -250,7 +250,7 @@ IOU constraints
 We want to impose two constraints on the ``IOUState`` itself:
 
 * Its value must be non-negative
-* Its sender and its recipient cannot be the same entity
+* The lender and the borrower cannot be the same entity
 
 We impose these constraints in the same ``requireThat`` block as before.
 
@@ -259,7 +259,7 @@ other statements - in this case, we're extracting the transaction's single ``IOU
 
 Signer constraints
 ~~~~~~~~~~~~~~~~~~
-Finally, we require the sender's signature on the transaction. A transaction's required signers is equal to the union
+Finally, we require the borrower's signature on the transaction. A transaction's required signers is equal to the union
 of all the signers listed on the commands. We therefore extract the signers from the ``Create`` command we
 retrieved earlier.
 
@@ -270,7 +270,7 @@ We've now written an ``IOUContract`` constraining the evolution of each ``IOUSta
 * An ``IOUState`` can only be created, not transferred or redeemed
 * Creating an ``IOUState`` requires an issuance transaction with no inputs, a single ``IOUState`` output, and a
   ``Create`` command
-* The ``IOUState`` created by the issuance transaction must have a non-negative value, and its sender and recipient
+* The ``IOUState`` created by the issuance transaction must have a non-negative value, and the lender and borrower
   must be different entities.
 
 Before we move on, make sure you go back and modify ``IOUState`` to point to the new ``IOUContract`` class.

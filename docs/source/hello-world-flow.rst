@@ -11,7 +11,7 @@ allow the node to handle new business processes. Our flow will allow a node to i
 
 Flow outline
 ------------
-Our flow needs to take the following steps to issue a new IOU onto the ledger:
+Our flow needs to take the following steps for a borrower to issue a new IOU onto the ledger:
 
   1. Create a valid transaction proposal for the creation of a new IOU
   2. Verify the transaction
@@ -22,14 +22,14 @@ Our flow needs to take the following steps to issue a new IOU onto the ledger:
      * Timestamp transactions that have a ``TimeWindow``
 
   6. Record the transaction in our vault
-  7. Send the transaction to the IOU's recipient so that they can record it too
+  7. Send the transaction to the IOU's lender so that they can record it too
 
 Subflows
 ^^^^^^^^
 Although our flow requirements look complex, we can delegate to existing flows to handle many of these tasks. A flow
 that is invoked within the context of a larger flow to handle a repeatable task is called a *subflow*.
 
-In our initiator flow, we can automate steps 5, 6 and 7  using ``FinalityFlow``.
+In our initiator flow, we can automate steps 5, 6 and 7 using ``FinalityFlow``.
 
 All we need to do is write the steps to handle the creation and signing of the proposed transaction.
 
@@ -205,7 +205,7 @@ the following transaction:
 So we'll need the following:
 
 * The output ``IOUState``
-* A ``Create`` command listing the IOU's sender as a signer
+* A ``Create`` command listing the IOU's borrower as a signer
 
 The command we use pairs the ``IOUContract.Create`` command defined earlier with our public key. Including this command
 in the transaction makes us one of the transaction's required signers.
@@ -254,7 +254,7 @@ automatically using a built-in flow called ``FinalityFlow``:
 
 * Notarising the transaction
 * Recording it in our vault
-* Sending it to the other participants (i.e. the recipient) for them to record as well
+* Sending it to the other participants (i.e. the lender) for them to record as well
 
 Our flow, and our CorDapp, are now ready!
 

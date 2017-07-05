@@ -60,8 +60,8 @@ Modelling IOUs
 How should we define the ``IOUState`` representing IOUs on the ledger? Beyond implementing the ``ContractState``
 interface, our ``IOUState`` will also need properties to track the relevant features of the IOU:
 
-* The sender of the IOU
-* The IOU's recipient
+* The lender of the IOU
+* The borrower of the IOU
 * The value of the IOU
 
 There are many more fields you could include, such as the IOU's currency. We'll abstract them away for now. If
@@ -82,11 +82,11 @@ define an ``IOUState``:
         import net.corda.core.identity.Party
 
         class IOUState(val value: Int,
-                       val sender: Party,
-                       val recipient: Party) : ContractState {
+                       val lender: Party,
+                       val borrower: Party) : ContractState {
             override val contract: IOUContract = IOUContract()
 
-            override val participants get() = listOf(sender, recipient)
+            override val participants get() = listOf(lender, borrower)
         }
 
     .. code-block:: java
@@ -102,26 +102,26 @@ define an ``IOUState``:
 
         public class IOUState implements ContractState {
             private final int value;
-            private final Party sender;
-            private final Party recipient;
+            private final Party lender;
+            private final Party borrower;
             private final IOUContract contract = new IOUContract();
 
-            public IOUState(int value, Party sender, Party recipient) {
+            public IOUState(int value, Party lender, Party borrower) {
                 this.value = value;
-                this.sender = sender;
-                this.recipient = recipient;
+                this.lender = lender;
+                this.borrower = borrower;
             }
 
             public int getValue() {
                 return value;
             }
 
-            public Party getSender() {
-                return sender;
+            public Party getLender() {
+                return lender;
             }
 
-            public Party getRecipient() {
-                return recipient;
+            public Party getBorrower() {
+                return borrower;
             }
 
             @Override
@@ -132,21 +132,21 @@ define an ``IOUState``:
 
             @Override
             public List<AbstractParty> getParticipants() {
-                return ImmutableList.of(sender, recipient);
+                return ImmutableList.of(lender, borrower);
             }
         }
 
 We've made the following changes:
 
 * We've renamed ``TemplateState`` to ``IOUState``
-* We've added properties for ``value``, ``sender`` and ``recipient`` (along with any getters and setters in Java):
+* We've added properties for ``value``, ``lender`` and ``borrower`` (along with any getters and setters in Java):
 
-  * ``value`` is just a standard int (in Java)/Int (in Kotlin), but ``sender`` and ``recipient`` are of type
+  * ``value`` is just a standard int (in Java)/Int (in Kotlin), but ``lender`` and ``borrower`` are of type
     ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
 
-* We've overridden ``participants`` to return a list of the ``sender`` and ``recipient``
+* We've overridden ``participants`` to return a list of the ``lender`` and ``borrower``
   * This means that actions such as changing the state's contract or its notary will require approval from both the
-    ``sender`` and the ``recipient``
+    ``lender`` and the ``borrower``
 
 We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
 ``IOUContract``.
