@@ -1324,7 +1324,7 @@ class VaultQueryTests {
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
-            val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.equal(USD.currencyCode) }
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
             val ccyCriteria = VaultCustomQueryCriteria(ccyIndex)
 
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))

@@ -79,7 +79,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 QueryCriteria.TimeInstantType.CONSUMED -> Column.Kotlin(VaultSchemaV1.VaultStates::consumedTime)
             }
             val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
-            predicateSet.add(expressionToPredicate(vaultStates, expression))
+            predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
         }
         return predicateSet
     }
@@ -132,75 +132,65 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
     }
 
-    /**
-     * @return : Expression<Boolean> -> : Predicate
-     */
-    private fun <O, R> expressionToExpression(root: Root<O>, expression: CriteriaExpression<O, R>): Expression<R> {
+    private fun <O, R> parseExpression(root: Root<O>, expression: CriteriaExpression<O, R>): Expression<Boolean> {
         return when (expression) {
             is CriteriaExpression.BinaryLogical -> {
-                val leftPredicate = expressionToExpression(root, expression.left)
-                val rightPredicate = expressionToExpression(root, expression.right)
+                val leftPredicate = parseExpression(root, expression.left)
+                val rightPredicate = parseExpression(root, expression.right)
                 when (expression.operator) {
-                    BinaryLogicalOperator.AND -> criteriaBuilder.and(leftPredicate, rightPredicate) as Expression<R>
-                    BinaryLogicalOperator.OR -> criteriaBuilder.or(leftPredicate, rightPredicate) as Expression<R>
+                    BinaryLogicalOperator.AND -> criteriaBuilder.and(leftPredicate, rightPredicate)
+                    BinaryLogicalOperator.OR -> criteriaBuilder.or(leftPredicate, rightPredicate)
                 }
             }
-            is CriteriaExpression.Not -> criteriaBuilder.not(expressionToExpression(root, expression.expression)) as Expression<R>
+            is CriteriaExpression.Not -> criteriaBuilder.not(parseExpression(root, expression.expression))
             is CriteriaExpression.ColumnPredicateExpression<O, *> -> {
                 val column = root.get<Any?>(getColumnName(expression.column))
-                columnPredicateToPredicate(column, expression.predicate) as Expression<R>
+                columnPredicateToPredicate(column, expression.predicate)
             }
-            else -> throw VaultQueryException("Not expecting $expression")
+            is CriteriaExpression.AggregateFunctionExpression<O,*> -> {
+                return parseAggregateFunction(root, expression) as Expression<Boolean>
+            }
         }
     }
 
-    private fun <O, R> parseAggregateFunctionExpression(root: Root<O>, expression: CriteriaExpression<O, R>) {
-        if (expression is CriteriaExpression.AggregateFunctionExpression<O,*>) {
-            val orderCriteria = mutableListOf<Order>()
-            val column = root.get<Any?>(getColumnName(expression.column))
-            val columnPredicate = expression.predicate
-            when (columnPredicate) {
-                is ColumnPredicate.AggregateFunction -> {
-                    column as Path<Long?>?
-                    val aggregateExpression =
-                        when (columnPredicate.type) {
-                            AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
-                            AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
-                            AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
-                            AggregateFunctionType.MAX -> criteriaBuilder.max(column)
-                            AggregateFunctionType.MIN -> criteriaBuilder.min(column)
-                        }
-                    aggregateExpressions.add(aggregateExpression)
-
-                    // optionally order by this aggregate function
-                    expression.orderBy?.let {
+    private fun <O, R> parseAggregateFunction(root: Root<O>, expression: CriteriaExpression.AggregateFunctionExpression<O, R>): Expression<out Any?>? {
+        val column = root.get<Any?>(getColumnName(expression.column))
+        val columnPredicate = expression.predicate
+        when (columnPredicate) {
+            is ColumnPredicate.AggregateFunction -> {
+                column as Path<Long?>?
+                val aggregateExpression =
+                    when (columnPredicate.type) {
+                        AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                        AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
+                        AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
+                        AggregateFunctionType.MAX -> criteriaBuilder.max(column)
+                        AggregateFunctionType.MIN -> criteriaBuilder.min(column)
+                    }
+                aggregateExpressions.add(aggregateExpression)
+                // optionally order by this aggregate function
+                expression.orderBy?.let {
+                    val orderCriteria =
                         when (expression.orderBy!!) {
-                            Sort.Direction.ASC -> orderCriteria.add(criteriaBuilder.asc(aggregateExpression))
-                            Sort.Direction.DESC -> orderCriteria.add(criteriaBuilder.desc(aggregateExpression))
+                            Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
+                            Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
                         }
-                    }
+                    criteriaQuery.orderBy(orderCriteria)
                 }
-                else -> throw VaultQueryException("Not expecting $columnPredicate")
+                // add optional group by clauses
+                expression.groupByColumns?.let { columns ->
+                    val groupByExpressions =
+                            columns.map { column ->
+                                val path = root.get<Any?>(getColumnName(column))
+                                aggregateExpressions.add(path)
+                                path
+                            }
+                    criteriaQuery.groupBy(groupByExpressions)
+                }
+                return aggregateExpression
             }
-            // add optional group by clauses
-            expression.groupByColumns?.let { columns ->
-                val groupByExpressions =
-                    columns.map { column ->
-                        val path = root.get<Any?>(getColumnName(column))
-                        aggregateExpressions.add(path)
-                        path
-                    }
-                criteriaQuery.groupBy(groupByExpressions)
-            }
-            // optionally, add order criteria
-            if (orderCriteria.isNotEmpty()) {
-                criteriaQuery.orderBy(orderCriteria)
-            }
+            else -> throw VaultQueryException("Not expecting $columnPredicate")
         }
-    }
-
-    private fun <O> expressionToPredicate(root: Root<O>, expression: CriteriaExpression<O, Boolean>): Predicate {
-        return expressionToExpression(root, expression) as Predicate
     }
 
     override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria) : Collection<Predicate> {
@@ -303,13 +293,9 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             joinPredicates.add(joinPredicate)
 
             // resolve general criteria expressions
-            try {
-                predicateSet.add(expressionToPredicate(entityRoot, criteria.expression))
-            }
-            catch(e: Exception) {
-                // resolve any aggregation functions
-                parseAggregateFunctionExpression(entityRoot, criteria.expression)
-            }
+            val expression = parseExpression(entityRoot, criteria.expression)
+            if (expression is Predicate)
+                predicateSet.add(expression)
         }
         catch (e: Exception) {
             e.message?.let { message ->
