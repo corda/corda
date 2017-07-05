@@ -2,13 +2,13 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.testing.NullSignature
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import java.io.InputStream
 import java.security.KeyPair
 import java.security.PublicKey

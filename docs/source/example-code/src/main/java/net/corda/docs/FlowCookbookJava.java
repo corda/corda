@@ -7,6 +7,8 @@ import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.contracts.TransactionType.NotaryChange;
+import net.corda.core.contracts.testing.DummyContract;
+import net.corda.core.contracts.testing.DummyState;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;

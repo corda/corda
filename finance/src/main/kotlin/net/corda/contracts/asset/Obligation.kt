@@ -8,9 +8,9 @@ import net.corda.contracts.asset.Obligation.Lifecycle.NORMAL
 import net.corda.contracts.clause.*
 import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
-import net.corda.core.crypto.NULL_PARTY
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
