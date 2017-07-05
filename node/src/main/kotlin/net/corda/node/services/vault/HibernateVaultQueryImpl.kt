@@ -64,10 +64,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
             try {
                 // parse criteria and build where predicates
-                val (selections, predicates) = criteriaParser.parse(criteria, sorting)
-
-                // prepare query for execution
-                val query = session.createQuery(criteriaQuery)
+                val (selections, _, orderSpec) = criteriaParser.parse(criteria, sorting)
 
                 // pagination checks
                 if (!paging.isDefault) {
