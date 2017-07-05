@@ -4,7 +4,7 @@ import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.utilities.Authority
-import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import kotlin.system.exitProcess

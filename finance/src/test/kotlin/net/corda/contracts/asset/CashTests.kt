@@ -1,6 +1,6 @@
 package net.corda.contracts.asset
 
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.contracts.testing.DummyState
 import net.corda.core.crypto.SecureHash

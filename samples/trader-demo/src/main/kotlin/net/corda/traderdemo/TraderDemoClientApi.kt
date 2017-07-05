@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
-import net.corda.contracts.testing.calculateRandomlySizedAmounts
+import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD

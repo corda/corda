@@ -1,8 +1,8 @@
 package net.corda.node.services.config
 
 import net.corda.core.crypto.commonName
-import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.Authority
+import net.corda.testing.ALICE
 import net.corda.nodeapi.User
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy

@@ -6,7 +6,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.opaque
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.flows.ResolveTransactionsFlow
 import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP

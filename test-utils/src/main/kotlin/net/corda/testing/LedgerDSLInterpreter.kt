@@ -6,7 +6,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
 import java.io.InputStream
 
 /**

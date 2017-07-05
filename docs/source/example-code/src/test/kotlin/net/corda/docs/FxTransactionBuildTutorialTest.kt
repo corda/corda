@@ -5,8 +5,8 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.flows.CashIssueFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService

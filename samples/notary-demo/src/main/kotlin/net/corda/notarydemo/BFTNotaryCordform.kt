@@ -2,8 +2,8 @@ package net.corda.notarydemo
 
 import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.demorun.util.*
 import net.corda.demorun.runNodes
 import net.corda.node.services.transactions.BFTNonValidatingNotaryService

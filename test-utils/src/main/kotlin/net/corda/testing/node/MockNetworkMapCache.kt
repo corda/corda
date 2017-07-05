@@ -10,6 +10,7 @@ import net.corda.core.utilities.Authority
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.getTestX509Name
 import rx.Observable
 import rx.subjects.PublishSubject

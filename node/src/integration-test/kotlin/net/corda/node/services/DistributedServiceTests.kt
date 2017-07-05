@@ -10,8 +10,8 @@ import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.testing.driver.NodeHandle

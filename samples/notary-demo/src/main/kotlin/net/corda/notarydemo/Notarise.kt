@@ -11,7 +11,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Authority
-import net.corda.core.utilities.BOB
+import net.corda.testing.BOB
 import net.corda.notarydemo.flows.DummyIssueAndMove
 import net.corda.notarydemo.flows.RPCStartableNotaryFlowClient
 import kotlin.streams.asSequence

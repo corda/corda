@@ -7,7 +7,7 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Authority
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashPaymentFlow
 import net.corda.flows.IssuerFlow

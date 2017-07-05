@@ -24,9 +24,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Authority
-import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.*
 import net.corda.node.services.*
 import net.corda.node.services.api.*
@@ -71,6 +69,7 @@ import rx.Observable
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier.*
+import java.math.BigInteger
 import java.net.JarURLConnection
 import java.net.URI
 import java.nio.file.Path
@@ -212,8 +211,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 findRPCFlows(scanResult)
             }
 
-            // TODO: Investigate having class path scanning find this flow
-            registerInitiatedFlow(TxKeyFlow.Provider::class.java)
             // TODO Remove this once the cash stuff is in its own CorDapp
             registerInitiatedFlow(IssuerFlow.Issuer::class.java)
 
@@ -413,6 +410,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         installCoreFlow(BroadcastTransactionFlow::class) { otherParty, _ -> NotifyTransactionHandler(otherParty) }
         installCoreFlow(NotaryChangeFlow::class) { otherParty, _ -> NotaryChangeHandler(otherParty) }
         installCoreFlow(ContractUpgradeFlow::class) { otherParty, _ -> ContractUpgradeHandler(otherParty) }
+        installCoreFlow(TransactionKeyFlow::class) { otherParty, _ -> TransactionKeyHandler(otherParty) }
     }
 
     /**
@@ -736,9 +734,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             if (myIdentity.owningKey !is CompositeKey) { // TODO: Support case where owningKey is a composite key.
                 keyStore.save(serviceName, privateKeyAlias, keyPair)
             }
-            val partyAndCertificate = getTestPartyAndCertificate(myIdentity)
+            val dummyCaKey = entropyToKeyPair(BigInteger.valueOf(111))
+            val dummyCa = CertificateAndKeyPair(
+                    X509Utilities.createSelfSignedCACertificate(X500Name("CN=Dummy CA,OU=Corda,O=R3 Ltd,L=London,C=GB"), dummyCaKey),
+                    dummyCaKey)
+            val partyAndCertificate = getTestPartyAndCertificate(myIdentity, dummyCa)
             // Sanity check the certificate and path
-            val validatorParameters = PKIXParameters(setOf(TrustAnchor(DUMMY_CA.certificate.cert, null)))
+            val validatorParameters = PKIXParameters(setOf(TrustAnchor(dummyCa.certificate.cert, null)))
             val validator = CertPathValidator.getInstance("PKIX")
             validatorParameters.isRevocationEnabled = false
             validator.validate(partyAndCertificate.certPath, validatorParameters) as PKIXCertPathValidatorResult
@@ -757,6 +759,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         partyKeys += identityCertPathAndKey.second
         return identityCertPathAndKey
+    }
+
+    private fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair): PartyAndCertificate {
+        val certFactory = CertificateFactory.getInstance("X509")
+        val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
+        val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+        return PartyAndCertificate(party, certHolder, certPath)
     }
 
     protected open fun generateKeyPair() = cryptoGenerateKeyPair()

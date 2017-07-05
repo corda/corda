@@ -3,8 +3,8 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.node.services.messaging.Ack
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.BOB_PUBKEY

@@ -11,8 +11,8 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.and
 import net.corda.core.toFuture
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction

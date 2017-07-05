@@ -9,7 +9,7 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.DUMMY_MAP
+import net.corda.testing.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
 import net.corda.node.internal.Node
 import net.corda.node.serialization.NodeClock

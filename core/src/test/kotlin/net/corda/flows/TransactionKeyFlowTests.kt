@@ -3,16 +3,18 @@ package net.corda.flows
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
-class TxKeyFlowTests {
+class TransactionKeyFlowTests {
     lateinit var mockNet: MockNetwork
 
     @Before
@@ -37,7 +39,7 @@ class TxKeyFlowTests {
         bobNode.services.identityService.registerIdentity(notaryNode.info.legalIdentityAndCert)
 
         // Run the flows
-        val requesterFlow = aliceNode.services.startFlow(TxKeyFlow.Requester(bob))
+        val requesterFlow = aliceNode.services.startFlow(TransactionKeyFlow(bob))
 
         // Get the results
         val actual: Map<Party, AnonymisedIdentity> = requesterFlow.resultFuture.getOrThrow().toMap()
@@ -47,5 +49,15 @@ class TxKeyFlowTests {
         val bobAnonymousIdentity = actual[bob] ?: throw IllegalStateException()
         assertNotEquals<AbstractParty>(alice, aliceAnonymousIdentity.identity)
         assertNotEquals<AbstractParty>(bob, bobAnonymousIdentity.identity)
+
+        // Verify that the anonymous identities look sane
+        assertEquals(alice.name, aliceAnonymousIdentity.certificate.subject)
+        assertEquals(bob.name, bobAnonymousIdentity.certificate.subject)
+
+        // Verify that the nodes have the right anonymous identities
+        assertTrue { aliceAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
+        assertTrue { bobAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { aliceAnonymousIdentity.identity.owningKey in bobNode.services.keyManagementService.keys }
+        assertFalse { bobAnonymousIdentity.identity.owningKey in aliceNode.services.keyManagementService.keys }
     }
 }

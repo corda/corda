@@ -11,7 +11,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.testing.*
 import org.junit.Test
 import java.security.KeyPair
 import kotlin.test.assertEquals

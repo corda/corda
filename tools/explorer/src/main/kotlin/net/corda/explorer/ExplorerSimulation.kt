@@ -18,17 +18,16 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.flows.*
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
@@ -134,8 +133,7 @@ class ExplorerSimulation(val options: OptionSet) {
         // Log to logger when flow finish.
         fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
-            returnValue.success {
-                val (stx, idenities) = it
+            returnValue.success { (stx) ->
                 Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
             }.failure {
                 Main.log.info("$out ${it.message}")

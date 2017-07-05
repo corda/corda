@@ -1,7 +1,7 @@
 package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.contracts.testing.calculateRandomlySizedAmounts
+import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
@@ -13,7 +13,7 @@ import net.corda.core.map
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.BOC
 import net.corda.testing.MEGA_CORP
@@ -43,7 +43,6 @@ class IssuerFlowTest {
 
         nodes.forEach { node ->
             nodes.map { it.info.legalIdentityAndCert }.forEach(node.services.identityService::registerIdentity)
-            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         }
     }
 
