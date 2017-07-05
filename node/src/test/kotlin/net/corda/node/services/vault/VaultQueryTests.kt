@@ -613,13 +613,13 @@ class VaultQueryTests {
             val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val sumCriteria = VaultCustomQueryCriteria(sum)
 
-            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val maxCriteria = VaultCustomQueryCriteria(max)
 
-            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val minCriteria = VaultCustomQueryCriteria(min)
 
-            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(groupByColumns = CashSchemaV1.PersistentCashState::currency) }
+            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
             val avgCriteria = VaultCustomQueryCriteria(avg)
 
             val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria

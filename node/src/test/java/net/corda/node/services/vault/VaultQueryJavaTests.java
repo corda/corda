@@ -222,8 +222,8 @@ public class VaultQueryJavaTests {
                 Field attributeCurrency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
                 Field attributeQuantity = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
 
-                CriteriaExpression currencyIndex = Builder.INSTANCE.equal(attributeCurrency, "USD");
-                CriteriaExpression quantityIndex = Builder.INSTANCE.greaterThanOrEqual(attributeQuantity, 10L);
+                CriteriaExpression currencyIndex = Builder.equal(attributeCurrency, "USD");
+                CriteriaExpression quantityIndex = Builder.greaterThanOrEqual(attributeQuantity, 10L);
 
                 QueryCriteria customCriteria2 = new VaultCustomQueryCriteria(quantityIndex);
                 QueryCriteria customCriteria1 = new VaultCustomQueryCriteria(currencyIndex);
@@ -397,11 +397,11 @@ public class VaultQueryJavaTests {
                 // DOCSTART VaultJavaQueryExample21
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies));
-                QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.count(pennies));
-                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.max(pennies));
-                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies));
-                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies));
+                QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.count(pennies));
+                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.max(pennies));
+                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.min(pennies));
+                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies));
 
                 QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
@@ -442,11 +442,11 @@ public class VaultQueryJavaTests {
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, Arrays.asList(currency)));
-                QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.count(pennies));
-                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.max(pennies, Arrays.asList(currency)));
-                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.min(pennies, Arrays.asList(currency)));
-                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.avg(pennies, Arrays.asList(currency)));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(currency)));
+                QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.count(pennies));
+                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.max(pennies, Arrays.asList(currency)));
+                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.min(pennies, Arrays.asList(currency)));
+                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies, Arrays.asList(currency)));
 
                 QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
@@ -511,7 +511,7 @@ public class VaultQueryJavaTests {
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
                 Field issuerParty = CashSchemaV1.PersistentCashState.class.getDeclaredField("issuerParty");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.INSTANCE.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(issuerParty, currency), Sort.Direction.DESC));
 
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, sumCriteria);
                 // DOCEND VaultJavaQueryExample23
