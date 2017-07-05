@@ -5,10 +5,30 @@ import net.corda.core.serialization.amqp.TypeNotation
 
 /**********************************************************************************************************************/
 
+/**
+ * Generated from an AMQP schema this class represents the classes unknown to the deserialiser and that thusly
+ * require carpenting up in bytecode form. This is a multi step process as carpenting one object may be depedent
+ * upon the creation of others, this information is tracked in the dependency tree represented by
+ * [dependencies] and [dependsOn]. Creatable classes are stored in [carpenterSchemas].
+ *
+ * The state of this class after initial generation is expected to mutate as classes are built by the carpenter
+ * enablaing the resolution of dependencies and thus new carpenter schemas added whilst those already
+ * carpented schemas are removed.
+ *
+ * @property carpenterSchemas The list of carpentable classes
+ * @property dependencies Maps a class to a list of classes that depend on it being built first
+ * @property dependsOn Maps a class to a list of classes it depends on being built before it
+ *
+ * Once a class is constructed we can quickly check for resolution by first looking at all of its dependents in the
+ * [dependencies] map. This will give us a list of classes that depended on that class being carpented. We can then
+ * in turn look up all of those classes in the [dependsOn] list, remove their dependency on the newly created class,
+ * and if that list is reduced to zero know we can now generate a [Schema] for them and carpent them up
+ */
 data class CarpenterSchemas (
         val carpenterSchemas : MutableList<Schema>,
         val dependencies     : MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
-        val dependsOn        : MutableMap<String, MutableList<String>>) {
+        val dependsOn        : MutableMap<String, MutableList<String>>)
+{
     companion object CarpenterSchemaConstructor {
         fun newInstance(): CarpenterSchemas {
             return CarpenterSchemas(
@@ -19,8 +39,6 @@ data class CarpenterSchemas (
     }
 
     fun addDepPair(type: TypeNotation, dependant: String, dependee: String) {
-        fun String.name() = this.split ('.').last().split('$').last()
-        println ("add dep ${dependant.name()} on ${dependee.name()}")
         dependsOn.computeIfAbsent(dependee, { mutableListOf<String>() }).add(dependant)
         dependencies.computeIfAbsent(dependant, { Pair(type, mutableListOf<String>()) }).second.add(dependee)
     }
@@ -31,8 +49,16 @@ data class CarpenterSchemas (
 
 /**********************************************************************************************************************/
 
+/**
+ * Take a dependency tree of [CarpenterSchemas] and reduce it to zero by carpenting those classes that
+ * require it. As classes are carpented check for depdency resolution, if now free generate a [Schema] for
+ * that class and add it to the list of classes ([CarpenterSchemas.carpenterSchemas]) that require
+ * carpenting
+ *
+ * @property cc a reference to the actual class carpenter we're using to constuct classes
+ * @property objects a list of carpented classes loaded into the carpenters class loader
+ */
 abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
-
     private val cc = ClassCarpenter()
     val objects = mutableMapOf<String, Class<*>>()
 
@@ -76,7 +102,6 @@ class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
 
 class TestMetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     override fun build() {
-        println ("TestMetaCarpenter::build")
         if (schemas.carpenterSchemas.isEmpty()) return
         step (schemas.carpenterSchemas.removeAt(0))
     }

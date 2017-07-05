@@ -38,11 +38,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter().build(aSchema)
 
-        val p = pinochio.constructors[0].newInstance(test)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
 
     @Test
@@ -69,51 +69,12 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
+        val aBuilder = ClassCarpenter().build(aSchema)
 
-        val p = pinochio.constructors[0].newInstance(test)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
-
-    /*
-    @Test
-    fun singleChar () {
-        val test = 'c'
-
-        @CordaSerializable
-        data class A(val a : Char)
-        val a = A(test)
-
-        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
-
-        assert (obj.obj is A)
-        val amqpObj  = obj.obj as A
-
-        assertEquals (test, amqpObj.a)
-        assertEquals (1, obj.envelope.schema.types.size)
-        assertEquals (1, obj.envelope.schema.types.size)
-        assert (obj.envelope.schema.types[0] is CompositeType)
-
-        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
-
-        assertEquals (1,      amqpSchema.fields.size)
-        assertEquals ("a",    amqpSchema.fields[0].name)
-        assertEquals ("char", amqpSchema.fields[0].type)
-
-        val carpenterSchema = CarpenterSchema.newInstance()
-        amqpSchema.carpenterSchema(carpenterSchema = carpenterSchema, force = true)
-
-        assert (classTestName ("A") in carpenterSchema.carpenterSchemas)
-
-        val aSchema = carpenterSchema.carpenterSchemas[classTestName ("A")]!!
-        val pinochio = ClassCarpenter().build(aSchema)
-
-        val p = pinochio.constructors[0].newInstance (test)
-
-        assertEquals (pinochio.getMethod("getA").invoke (p), amqpObj.a)
-    }
-    */
 
     @Test
     fun singleLong() {
@@ -143,10 +104,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
-        val p = pinochio.constructors[0].newInstance(test)
+        val aBuilder = ClassCarpenter().build(aSchema)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
 
     @Test
@@ -177,47 +138,14 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
-        val p = pinochio.constructors[0].newInstance(test)
+        val aBuilder = ClassCarpenter().build(aSchema)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
 
-    /*
     @Test
-    fun singleBool() {
-        val test = true
-
-        @CordaSerializable
-        data class A(val a : Boolean)
-
-        var a = A (test)
-
-        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise (a))
-
-        assert (obj.obj is A)
-        val amqpObj  = obj.obj as A
-
-        assertEquals (test, amqpObj.a)
-        assertEquals (1, obj.envelope.schema.types.size)
-        assert (obj.envelope.schema.types[0] is CompositeType)
-
-        var amqpSchema = obj.envelope.schema.types[0] as CompositeType
-
-        assertEquals (1,         amqpSchema.fields.size)
-        assertEquals ("a",       amqpSchema.fields[0].name)
-        assertEquals ("boolean", amqpSchema.fields[0].type)
-
-        var pinochio   = ClassCarpenter().build(ClassCarpenter.Schema(amqpSchema.name, amqpSchema.carpenterSchema()))
-
-        val p = pinochio.constructors[0].newInstance (test)
-
-        assertEquals (pinochio.getMethod("getA").invoke (p), amqpObj.a)
-    }
-    */
-
-    @Test
-    fun singleDouble() {
+fun singleDouble() {
         val test = 10.0
 
         @CordaSerializable
@@ -244,10 +172,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
-        val p = pinochio.constructors[0].newInstance(test)
+        val aBuilder = ClassCarpenter().build(aSchema)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
 
     @Test
@@ -278,9 +206,9 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
-        val pinochio = ClassCarpenter().build(aSchema)
-        val p = pinochio.constructors[0].newInstance(test)
+        val aBuilder = ClassCarpenter().build(aSchema)
+        val p = aBuilder.constructors[0].newInstance(test)
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
+        assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
     }
 }

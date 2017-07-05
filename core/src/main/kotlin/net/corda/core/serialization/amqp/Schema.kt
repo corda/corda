@@ -123,7 +123,7 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     }
 }
 
-data class Descriptor(var name: String?, val code: UnsignedLong? = null) : DescribedType {
+data class Descriptor(val name: String?, val code: UnsignedLong? = null) : DescribedType {
     companion object : DescribedTypeConstructor<Descriptor> {
         val DESCRIPTOR = UnsignedLong(3L or DESCRIPTOR_TOP_32BITS)
 
@@ -161,7 +161,7 @@ data class Descriptor(var name: String?, val code: UnsignedLong? = null) : Descr
     }
 }
 
-data class Field(var name: String, val type: String, val requires: List<String>, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
+data class Field(val name: String, val type: String, val requires: List<String>, val default: String?, val label: String?, val mandatory: Boolean, val multiple: Boolean) : DescribedType {
     companion object : DescribedTypeConstructor<Field> {
         val DESCRIPTOR = UnsignedLong(4L or DESCRIPTOR_TOP_32BITS)
 
@@ -221,16 +221,9 @@ data class Field(var name: String, val type: String, val requires: List<String>,
     fun validateType(
             classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
     ) = when (type) {
-        "int"     -> Int::class.javaPrimitiveType!!
-        "string"  -> String::class.java
-        "short"   -> Short::class.javaPrimitiveType!!
-        "long"    -> Long::class.javaPrimitiveType!!
-        "char"    -> Char::class.javaPrimitiveType!!
-        "boolean" -> Boolean::class.javaPrimitiveType!!
-        "double"  -> Double::class.javaPrimitiveType!!
-        "float"   -> Float::class.javaPrimitiveType!!
-        "*"       -> if (classLoaders.exists(requires[0])) requires[0] else null
-        else      -> if (classLoaders.exists (type)) type else null
+        "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
+        "*"       -> classLoaders.exists(requires[0])
+        else      -> classLoaders.exists (type)
     }
 
     fun typeAsString() = if (type =="*") requires[0] else type
@@ -256,7 +249,7 @@ sealed class TypeNotation : DescribedType {
     abstract val descriptor: Descriptor
 }
 
-data class CompositeType(override var name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation() {
+data class CompositeType(override val name: String, override val label: String?, override val provides: List<String>, override val descriptor: Descriptor, val fields: List<Field>) : TypeNotation() {
     companion object : DescribedTypeConstructor<CompositeType> {
         val DESCRIPTOR = UnsignedLong(5L or DESCRIPTOR_TOP_32BITS)
 
@@ -300,16 +293,30 @@ data class CompositeType(override var name: String, override val label: String?,
         return sb.toString()
     }
 
-    /** if we can load the class then we MUST know about all of it's sub elements,
-        otherwise we couldn't know about this */
+    /**
+     * if we can load the class then we MUST know about all of it's composite elements
+     */
     private fun validateKnown (
         classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()))
     {
         fields.forEach {
-            if (it.validateType(classLoaders) == null) throw UncarpentableException (name, it.name, it.type)
+            if (!it.validateType(classLoaders)) throw UncarpentableException (name, it.name, it.type)
         }
     }
 
+    /**
+     * based upon this AMQP schema either
+     *  a) add the corespending carpenter schema to the [carpenterSchemas] param
+     *  b) add the class to the dependency tree in [carpenterSchemas] if it cannot be instantiated
+     *     at this time
+     *
+     *  @param classLoaders list of classLoaders, defaulting toe the system class loader, that might
+     *  be used to load objects
+     *  @param carpenterSchemas structure that holds the dependency tree and list of classes that
+     *  need constructing
+     *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
+     *  on the class path. For testing purposes schema generation can be forced
+     */
     fun carpenterSchema(
             classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()),
             carpenterSchemas : CarpenterSchemas,
