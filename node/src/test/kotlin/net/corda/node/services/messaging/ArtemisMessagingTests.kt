@@ -1,9 +1,9 @@
 package net.corda.node.services.messaging
 
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.doneFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -55,7 +55,7 @@ class ArtemisMessagingTests {
     lateinit var dataSource: Closeable
     lateinit var database: Database
     lateinit var userService: RPCUserService
-    lateinit var networkMapRegistrationFuture: ListenableFuture<Unit>
+    lateinit var networkMapRegistrationFuture: CordaFuture<Unit>
 
     var messagingClient: NodeMessagingClient? = null
     var messagingServer: ArtemisMessagingServer? = null
@@ -78,7 +78,7 @@ class ArtemisMessagingTests {
         val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
-        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
+        networkMapRegistrationFuture = doneFuture(Unit)
     }
 
     @After
@@ -142,7 +142,7 @@ class ArtemisMessagingTests {
 
     @Test
     fun `client should be able to send message to itself before network map is available, and receive after`() {
-        val settableFuture: SettableFuture<Unit> = SettableFuture.create()
+        val settableFuture = openFuture<Unit>()
         networkMapRegistrationFuture = settableFuture
 
         val receivedMessages = LinkedBlockingQueue<Message>()
@@ -167,7 +167,7 @@ class ArtemisMessagingTests {
     fun `client should be able to send large numbers of messages to itself before network map is available and survive restart, then receive messages`() {
         // Crank the iteration up as high as you want... just takes longer to run.
         val iterations = 100
-        networkMapRegistrationFuture = SettableFuture.create()
+        networkMapRegistrationFuture = openFuture()
 
         val receivedMessages = LinkedBlockingQueue<Message>()
 
@@ -188,7 +188,7 @@ class ArtemisMessagingTests {
         messagingClient.stop()
         messagingServer?.stop()
 
-        networkMapRegistrationFuture = Futures.immediateFuture(Unit)
+        networkMapRegistrationFuture = doneFuture(Unit)
 
         createAndStartClientAndServer(receivedMessages)
         for (iter in 1..iterations) {

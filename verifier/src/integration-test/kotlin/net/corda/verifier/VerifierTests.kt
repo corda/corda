@@ -1,14 +1,13 @@
 package net.corda.verifier
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.mock.generateOrFail
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.map
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.concurrent.transpose
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
@@ -41,7 +40,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             startVerifier(alice)
             alice.waitUntilNumberOfVerifiers(1)
-            val results = Futures.allAsList(transactions.map { alice.verifyTransaction(it) }).get()
+            val results = transactions.map { alice.verifyTransaction(it) }.transpose().get()
             results.forEach {
                 if (it != null) {
                     throw it
@@ -61,7 +60,7 @@ class VerifierTests {
                 startVerifier(alice)
             }
             alice.waitUntilNumberOfVerifiers(numberOfVerifiers)
-            val results = Futures.allAsList(transactions.map { alice.verifyTransaction(it) }).get()
+            val results = transactions.map { alice.verifyTransaction(it) }.transpose().get()
             results.forEach {
                 if (it != null) {
                     throw it
@@ -94,7 +93,7 @@ class VerifierTests {
                     it
                 }
             }
-            Futures.allAsList(futures).get()
+            futures.transpose().get()
         }
     }
 
@@ -106,7 +105,7 @@ class VerifierTests {
             val alice = aliceFuture.get()
             val futures = transactions.map { alice.verifyTransaction(it) }
             startVerifier(alice)
-            Futures.allAsList(futures).get()
+            futures.transpose().get()
         }
     }
 

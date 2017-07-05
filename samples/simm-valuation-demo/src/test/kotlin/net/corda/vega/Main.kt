@@ -1,8 +1,7 @@
 package net.corda.vega
 
-import com.google.common.util.concurrent.Futures
-import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_BANK_C
@@ -18,11 +17,11 @@ import net.corda.testing.driver.driver
 fun main(args: Array<String>) {
     driver(dsl = {
         startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type)))
-        val (nodeA, nodeB, nodeC) = Futures.allAsList(
+        val (nodeA, nodeB, nodeC) = listOf(
                 startNode(DUMMY_BANK_A.name),
                 startNode(DUMMY_BANK_B.name),
                 startNode(DUMMY_BANK_C.name)
-        ).getOrThrow()
+        ).transpose().getOrThrow()
 
         startWebserver(nodeA)
         startWebserver(nodeB)

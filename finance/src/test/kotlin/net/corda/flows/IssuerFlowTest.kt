@@ -1,22 +1,21 @@
 package net.corda.flows
 
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
+import net.corda.core.concurrent.CordaFuture
+import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
-import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.After
@@ -142,7 +141,7 @@ class IssuerFlowTest {
                                            issueToNode: MockNode,
                                            amount: Amount<Currency>,
                                            party: Party,
-                                           ref: OpaqueBytes): ListenableFuture<AbstractCashFlow.Result> {
+                                           ref: OpaqueBytes): CordaFuture<AbstractCashFlow.Result> {
         val issueToPartyAndRef = party.ref(ref)
         val issueRequest = IssuanceRequester(amount, party, issueToPartyAndRef.reference, issuerNode.info.legalIdentity,
                 anonymous = false)

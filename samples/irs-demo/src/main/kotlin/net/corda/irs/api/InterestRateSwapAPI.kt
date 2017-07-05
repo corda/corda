@@ -2,7 +2,6 @@ package net.corda.irs.api
 
 import net.corda.client.rpc.notUsed
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.loggerFor

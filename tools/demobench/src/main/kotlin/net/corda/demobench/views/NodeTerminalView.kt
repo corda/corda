@@ -18,8 +18,6 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
-import net.corda.core.match
-import net.corda.core.then
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.demobench.explorer.ExplorerController
 import net.corda.demobench.model.NodeConfig

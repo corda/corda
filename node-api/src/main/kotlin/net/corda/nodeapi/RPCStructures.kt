@@ -4,7 +4,7 @@ package net.corda.nodeapi
 
 import com.esotericsoftware.kryo.Registration
 import com.esotericsoftware.kryo.Serializer
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.requireExternal
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
@@ -46,16 +46,15 @@ class PermissionException(msg: String) : RuntimeException(msg)
 // The Kryo used for the RPC wire protocol. Every type in the wire protocol is listed here explicitly.
 // This is annoying to write out, but will make it easier to formalise the wire protocol when the time comes,
 // because we can see everything we're using in one place.
-class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(makeStandardClassResolver()) {
+class RPCKryo(observableSerializer: Serializer<Observable<*>>) : CordaKryo(makeStandardClassResolver()) {
     init {
         DefaultKryoCustomizer.customize(this)
 
         // RPC specific classes
         register(InputStream::class.java, InputStreamSerializer)
         register(Observable::class.java, observableSerializer)
-        @Suppress("UNCHECKED_CAST")
-        register(ListenableFuture::class,
-                read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java as Class<Observable<Any>>).toFuture() },
+        register(CordaFuture::class,
+                read = { kryo, input -> observableSerializer.read(kryo, input, Observable::class.java).toFuture() },
                 write = { kryo, output, obj -> observableSerializer.write(kryo, output, obj.toObservable()) }
         )
     }
@@ -67,8 +66,8 @@ class RPCKryo(observableSerializer: Serializer<Observable<Any>>) : CordaKryo(mak
         if (InputStream::class.java != type && InputStream::class.java.isAssignableFrom(type)) {
             return super.getRegistration(InputStream::class.java)
         }
-        if (ListenableFuture::class.java != type && ListenableFuture::class.java.isAssignableFrom(type)) {
-            return super.getRegistration(ListenableFuture::class.java)
+        if (CordaFuture::class.java != type && CordaFuture::class.java.isAssignableFrom(type)) {
+            return super.getRegistration(CordaFuture::class.java)
         }
         type.requireExternal("RPC not allowed to deserialise internal classes")
         return super.getRegistration(type)

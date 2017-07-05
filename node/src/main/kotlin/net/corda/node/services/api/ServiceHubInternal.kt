@@ -1,7 +1,7 @@
 package net.corda.node.services.api
 
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -31,7 +31,7 @@ interface NetworkMapCacheInternal : NetworkMapCache {
      * @param network the network messaging service.
      * @param service the network map service to fetch current state from.
      */
-    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): ListenableFuture<Unit>
+    fun deregisterForUpdates(network: MessagingService, service: NodeInfo): CordaFuture<Unit>
 
     /**
      * Add a network map service; fetches a copy of the latest map from the service and subscribes to any further
@@ -43,7 +43,7 @@ interface NetworkMapCacheInternal : NetworkMapCache {
      * version is less than or equal to the given version, no update is fetched.
      */
     fun addMapService(network: MessagingService, networkMapAddress: SingleMessageRecipient,
-                      subscribe: Boolean, ifChangedSinceVer: Int? = null): ListenableFuture<Unit>
+                      subscribe: Boolean, ifChangedSinceVer: Int? = null): CordaFuture<Unit>
 
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)

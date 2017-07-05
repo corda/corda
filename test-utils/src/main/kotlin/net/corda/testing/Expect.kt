@@ -1,7 +1,7 @@
 package net.corda.testing
 
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.getOrThrow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Observable

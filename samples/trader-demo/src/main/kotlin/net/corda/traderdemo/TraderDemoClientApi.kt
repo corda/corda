@@ -1,6 +1,5 @@
 package net.corda.traderdemo
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.notUsed
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.Cash
@@ -9,9 +8,9 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.USD
 import net.corda.core.contracts.filterStatesOfType
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
@@ -53,7 +52,7 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
             rpc.startFlow(::IssuanceRequester, Amount(pennies, amount.token), me.legalIdentity, OpaqueBytes.of(1), bankOfCordaParty, anonymous).returnValue
         }
 
-        Futures.allAsList(resultFutures).getOrThrow()
+        resultFutures.transpose().getOrThrow()
     }
 
     fun runSeller(amount: Amount<Currency> = 1000.0.DOLLARS, counterparty: X500Name) {

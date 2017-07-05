@@ -1,7 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -37,6 +37,6 @@ interface FlowStateMachine<R> {
     val serviceHub: ServiceHub
     val logger: Logger
     val id: StateMachineRunId
-    val resultFuture: ListenableFuture<R>
+    val resultFuture: CordaFuture<R>
     val flowInitiator: FlowInitiator
 }

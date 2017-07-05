@@ -8,7 +8,6 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.identity.AbstractParty
-import net.corda.core.thenMatch
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest

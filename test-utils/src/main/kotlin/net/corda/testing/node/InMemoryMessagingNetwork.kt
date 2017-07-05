@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.ThreadBox
 import net.corda.core.crypto.X509Utilities
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.getOrThrow
 import net.corda.core.messaging.AllPossibleRecipients
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients

@@ -6,7 +6,7 @@ import io.atomix.copycat.client.CopycatClient
 import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService

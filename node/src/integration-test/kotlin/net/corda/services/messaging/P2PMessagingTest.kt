@@ -1,13 +1,14 @@
 package net.corda.services.messaging
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.transpose
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.elapsedTime
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.seconds
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -36,7 +37,7 @@ class P2PMessagingTest : NodeBasedTest() {
     @Test
     fun `network map will work after restart`() {
         val identities = listOf(DUMMY_BANK_A, DUMMY_BANK_B, DUMMY_NOTARY)
-        fun startNodes() = Futures.allAsList(identities.map { startNode(it.name) })
+        fun startNodes() = identities.map { startNode(it.name) }.transpose()
 
         val startUpDuration = elapsedTime { startNodes().getOrThrow() }
         // Start the network map a second time - this will restore message queues from the journal.
@@ -72,7 +73,7 @@ class P2PMessagingTest : NodeBasedTest() {
                 DUMMY_MAP.name,
                 advertisedServices = setOf(distributedService),
                 configOverrides = mapOf("notaryNodeAddress" to notaryClusterAddress.toString()))
-        val (serviceNode2, alice) = Futures.allAsList(
+        val (serviceNode2, alice) = listOf(
                 startNode(
                         SERVICE_2_NAME,
                         advertisedServices = setOf(distributedService),
@@ -80,7 +81,7 @@ class P2PMessagingTest : NodeBasedTest() {
                                 "notaryNodeAddress" to freeLocalHostAndPort().toString(),
                                 "notaryClusterAddresses" to listOf(notaryClusterAddress.toString()))),
                 startNode(ALICE.name)
-        ).getOrThrow()
+        ).transpose().getOrThrow()
 
         assertAllNodesAreUsed(listOf(networkMapNode, serviceNode2), DISTRIBUTED_SERVICE_NAME, alice)
     }
@@ -214,7 +215,7 @@ class P2PMessagingTest : NodeBasedTest() {
         }
     }
 
-    private fun Node.receiveFrom(target: MessageRecipients): ListenableFuture<Any> {
+    private fun Node.receiveFrom(target: MessageRecipients): CordaFuture<Any> {
         val request = TestRequest(replyTo = network.myAddress)
         return network.sendRequest<Any>(javaClass.name, request, target)
     }

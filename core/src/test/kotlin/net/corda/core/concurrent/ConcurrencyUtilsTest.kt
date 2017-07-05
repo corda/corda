@@ -1,21 +1,21 @@
 package net.corda.core.concurrent
 
-import com.google.common.util.concurrent.SettableFuture
 import com.nhaarman.mockito_kotlin.*
-import net.corda.core.getOrThrow
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import org.slf4j.Logger
 import java.io.EOFException
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConcurrencyUtilsTest {
-    private val f1 = SettableFuture.create<Int>()
-    private val f2 = SettableFuture.create<Double>()
+    private val f1 = openFuture<Int>()
+    private val f2 = openFuture<Double>()
     private var invocations = 0
-    private val log: Logger = mock<Logger>()
+    private val log = mock<Logger>()
     @Test
     fun `firstOf short circuit`() {
         // Order not significant in this case:
@@ -31,6 +31,7 @@ class ConcurrencyUtilsTest {
         f2.setException(throwable)
         assertEquals(1, invocations) // Least astonishing to skip handler side-effects.
         verify(log).error(eq(shortCircuitedTaskFailedMessage), same(throwable))
+        verifyNoMoreInteractions(log)
     }
 
     @Test
@@ -48,20 +49,24 @@ class ConcurrencyUtilsTest {
         assertTrue(f2.isCancelled)
     }
 
+    /**
+     * Note that if you set CancellationException on CompletableFuture it will report isCancelled.
+     */
     @Test
     fun `firstOf re-entrant handler attempt not due to cancel`() {
         val futures = arrayOf(f1, f2)
-        val fakeCancel = CancellationException()
+        val nonCancel = IllegalStateException()
         val g = firstOf(futures, log) {
             ++invocations
-            futures.forEach { it.setException(fakeCancel) } // One handler attempt here.
+            futures.forEach { it.setException(nonCancel) } // One handler attempt here.
             it.getOrThrow()
         }
         f1.set(100)
         assertEquals(100, g.getOrThrow())
         assertEquals(1, invocations) // Handler didn't run as g was already done.
-        verify(log).error(eq(shortCircuitedTaskFailedMessage), same(fakeCancel))
-        assertThatThrownBy { f2.getOrThrow() }.isSameAs(fakeCancel)
+        verify(log).error(eq(shortCircuitedTaskFailedMessage), same(nonCancel))
+        verifyNoMoreInteractions(log)
+        assertThatThrownBy { f2.getOrThrow() }.isSameAs(nonCancel)
     }
 
     @Test
@@ -74,5 +79,86 @@ class ConcurrencyUtilsTest {
         assertThatThrownBy { g.getOrThrow() }.isInstanceOf(CancellationException::class.java)
         assertEquals(1, invocations)
         verifyNoMoreInteractions(log)
+    }
+
+    @Test
+    fun `match does not pass failure of success block into the failure block`() {
+        val f = CompletableFuture.completedFuture(100)
+        val successes = mutableListOf<Any?>()
+        val failures = mutableListOf<Any?>()
+        val x = Throwable()
+        assertThatThrownBy {
+            f.match({
+                successes.add(it)
+                throw x
+            }, failures::add)
+        }.isSameAs(x)
+        assertEquals(listOf<Any?>(100), successes)
+        assertEquals(emptyList<Any?>(), failures)
+    }
+
+    @Test
+    fun `match does not pass ExecutionException to failure block`() {
+        val e = Throwable()
+        val f = CompletableFuture<Void>().apply { completeExceptionally(e) }
+        val successes = mutableListOf<Any?>()
+        val failures = mutableListOf<Any?>()
+        val x = Throwable()
+        assertThatThrownBy {
+            f.match(successes::add, {
+                failures.add(it)
+                throw x
+            })
+        }.isSameAs(x)
+        assertEquals(emptyList<Any?>(), successes)
+        assertEquals(listOf<Any?>(e), failures)
+    }
+}
+
+class TransposeTest {
+    private val a = openFuture<Int>()
+    private val b = openFuture<Int>()
+    private val c = openFuture<Int>()
+    private val f = listOf(a, b, c).transpose()
+    @Test
+    fun `transpose empty collection`() {
+        assertEquals(emptyList(), emptyList<CordaFuture<*>>().transpose().getOrThrow())
+    }
+
+    @Test
+    fun `transpose values are in the same order as the collection of futures`() {
+        b.set(2)
+        c.set(3)
+        assertFalse(f.isDone)
+        a.set(1)
+        assertEquals(listOf(1, 2, 3), f.getOrThrow())
+    }
+
+    @Test
+    fun `transpose throwables are reported in the order they were thrown`() {
+        val ax = Exception()
+        val bx = Exception()
+        val cx = Exception()
+        b.setException(bx)
+        c.setException(cx)
+        assertFalse(f.isDone)
+        a.setException(ax)
+        assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
+        assertEquals(listOf(cx, ax), bx.suppressed.asList())
+        assertEquals(emptyList(), ax.suppressed.asList())
+        assertEquals(emptyList(), cx.suppressed.asList())
+    }
+
+    @Test
+    fun `transpose mixture of outcomes`() {
+        val bx = Exception()
+        val cx = Exception()
+        b.setException(bx)
+        c.setException(cx)
+        assertFalse(f.isDone)
+        a.set(100) // Discarded.
+        assertThatThrownBy { f.getOrThrow() }.isSameAs(bx)
+        assertEquals(listOf(cx), bx.suppressed.asList())
+        assertEquals(emptyList(), cx.suppressed.asList())
     }
 }

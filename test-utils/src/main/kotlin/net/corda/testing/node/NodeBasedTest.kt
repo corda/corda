@@ -1,12 +1,13 @@
 package net.corda.testing.node
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.MoreExecutors.listeningDecorator
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.fork
+import net.corda.core.concurrent.transpose
+import net.corda.core.createDirectories
 import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
+import net.corda.core.div
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.utilities.WHITESPACE
@@ -57,8 +58,8 @@ abstract class NodeBasedTest {
      */
     @After
     fun stopAllNodes() {
-        val shutdownExecutor = listeningDecorator(Executors.newScheduledThreadPool(nodes.size))
-        Futures.allAsList(nodes.map { shutdownExecutor.submit(it::stop) }).getOrThrow()
+        val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
+        nodes.map { shutdownExecutor.fork(it::stop) }.transpose().getOrThrow()
         // Wait until ports are released
         val portNotBoundChecks = nodes.flatMap {
             listOf(
@@ -68,7 +69,7 @@ abstract class NodeBasedTest {
         }.filterNotNull()
         nodes.clear()
         _networkMapNode = null
-        Futures.allAsList(portNotBoundChecks).getOrThrow()
+        portNotBoundChecks.transpose().getOrThrow()
     }
 
     /**
@@ -90,7 +91,7 @@ abstract class NodeBasedTest {
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): ListenableFuture<Node> {
+                  configOverrides: Map<String, Any> = emptyMap()): CordaFuture<Node> {
         val node = startNodeInternal(
                 legalName,
                 platformVersion,
@@ -108,7 +109,7 @@ abstract class NodeBasedTest {
 
     fun startNotaryCluster(notaryName: X500Name,
                            clusterSize: Int,
-                           serviceType: ServiceType = RaftValidatingNotaryService.type): ListenableFuture<List<Node>> {
+                           serviceType: ServiceType = RaftValidatingNotaryService.type): CordaFuture<List<Node>> {
         ServiceIdentityGenerator.generateToDisk(
                 (0 until clusterSize).map { baseDirectory(notaryName.appendToCommonName("-$it")) },
                 serviceType.id,
@@ -131,7 +132,7 @@ abstract class NodeBasedTest {
                             "notaryClusterAddresses" to listOf(nodeAddresses[0])))
         }
 
-        return Futures.allAsList(remainingNodesFutures).flatMap { remainingNodes ->
+        return remainingNodesFutures.transpose().flatMap { remainingNodes ->
             masterNodeFuture.map { masterNode -> listOf(masterNode) + remainingNodes }
         }
     }

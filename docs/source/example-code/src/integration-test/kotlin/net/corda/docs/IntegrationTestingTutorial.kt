@@ -1,27 +1,20 @@
 package net.corda.docs
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.transpose
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
-import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.nodeapi.User
-import net.corda.testing.expect
-import net.corda.testing.expectEvents
-import net.corda.testing.parallel
-import net.corda.testing.sequence
+import net.corda.testing.*
+import net.corda.testing.driver.driver
 import org.junit.Test
 import java.util.*
 import kotlin.concurrent.thread
@@ -38,11 +31,11 @@ class IntegrationTestingTutorial {
             val bobUser = User("bobUser", "testPassword2", permissions = setOf(
                     startFlowPermission<CashPaymentFlow>()
             ))
-            val (alice, bob, notary) = Futures.allAsList(
+            val (alice, bob, notary) = listOf(
                     startNode(ALICE.name, rpcUsers = listOf(aliceUser)),
                     startNode(BOB.name, rpcUsers = listOf(bobUser)),
                     startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(ValidatingNotaryService.type)))
-            ).getOrThrow()
+            ).transpose().getOrThrow()
             // END 1
 
             // START 2
@@ -63,7 +56,7 @@ class IntegrationTestingTutorial {
 
             // START 4
             val issueRef = OpaqueBytes.of(0)
-            val futures = Stack<ListenableFuture<*>>()
+            val futures = Stack<CordaFuture<*>>()
             (1..10).map { i ->
                 thread {
                     futures.push(aliceProxy.startFlow(::CashIssueFlow,

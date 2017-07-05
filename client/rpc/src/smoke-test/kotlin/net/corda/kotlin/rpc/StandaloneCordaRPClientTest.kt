@@ -9,7 +9,6 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.POUNDS
 import net.corda.core.contracts.SWISS_FRANCS
 import net.corda.core.crypto.SecureHash
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault

@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.flows.FlowLogic
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.NotaryService
 import net.corda.core.node.services.TimeWindowChecker

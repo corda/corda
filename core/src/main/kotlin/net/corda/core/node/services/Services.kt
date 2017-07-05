@@ -1,7 +1,7 @@
 package net.corda.core.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.DigitalSignature
@@ -211,9 +211,9 @@ interface VaultService {
     fun notify(tx: WireTransaction) = notifyAll(listOf(tx))
 
     /**
-     * Provide a [Future] for when a [StateRef] is consumed, which can be very useful in building tests.
+     * Provide a [CordaFuture] for when a [StateRef] is consumed, which can be very useful in building tests.
      */
-    fun whenConsumed(ref: StateRef): ListenableFuture<Vault.Update> {
+    fun whenConsumed(ref: StateRef): CordaFuture<Vault.Update> {
         return updates.filter { it.consumed.any { it.ref == ref } }.toFuture()
     }
 
@@ -541,5 +541,5 @@ interface TransactionVerifierService {
      * @param transaction The transaction to be verified.
      * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
      */
-    fun verify(transaction: LedgerTransaction): ListenableFuture<*>
+    fun verify(transaction: LedgerTransaction): CordaFuture<*>
 }

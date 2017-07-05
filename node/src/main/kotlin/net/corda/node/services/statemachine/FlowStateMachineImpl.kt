@@ -4,10 +4,11 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.FiberScheduler
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.DeclaredField.Companion.declaredField
 import net.corda.core.abbreviate
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.OpenFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
@@ -77,10 +78,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
      */
     override val logger: Logger = LoggerFactory.getLogger("net.corda.flow.$id")
 
-    @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
+    @Transient private var _resultFuture: OpenFuture<R>? = openFuture()
     /** This future will complete when the call method returns. */
-    override val resultFuture: ListenableFuture<R>
-        get() = _resultFuture ?: SettableFuture.create<R>().also { _resultFuture = it }
+    override val resultFuture: CordaFuture<R>
+        get() = _resultFuture ?: openFuture<R>().also { _resultFuture = it }
 
     // This state IS serialised, as we need it to know what the fiber is waiting for.
     internal val openSessions = HashMap<Pair<FlowLogic<*>, Party>, FlowSession>()

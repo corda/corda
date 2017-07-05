@@ -9,7 +9,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.then
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.api.SchedulerService

@@ -8,7 +8,6 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.core.flows.FlowException
 import net.corda.core.messaging.startFlow
-import net.corda.core.thenMatch
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest

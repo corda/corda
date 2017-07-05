@@ -1,9 +1,8 @@
 package net.corda.vega
 
-import com.google.common.util.concurrent.Futures
 import com.opengamma.strata.product.common.BuySell
-import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
@@ -34,8 +33,8 @@ class SimmValuationTest : IntegrationTestCategory {
     fun `runs SIMM valuation demo`() {
         driver(isDebug = true) {
             startNode(DUMMY_NOTARY.name, setOf(ServiceInfo(SimpleNotaryService.type))).getOrThrow()
-            val (nodeA, nodeB) = Futures.allAsList(startNode(nodeALegalName), startNode(nodeBLegalName)).getOrThrow()
-            val (nodeAApi, nodeBApi) = Futures.allAsList(startWebserver(nodeA), startWebserver(nodeB))
+            val (nodeA, nodeB) = listOf(startNode(nodeALegalName), startNode(nodeBLegalName)).transpose().getOrThrow()
+            val (nodeAApi, nodeBApi) = listOf(startWebserver(nodeA), startWebserver(nodeB)).transpose()
                     .getOrThrow()
                     .map { HttpApi.fromHostAndPort(it.listenAddress, "api/simmvaluationdemo") }
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)

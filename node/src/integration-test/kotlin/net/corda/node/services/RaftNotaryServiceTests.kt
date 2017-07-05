@@ -1,13 +1,11 @@
 package net.corda.node.services
 
-import com.google.common.util.concurrent.Futures
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
 import net.corda.testing.contracts.DummyContract
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.map
+import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
@@ -26,10 +24,10 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val (bankA) = Futures.allAsList(
+        val (bankA) = listOf(
                 startNode(DUMMY_BANK_A.name),
                 startNotaryCluster(notaryName, 3).map { it.first() }
-        ).getOrThrow()
+        ).transpose().getOrThrow()
 
         val notaryParty = bankA.services.networkMapCache.getNotary(notaryName)!!
 

@@ -3,11 +3,12 @@ package net.corda.node.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
-import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sign
+import net.corda.core.days
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -22,7 +23,9 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
+import net.corda.core.rootCause
 import net.corda.core.serialization.serialize
+import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
@@ -53,7 +56,6 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
 import java.util.*
-import java.util.concurrent.Future
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import kotlin.test.assertEquals
@@ -483,8 +485,8 @@ class TwoPartyTradeFlowTests {
 
     private data class RunResult(
             // The buyer is not created immediately, only when the seller starts running
-            val buyer: Future<FlowStateMachine<*>>,
-            val sellerResult: Future<SignedTransaction>,
+            val buyer: CordaFuture<FlowStateMachine<*>>,
+            val sellerResult: CordaFuture<SignedTransaction>,
             val sellerId: StateMachineRunId
     )
 

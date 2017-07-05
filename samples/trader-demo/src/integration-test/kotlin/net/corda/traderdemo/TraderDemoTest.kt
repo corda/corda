@@ -1,11 +1,10 @@
 package net.corda.traderdemo
 
-import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.getOrThrow
 import net.corda.core.millis
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
@@ -30,12 +29,12 @@ class TraderDemoTest : NodeBasedTest() {
                 startFlowPermission<SellerFlow>())
         val demoUser = listOf(User("demo", "demo", permissions))
         val user = User("user1", "test", permissions = setOf(startFlowPermission<IssuerFlow.IssuanceRequester>()))
-        val (nodeA, nodeB) = Futures.allAsList(
+        val (nodeA, nodeB) = listOf(
                 startNode(DUMMY_BANK_A.name, rpcUsers = demoUser),
                 startNode(DUMMY_BANK_B.name, rpcUsers = demoUser),
                 startNode(BOC.name, rpcUsers = listOf(user)),
                 startNode(DUMMY_NOTARY.name, advertisedServices = setOf(ServiceInfo(SimpleNotaryService.type)))
-        ).getOrThrow()
+        ).transpose().getOrThrow()
 
         nodeA.registerInitiatedFlow(BuyerFlow::class.java)
 

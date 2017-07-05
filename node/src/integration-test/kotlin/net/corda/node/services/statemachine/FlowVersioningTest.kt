@@ -1,11 +1,10 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.util.concurrent.Futures
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
-import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.concurrent.transpose
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
@@ -16,9 +15,9 @@ import org.junit.Test
 class FlowVersioningTest : NodeBasedTest() {
     @Test
     fun `core flows receive platform version of initiator`() {
-        val (alice, bob) = Futures.allAsList(
+        val (alice, bob) = listOf(
                 startNode(ALICE.name, platformVersion = 2),
-                startNode(BOB.name, platformVersion = 3)).getOrThrow()
+                startNode(BOB.name, platformVersion = 3)).transpose().getOrThrow()
         bob.installCoreFlow(ClientFlow::class, ::SendBackPlatformVersionFlow)
         val resultFuture = alice.services.startFlow(ClientFlow(bob.info.legalIdentity)).resultFuture
         assertThat(resultFuture.getOrThrow()).isEqualTo(2)

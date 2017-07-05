@@ -1,7 +1,7 @@
 package net.corda.node.services.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.*
+import net.corda.core.ThreadBox
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
@@ -75,7 +75,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                           val myIdentity: PublicKey?,
                           val nodeExecutor: AffinityExecutor.ServiceAffinityExecutor,
                           val database: Database,
-                          val networkMapRegistrationFuture: ListenableFuture<Unit>,
+                          val networkMapRegistrationFuture: CordaFuture<Unit>,
                           val monitoringService: MonitoringService,
                           advertisedAddress: NetworkHostAndPort = serverAddress
 ) : ArtemisMessagingComponent(), MessagingService {

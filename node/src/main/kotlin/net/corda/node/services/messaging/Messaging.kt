@@ -1,8 +1,8 @@
 package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.catch
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -147,13 +147,13 @@ inline fun MessagingService.runOnNextMessage(topicSession: TopicSession, crossin
 }
 
 /**
- * Returns a [ListenableFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
+ * Returns a [CordaFuture] of the next message payload ([Message.data]) which is received on the given topic and sessionId.
  * The payload is deserialized to an object of type [M]. Any exceptions thrown will be captured by the future.
  */
-fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): ListenableFuture<M> {
-    val messageFuture = SettableFuture.create<M>()
+fun <M : Any> MessagingService.onNext(topic: String, sessionId: Long): CordaFuture<M> {
+    val messageFuture = openFuture<M>()
     runOnNextMessage(topic, sessionId) { message ->
-        messageFuture.catch {
+        messageFuture.capture {
             message.data.deserialize<M>()
         }
     }

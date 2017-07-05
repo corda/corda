@@ -2,7 +2,6 @@ package net.corda.client.rpc
 
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.flows.FlowInitiator
-import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.crypto.random63BitValue

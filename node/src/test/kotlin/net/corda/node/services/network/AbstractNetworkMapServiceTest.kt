@@ -1,7 +1,6 @@
 package net.corda.node.services.network
 
-import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.getOrThrow
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
@@ -207,7 +206,7 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     private var lastSerial = Long.MIN_VALUE
 
     private fun MockNode.registration(addOrRemove: AddOrRemove,
-                                      serial: Long? = null): ListenableFuture<RegistrationResponse> {
+                                      serial: Long? = null): CordaFuture<RegistrationResponse> {
         val distinctSerial = if (serial == null) {
             ++lastSerial
         } else {

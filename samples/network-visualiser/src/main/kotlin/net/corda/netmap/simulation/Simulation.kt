@@ -1,15 +1,15 @@
 package net.corda.netmap.simulation
 
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.crypto.locationOrNull
-import net.corda.core.flatMap
+import net.corda.core.concurrent.doneFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CityDatabase
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.containsType
+import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_MAP
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_REGULATOR
@@ -265,10 +265,9 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
         }
     }
 
-    val networkInitialisationFinished: ListenableFuture<*> =
-            Futures.allAsList(mockNet.nodes.map { it.networkMapRegistrationFuture })
+    val networkInitialisationFinished = mockNet.nodes.map { it.networkMapRegistrationFuture }.transpose()
 
-    fun start(): ListenableFuture<Unit> {
+    fun start(): CordaFuture<Unit> {
         mockNet.startNodes()
         // Wait for all the nodes to have finished registering with the network map service.
         return networkInitialisationFinished.flatMap { startMainSimulation() }
@@ -278,8 +277,8 @@ abstract class Simulation(val networkSendManuallyPumped: Boolean,
      * Sub-classes should override this to trigger whatever they want to simulate. This method will be invoked once the
      * network bringup has been simulated.
      */
-    protected open fun startMainSimulation(): ListenableFuture<Unit> {
-        return Futures.immediateFuture(Unit)
+    protected open fun startMainSimulation(): CordaFuture<Unit> {
+        return doneFuture(Unit)
     }
 
     fun stop() {

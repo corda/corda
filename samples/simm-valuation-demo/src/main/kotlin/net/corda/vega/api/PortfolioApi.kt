@@ -7,7 +7,6 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.filterStatesOfType
 import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
-import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps

@@ -1,8 +1,6 @@
 package net.corda.client.rpc
 
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.flatMap
-import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.User
@@ -44,13 +42,13 @@ open class AbstractRPCTest {
                     startInVmRpcClient<I>(rpcUser.username, rpcUser.password, clientConfiguration).map {
                         TestProxy(it, { startInVmArtemisSession(rpcUser.username, rpcUser.password) })
                     }
-                }.get()
+                }
             RPCTestMode.Netty ->
                 startRpcServer(ops = ops, rpcUser = rpcUser, configuration = serverConfiguration).flatMap { server ->
                     startRpcClient<I>(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password, clientConfiguration).map {
                         TestProxy(it, { startArtemisSession(server.broker.hostAndPort!!, rpcUser.username, rpcUser.password) })
                     }
-                }.get()
-        }
+                }
+        }.get()
     }
 }

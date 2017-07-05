@@ -5,6 +5,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.testing.NullPublicKey
+import net.corda.core.seconds
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -20,7 +21,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
-import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class DBTransactionStorageTests {
@@ -129,7 +129,7 @@ class DBTransactionStorageTests {
         database.transaction {
             transactionStorage.addTransaction(expected)
         }
-        val actual = future.get(1, TimeUnit.SECONDS)
+        val actual = future.get(1.seconds)
         assertEquals(expected, actual)
     }
 

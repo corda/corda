@@ -1,10 +1,10 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.doneFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
@@ -251,8 +251,8 @@ open class Node(override val configuration: FullNodeConfiguration,
      * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
      * encountered when trying to connect to the network map node.
      */
-    override fun registerWithNetworkMap(): ListenableFuture<Unit> {
-        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: Futures.immediateFuture(Unit)
+    override fun registerWithNetworkMap(): CordaFuture<Unit> {
+        val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: doneFuture(Unit)
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
@@ -291,7 +291,8 @@ open class Node(override val configuration: FullNodeConfiguration,
         super.initialiseDatabasePersistence(insideTransaction)
     }
 
-    val startupComplete: ListenableFuture<Unit> = SettableFuture.create()
+    private val _startupComplete = openFuture<Unit>()
+    val startupComplete: CordaFuture<Unit> get() = _startupComplete
 
     override fun start(): Node {
         super.start()
@@ -316,7 +317,7 @@ open class Node(override val configuration: FullNodeConfiguration,
                         build().
                         start()
 
-                (startupComplete as SettableFuture<Unit>).set(Unit)
+                _startupComplete.set(Unit)
             }
         }, {})
         shutdownHook = addShutdownHook {

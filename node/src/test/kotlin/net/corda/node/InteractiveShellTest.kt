@@ -1,7 +1,7 @@
 package net.corda.node
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.google.common.util.concurrent.ListenableFuture
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
@@ -92,7 +92,7 @@ class InteractiveShellTest {
             get() = throw UnsupportedOperationException()
         override val id: StateMachineRunId
             get() = throw UnsupportedOperationException()
-        override val resultFuture: ListenableFuture<Any?>
+        override val resultFuture: CordaFuture<Any?>
             get() = throw UnsupportedOperationException()
         override val flowInitiator: FlowInitiator
             get() = throw UnsupportedOperationException()

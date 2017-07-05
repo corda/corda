@@ -1,9 +1,10 @@
 package net.corda.node.services.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import io.netty.handler.ssl.SslHandler
 import net.corda.core.*
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.concurrent.openFuture
 import net.corda.core.crypto.*
 import net.corda.core.crypto.X509Utilities.CORDA_CLIENT_TLS
 import net.corda.core.crypto.X509Utilities.CORDA_ROOT_CA
@@ -104,12 +105,12 @@ class ArtemisMessagingServer(override val config: NodeConfiguration,
     private val mutex = ThreadBox(InnerState())
     private lateinit var activeMQServer: ActiveMQServer
     val serverControl: ActiveMQServerControl get() = activeMQServer.activeMQServerControl
-    private val _networkMapConnectionFuture = config.networkMapService?.let { SettableFuture.create<Unit>() }
+    private val _networkMapConnectionFuture = config.networkMapService?.let { openFuture<Unit>() }
     /**
      * A [ListenableFuture] which completes when the server successfully connects to the network map node. If a
      * non-recoverable error is encountered then the Future will complete with an exception.
      */
-    val networkMapConnectionFuture: SettableFuture<Unit>? get() = _networkMapConnectionFuture
+    val networkMapConnectionFuture: CordaFuture<Unit>? get() = _networkMapConnectionFuture
     private var networkChangeHandle: Subscription? = null
     private val nodeRunsNetworkMapService = config.networkMapService == null
 
