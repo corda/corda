@@ -7,7 +7,7 @@ import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.random63BitValue
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
+import net.corda.testing.ALICE
 import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow

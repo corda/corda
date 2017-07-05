@@ -8,7 +8,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.utilities.ALICE
+import net.corda.testing.ALICE
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl

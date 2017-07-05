@@ -7,10 +7,6 @@ import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.X509Utilities
-import net.corda.core.crypto.commonName
-import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -19,8 +15,9 @@ import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.*
-import net.corda.node.services.config.*
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.testing.node.MockServices
@@ -33,6 +30,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.security.PublicKey
+import java.security.cert.CertificateFactory
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -194,4 +192,18 @@ fun getTestX509Name(commonName: String): X500Name {
     nameBuilder.addRDN(BCStyle.L, "New York")
     nameBuilder.addRDN(BCStyle.C, "US")
     return nameBuilder.build()
+}
+
+fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+    val certFactory = CertificateFactory.getInstance("X509")
+    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
+    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
+    return PartyAndCertificate(party, certHolder, certPath)
+}
+
+/**
+ * Build a test party with a nonsense certificate authority for testing purposes.
+ */
+fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
+    return getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
 }

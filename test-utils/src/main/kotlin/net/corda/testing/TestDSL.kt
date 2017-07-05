@@ -145,7 +145,7 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun timeWindow(data: TimeWindow) {
-        transactionBuilder.addTimeWindow(data)
+        transactionBuilder.timeWindow = data
     }
 
     override fun tweak(

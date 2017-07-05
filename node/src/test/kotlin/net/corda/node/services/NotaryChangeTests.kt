@@ -8,13 +8,13 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.getTestPartyAndCertificate
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.NotaryChangeFlow
 import net.corda.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x500.X500Name
@@ -172,7 +172,7 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: A
 
 fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
-    tx.addTimeWindow(Instant.now(), 30.seconds)
+    tx.setTimeWindow(Instant.now(), 30.seconds)
     val stx = node.services.signInitialTransaction(tx)
     node.services.recordTransactions(stx)
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))

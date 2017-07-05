@@ -66,7 +66,7 @@ dependencies {
     compile ':terminal-331a005d6793e52cefc9e2cec6774e62d5a546b1'
     compile ':pty4j-0.7.2'
 
-    testCompile project(':node')
+    testCompile project(':test-utils')
     testCompile project(':webserver')
 
     testCompile "junit:junit:$junit_version"

@@ -1,7 +1,7 @@
 package net.corda.contracts
 
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.days
 import net.corda.core.identity.AnonymousParty
@@ -10,7 +10,6 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
@@ -260,7 +259,7 @@ class CommercialPaperTestsGeneric {
         val faceValue = 10000.DOLLARS `issued by` DUMMY_CASH_ISSUER
         val issuance = bigCorpServices.myInfo.legalIdentity.ref(1)
         val issueBuilder = CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, DUMMY_NOTARY)
-        issueBuilder.addTimeWindow(TEST_TX_TIME, 30.seconds)
+        issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val issuePtx = bigCorpServices.signInitialTransaction(issueBuilder)
         val issueTx = notaryServices.addSignature(issuePtx)
 
@@ -289,7 +288,7 @@ class CommercialPaperTestsGeneric {
         databaseBigCorp.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val builder = TransactionType.General.Builder(DUMMY_NOTARY)
-                builder.addTimeWindow(time, 30.seconds)
+                builder.setTimeWindow(time, 30.seconds)
                 CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), bigCorpVaultService)
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = bigCorpServices.addSignature(ptx)

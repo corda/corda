@@ -12,8 +12,7 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_CA
-import net.corda.core.utilities.getTestPartyAndCertificate
+import net.corda.testing.DUMMY_CA
 import net.corda.flows.AnonymisedIdentity
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
@@ -29,6 +28,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MOCK_IDENTITIES
 import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.getTestPartyAndCertificate
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
 import rx.subjects.PublishSubject
