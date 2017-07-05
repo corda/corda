@@ -99,7 +99,7 @@ class TransactionSerializationTests {
 
     @Test
     fun timeWindow() {
-        tx.addTimeWindow(TEST_TX_TIME, 30.seconds)
+        tx.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val ptx = megaCorpServices.signInitialTransaction(tx)
         val stx = notaryServices.addSignature(ptx)
         assertEquals(TEST_TX_TIME, stx.tx.timeWindow?.midpoint)

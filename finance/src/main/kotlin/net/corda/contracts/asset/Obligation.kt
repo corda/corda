@@ -543,7 +543,7 @@ class Obligation<P : Any> : Contract {
             }
             tx.addCommand(Commands.SetLifecycle(lifecycle), partiesUsed.map { it.owningKey }.distinct())
         }
-        tx.addTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
+        tx.setTimeWindow(issuanceDef.dueBefore, issuanceDef.timeTolerance)
     }
 
     /**

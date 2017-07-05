@@ -30,6 +30,7 @@ import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -303,7 +304,10 @@ public class FlowCookbookJava {
             regTxBuilder.addOutputState(ourOutput);
             regTxBuilder.addCommand(ourCommand);
             regTxBuilder.addAttachment(ourAttachment);
-            regTxBuilder.addTimeWindow(ourTimeWindow);
+
+            // We set the time-window within which the transaction must be notarised using either of:
+            regTxBuilder.setTimeWindow(ourTimeWindow);
+            regTxBuilder.setTimeWindow(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
 
             /*-----------------------
              * TRANSACTION SIGNING *
