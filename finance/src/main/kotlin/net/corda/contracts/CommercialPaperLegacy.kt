@@ -3,8 +3,8 @@ package net.corda.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NULL_PARTY
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService

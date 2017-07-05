@@ -7,6 +7,7 @@ import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.contracts.testing.fillWithSomeTestDeals
 import net.corda.contracts.testing.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
+import net.corda.core.contracts.testing.DummyLinearContract
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates
@@ -22,7 +23,8 @@ import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before

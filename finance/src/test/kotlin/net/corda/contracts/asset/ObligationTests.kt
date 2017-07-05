@@ -4,8 +4,9 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.core.crypto.NULL_PARTY
+import net.corda.core.contracts.testing.DummyState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.serialization.OpaqueBytes
