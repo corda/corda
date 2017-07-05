@@ -279,12 +279,8 @@ public class VaultQueryJavaTests {
             List<UniqueIdentifier> linearIds = Arrays.asList(uid);
             List<AbstractParty> dealParty = Arrays.asList(getMEGA_CORP());
             QueryCriteria dealCriteria = new LinearStateQueryCriteria(dealParty, null, dealIds);
-
             QueryCriteria linearCriteria = new LinearStateQueryCriteria(dealParty, linearIds, null);
-
-
             QueryCriteria dealOrLinearIdCriteria = or(dealCriteria, linearCriteria);
-
             QueryCriteria compositeCriteria = and(dealOrLinearIdCriteria, vaultCriteria);
 
             PageSpecification pageSpec  = new PageSpecification(0, getMAX_PAGE_SIZE());
@@ -296,7 +292,7 @@ public class VaultQueryJavaTests {
             Observable<Vault.Update> updates = results.getFuture();
             // DOCEND VaultJavaQueryExample5
 
-            assertThat(snapshot.getStates()).hasSize(4);
+            assertThat(snapshot.getStates()).hasSize(13);
 
             return tx;
         });

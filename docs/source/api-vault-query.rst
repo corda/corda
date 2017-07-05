@@ -78,6 +78,8 @@ There are four implementations of this interface which can be chained together t
     :end-before: DOCEND VaultQueryExample20
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
+
+All ``QueryCriteria`` implementations provide an explicitly specifiable ``StateStatus`` attribute which defaults to filtering on UNCONSUMED states.
 	   
 .. note:: Custom contract states that implement the ``Queryable`` interface may now extend common schemas types ``FungiblePersistentState`` or, ``LinearPersistentState``.  Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset`` and ``LinearState`` attributes. See ``SampleCashSchemaV2`` and ``DummyLinearStateSchemaV2`` as examples.
 
