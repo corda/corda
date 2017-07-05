@@ -147,9 +147,10 @@ sealed class TransactionType {
          * and adds the list of participants to the signers set for every input state.
          */
         class Builder(notary: Party) : TransactionBuilder(NotaryChange, notary) {
-            override fun addInputState(stateAndRef: StateAndRef<*>) {
+            override fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
                 signers.addAll(stateAndRef.state.data.participants.map { it.owningKey })
                 super.addInputState(stateAndRef)
+                return this
             }
         }
 
