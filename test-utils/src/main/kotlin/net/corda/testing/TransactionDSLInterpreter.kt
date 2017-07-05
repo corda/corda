@@ -51,7 +51,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
-     * Adds a time-window to the transaction.
+     * Sets the time-window of the transaction.
      * @param data the [TimeWindow] (validation window).
      */
     fun timeWindow(data: TimeWindow)
@@ -115,7 +115,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
 
     /**
-     * Adds a [TimeWindow] command to the transaction.
+     * Sets the [TimeWindow] of the transaction.
      * @param time The [Instant] of the [TimeWindow].
      * @param tolerance The tolerance of the [TimeWindow].
      */
