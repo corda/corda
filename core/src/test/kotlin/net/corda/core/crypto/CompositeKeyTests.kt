@@ -161,79 +161,79 @@ class CompositeKeyTests {
         }
         // Duplicated composite key children.
         assertFailsWith(IllegalArgumentException::class) {
-            val node1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
-            val node2 = CompositeKey.Builder().addKeys(bobPublicKey, alicePublicKey).build()
-            CompositeKey.Builder().addKeys(node1, node2).build()
+            val compositeKey1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build()
+            val compositeKey2 = CompositeKey.Builder().addKeys(bobPublicKey, alicePublicKey).build()
+            CompositeKey.Builder().addKeys(compositeKey1, compositeKey2).build()
         }
     }
 
     @Test()
     fun `composite key validation with graph cycle detection`() {
-        val node1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
-        val node2 = CompositeKey.Builder().addKeys(alicePublicKey, node1).build() as CompositeKey
-        val node3 = CompositeKey.Builder().addKeys(alicePublicKey, node2).build() as CompositeKey
-        val node4 = CompositeKey.Builder().addKeys(alicePublicKey, node3).build() as CompositeKey
-        val node5 = CompositeKey.Builder().addKeys(alicePublicKey, node4).build() as CompositeKey
-        val node6 = CompositeKey.Builder().addKeys(alicePublicKey, node5, node2).build() as CompositeKey
+        val key1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build() as CompositeKey
+        val key2 = CompositeKey.Builder().addKeys(alicePublicKey, key1).build() as CompositeKey
+        val key3 = CompositeKey.Builder().addKeys(alicePublicKey, key2).build() as CompositeKey
+        val key4 = CompositeKey.Builder().addKeys(alicePublicKey, key3).build() as CompositeKey
+        val key5 = CompositeKey.Builder().addKeys(alicePublicKey, key4).build() as CompositeKey
+        val key6 = CompositeKey.Builder().addKeys(alicePublicKey, key5, key2).build() as CompositeKey
 
         // Initially, there is no any graph cycle.
-        node1.checkValidity()
-        node2.checkValidity()
-        node3.checkValidity()
-        node4.checkValidity()
-        node5.checkValidity()
-        // The fact that node6 has a direct reference to node2 and an indirect (via path node5->node4->node3->node2)
+        key1.checkValidity()
+        key2.checkValidity()
+        key3.checkValidity()
+        key4.checkValidity()
+        key5.checkValidity()
+        // The fact that key6 has a direct reference to key2 and an indirect (via path key5->key4->key3->key2)
         // does not imply a cycle, as expected (independent paths).
-        node6.checkValidity()
+        key6.checkValidity()
 
-        // We will create a graph cycle between node5 and node3. Node5 has already a reference to node3 (via node4).
-        // To create a cycle, we add a reference (child) from node3 to node5.
-        // Children list is immutable, so reflection is used to inject node5 as an extra NodeAndWeight child of node3.
-        val field = node3.javaClass.getDeclaredField("children")
+        // We will create a graph cycle between key5 and key3. Key5 has already a reference to key3 (via key4).
+        // To create a cycle, we add a reference (child) from key3 to key5.
+        // Children list is immutable, so reflection is used to inject key5 as an extra NodeAndWeight child of key3.
+        val field = key3.javaClass.getDeclaredField("children")
         field.isAccessible = true
-        val fixedChildren = node3.children.plus(CompositeKey.NodeAndWeight(node5, 1))
-        field.set(node3, fixedChildren)
+        val fixedChildren = key3.children.plus(CompositeKey.NodeAndWeight(key5, 1))
+        field.set(key3, fixedChildren)
 
         /* A view of the example graph cycle.
          *
-         *               node6
+         *               key6
          *              /    \
-         *           node5   node2
+         *            key5   key2
          *            /
-         *         node4
+         *         key4
          *         /
-         *      node3
+         *       key3
          *      /   \
-         *   node2  node5
+         *    key2  key5
          *    /
-         * node1
+         *  key1
          *
          */
 
-        // Detect the graph cycle starting from node3.
+        // Detect the graph cycle starting from key3.
         assertFailsWith(IllegalArgumentException::class) {
-            node3.checkValidity()
+            key3.checkValidity()
         }
 
-        // Detect the graph cycle starting from node4.
+        // Detect the graph cycle starting from key4.
         assertFailsWith(IllegalArgumentException::class) {
-            node4.checkValidity()
+            key4.checkValidity()
         }
 
-        // Detect the graph cycle starting from node5.
+        // Detect the graph cycle starting from key5.
         assertFailsWith(IllegalArgumentException::class) {
-            node5.checkValidity()
+            key5.checkValidity()
         }
 
-        // Detect the graph cycle starting from node6.
-        // Typically, one needs to test on the root node only (thus, a validity check on node6 would be enough).
+        // Detect the graph cycle starting from key6.
+        // Typically, one needs to test on the root tree-node only (thus, a validity check on key6 would be enough).
         assertFailsWith(IllegalArgumentException::class) {
-            node6.checkValidity()
+            key6.checkValidity()
         }
 
-        // Node2 (and all paths below it, i.e. Node1) are outside the graph cycle and thus, there is no impact on them.
-        node2.checkValidity()
-        node1.checkValidity()
+        // Key2 (and all paths below it, i.e. key1) are outside the graph cycle and thus, there is no impact on them.
+        key2.checkValidity()
+        key1.checkValidity()
     }
 
     @Test

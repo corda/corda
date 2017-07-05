@@ -29,8 +29,12 @@ class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
-        checkConstraints() // TODO: replace with the more extensive, but slower, checkValidity() test.
+        // TODO: replace with the more extensive, but slower, checkValidity() test.
+        checkConstraints()
     }
+
+    @Transient
+    private var validated = false
 
     // Check for key duplication, threshold and weight constraints and test for aggregated weight integer overflow.
     private fun checkConstraints() {
@@ -74,12 +78,13 @@ class CompositeKey private constructor (val threshold: Int,
         visitedMap.put(this, true)
         cycleDetection(visitedMap) // Graph cycle testing on the root node.
         checkConstraints()
-        for ((node) in children) {
+        for ((node, _) in children) {
             if (node is CompositeKey) {
                 // We don't need to check for cycles on the rest of the nodes (testing on the root node is enough).
                 node.checkConstraints()
             }
         }
+        validated = true
     }
 
     // Method to check if the total (aggregated) weight of child nodes overflows.
@@ -148,14 +153,14 @@ class CompositeKey private constructor (val threshold: Int,
     // Extracted method from isFulfilledBy.
     private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
         if (keysToCheck.any { it is CompositeKey } ) return false
-        val combinedWeight = children.map { (node, weight) ->
+        val totalWeight = children.map { (node, weight) ->
             if (node is CompositeKey) {
                 if (node.checkFulfilledBy(keysToCheck)) weight else 0
             } else {
                 if (keysToCheck.contains(node)) weight else 0
             }
         }.sum()
-        return combinedWeight >= threshold
+        return totalWeight >= threshold
     }
 
     /**
@@ -164,7 +169,10 @@ class CompositeKey private constructor (val threshold: Int,
      * If all thresholds are satisfied, the composite key requirement is considered to be met.
      */
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
-        checkValidity() // TODO: remove when checkValidity() will be eventually invoked during deserialization.
+        // We validate keys only when checking if they're matched, as this checks subkeys as a result.
+        // Doing these checks at deserialization/construction time would result in duplicate checks.
+        if (!validated)
+            checkValidity() // TODO: remove when checkValidity() will be eventually invoked during/after deserialization.
         return checkFulfilledBy(keysToCheck)
     }
 
