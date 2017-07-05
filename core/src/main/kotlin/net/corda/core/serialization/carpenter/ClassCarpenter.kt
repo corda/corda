@@ -76,7 +76,7 @@ class ClassCarpenter {
     class NullablePrimitive(msg: String) : RuntimeException(msg)
 
     abstract class Field(val field: Class<out Any?>) {
-        val unsetName = "Unset"
+        protected val unsetName = "Unset"
         var name: String = unsetName
         abstract val nullabilityAnnotation: String
 
@@ -96,8 +96,6 @@ class ClassCarpenter {
             mv.visitAnnotation(nullabilityAnnotation, false)
         }
 
-        abstract fun copy(name: String, field: Class<out Any?>): Field
-        abstract fun nullTest(mv: MethodVisitor, slot: Int)
         fun visitParameter(mv: MethodVisitor, idx: Int) {
             with(mv) {
                 visitParameter(name, 0)
@@ -106,6 +104,9 @@ class ClassCarpenter {
                 }
             }
         }
+
+        abstract fun copy(name: String, field: Class<out Any?>): Field
+        abstract fun nullTest(mv: MethodVisitor, slot: Int)
     }
 
     class NonNullableField(field: Class<out Any?>) : Field(field) {
@@ -341,9 +342,8 @@ class ClassCarpenter {
 
     private fun ClassWriter.generateAbstractGetters(schema: Schema) {
         for ((name, field) in schema.fields) {
-            val descriptor = field.descriptor
             val opcodes = ACC_ABSTRACT + ACC_PUBLIC
-            with(visitMethod(opcodes, "get" + name.capitalize(), "()" + descriptor, null, null)) {
+            with(visitMethod(opcodes, "get" + name.capitalize(), "()${field.descriptor}", null, null)) {
                 // abstract method doesn't have any implementation so just end
                 visitEnd()
             }
@@ -378,7 +378,6 @@ class ClassCarpenter {
 
             // Assign the fields from parameters.
             var slot = 1 + superclassFields.size
-
             for ((name, field) in schema.fields.entries) {
                 field.nullTest(this, slot)
 
