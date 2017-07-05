@@ -72,7 +72,7 @@ interface ServiceHubInternal : PluginServiceHub {
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
-    override val validatedTransactions: TransactionStorage
+    override val validatedTransactions: WritableTransactionStorage
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
     val monitoringService: MonitoringService
     val schemaService: SchemaService
@@ -89,8 +89,9 @@ interface ServiceHubInternal : PluginServiceHub {
     val uploaders: List<FileUploader>
 
     override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-        val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
+        require(recordedTransactions.isNotEmpty()) { "No transactions passed in for recording" }
+        val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
         if (stateMachineRunId != null) {
             recordedTransactions.forEach {
                 stateMachineRecordedTransactionMapping.addMapping(stateMachineRunId, it.id)
@@ -133,6 +134,20 @@ interface ServiceHubInternal : PluginServiceHub {
     }
 
     fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>?
+}
+
+/**
+ * Thread-safe storage of transactions.
+ */
+interface WritableTransactionStorage : TransactionStorage {
+    /**
+     * Add a new transaction to the store. If the store already has a transaction with the same id it will be
+     * overwritten.
+     * @param transaction The transaction to be recorded.
+     * @return true if the transaction was recorded successfully, false if it was already recorded.
+     */
+    // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
+    fun addTransaction(transaction: SignedTransaction): Boolean
 }
 
 /**
