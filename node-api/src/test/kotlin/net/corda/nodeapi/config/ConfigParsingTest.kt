@@ -59,8 +59,8 @@ class ConfigParsingTest {
     }
 
     @Test
-    fun `Authority`() {
-        testPropertyType<AuthorityData, AuthorityListData, NetworkHostAndPort>(
+    fun `NetworkHostAndPort`() {
+        testPropertyType<NetworkHostAndPortData, NetworkHostAndPortListData, NetworkHostAndPort>(
                 NetworkHostAndPort("localhost", 2223),
                 NetworkHostAndPort("localhost", 2225),
                 valuesToString = true)
@@ -223,8 +223,8 @@ class ConfigParsingTest {
     data class LocalDateListData(override val values: List<LocalDate>) : ListData<LocalDate>
     data class InstantData(override val value: Instant) : SingleData<Instant>
     data class InstantListData(override val values: List<Instant>) : ListData<Instant>
-    data class AuthorityData(override val value: NetworkHostAndPort) : SingleData<NetworkHostAndPort>
-    data class AuthorityListData(override val values: List<NetworkHostAndPort>) : ListData<NetworkHostAndPort>
+    data class NetworkHostAndPortData(override val value: NetworkHostAndPort) : SingleData<NetworkHostAndPort>
+    data class NetworkHostAndPortListData(override val values: List<NetworkHostAndPort>) : ListData<NetworkHostAndPort>
     data class PathData(override val value: Path) : SingleData<Path>
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>

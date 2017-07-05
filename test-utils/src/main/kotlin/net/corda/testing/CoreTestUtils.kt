@@ -14,6 +14,7 @@ import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.IdentityService
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -89,7 +90,7 @@ val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTAR
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
 
 val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
-val MOCK_HOST_AND_PORT = Authority("mockHost", 30000)
+val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -100,7 +101,7 @@ private val freePortCounter = AtomicInteger(30000)
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort() = Authority("localhost", freePort())
+fun freeLocalHostAndPort() = NetworkHostAndPort("localhost", freePort())
 
 /**
  * Returns a free port.
@@ -116,9 +117,9 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * Unlikely, but in the time between running this function and handing the ports
  * to the Node, some other process else could allocate the returned ports.
  */
-fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<Authority> {
+fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { Authority(hostName, it) }
+    return (freePort .. freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
 /**
