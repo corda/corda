@@ -3,6 +3,11 @@ Changelog
 
 Here are brief summaries of what's changed between each snapshot release. This includes guidance on how to upgrade code from the previous milestone release.
 
+Milestone 11.2
+--------------
+
+* UntrustworthyData.Validator implements Serializable so that checkpoints with unwrap lambdas are valid.
+
 Milestone 11.1
 --------------
 

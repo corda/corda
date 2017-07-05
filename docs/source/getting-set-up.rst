@@ -80,7 +80,7 @@ And a simple example CorDapp for you to explore basic concepts is available here
 You can clone these repos to your local machine by running the command ``git clone [repo URL]``.
 
 By default, these repos will be on the ``master`` branch. However, this is an unstable development branch. You should check 
-out the latest release tag instead by running ``git checkout release-M11.1``.
+out the latest release tag instead by running ``git checkout release-M11.2``.
 
 Opening Corda/CorDapps in IDEA
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
