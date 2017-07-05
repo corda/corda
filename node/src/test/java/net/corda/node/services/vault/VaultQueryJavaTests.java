@@ -6,7 +6,7 @@ import net.corda.contracts.DealState;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.testing.DummyLinearContract;
-import net.corda.core.crypto.SecureHash;
+import net.corda.core.crypto.*;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;
 import net.corda.core.node.services.Vault;
@@ -45,6 +45,9 @@ import java.util.stream.StreamSupport;
 
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
+import static net.corda.testing.CoreTestUtils.getBOC;
+import static net.corda.testing.CoreTestUtils.getBOC_KEY;
+import static net.corda.testing.CoreTestUtils.getBOC_PUBKEY;
 import static net.corda.core.contracts.ContractsDSL.USD;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.getMAX_PAGE_SIZE;
 import static net.corda.node.utilities.DatabaseSupportKt.configureDatabase;
