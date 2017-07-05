@@ -3,6 +3,7 @@
 package net.corda.core.utilities
 
 import net.corda.core.crypto.*
+import net.corda.core.crypto.testing.DummyPublicKey
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import org.bouncycastle.asn1.x500.X500Name

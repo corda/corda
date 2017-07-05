@@ -8,10 +8,7 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.contracts.AbstractAttachment
 import net.corda.core.contracts.Attachment
-import net.corda.core.createDirectory
 import net.corda.core.crypto.SecureHash
-import net.corda.core.div
-import net.corda.core.extractZipFile
 import net.corda.core.isDirectory
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.*
@@ -35,7 +32,7 @@ import javax.annotation.concurrent.ThreadSafe
  * Stores attachments in H2 database.
  */
 @ThreadSafe
-class NodeAttachmentService(override var storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry)
+class NodeAttachmentService(val storePath: Path, dataSourceProperties: Properties, metrics: MetricRegistry)
     : AttachmentStorage, AcceptsFileUpload, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<NodeAttachmentService>()
@@ -48,7 +45,6 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
     var checkAttachmentsOnLoad = true
 
     private val attachmentCount = metrics.counter("Attachments")
-    @Volatile override var automaticallyExtractAttachments = false
 
     init {
         require(storePath.isDirectory()) { "$storePath must be a directory" }
@@ -182,19 +178,6 @@ class NodeAttachmentService(override var storePath: Path, dataSourceProperties: 
         attachmentCount.inc()
 
         log.info("Stored new attachment $id")
-
-        if (automaticallyExtractAttachments) {
-            val extractTo = storePath / "$id.jar"
-            try {
-                extractTo.createDirectory()
-                extractZipFile(ByteArrayInputStream(bytes), extractTo)
-            } catch(e: FileAlreadyExistsException) {
-                log.trace("Did not extract attachment jar to directory because it already exists")
-            } catch(e: Exception) {
-                log.error("Failed to extract attachment jar $id, ", e)
-                // TODO: Delete the extractTo directory here.
-            }
-        }
 
         return id
     }

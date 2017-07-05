@@ -1,7 +1,11 @@
 package net.corda.node.services.transactions
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionType
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
@@ -82,7 +86,7 @@ class ValidatingNotaryServiceTests {
         val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
         val signedByNode = node.services.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
-        node.services.recordTransactions(listOf(stx))
+        node.services.recordTransactions(stx)
         return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
     }
 }

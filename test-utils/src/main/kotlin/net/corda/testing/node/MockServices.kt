@@ -15,6 +15,7 @@ import net.corda.core.utilities.DUMMY_CA
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.flows.AnonymisedIdentity
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.freshCertificate
@@ -34,8 +35,6 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -65,7 +64,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
 
     override val attachments: AttachmentStorage = MockAttachmentStorage()
-    override val validatedTransactions: TransactionStorage = MockTransactionStorage()
+    override val validatedTransactions: WritableTransactionStorage = MockTransactionStorage()
     val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
     override final val identityService: IdentityService = InMemoryIdentityService(MOCK_IDENTITIES, trustRoot = DUMMY_CA.certificate)
     override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *keys)
@@ -123,10 +122,8 @@ class MockKeyManagementService(val identityService: IdentityService,
     }
 }
 
-class MockAttachmentStorage : AttachmentStorage {
+class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     val files = HashMap<SecureHash, ByteArray>()
-    override var automaticallyExtractAttachments = false
-    override var storePath: Path = Paths.get("")
 
     override fun openAttachment(id: SecureHash): Attachment? {
         val f = files[id] ?: return null
@@ -158,7 +155,7 @@ class MockStateMachineRecordedTransactionMappingStorage(
         val storage: StateMachineRecordedTransactionMappingStorage = InMemoryStateMachineRecordedTransactionMappingStorage()
 ) : StateMachineRecordedTransactionMappingStorage by storage
 
-open class MockTransactionStorage : TransactionStorage {
+open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
     override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
         return DataFeed(txns.values.toList(), _updatesPublisher)
     }

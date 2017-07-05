@@ -8,7 +8,7 @@ import io.requery.rx.KotlinRxEntityStore
 import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
-import net.corda.core.contracts.TimeWindow
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
@@ -21,7 +21,10 @@ import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.BOB
+import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.node.services.vault.schemas.requery.*
 import org.h2.jdbcx.JdbcDataSource
 import org.junit.After

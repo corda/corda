@@ -14,10 +14,12 @@ import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.ServiceEntry
-import net.corda.core.node.services.*
 import net.corda.core.utilities.Authority
+import net.corda.core.node.WorldMapLocation
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.DUMMY_NOTARY_KEY
 import net.corda.core.utilities.getTestPartyAndCertificate
 import net.corda.core.utilities.loggerFor
@@ -32,7 +34,6 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.testing.MOCK_VERSION_INFO
@@ -181,8 +182,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(),
                     trustRoot = trustRoot, caCertificates = *caCertificates)
         }
-
-        override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
             return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))

@@ -19,7 +19,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
-import net.corda.core.node.services.NotaryService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
@@ -42,6 +41,7 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
+import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.services.network.PersistentNetworkMapService
@@ -122,78 +122,18 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
     protected val partyKeys = mutableSetOf<KeyPair>()
 
-    val services = object : ServiceHubInternal {
-        override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
-        override val uploaders: List<FileUploader> get() = this@AbstractNode.uploaders
-        override val stateMachineRecordedTransactionMapping: StateMachineRecordedTransactionMappingStorage
-            get() = this@AbstractNode.transactionMappings
-        override val validatedTransactions: TransactionStorage get() = this@AbstractNode.transactions
-        override val networkService: MessagingService get() = network
-        override val networkMapCache: NetworkMapCacheInternal get() = netMapCache
-        override val vaultService: VaultService get() = vault
-        override val vaultQueryService: VaultQueryService get() = vaultQuery
-        override val keyManagementService: KeyManagementService get() = keyManagement
-        override val identityService: IdentityService get() = identity
-        override val schedulerService: SchedulerService get() = scheduler
-        override val clock: Clock get() = platformClock
-        override val myInfo: NodeInfo get() = info
-        override val schemaService: SchemaService get() = schemas
-        override val transactionVerifierService: TransactionVerifierService get() = txVerifierService
-        override val auditService: AuditService get() = this@AbstractNode.auditService
-        override val database: Database get() = this@AbstractNode.database
-        override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
+    val services: ServiceHubInternal get() = _services
 
-        override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
-            require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
-            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
-        }
-
-        override val rpcFlows: List<Class<out FlowLogic<*>>> get() = this@AbstractNode.rpcFlows
-
-        // Internal only
-        override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
-
-        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
-            return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
-        }
-
-        override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
-            return flowFactories[initiatingFlowClass]
-        }
-
-        override fun recordTransactions(txs: Iterable<SignedTransaction>) {
-            database.transaction {
-                super.recordTransactions(txs)
-            }
-        }
-    }
-
-    open fun findMyLocation(): WorldMapLocation? {
-        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
-    }
-
+    private lateinit var _services: ServiceHubInternalImpl
     lateinit var info: NodeInfo
     lateinit var checkpointStorage: CheckpointStorage
     lateinit var smm: StateMachineManager
     lateinit var attachments: NodeAttachmentService
-    lateinit var transactions: TransactionStorage
-    lateinit var transactionMappings: StateMachineRecordedTransactionMappingStorage
-    lateinit var uploaders: List<FileUploader>
-    lateinit var vault: VaultService
-    lateinit var vaultQuery: VaultQueryService
-    lateinit var keyManagement: KeyManagementService
     var inNodeNetworkMapService: NetworkMapService? = null
-    lateinit var txVerifierService: TransactionVerifierService
-    lateinit var identity: IdentityService
     lateinit var network: MessagingService
-    lateinit var netMapCache: NetworkMapCacheInternal
-    lateinit var scheduler: NodeSchedulerService
-    lateinit var schemas: SchemaService
-    lateinit var auditService: AuditService
     protected val runOnStop = ArrayList<() -> Any?>()
     lateinit var database: Database
     protected var dbCloser: (() -> Any?)? = null
-    private lateinit var rpcFlows: List<Class<out FlowLogic<*>>>
 
     var isPreviousCheckpointsPresent = false
         private set
@@ -215,6 +155,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** The implementation of the [CordaRPCOps] interface used by this node. */
     open val rpcOps: CordaRPCOps by lazy { CordaRPCOpsImpl(services, smm, database) }   // Lazy to avoid init ordering issue with the SMM.
 
+    open fun findMyLocation(): WorldMapLocation? {
+        return configuration.myLegalName.locationOrNull?.let { CityDatabase[it] }
+    }
+
     open fun start(): AbstractNode {
         require(!started) { "Node has already been started" }
 
@@ -233,8 +177,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         initialiseDatabasePersistence {
-            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
-            val tokenizableServices = makeServices(keyStoreWrapper)
+            val tokenizableServices = makeServices()
 
             smm = StateMachineManager(services,
                     checkpointStorage,
@@ -266,9 +209,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             if (scanResult != null) {
                 installCordaServices(scanResult)
                 registerInitiatedFlows(scanResult)
-                rpcFlows = findRPCFlows(scanResult)
-            } else {
-                rpcFlows = emptyList()
+                findRPCFlows(scanResult)
             }
 
             // TODO: Investigate having class path scanning find this flow
@@ -283,7 +224,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             smm.start()
             // Shut down the SMM so no Fibers are scheduled.
             runOnStop += { smm.stop(acceptableLiveFiberCountOnStop()) }
-            scheduler.start()
+            _services.schedulerService.start()
         }
         started = true
         return this
@@ -301,7 +242,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             }
         }
 
-        return scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
+        scanResult.getClassesWithAnnotation(SerializeAsToken::class, CordaService::class)
                 .filter {
                     val serviceType = getServiceType(it)
                     if (serviceType != null && info.serviceIdentities(serviceType).isEmpty()) {
@@ -434,19 +375,21 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         return observable
     }
 
-    private fun findRPCFlows(scanResult: ScanResult): List<Class<out FlowLogic<*>>> {
+    private fun findRPCFlows(scanResult: ScanResult) {
         fun Class<out FlowLogic<*>>.isUserInvokable(): Boolean {
             return isPublic(modifiers) && !isLocalClass && !isAnonymousClass && (!isMemberClass || isStatic(modifiers))
         }
 
-        return scanResult.getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class).filter { it.isUserInvokable() } +
-                // Add any core flows here
-                listOf(
-                        ContractUpgradeFlow::class.java,
-                        // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
-                        CashIssueFlow::class.java,
-                        CashExitFlow::class.java,
-                        CashPaymentFlow::class.java)
+        _services.rpcFlows += scanResult
+                .getClassesWithAnnotation(FlowLogic::class, StartableByRPC::class)
+                .filter { it.isUserInvokable() } +
+                    // Add any core flows here
+                    listOf(
+                            ContractUpgradeFlow::class.java,
+                            // TODO Remove all Cash flows from default list once they are split into separate CorDapp.
+                            CashIssueFlow::class.java,
+                            CashExitFlow::class.java,
+                            CashPaymentFlow::class.java)
     }
 
     /**
@@ -476,36 +419,20 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
      * Builds node internal, advertised, and plugin services.
      * Returns a list of tokenizable services to be added to the serialisation context.
      */
-    private fun makeServices(keyStoreWrapper: KeyStoreWrapper): MutableList<Any> {
-        val keyStore = keyStoreWrapper.keyStore
-        attachments = createAttachmentStorage()
-        transactions = createTransactionStorage()
-        transactionMappings = DBTransactionMappingStorage()
+    private fun makeServices(): MutableList<Any> {
         checkpointStorage = DBCheckpointStorage()
-        netMapCache = InMemoryNetworkMapCache(services)
+        _services = ServiceHubInternalImpl()
+        attachments = createAttachmentStorage()
         network = makeMessagingService()
-        schemas = makeSchemaService()
-        vault = makeVaultService(configuration.dataSourceProperties)
-        vaultQuery = makeVaultQueryService(schemas)
-        txVerifierService = makeTransactionVerifierService()
-        auditService = DummyAuditService()
-
         info = makeInfo()
-        identity = makeIdentityService(keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
-                keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
-                info.legalIdentityAndCert)
-        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
-        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
-        // the identity key. But the infrastructure to make that easy isn't here yet.
-        keyManagement = makeKeyManagementService(identity)
-        scheduler = NodeSchedulerService(services, database, unfinishedSchedules = busyNodeLatch)
 
-        val tokenizableServices = mutableListOf(attachments, network, vault, vaultQuery, keyManagement, identity, platformClock, scheduler)
+        val tokenizableServices = mutableListOf(attachments, network, services.vaultService, services.vaultQueryService,
+                services.keyManagementService, services.identityService, platformClock, services.schedulerService)
         makeAdvertisedServices(tokenizableServices)
         return tokenizableServices
     }
 
-    protected open fun createTransactionStorage(): TransactionStorage = DBTransactionStorage()
+    protected open fun makeTransactionStorage(): WritableTransactionStorage = DBTransactionStorage()
 
     private fun scanCordapps(): ScanResult? {
         val scanPackage = System.getProperty("net.corda.node.cordapp.scan.package")
@@ -560,14 +487,15 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     private fun initUploaders() {
-        uploaders = listOf(attachments) + cordappServices.values.filterIsInstance(AcceptsFileUpload::class.java)
+        _services.uploaders += attachments
+        cordappServices.values.filterIsInstanceTo(_services.uploaders, AcceptsFileUpload::class.java)
     }
 
     private fun makeVaultObservers() {
-        VaultSoftLockManager(vault, smm)
+        VaultSoftLockManager(services.vaultService, smm)
         CashBalanceAsMetricsObserver(services, database)
         ScheduledActivityObserver(services)
-        HibernateObserver(vault.rawUpdates, HibernateConfiguration(schemas))
+        HibernateObserver(services.vaultService.rawUpdates, HibernateConfiguration(services.schemaService))
     }
 
     private fun makeInfo(): NodeInfo {
@@ -684,7 +612,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val expires = instant + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val reg = NodeRegistration(info, instant.toEpochMilli(), ADD, expires)
         val legalIdentityKey = obtainLegalIdentityKey()
-        val request = NetworkMapService.RegistrationRequest(reg.toWire(keyManagement, legalIdentityKey.public), network.myAddress)
+        val request = RegistrationRequest(reg.toWire(services.keyManagementService, legalIdentityKey.public), network.myAddress)
         return network.sendRequest(NetworkMapService.REGISTER_TOPIC, request, networkMapAddress)
     }
 
@@ -735,7 +663,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
                 .toTypedArray()
         val service = InMemoryIdentityService(setOf(info.legalIdentityAndCert), trustRoot = trustRoot, caCertificates = *caCertificates)
         services.networkMapCache.partyNodes.forEach { service.registerIdentity(it.legalIdentityAndCert) }
-        netMapCache.changed.subscribe { mapChange ->
+        services.networkMapCache.changed.subscribe { mapChange ->
             // TODO how should we handle network map removal
             if (mapChange is MapChange.Added) {
                 service.registerIdentity(mapChange.node.legalIdentityAndCert)
@@ -743,13 +671,6 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         }
         return service
     }
-
-    // TODO: sort out ordering of open & protected modifiers of functions in this class.
-    protected open fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
-
-    protected open fun makeVaultQueryService(schemas: SchemaService): VaultQueryService = HibernateVaultQueryImpl(HibernateConfiguration(schemas), vault.updatesPublisher)
-
-    protected open fun makeSchemaService(): SchemaService = NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet())
 
     protected abstract fun makeTransactionVerifierService(): TransactionVerifierService
 
@@ -844,6 +765,60 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         val attachmentsDir = (configuration.baseDirectory / "attachments").createDirectories()
         return NodeAttachmentService(attachmentsDir, configuration.dataSourceProperties, services.monitoringService.metrics)
     }
+
+    private inner class ServiceHubInternalImpl : ServiceHubInternal, SingletonSerializeAsToken() {
+        override val rpcFlows = ArrayList<Class<out FlowLogic<*>>>()
+        override val uploaders = ArrayList<FileUploader>()
+        override val stateMachineRecordedTransactionMapping = DBTransactionMappingStorage()
+        override val auditService = DummyAuditService()
+        override val monitoringService = MonitoringService(MetricRegistry())
+        override val validatedTransactions = makeTransactionStorage()
+        override val transactionVerifierService by lazy { makeTransactionVerifierService() }
+        override val networkMapCache by lazy { InMemoryNetworkMapCache(this) }
+        override val vaultService by lazy { NodeVaultService(this, configuration.dataSourceProperties) }
+        override val vaultQueryService by lazy {
+            HibernateVaultQueryImpl(HibernateConfiguration(schemaService), vaultService.updatesPublisher)
+        }
+        // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
+        // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
+        // the identity key. But the infrastructure to make that easy isn't here yet.
+        override val keyManagementService by lazy { makeKeyManagementService(identityService) }
+        override val schedulerService by lazy { NodeSchedulerService(this, unfinishedSchedules = busyNodeLatch) }
+        override val identityService by lazy {
+            val keyStoreWrapper = KeyStoreWrapper(configuration.trustStoreFile, configuration.trustStorePassword)
+            makeIdentityService(
+                    keyStoreWrapper.keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA)!! as X509Certificate,
+                    keyStoreWrapper.certificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA),
+                    info.legalIdentityAndCert)
+        }
+        override val attachments: AttachmentStorage get() = this@AbstractNode.attachments
+        override val networkService: MessagingService get() = network
+        override val clock: Clock get() = platformClock
+        override val myInfo: NodeInfo get() = info
+        override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
+        override val database: Database get() = this@AbstractNode.database
+        override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
+
+        override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {
+            require(type.isAnnotationPresent(CordaService::class.java)) { "${type.name} is not a Corda service" }
+            return cordappServices.getInstance(type) ?: throw IllegalArgumentException("Corda service ${type.name} does not exist")
+        }
+
+        override fun <T> startFlow(logic: FlowLogic<T>, flowInitiator: FlowInitiator): FlowStateMachineImpl<T> {
+            return serverThread.fetchFrom { smm.add(logic, flowInitiator) }
+        }
+
+        override fun getFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>): InitiatedFlowFactory<*>? {
+            return flowFactories[initiatingFlowClass]
+        }
+
+        override fun recordTransactions(txs: Iterable<SignedTransaction>) {
+            database.transaction {
+                super.recordTransactions(txs)
+            }
+        }
+    }
+
 }
 
 private class KeyStoreWrapper(val keyStore: KeyStore, val storePath: Path, private val storePassword: String) {

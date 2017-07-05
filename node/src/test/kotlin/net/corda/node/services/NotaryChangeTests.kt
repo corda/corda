@@ -1,6 +1,7 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
@@ -135,7 +136,7 @@ class NotaryChangeTests {
             addOutputState(stateB, notary, encumbrance = 1) // Encumbered by stateC
         }
         val stx = node.services.signInitialTransaction(tx)
-        node.services.recordTransactions(listOf(stx))
+        node.services.recordTransactions(stx)
         return tx.toWireTransaction()
     }
 
@@ -152,7 +153,7 @@ fun issueState(node: AbstractNode, notaryNode: AbstractNode): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notaryNode.info.notaryIdentity, node.info.legalIdentity.ref(0))
     val signedByNode = node.services.signInitialTransaction(tx)
     val stx = notaryNode.services.addSignature(signedByNode, notaryNode.services.notaryIdentityKey)
-    node.services.recordTransactions(listOf(stx))
+    node.services.recordTransactions(stx)
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
 }
 
@@ -163,8 +164,8 @@ fun issueMultiPartyState(nodeA: AbstractNode, nodeB: AbstractNode, notaryNode: A
     val signedByA = nodeA.services.signInitialTransaction(tx)
     val signedByAB = nodeB.services.addSignature(signedByA)
     val stx = notaryNode.services.addSignature(signedByAB, notaryNode.services.notaryIdentityKey)
-    nodeA.services.recordTransactions(listOf(stx))
-    nodeB.services.recordTransactions(listOf(stx))
+    nodeA.services.recordTransactions(stx)
+    nodeB.services.recordTransactions(stx)
     val stateAndRef = StateAndRef(state, StateRef(stx.id, 0))
     return stateAndRef
 }
@@ -173,6 +174,6 @@ fun issueInvalidState(node: AbstractNode, notary: Party): StateAndRef<*> {
     val tx = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
     tx.addTimeWindow(Instant.now(), 30.seconds)
     val stx = node.services.signInitialTransaction(tx)
-    node.services.recordTransactions(listOf(stx))
+    node.services.recordTransactions(stx)
     return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
 }
