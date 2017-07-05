@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
@@ -270,5 +270,5 @@ class NodeConfigTest {
             users = users
     )
 
-    private fun localPort(port: Int) = Authority("localhost", port)
+    private fun localPort(port: Int) = NetworkHostAndPort("localhost", port)
 }

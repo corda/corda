@@ -7,7 +7,7 @@ import com.jcraft.jsch.JSch
 import com.jcraft.jsch.agentproxy.AgentProxy
 import com.jcraft.jsch.agentproxy.connector.SSHAgentConnector
 import com.jcraft.jsch.agentproxy.usocket.JNAUSocketFactory
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.driver.PortAllocation
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -61,7 +61,7 @@ fun setupJSchWithSshAgent(): JSch {
 }
 
 class ConnectionManager(private val jSch: JSch) {
-    fun connectToNode(remoteNode: RemoteNode, localTunnelAddress: Authority): NodeConnection {
+    fun connectToNode(remoteNode: RemoteNode, localTunnelAddress: NetworkHostAndPort): NodeConnection {
         val session = jSch.getSession(remoteNode.sshUserName, remoteNode.hostname, 22)
         // We don't check the host fingerprints because they may change often
         session.setConfig("StrictHostKeyChecking", "no")

@@ -11,8 +11,8 @@ import net.corda.core.div
 import net.corda.core.map
 import net.corda.core.messaging.RPCOps
 import net.corda.core.random63BitValue
-import net.corda.core.utilities.Authority
-import net.corda.core.utilities.parseAuthority
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.testing.driver.ProcessUtilities
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -110,7 +110,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
             configuration: RPCServerConfiguration = RPCServerConfiguration.default,
-            customPort: Authority? = null,
+            customPort: NetworkHostAndPort? = null,
             ops : I
     ) : ListenableFuture<RpcServerHandle>
 
@@ -125,7 +125,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      */
     fun <I : RPCOps> startRpcClient(
             rpcOpsClass: Class<I>,
-            rpcAddress: Authority,
+            rpcAddress: NetworkHostAndPort,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password,
             configuration: RPCClientConfiguration = RPCClientConfiguration.default
@@ -141,7 +141,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      */
     fun <I : RPCOps> startRandomRpcClient(
             rpcOpsClass: Class<I>,
-            rpcAddress: Authority,
+            rpcAddress: NetworkHostAndPort,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password
     ): ListenableFuture<Process>
@@ -154,7 +154,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
      * @param password The password to authenticate with.
      */
     fun startArtemisSession(
-            rpcAddress: Authority,
+            rpcAddress: NetworkHostAndPort,
             username: String = rpcTestUser.username,
             password: String = rpcTestUser.password
     ): ClientSession
@@ -164,7 +164,7 @@ interface RPCDriverExposedDSLInterface : DriverDSLExposedInterface {
             rpcUser: User = rpcTestUser,
             maxFileSize: Int = ArtemisMessagingServer.MAX_FILE_SIZE,
             maxBufferedBytesPerClient: Long = 10L * ArtemisMessagingServer.MAX_FILE_SIZE,
-            customPort: Authority? = null
+            customPort: NetworkHostAndPort? = null
     ): ListenableFuture<RpcBrokerHandle>
 
     fun startInVmRpcBroker(
@@ -187,12 +187,12 @@ inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startInVmRpcClient(
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
 ) = startInVmRpcClient(I::class.java, username, password, configuration)
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRandomRpcClient(
-        hostAndPort: Authority,
+        hostAndPort: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password
 ) = startRandomRpcClient(I::class.java, hostAndPort, username, password)
 inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
-        rpcAddress: Authority,
+        rpcAddress: NetworkHostAndPort,
         username: String = rpcTestUser.username,
         password: String = rpcTestUser.password,
         configuration: RPCClientConfiguration = RPCClientConfiguration.default
@@ -201,7 +201,7 @@ inline fun <reified I : RPCOps> RPCDriverExposedDSLInterface.startRpcClient(
 interface RPCDriverInternalDSLInterface : DriverDSLInternalInterface, RPCDriverExposedDSLInterface
 
 data class RpcBrokerHandle(
-        val hostAndPort: Authority?, /** null if this is an InVM broker */
+        val hostAndPort: NetworkHostAndPort?,/** null if this is an InVM broker */
         val clientTransportConfiguration: TransportConfiguration,
         val serverControl: ActiveMQServerControl
 )
@@ -307,7 +307,7 @@ data class RPCDriverDSL(
                 configureCommonSettings(maxFileSize, maxBufferedBytesPerClient)
             }
         }
-        fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: Authority): Configuration {
+        fun createRpcServerArtemisConfig(maxFileSize: Int, maxBufferedBytesPerClient: Long, baseDirectory: Path, hostAndPort: NetworkHostAndPort): Configuration {
             val connectionDirection = ConnectionDirection.Inbound(acceptorFactoryClassName = NettyAcceptorFactory::class.java.name)
             return ConfigurationImpl().apply {
                 val artemisDir = "$baseDirectory/artemis"
@@ -319,7 +319,7 @@ data class RPCDriverDSL(
             }
         }
         val inVmClientTransportConfiguration = TransportConfiguration(InVMConnectorFactory::class.java.name)
-        fun createNettyClientTransportConfiguration(hostAndPort: Authority): TransportConfiguration {
+        fun createNettyClientTransportConfiguration(hostAndPort: NetworkHostAndPort): TransportConfiguration {
             return ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), hostAndPort, null)
         }
     }
@@ -367,7 +367,7 @@ data class RPCDriverDSL(
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
             configuration: RPCServerConfiguration,
-            customPort: Authority?,
+            customPort: NetworkHostAndPort?,
             ops: I
     ): ListenableFuture<RpcServerHandle> {
         return startRpcBroker(serverName, rpcUser, maxFileSize, maxBufferedBytesPerClient, customPort).map { broker ->
@@ -377,7 +377,7 @@ data class RPCDriverDSL(
 
     override fun <I : RPCOps> startRpcClient(
             rpcOpsClass: Class<I>,
-            rpcAddress: Authority,
+            rpcAddress: NetworkHostAndPort,
             username: String,
             password: String,
             configuration: RPCClientConfiguration
@@ -392,7 +392,7 @@ data class RPCDriverDSL(
         }
     }
 
-    override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: Authority, username: String, password: String): ListenableFuture<Process> {
+    override fun <I : RPCOps> startRandomRpcClient(rpcOpsClass: Class<I>, rpcAddress: NetworkHostAndPort, username: String, password: String): ListenableFuture<Process> {
         val processFuture = driverDSL.executorService.submit<Process> {
             ProcessUtilities.startJavaProcess<RandomRpcUser>(listOf(rpcOpsClass.name, rpcAddress.toString(), username, password))
         }
@@ -400,7 +400,7 @@ data class RPCDriverDSL(
         return processFuture
     }
 
-    override fun startArtemisSession(rpcAddress: Authority, username: String, password: String): ClientSession {
+    override fun startArtemisSession(rpcAddress: NetworkHostAndPort, username: String, password: String): ClientSession {
         val locator = ActiveMQClient.createServerLocatorWithoutHA(createNettyClientTransportConfiguration(rpcAddress))
         val sessionFactory = locator.createSessionFactory()
         val session = sessionFactory.createSession(username, password, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
@@ -418,7 +418,7 @@ data class RPCDriverDSL(
             rpcUser: User,
             maxFileSize: Int,
             maxBufferedBytesPerClient: Long,
-            customPort: Authority?
+            customPort: NetworkHostAndPort?
     ): ListenableFuture<RpcBrokerHandle> {
         val hostAndPort = customPort ?: driverDSL.portAllocation.nextHostAndPort()
         addressMustNotBeBound(driverDSL.executorService, hostAndPort)
@@ -507,7 +507,7 @@ class RandomRpcUser {
             require(args.size == 4)
             @Suppress("UNCHECKED_CAST")
             val rpcClass = Class.forName(args[0]) as Class<RPCOps>
-            val hostAndPort = args[1].parseAuthority()
+            val hostAndPort = args[1].parseNetworkHostAndPort()
             val username = args[2]
             val password = args[3]
             val handle = RPCClient<RPCOps>(hostAndPort, null).start(rpcClass, username, password)

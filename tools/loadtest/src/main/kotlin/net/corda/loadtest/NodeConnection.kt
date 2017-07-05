@@ -8,7 +8,7 @@ import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.future
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.addShutdownHook
 import java.io.ByteArrayOutputStream
@@ -22,7 +22,7 @@ import java.io.OutputStream
  * [doWhileClientStopped], otherwise the RPC link will be broken.
  * TODO: Auto reconnect has been enable for RPC connection, investigate if we still need [doWhileClientStopped].
  */
-class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Session, private val localTunnelAddress: Authority) : Closeable {
+class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Session, private val localTunnelAddress: NetworkHostAndPort) : Closeable {
     companion object {
         val log = loggerFor<NodeConnection>()
     }

@@ -15,13 +15,12 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.ServiceEntry
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.node.WorldMapLocation
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.TransactionKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -222,7 +221,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
 
-        override fun myAddresses() = emptyList<Authority>()
+        override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
         override fun start(): MockNode {
             super.start()

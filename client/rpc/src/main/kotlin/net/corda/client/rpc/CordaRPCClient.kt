@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
 import net.corda.nodeapi.ConnectionDirection
 import net.corda.nodeapi.config.SSLConfiguration
@@ -33,7 +33,7 @@ data class CordaRPCClientConfiguration(
 
 /** @see RPCClient */
 class CordaRPCClient(
-        hostAndPort: Authority,
+        hostAndPort: NetworkHostAndPort,
         sslConfiguration: SSLConfiguration? = null,
         configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.default
 ) {

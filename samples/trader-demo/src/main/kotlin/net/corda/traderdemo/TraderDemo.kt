@@ -3,7 +3,7 @@ package net.corda.traderdemo
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.DOLLARS
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
@@ -42,12 +42,12 @@ private class TraderDemo {
         // will contact the buyer and actually make something happen.
         val role = options.valueOf(roleArg)!!
         if (role == Role.BUYER) {
-            val host = Authority("localhost", 10006)
+            val host = NetworkHostAndPort("localhost", 10006)
             CordaRPCClient(host).start("demo", "demo").use {
                 TraderDemoClientApi(it.proxy).runBuyer()
             }
         } else {
-            val host = Authority("localhost", 10009)
+            val host = NetworkHostAndPort("localhost", 10009)
             CordaRPCClient(host).use("demo", "demo") {
                 TraderDemoClientApi(it.proxy).runSeller(1000.DOLLARS, DUMMY_BANK_A.name)
             }

@@ -6,7 +6,7 @@ import net.corda.bank.api.BankOfCordaWebApi.IssueRequestParams
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashExitFlow
 import net.corda.flows.CashPaymentFlow
@@ -72,13 +72,13 @@ private class BankOfCordaDriver {
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
-                        val result = BankOfCordaClientApi(Authority("localhost", 10006)).requestRPCIssue(requestParams)
+                        val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10006)).requestRPCIssue(requestParams)
                         if (result is SignedTransaction)
                             println("Success!! You transaction receipt is ${result.tx.id}")
                     }
                     Role.ISSUE_CASH_WEB -> {
                         println("Requesting Cash via Web ...")
-                        val result = BankOfCordaClientApi(Authority("localhost", 10007)).requestWebIssue(requestParams)
+                        val result = BankOfCordaClientApi(NetworkHostAndPort("localhost", 10007)).requestWebIssue(requestParams)
                         if (result)
                             println("Successfully processed Cash Issue request")
                     }

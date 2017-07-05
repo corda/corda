@@ -161,13 +161,13 @@ sealed class NodeHandle {
     abstract val nodeInfo: NodeInfo
     abstract val rpc: CordaRPCOps
     abstract val configuration: FullNodeConfiguration
-    abstract val webAddress: Authority
+    abstract val webAddress: NetworkHostAndPort
 
     data class OutOfProcess(
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
             override val configuration: FullNodeConfiguration,
-            override val webAddress: Authority,
+            override val webAddress: NetworkHostAndPort,
             val debugPort: Int?,
             val process: Process
     ) : NodeHandle()
@@ -176,7 +176,7 @@ sealed class NodeHandle {
             override val nodeInfo: NodeInfo,
             override val rpc: CordaRPCOps,
             override val configuration: FullNodeConfiguration,
-            override val webAddress: Authority,
+            override val webAddress: NetworkHostAndPort,
             val node: Node,
             val nodeThread: Thread
     ) : NodeHandle()
@@ -185,13 +185,13 @@ sealed class NodeHandle {
 }
 
 data class WebserverHandle(
-        val listenAddress: Authority,
+        val listenAddress: NetworkHostAndPort,
         val process: Process
 )
 
 sealed class PortAllocation {
     abstract fun nextPort(): Int
-    fun nextHostAndPort() = Authority("localhost", nextPort())
+    fun nextHostAndPort() = NetworkHostAndPort("localhost", nextPort())
 
     class Incremental(startingPort: Int) : PortAllocation() {
         val portCounter = AtomicInteger(startingPort)
@@ -292,16 +292,16 @@ fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-class ListenProcessDeathException(hostAndPort: Authority, listenProcess: Process) : Exception("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
+class ListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess: Process) : Exception("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
 
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
  */
-fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: Authority, listenProcess: Process? = null) {
+fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, listenProcess: Process? = null) {
     addressMustBeBoundFuture(executorService, hostAndPort, listenProcess).getOrThrow()
 }
 
-fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: Authority, listenProcess: Process? = null): ListenableFuture<Unit> {
+fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, listenProcess: Process? = null): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to bind") {
         if (listenProcess != null && !listenProcess.isAlive) {
             throw ListenProcessDeathException(hostAndPort, listenProcess)
@@ -315,11 +315,11 @@ fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndP
     }
 }
 
-fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: Authority) {
+fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort) {
     addressMustNotBeBoundFuture(executorService, hostAndPort).getOrThrow()
 }
 
-fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: Authority): ListenableFuture<Unit> {
+fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): ListenableFuture<Unit> {
     return poll(executorService, "address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
@@ -508,7 +508,7 @@ class DriverDSL(
         _executorService?.shutdownNow()
     }
 
-    private fun establishRpc(nodeAddress: Authority, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
+    private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
         val client = CordaRPCClient(nodeAddress, sslConfig)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
@@ -540,7 +540,7 @@ class DriverDSL(
                 is NetworkMapStartStrategy.Nominated -> {
                     serviceConfig(networkMapCandidates.filter {
                         it.name == legalName.toString()
-                    }.single().config.getString("p2pAddress").parseAuthority()).let {
+                    }.single().config.getString("p2pAddress").parseNetworkHostAndPort()).let {
                         { nodeName: X500Name -> if (nodeName == legalName) null else it }
                     }
                 }
@@ -698,7 +698,7 @@ class DriverDSL(
         return startNodeInternal(config, webAddress, startInProcess)
     }
 
-    private fun startNodeInternal(config: Config, webAddress: Authority, startInProcess: Boolean?): ListenableFuture<out NodeHandle> {
+    private fun startNodeInternal(config: Config, webAddress: NetworkHostAndPort, startInProcess: Boolean?): ListenableFuture<out NodeHandle> {
         val nodeConfiguration = config.parseAs<FullNodeConfiguration>()
         if (startInProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, nodeConfiguration, config)

@@ -3,7 +3,7 @@ package net.corda.nodeapi.serialization
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.serialization.SerializationCustomization
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import org.apache.activemq.artemis.api.core.SimpleString
 import rx.Notification
 import rx.exceptions.OnErrorNotImplementedException
@@ -33,7 +33,7 @@ class DefaultWhitelist : CordaPluginRegistry() {
             addToWhitelist(listOf(Unit).javaClass) // SingletonList
             addToWhitelist(setOf(Unit).javaClass) // SingletonSet
             addToWhitelist(mapOf(Unit to Unit).javaClass) // SingletonSet
-            addToWhitelist(Authority::class.java)
+            addToWhitelist(NetworkHostAndPort::class.java)
             addToWhitelist(SimpleString::class.java)
             addToWhitelist(KryoException::class.java)
             addToWhitelist(StringBuffer::class.java)

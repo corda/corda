@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigParseOptions
 import net.corda.core.ErrorOr
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.core.div
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
@@ -23,7 +23,7 @@ data class VerifierConfiguration(
         override val baseDirectory: Path,
         val config: Config
 ) : NodeSSLConfiguration {
-    val nodeHostAndPort: Authority by config
+    val nodeHostAndPort: NetworkHostAndPort by config
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
 }

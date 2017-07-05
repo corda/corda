@@ -1,7 +1,7 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.div
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import java.io.FileWriter
@@ -17,14 +17,14 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSMaRtConfig(private val replicaAddresses: List<Authority>, debug: Boolean = false) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
+class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean = false) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         private val log = loggerFor<BFTSMaRtConfig>()
         internal val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
     }
 
     init {
-        val claimedPorts = mutableSetOf<Authority>()
+        val claimedPorts = mutableSetOf<NetworkHostAndPort>()
         val n = replicaAddresses.size
         (0 until n).forEach { replicaId ->
             // Each replica claims the configured port and the next one:
@@ -66,7 +66,7 @@ class BFTSMaRtConfig(private val replicaAddresses: List<Authority>, debug: Boole
         log.debug { "Replica $peerId is ready for P2P." }
     }
 
-    private fun replicaPorts(replicaId: Int): List<Authority> {
+    private fun replicaPorts(replicaId: Int): List<NetworkHostAndPort> {
         val base = replicaAddresses[replicaId]
         return BFTSMaRtPort.values().map { it.ofReplica(base) }
     }
@@ -76,10 +76,10 @@ private enum class BFTSMaRtPort(private val off: Int) {
     FOR_CLIENTS(0),
     FOR_REPLICAS(1);
 
-    fun ofReplica(base: Authority) = Authority(base.host, base.port + off)
+    fun ofReplica(base: NetworkHostAndPort) = NetworkHostAndPort(base.host, base.port + off)
 }
 
-private fun Authority.isListening() = try {
+private fun NetworkHostAndPort.isListening() = try {
     Socket(host, port).use { true } // Will cause one error to be logged in the replica on success.
 } catch (e: SocketException) {
     false

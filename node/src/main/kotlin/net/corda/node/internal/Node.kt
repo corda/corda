@@ -12,9 +12,9 @@ import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.success
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parseAuthority
+import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.core.utilities.trace
 import net.corda.node.serialization.NodeClock
 import net.corda.node.services.RPCUserService
@@ -156,21 +156,21 @@ open class Node(override val configuration: FullNodeConfiguration,
                 advertisedAddress)
     }
 
-    private fun makeLocalMessageBroker(): Authority {
+    private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
             messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
-            return Authority("localhost", p2pAddress.port)
+            return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
-    private fun getAdvertisedAddress(): Authority {
+    private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
             val useHost = if (detectPublicIp) {
                 tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
             } else {
                 p2pAddress.host
             }
-            Authority(useHost, p2pAddress.port)
+            NetworkHostAndPort(useHost, p2pAddress.port)
         }
     }
 
@@ -202,7 +202,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * it back to the queue.
      * - Once the message is received the session is closed and the queue deleted.
      */
-    private fun discoverPublicHost(serverAddress: Authority): String? {
+    private fun discoverPublicHost(serverAddress: NetworkHostAndPort): String? {
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -235,7 +235,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         session.deleteQueue(queueName)
         clientFactory.close()
 
-        return publicHostAndPort.removePrefix("/").parseAuthority().host
+        return publicHostAndPort.removePrefix("/").parseNetworkHostAndPort().host
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
@@ -258,7 +258,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
-    override fun myAddresses(): List<Authority> {
+    override fun myAddresses(): List<NetworkHostAndPort> {
         val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
         return listOf(address.hostAndPort)
     }
@@ -360,4 +360,4 @@ open class Node(override val configuration: FullNodeConfiguration,
 
 class ConfigurationException(message: String) : Exception(message)
 
-data class NetworkMapInfo(val address: Authority, val legalName: X500Name)
+data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: X500Name)

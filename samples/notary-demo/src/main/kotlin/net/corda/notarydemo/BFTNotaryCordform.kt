@@ -13,7 +13,7 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.stream
 import net.corda.core.toTypedArray
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.minCorrectReplicas
 import org.bouncycastle.asn1.x500.X500Name
 
@@ -38,7 +38,7 @@ object BFTNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", not
             p2pPort(10005)
             rpcPort(10006)
         }
-        val clusterAddresses = (0 until clusterSize).stream().mapToObj { Authority("localhost", 11000 + it * 10) }.toTypedArray()
+        val clusterAddresses = (0 until clusterSize).stream().mapToObj { NetworkHostAndPort("localhost", 11000 + it * 10) }.toTypedArray()
         fun notaryNode(replicaId: Int, configure: CordformNode.() -> Unit) = node {
             name(notaryNames[replicaId])
             advertisedServices(advertisedService)

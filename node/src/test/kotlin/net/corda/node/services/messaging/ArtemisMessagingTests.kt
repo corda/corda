@@ -7,7 +7,7 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.ALICE
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
@@ -218,7 +218,7 @@ class ArtemisMessagingTests {
         return messagingClient
     }
 
-    private fun createMessagingClient(server: Authority = Authority("localhost", serverPort)): NodeMessagingClient {
+    private fun createMessagingClient(server: NetworkHostAndPort = NetworkHostAndPort("localhost", serverPort)): NodeMessagingClient {
         return database.transaction {
             NodeMessagingClient(
                     config,

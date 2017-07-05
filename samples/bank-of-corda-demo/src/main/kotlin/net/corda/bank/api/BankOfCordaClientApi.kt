@@ -8,14 +8,14 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.http.HttpApi
 
 /**
  * Interface for communicating with Bank of Corda node
  */
-class BankOfCordaClientApi(val hostAndPort: Authority) {
+class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
     private val apiRoot = "api/bank"
     /**
      * HTTP API

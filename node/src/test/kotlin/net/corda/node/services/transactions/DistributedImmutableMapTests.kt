@@ -7,7 +7,7 @@ import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.getOrThrow
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.configureDatabase
@@ -87,7 +87,7 @@ class DistributedImmutableMapTests {
         return cluster.map { it.getOrThrow() }
     }
 
-    private fun createReplica(myAddress: Authority, clusterAddress: Authority? = null): CompletableFuture<Member> {
+    private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
 

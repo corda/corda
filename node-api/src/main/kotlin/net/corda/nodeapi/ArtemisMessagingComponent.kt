@@ -9,7 +9,7 @@ import net.corda.core.node.services.ServiceType
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import java.security.KeyStore
 import java.security.PublicKey
@@ -42,11 +42,11 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
-        val hostAndPort: Authority
+        val hostAndPort: NetworkHostAndPort
     }
 
     @CordaSerializable
-    data class NetworkMapAddress(override val hostAndPort: Authority) : ArtemisPeerAddress {
+    data class NetworkMapAddress(override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 
@@ -62,13 +62,13 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      * @param hostAndPort The address of the node.
      */
     @CordaSerializable
-    data class NodeAddress(override val queueName: String, override val hostAndPort: Authority) : ArtemisPeerAddress {
+    data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(peerIdentity: PublicKey, hostAndPort: Authority): NodeAddress {
+            fun asPeer(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
 
-            fun asService(serviceIdentity: PublicKey, hostAndPort: Authority): NodeAddress {
+            fun asService(serviceIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
                 return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }

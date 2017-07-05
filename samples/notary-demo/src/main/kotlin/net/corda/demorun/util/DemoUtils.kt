@@ -3,7 +3,7 @@ package net.corda.demorun.util
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformNode
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.User
 import org.bouncycastle.asn1.x500.X500Name
 
@@ -21,6 +21,6 @@ fun CordformNode.advertisedServices(vararg services: ServiceInfo) {
     advertisedServices = services.map { it.toString() }
 }
 
-fun CordformNode.notaryClusterAddresses(vararg addresses: Authority) {
+fun CordformNode.notaryClusterAddresses(vararg addresses: NetworkHostAndPort) {
     notaryClusterAddresses = addresses.map { it.toString() }
 }

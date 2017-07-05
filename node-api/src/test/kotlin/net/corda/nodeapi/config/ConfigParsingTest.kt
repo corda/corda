@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.getTestX509Name
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
@@ -60,9 +60,9 @@ class ConfigParsingTest {
 
     @Test
     fun `Authority`() {
-        testPropertyType<AuthorityData, AuthorityListData, Authority>(
-                Authority("localhost", 2223),
-                Authority("localhost", 2225),
+        testPropertyType<AuthorityData, AuthorityListData, NetworkHostAndPort>(
+                NetworkHostAndPort("localhost", 2223),
+                NetworkHostAndPort("localhost", 2225),
                 valuesToString = true)
     }
 
@@ -223,8 +223,8 @@ class ConfigParsingTest {
     data class LocalDateListData(override val values: List<LocalDate>) : ListData<LocalDate>
     data class InstantData(override val value: Instant) : SingleData<Instant>
     data class InstantListData(override val values: List<Instant>) : ListData<Instant>
-    data class AuthorityData(override val value: Authority) : SingleData<Authority>
-    data class AuthorityListData(override val values: List<Authority>) : ListData<Authority>
+    data class AuthorityData(override val value: NetworkHostAndPort) : SingleData<NetworkHostAndPort>
+    data class AuthorityListData(override val values: List<NetworkHostAndPort>) : ListData<NetworkHostAndPort>
     data class PathData(override val value: Path) : SingleData<Path>
     data class PathListData(override val values: List<Path>) : ListData<Path>
     data class URLData(override val value: URL) : SingleData<URL>

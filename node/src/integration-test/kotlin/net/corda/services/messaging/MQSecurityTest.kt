@@ -11,7 +11,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
@@ -144,13 +144,13 @@ abstract class MQSecurityTest : NodeBasedTest() {
         assertAllQueueCreationAttacksFail(randomQueue)
     }
 
-    fun clientTo(target: Authority, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
+    fun clientTo(target: NetworkHostAndPort, sslConfiguration: SSLConfiguration? = configureTestSSL()): SimpleMQClient {
         val client = SimpleMQClient(target, sslConfiguration)
         clients += client
         return client
     }
 
-    fun loginToRPC(target: Authority, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
+    fun loginToRPC(target: NetworkHostAndPort, rpcUser: User, sslConfiguration: SSLConfiguration? = null): CordaRPCOps {
         return CordaRPCClient(target, sslConfiguration).start(rpcUser.username, rpcUser.password).proxy
     }
 

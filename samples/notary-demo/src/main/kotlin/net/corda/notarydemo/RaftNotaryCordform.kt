@@ -12,7 +12,7 @@ import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.cordform.CordformDefinition
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes
 import net.corda.demorun.util.node
 import org.bouncycastle.asn1.x500.X500Name
@@ -49,7 +49,7 @@ object RaftNotaryCordform : CordformDefinition("build" / "notary-demo-nodes", no
             p2pPort(10009)
             rpcPort(10010)
         }
-        val clusterAddress = Authority("localhost", 10008) // Otherwise each notary forms its own cluster.
+        val clusterAddress = NetworkHostAndPort("localhost", 10008) // Otherwise each notary forms its own cluster.
         notaryNode(1) {
             notaryNodePort(10012)
             p2pPort(10013)

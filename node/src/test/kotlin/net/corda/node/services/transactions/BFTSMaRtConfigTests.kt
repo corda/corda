@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import net.corda.core.utilities.Authority
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.transactions.BFTSMaRtConfig.Companion.portIsClaimedFormat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
@@ -28,7 +28,7 @@ class BFTSMaRtConfigTests {
 
     @Test
     fun `overlapping port ranges are rejected`() {
-        fun addresses(vararg ports: Int) = ports.map { Authority("localhost", it) }
+        fun addresses(vararg ports: Int) = ports.map { NetworkHostAndPort("localhost", it) }
         assertThatThrownBy { BFTSMaRtConfig(addresses(11000, 11001)).use {} }
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage(portIsClaimedFormat.format("localhost:11001", setOf("localhost:11000", "localhost:11001")))
