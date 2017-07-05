@@ -32,6 +32,7 @@ import org.bouncycastle.asn1.x500.X500Name;
 
 import java.security.PublicKey;
 import java.security.SignatureException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -297,6 +298,16 @@ public class FlowCookbookJava {
             TimeWindow ourBefore = TimeWindow.untilOnly(Instant.MAX);
             // DOCEND 26
 
+            // We can also define a time window as an ``Instant`` +/- a time
+            // tolerance (e.g. 30 seconds):
+            // DOCSTART 42
+            TimeWindow ourTimeWindow2 = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30));
+            // DOCEND 42
+            // Or as a start-time plus a duration:
+            // DOCSTART 43
+            TimeWindow ourTimeWindow3 = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30));
+            // DOCEND 43
+
             /*------------------------
              * TRANSACTION BUILDING *
             ------------------------*/
@@ -327,8 +338,17 @@ public class FlowCookbookJava {
             regTxBuilder.addOutputState(ourOutput);
             regTxBuilder.addCommand(ourCommand);
             regTxBuilder.addAttachment(ourAttachment);
-            regTxBuilder.setTimeWindow(ourTimeWindow);
             // DOCEND 28
+
+            // There are several ways of setting the transaction's time-window.
+            // We can set a time-window directly:
+            // DOCSTART 44
+            regTxBuilder.setTimeWindow(ourTimeWindow);
+            // DOCEND 44
+            // Or as a start time plus a duration (e.g. 45 seconds):
+            // DOCSTART 45
+            regTxBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45));
+            // DOCEND 45
 
             /*-----------------------
              * TRANSACTION SIGNING *
@@ -415,6 +435,10 @@ public class FlowCookbookJava {
             // DOCSTART 34
             DummyState outputState = (DummyState) wireTx.getOutputs().get(0).getData();
             if (outputState.getMagicNumber() != 777) {
+                // ``FlowException`` is a special exception type. It will be
+                // propagated back to any counterparty flows waiting for a
+                // message from this flow, notifying them that the flow has
+                // failed.
                 throw new FlowException("We expected a magic number of 777.");
             }
             // DOCEND 34

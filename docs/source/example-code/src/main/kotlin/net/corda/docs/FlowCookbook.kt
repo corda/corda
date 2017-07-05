@@ -279,6 +279,16 @@ object FlowCookbook {
             val ourBefore: TimeWindow = TimeWindow.untilOnly(Instant.MAX)
             // DOCEND 26
 
+            // We can also define a time window as an ``Instant`` +/- a time
+            // tolerance (e.g. 30 seconds):
+            // DOCSTART 42
+            val ourTimeWindow2: TimeWindow = TimeWindow.withTolerance(Instant.now(), Duration.ofSeconds(30))
+            // DOCEND 42
+            // Or as a start-time plus a duration:
+            // DOCSTART 43
+            val ourTimeWindow3: TimeWindow = TimeWindow.fromStartAndDuration(Instant.now(), Duration.ofSeconds(30))
+            // DOCEND 43
+
             /**-----------------------
              * TRANSACTION BUILDING *
             -----------------------**/
@@ -309,10 +319,17 @@ object FlowCookbook {
             regTxBuilder.addOutputState(ourOutput)
             regTxBuilder.addCommand(ourCommand)
             regTxBuilder.addAttachment(ourAttachment)
-            regTxBuilder.timeWindow = ourTimeWindow
             // DOCEND 28
 
-
+            // There are several ways of setting the transaction's time-window.
+            // We can set a time-window directly:
+            // DOCSTART 44
+            regTxBuilder.timeWindow = ourTimeWindow
+            // DOCEND 44
+            // Or as a start time plus a duration (e.g. 45 seconds):
+            // DOCSTART 45
+            regTxBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45))
+            // DOCEND 45
 
             /**----------------------
              * TRANSACTION SIGNING *
