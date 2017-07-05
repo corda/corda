@@ -9,6 +9,7 @@ import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.contracts.TransactionType.NotaryChange;
 import net.corda.core.contracts.testing.DummyContract;
 import net.corda.core.contracts.testing.DummyState;
+import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
@@ -30,7 +31,7 @@ import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
 import java.security.PublicKey;
-import java.time.Duration;
+import java.security.SignatureException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -83,6 +84,7 @@ public class FlowCookbookJava {
                 return CollectSignaturesFlow.Companion.tracker();
             }
         };
+        private static final Step VERIFYING_SIGS = new Step("Verifying a transaction's signatures.");
         private static final Step FINALISATION = new Step("Finalising a transaction.") {
             @Override public ProgressTracker childProgressTracker() {
                 return FinalityFlow.Companion.tracker();
@@ -335,18 +337,36 @@ public class FlowCookbookJava {
 
             // We finalise the transaction by signing it,
             // converting it into a ``SignedTransaction``.
+            // DOCSTART 29
             SignedTransaction onceSignedTx = getServiceHub().signInitialTransaction(regTxBuilder);
+            // DOCEND 29
             // We can also sign the transaction using a different public key:
+            // DOCSTART 30
             PublicKey otherKey = getServiceHub().getKeyManagementService().freshKey();
             SignedTransaction onceSignedTx2 = getServiceHub().signInitialTransaction(regTxBuilder, otherKey);
+            // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
             // from a counterparty and we needed to sign it, we would add our
             // signature using:
+            // DOCSTART 38
             SignedTransaction twiceSignedTx = getServiceHub().addSignature(onceSignedTx);
+            // DOCEND 38
             // Or, if we wanted to use a different public key:
             PublicKey otherKey2 = getServiceHub().getKeyManagementService().freshKey();
+            // DOCSTART 39
             SignedTransaction twiceSignedTx2 = getServiceHub().addSignature(onceSignedTx, otherKey2);
+            // DOCEND 39
+
+            // We can also generate a signature over the transaction without
+            // adding it to the transaction itself:
+            // DOCSTART 40
+            DigitalSignature.WithKey sig = getServiceHub().createSignature(onceSignedTx);
+            // DOCEND 40
+            // And again, if we wanted to use a different public key:
+            // DOCSTART 41
+            DigitalSignature.WithKey sig2 = getServiceHub().createSignature(onceSignedTx, otherKey2);
+            // DOCEND 41
 
             /*----------------------------
              * TRANSACTION VERIFICATION *
@@ -367,34 +387,37 @@ public class FlowCookbookJava {
             subFlow(new ResolveTransactionsFlow(ImmutableSet.of(ourStateRef.getTxhash()), counterparty));
             // DOCEND 14
 
-            // We verify a transaction using the following one-liner:
-            twiceSignedTx.getTx().toLedgerTransaction(getServiceHub()).verify();
-
-            // Let's break that down...
-
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
             // with signatures over this ``WireTransaction``. We don't verify
             // a signed transaction per se, but rather the ``WireTransaction``
             // it contains.
+            // DOCSTART 31
             WireTransaction wireTx = twiceSignedTx.getTx();
+            // DOCEND 31
             // Before we can verify the transaction, we need the
             // ``ServiceHub`` to use our node's local storage to resolve the
             // transaction's inputs and attachments into actual objects,
             // rather than just references. We do this by converting the
             // ``WireTransaction`` into a ``LedgerTransaction``.
+            // DOCSTART 32
             LedgerTransaction ledgerTx = wireTx.toLedgerTransaction(getServiceHub());
+            // DOCEND 32
             // We can now verify the transaction.
+            // DOCSTART 33
             ledgerTx.verify();
+            // DOCEND 33
 
             // We'll often want to perform our own additional verification
             // too. Just because a transaction is valid based on the contract
             // rules and requires our signature doesn't mean we have to
             // sign it! We need to make sure the transaction represents an
             // agreement we actually want to enter into.
+            // DOCSTART 34
             DummyState outputState = (DummyState) wireTx.getOutputs().get(0).getData();
             if (outputState.getMagicNumber() != 777) {
                 throw new FlowException("We expected a magic number of 777.");
             }
+            // DOCEND 34
 
             // Of course, if you are not a required signer on the transaction,
             // you have no power to decide whether it is valid or not. If it
@@ -414,6 +437,37 @@ public class FlowCookbookJava {
             // DOCSTART 15
             SignedTransaction fullySignedTx = subFlow(new CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()));
             // DOCEND 15
+
+            /*------------------------
+             * VERIFYING SIGNATURES *
+            ------------------------*/
+            progressTracker.setCurrentStep(VERIFYING_SIGS);
+
+            try {
+
+                // We can verify that a transaction has all the required
+                // signatures, and that they're all valid, by running:
+                // DOCSTART 35
+                fullySignedTx.verifySignatures();
+                // DOCEND 35
+
+                // If the transaction is only partially signed, we have to pass in
+                // a list of the public keys corresponding to the missing
+                // signatures, explicitly telling the system not to check them.
+                // DOCSTART 36
+                onceSignedTx.verifySignatures(counterpartyPubKey);
+                // DOCEND 36
+
+                // We can also choose to only check the signatures that are
+                // present. BE VERY CAREFUL - this function provides no guarantees
+                // that the signatures are correct, or that none are missing.
+                // DOCSTART 37
+                twiceSignedTx.checkSignaturesAreValid();
+                // DOCEND 37
+
+            } catch (SignatureException e) {
+                // Handle this as required.
+            }
 
             /*------------------------------
              * FINALISING THE TRANSACTION *

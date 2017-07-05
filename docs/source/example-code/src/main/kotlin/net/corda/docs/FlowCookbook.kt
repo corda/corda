@@ -7,6 +7,7 @@ import net.corda.core.contracts.TransactionType.General
 import net.corda.core.contracts.TransactionType.NotaryChange
 import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.contracts.testing.DummyState
+import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -66,6 +67,7 @@ object FlowCookbook {
                 // subflow's progress steps in our flow's progress tracker.
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
+            object VERIFYING_SIGS : Step("Verifying a transaction's signatures.")
             object FINALISATION : Step("Finalising a transaction.") {
                 override fun childProgressTracker() = FinalityFlow.tracker()
             }
@@ -79,6 +81,7 @@ object FlowCookbook {
                     TX_SIGNING,
                     TX_VERIFICATION,
                     SIGS_GATHERING,
+                    VERIFYING_SIGS,
                     FINALISATION
             )
         }
@@ -309,6 +312,8 @@ object FlowCookbook {
             regTxBuilder.timeWindow = ourTimeWindow
             // DOCEND 28
 
+
+
             /**----------------------
              * TRANSACTION SIGNING *
             ----------------------**/
@@ -316,18 +321,36 @@ object FlowCookbook {
 
             // We finalise the transaction by signing it, converting it into a
             // ``SignedTransaction``.
+            // DOCSTART 29
             val onceSignedTx: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder)
+            // DOCEND 29
             // We can also sign the transaction using a different public key:
+            // DOCSTART 30
             val otherKey: PublicKey = serviceHub.keyManagementService.freshKey()
             val onceSignedTx2: SignedTransaction = serviceHub.signInitialTransaction(regTxBuilder, otherKey)
+            // DOCEND 30
 
             // If instead this was a ``SignedTransaction`` that we'd received
             // from a counterparty and we needed to sign it, we would add our
             // signature using:
+            // DOCSTART 38
             val twiceSignedTx: SignedTransaction = serviceHub.addSignature(onceSignedTx)
+            // DOCEND 38
             // Or, if we wanted to use a different public key:
             val otherKey2: PublicKey = serviceHub.keyManagementService.freshKey()
+            // DOCSTART 39
             val twiceSignedTx2: SignedTransaction = serviceHub.addSignature(onceSignedTx, otherKey2)
+            // DOCEND 39
+
+            // We can also generate a signature over the transaction without
+            // adding it to the transaction itself:
+            // DOCSTART 40
+            val sig: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx)
+            // DOCEND 40
+            // And again, if we wanted to use a different public key:
+            // DOCSTART 41
+            val sig2: DigitalSignature.WithKey = serviceHub.createSignature(onceSignedTx, otherKey2)
+            // DOCEND 41
 
             // In practice, however, the process of gathering every signature
             // but the first can be automated using ``CollectSignaturesFlow``.
@@ -352,30 +375,32 @@ object FlowCookbook {
             subFlow(ResolveTransactionsFlow(setOf(ourStateRef.txhash), counterparty))
             // DOCEND 14
 
-            // We verify a transaction using the following one-liner:
-            twiceSignedTx.tx.toLedgerTransaction(serviceHub).verify()
-
-            // Let's break that down...
-
             // A ``SignedTransaction`` is a pairing of a ``WireTransaction``
             // with signatures over this ``WireTransaction``. We don't verify
             // a signed transaction per se, but rather the ``WireTransaction``
             // it contains.
+            // DOCSTART 31
             val wireTx: WireTransaction = twiceSignedTx.tx
+            // DOCEND 31
             // Before we can verify the transaction, we need the
             // ``ServiceHub`` to use our node's local storage to resolve the
             // transaction's inputs and attachments into actual objects,
             // rather than just references. We do this by converting the
             // ``WireTransaction`` into a ``LedgerTransaction``.
+            // DOCSTART 32
             val ledgerTx: LedgerTransaction = wireTx.toLedgerTransaction(serviceHub)
+            // DOCEND 32
             // We can now verify the transaction.
+            // DOCSTART 33
             ledgerTx.verify()
+            // DOCEND 33
 
             // We'll often want to perform our own additional verification
             // too. Just because a transaction is valid based on the contract
             // rules and requires our signature doesn't mean we have to
             // sign it! We need to make sure the transaction represents an
             // agreement we actually want to enter into.
+            // DOCSTART 34
             val outputState: DummyState = wireTx.outputs.single().data as DummyState
             if (outputState.magicNumber == 777) {
                 // ``FlowException`` is a special exception type. It will be
@@ -384,6 +409,7 @@ object FlowCookbook {
                 // failed.
                 throw FlowException("We expected a magic number of 777.")
             }
+            // DOCEND 34
 
             // Of course, if you are not a required signer on the transaction,
             // you have no power to decide whether it is valid or not. If it
@@ -403,6 +429,31 @@ object FlowCookbook {
             // DOCSTART 15
             val fullySignedTx: SignedTransaction = subFlow(CollectSignaturesFlow(twiceSignedTx, SIGS_GATHERING.childProgressTracker()))
             // DOCEND 15
+
+            /**-----------------------
+             * VERIFYING SIGNATURES *
+            -----------------------**/
+            progressTracker.currentStep = VERIFYING_SIGS
+
+            // We can verify that a transaction has all the required
+            // signatures, and that they're all valid, by running:
+            // DOCSTART 35
+            fullySignedTx.verifySignatures()
+            // DOCEND 35
+
+            // If the transaction is only partially signed, we have to pass in
+            // a list of the public keys corresponding to the missing
+            // signatures, explicitly telling the system not to check them.
+            // DOCSTART 36
+            onceSignedTx.verifySignatures(counterpartyPubKey)
+            // DOCEND 36
+
+            // We can also choose to only check the signatures that are
+            // present. BE VERY CAREFUL - this function provides no guarantees
+            // that the signatures are correct, or that none are missing.
+            // DOCSTART 37
+            twiceSignedTx.checkSignaturesAreValid()
+            // DOCEND 37
 
             /**-----------------------------
              * FINALISING THE TRANSACTION *
