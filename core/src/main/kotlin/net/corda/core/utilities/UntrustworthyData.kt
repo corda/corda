@@ -2,6 +2,7 @@ package net.corda.core.utilities
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowException
+import java.io.Serializable
 
 /**
  * A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
@@ -27,7 +28,7 @@ class UntrustworthyData<out T>(private val fromUntrustedWorld: T) {
     @Deprecated("This old name was confusing, use unwrap instead", replaceWith = ReplaceWith("unwrap"))
     inline fun <R> validate(validator: (T) -> R) = validator(data)
 
-    interface Validator<in T, out R> {
+    interface Validator<in T, out R> : Serializable {
         @Suspendable
         @Throws(FlowException::class)
         fun validate(data: T): R
