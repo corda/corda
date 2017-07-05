@@ -28,7 +28,6 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.then
 import net.corda.core.transactions.SignedTransaction
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CashTransaction
@@ -106,7 +105,11 @@ class NewTransaction : Fragment() {
                 command.startFlow(rpcProxy.value!!)
             }
             runAsync {
-                handle.returnValue.then { dialog.dialogPane.isDisable = false }.getOrThrow()
+                try {
+                    handle.returnValue.getOrThrow()
+                } finally {
+                    dialog.dialogPane.isDisable = false
+                }
             }.ui { it ->
                 val stx: SignedTransaction = it.stx
                 val type = when (command) {

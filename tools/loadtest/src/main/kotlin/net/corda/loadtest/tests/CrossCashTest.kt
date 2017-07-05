@@ -7,10 +7,9 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
-import net.corda.core.failure
 import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.success
+import net.corda.core.thenMatch
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
@@ -207,12 +206,11 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 
         execute = { command ->
             val result = command.command.startFlow(command.node.proxy).returnValue
-            result.failure {
-                log.error("Failure[$command]", it)
-            }
-            result.success {
+            result.thenMatch({
                 log.info("Success[$command]: $result")
-            }
+            }, {
+                log.error("Failure[$command]", it)
+            })
         },
 
         gatherRemoteState = { previousState ->

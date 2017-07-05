@@ -183,7 +183,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
 
             // Create a queue, consumer and producer for handling P2P network messages.
             p2pConsumer = makeP2PConsumer(session, true)
-            networkMapRegistrationFuture.success {
+            networkMapRegistrationFuture.thenMatch({
                 state.locked {
                     log.info("Network map is complete, so removing filter from P2P consumer.")
                     try {
@@ -193,7 +193,7 @@ class NodeMessagingClient(override val config: NodeConfiguration,
                     }
                     p2pConsumer = makeP2PConsumer(session, false)
                 }
-            }
+            }, {})
 
             rpcServer = RPCServer(rpcOps, NODE_USER, NODE_USER, locator, userService, config.myLegalName)
 
