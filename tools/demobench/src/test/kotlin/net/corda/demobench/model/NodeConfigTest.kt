@@ -7,7 +7,7 @@ import com.google.common.net.HostAndPort
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.div
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.FullNodeConfiguration
 import net.corda.nodeapi.User

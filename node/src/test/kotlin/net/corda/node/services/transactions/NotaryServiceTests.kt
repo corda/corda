@@ -10,7 +10,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -43,7 +43,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.addTimeWindow(Instant.now(), 30.seconds)
+            tx.setTimeWindow(Instant.now(), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 
@@ -68,7 +68,7 @@ class NotaryServiceTests {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
-            tx.addTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
+            tx.setTimeWindow(Instant.now().plusSeconds(3600), 30.seconds)
             clientNode.services.signInitialTransaction(tx)
         }
 

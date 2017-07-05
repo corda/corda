@@ -2,7 +2,7 @@ package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
@@ -10,7 +10,7 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.core.utilities.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction

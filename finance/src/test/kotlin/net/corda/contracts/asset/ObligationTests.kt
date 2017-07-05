@@ -6,6 +6,7 @@ import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
 import net.corda.core.contracts.testing.DummyState
 import net.corda.core.crypto.SecureHash
+import net.corda.core.hours
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -15,6 +16,7 @@ import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test
 import java.time.Duration
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.test.assertEquals
@@ -23,14 +25,14 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ObligationTests {
-    val defaultRef = OpaqueBytes(ByteArray(1, { 1 }))
+    val defaultRef = OpaqueBytes.of(1)
     val defaultIssuer = MEGA_CORP.ref(defaultRef)
     val oneMillionDollars = 1000000.DOLLARS `issued by` defaultIssuer
     val trustedCashContract = nonEmptySetOf(SecureHash.randomSHA256() as SecureHash)
     val megaIssuedDollars = nonEmptySetOf(Issued(defaultIssuer, USD))
     val megaIssuedPounds = nonEmptySetOf(Issued(defaultIssuer, GBP))
-    val fivePm = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS).plus(17, ChronoUnit.HOURS)
-    val sixPm = fivePm.plus(1, ChronoUnit.HOURS)
+    val fivePm: Instant = TEST_TX_TIME.truncatedTo(ChronoUnit.DAYS) + 17.hours
+    val sixPm: Instant = fivePm + 1.hours
     val megaCorpDollarSettlement = Obligation.Terms(trustedCashContract, megaIssuedDollars, fivePm)
     val megaCorpPoundSettlement = megaCorpDollarSettlement.copy(acceptableIssuedProducts = megaIssuedPounds)
     val inState = Obligation.State(
@@ -871,4 +873,9 @@ class ObligationTests {
         val actual = sumAmountsDue(balanced)
         assertEquals(expected, actual)
     }
+
+    val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
+        get() = Obligation.Terms(nonEmptySetOf(Cash().legalContractReference), nonEmptySetOf(this), TEST_TX_TIME)
+    val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>
+        get() = Obligation.State(Obligation.Lifecycle.NORMAL, DUMMY_OBLIGATION_ISSUER, token.OBLIGATION_DEF, quantity, NULL_PARTY)
 }

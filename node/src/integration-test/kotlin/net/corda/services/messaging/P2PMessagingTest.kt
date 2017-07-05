@@ -10,14 +10,12 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.services.messaging.*
 import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
-import net.corda.testing.freeLocalHostAndPort
-import net.corda.testing.getTestX509Name
+import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name

@@ -3,7 +3,7 @@ package net.corda.node.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature

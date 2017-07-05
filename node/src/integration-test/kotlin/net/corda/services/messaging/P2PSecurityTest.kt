@@ -8,7 +8,6 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
 import net.corda.core.random63BitValue
 import net.corda.core.seconds
-import net.corda.core.utilities.*
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -16,11 +15,9 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NodeRegistration
 import net.corda.node.utilities.AddOrRemove
-import net.corda.testing.MOCK_HOST_AND_PORT
-import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.*
 import net.corda.testing.node.NodeBasedTest
 import net.corda.testing.node.SimpleNode
-import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name

@@ -2,10 +2,10 @@ package net.corda.node.services.database
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DummyFungibleContract
-import net.corda.contracts.testing.consumeCash
-import net.corda.contracts.testing.fillWithSomeTestCash
-import net.corda.contracts.testing.fillWithSomeTestDeals
-import net.corda.contracts.testing.fillWithSomeTestLinearStates
+import net.corda.testing.contracts.consumeCash
+import net.corda.testing.contracts.fillWithSomeTestCash
+import net.corda.testing.contracts.fillWithSomeTestDeals
+import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
@@ -16,10 +16,10 @@ import net.corda.core.schemas.testing.DummyLinearStateSchemaV2
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.BOB_KEY
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.BOB_KEY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService

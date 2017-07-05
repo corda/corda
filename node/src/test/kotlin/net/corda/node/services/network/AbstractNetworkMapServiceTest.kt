@@ -7,10 +7,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.CHARLIE
-import net.corda.core.utilities.DUMMY_MAP
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.CHARLIE
+import net.corda.testing.DUMMY_MAP
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest

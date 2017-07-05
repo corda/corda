@@ -17,6 +17,9 @@ UNRELEASED
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
   ``ServiceHub``.
 
+* Mock identity constants used in tests, such as ``ALICE``, ``BOB``, ``DUMMY_NOTARY``, have moved to ``net.corda.testing``
+  in the ``test-utils`` module.
+
 Milestone 13
 ------------
 

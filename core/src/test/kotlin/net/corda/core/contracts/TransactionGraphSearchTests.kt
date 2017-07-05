@@ -5,8 +5,8 @@ import net.corda.core.contracts.testing.DummyState
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.testing.MEGA_CORP_KEY
 import net.corda.testing.MEGA_CORP_PUBKEY
 import net.corda.testing.node.MockServices
