@@ -132,6 +132,14 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
     }
 
+    private fun <O> parseExpression(entityRoot: Root<O>, expression: CriteriaExpression<O, Boolean>, predicateSet: MutableSet<Predicate>) {
+        if (expression is CriteriaExpression.AggregateFunctionExpression<O,*>) {
+            parseAggregateFunction(entityRoot, expression)
+        } else {
+            predicateSet.add(parseExpression(entityRoot, expression) as Predicate)
+        }
+    }
+
     private fun <O, R> parseExpression(root: Root<O>, expression: CriteriaExpression<O, R>): Expression<Boolean> {
         return when (expression) {
             is CriteriaExpression.BinaryLogical -> {
@@ -147,9 +155,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 val column = root.get<Any?>(getColumnName(expression.column))
                 columnPredicateToPredicate(column, expression.predicate)
             }
-            is CriteriaExpression.AggregateFunctionExpression<O,*> -> {
-                return parseAggregateFunction(root, expression) as Expression<Boolean>
-            }
+            else -> throw VaultQueryException("Unexpected expression: $expression")
         }
     }
 
@@ -293,9 +299,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             joinPredicates.add(joinPredicate)
 
             // resolve general criteria expressions
-            val expression = parseExpression(entityRoot, criteria.expression)
-            if (expression is Predicate)
-                predicateSet.add(expression)
+            parseExpression(entityRoot, criteria.expression, predicateSet)
         }
         catch (e: Exception) {
             e.message?.let { message ->

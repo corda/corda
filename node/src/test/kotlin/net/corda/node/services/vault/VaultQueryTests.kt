@@ -3,7 +3,6 @@ package net.corda.node.services.vault
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
-import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
@@ -19,9 +18,6 @@ import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.TEST_TX_TIME
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
