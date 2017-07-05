@@ -16,6 +16,7 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
+
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
  * The generated classes have getters, a toString method and implement a simple property access interface. The
@@ -60,16 +61,12 @@ interface SimpleFieldAccess {
  *
  * Equals/hashCode methods are not yet supported.
  */
-
-fun Map<String, ClassCarpenter.Field>.descriptors() = LinkedHashMap(this.mapValues { it.value.descriptor })
-
 class ClassCarpenter {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
-
 
     class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
     class InterfaceMismatch(msg: String) : RuntimeException(msg)
@@ -110,7 +107,7 @@ class ClassCarpenter {
     }
 
     class NonNullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Lorg/jetbrains/annotations/Nullable;"
+        override val nullabilityAnnotation = "Ljavax/annotations/Nullable;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             this.name = name
@@ -138,7 +135,7 @@ class ClassCarpenter {
 
 
     class NullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Lorg/jetbrains/annotations/NotNull;"
+        override val nullabilityAnnotation = "Ljavax/annotations/NotNull;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             if (field.isPrimitive) {
@@ -163,7 +160,11 @@ class ClassCarpenter {
             val name: String,
             fields: Map<String, Field>,
             val superclass: Schema? = null,
-            val interfaces: List<Class<*>> = emptyList()) {
+            val interfaces: List<Class<*>> = emptyList())
+    {
+        private fun Map<String, ClassCarpenter.Field>.descriptors() =
+                LinkedHashMap(this.mapValues { it.value.descriptor })
+
         /* Fix the order up front if the user didn't, inject the name into the field as it's
            neater when iterating */
         val fields = LinkedHashMap(fields.mapValues { it.value.copy(it.key, it.value.field) })
@@ -233,8 +234,8 @@ class ClassCarpenter {
         return _loaded[schema.name]!!
     }
 
-    private fun generateInterface(schema: Schema): Class<*> {
-        return generate(schema) { cw, schema ->
+    private fun generateInterface(interfaceSchema: Schema): Class<*> {
+        return generate(interfaceSchema) { cw, schema ->
             val interfaces = schema.interfaces.map { it.name.jvm }.toTypedArray()
 
             with(cw) {
@@ -247,8 +248,8 @@ class ClassCarpenter {
         }
     }
 
-    private fun generateClass(schema: Schema): Class<*> {
-        return generate(schema) { cw, schema ->
+    private fun generateClass(classSchema: Schema): Class<*> {
+        return generate(classSchema) { cw, schema ->
             val superName = schema.superclass?.jvmName ?: "java/lang/Object"
             val interfaces = arrayOf(SimpleFieldAccess::class.java.name.jvm) + schema.interfaces.map { it.name.jvm }
 
