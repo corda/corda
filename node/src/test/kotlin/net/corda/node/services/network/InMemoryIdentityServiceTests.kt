@@ -7,7 +7,6 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.*
 import net.corda.flows.AnonymisedIdentity
-import net.corda.flows.TxKeyFlow
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.BOB_PUBKEY

@@ -43,7 +43,6 @@ class IssuerFlowTest {
 
         nodes.forEach { node ->
             nodes.map { it.info.legalIdentityAndCert }.forEach(node.services.identityService::registerIdentity)
-            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         }
     }
 

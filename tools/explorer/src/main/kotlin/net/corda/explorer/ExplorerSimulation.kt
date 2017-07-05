@@ -18,7 +18,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.success
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ALICE
 import net.corda.core.utilities.BOB
 import net.corda.core.utilities.DUMMY_NOTARY

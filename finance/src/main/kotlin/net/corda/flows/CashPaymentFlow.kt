@@ -35,15 +35,11 @@ open class CashPaymentFlow(
     override fun call(): AbstractCashFlow.Result {
         progressTracker.currentStep = GENERATING_ID
         val txIdentities = if (anonymous) {
-            subFlow(TxKeyFlow.Requester(recipient))
+            subFlow(TransactionKeyFlow(recipient))
         } else {
-            TxKeyFlow.TxIdentities(emptyList())
+            emptyMap<Party, AnonymisedIdentity>()
         }
-        val anonymousRecipient = if (anonymous) {
-            txIdentities.forParty(recipient).identity
-        } else {
-            recipient
-        }
+        val anonymousRecipient = txIdentities.get(recipient)?.identity ?: recipient
         progressTracker.currentStep = GENERATING_TX
         val builder: TransactionBuilder = TransactionType.General.Builder(null as Party?)
         // TODO: Have some way of restricting this to states the caller controls
@@ -62,6 +58,6 @@ open class CashPaymentFlow(
 
         progressTracker.currentStep = FINALISING_TX
         finaliseTx(setOf(recipient), tx, "Unable to notarise spend")
-        return Result(tx, txIdentities)
+        return Result(tx, anonymousRecipient)
     }
 }
