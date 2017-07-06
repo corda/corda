@@ -4,9 +4,9 @@ import net.corda.contracts.*
 import net.corda.core.contracts.*
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.TEST_TX_TIME
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
+import net.corda.testing.TEST_TX_TIME
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import org.junit.Test
@@ -227,7 +227,7 @@ class IRSTests {
                     calculation = dummyIRS.calculation,
                     common = dummyIRS.common,
                     notary = DUMMY_NOTARY).apply {
-                addTimeWindow(TEST_TX_TIME, 30.seconds)
+                setTimeWindow(TEST_TX_TIME, 30.seconds)
             }
             val ptx1 = megaCorpServices.signInitialTransaction(gtx)
             val ptx2 = miniCorpServices.addSignature(ptx1)
@@ -311,7 +311,7 @@ class IRSTests {
                 val tx = TransactionType.General.Builder(DUMMY_NOTARY)
                 val fixing = Fix(nextFix, "0.052".percent.value)
                 InterestRateSwap().generateFix(tx, previousTXN.tx.outRef(0), fixing)
-                tx.addTimeWindow(TEST_TX_TIME, 30.seconds)
+                tx.setTimeWindow(TEST_TX_TIME, 30.seconds)
                 val ptx1 = megaCorpServices.signInitialTransaction(tx)
                 val ptx2 = miniCorpServices.addSignature(ptx1)
                 notaryServices.addSignature(ptx2)

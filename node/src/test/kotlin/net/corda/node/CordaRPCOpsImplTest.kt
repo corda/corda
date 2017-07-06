@@ -32,6 +32,7 @@ import net.corda.testing.node.MockNetwork.MockNode
 import net.corda.testing.sequence
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
+import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Before
 import org.junit.Test
@@ -74,6 +75,11 @@ class CordaRPCOpsImplTest {
             vaultUpdates = rpc.vaultAndUpdates().second
             vaultTrackCash = rpc.vaultTrackBy<Cash.State>().future
         }
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test

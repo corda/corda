@@ -8,7 +8,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.ALICE
+import net.corda.testing.ALICE
 import net.corda.testing.driver.driver
 import net.corda.node.internal.NodeStartup
 import net.corda.node.services.startFlowPermission

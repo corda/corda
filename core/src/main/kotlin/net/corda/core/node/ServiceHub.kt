@@ -1,5 +1,6 @@
 package net.corda.core.node
 
+import com.google.common.collect.Lists
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.node.services.*
@@ -17,8 +18,10 @@ import java.time.Clock
  */
 interface ServicesForResolution {
     val identityService: IdentityService
+
     /** Provides access to storage of arbitrary JAR files (which may contain only data, no code). */
     val attachments: AttachmentStorage
+
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
@@ -40,12 +43,13 @@ interface ServiceHub : ServicesForResolution {
     val vaultService: VaultService
     val vaultQueryService: VaultQueryService
     val keyManagementService: KeyManagementService
+
     /**
      * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
      * The signatures aren't technically needed after that point, but we keep them around so that we can relay
      * the transaction data to other nodes that need it.
      */
-    val validatedTransactions: ReadOnlyTransactionStorage
+    val validatedTransactions: TransactionStorage
 
     val networkMapCache: NetworkMapCache
     val transactionVerifierService: TransactionVerifierService
@@ -60,41 +64,41 @@ interface ServiceHub : ServicesForResolution {
     fun <T : SerializeAsToken> cordaService(type: Class<T>): T
 
     /**
-     * Given a [SignedTransaction], writes it to the local storage for validated transactions and then
-     * sends them to the vault for further processing. Expects to be run within a database transaction.
+     * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
+     * further processing. This is expected to be run within a database transaction.
      *
      * @param txs The transactions to record.
      */
-    // TODO: Make this take a single tx.
     fun recordTransactions(txs: Iterable<SignedTransaction>)
 
     /**
-     * Given some [SignedTransaction]s, writes them to the local storage for validated transactions and then
-     * sends them to the vault for further processing.
-     *
-     * @param txs The transactions to record.
+     * Stores the given [SignedTransaction]s in the local transaction storage and then sends them to the vault for
+     * further processing. This is expected to be run within a database transaction.
      */
-    fun recordTransactions(vararg txs: SignedTransaction) = recordTransactions(txs.toList())
+    fun recordTransactions(first: SignedTransaction, vararg remaining: SignedTransaction) {
+        recordTransactions(Lists.asList(first, remaining))
+    }
 
     /**
      * Given a [StateRef] loads the referenced transaction and looks up the specified output [ContractState].
      *
-     * @throws TransactionResolutionException if the [StateRef] points to a non-existent transaction.
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
      */
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val definingTx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
-        return definingTx.tx.outputs[stateRef.index]
+        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        return stx.tx.outputs[stateRef.index]
     }
 
     /**
-     * Will check [logicType] and [args] against a whitelist and if acceptable then construct and initiate the protocol.
+     * Converts the given [StateRef] into a [StateAndRef] object.
      *
-     * @throws IllegalProtocolLogicException or IllegalArgumentException if there are problems with the [logicType] or [args].
+     * @throws TransactionResolutionException if [stateRef] points to a non-existent transaction.
      */
-    fun <T : ContractState> toStateAndRef(ref: StateRef): StateAndRef<T> {
-        val definingTx = validatedTransactions.getTransaction(ref.txhash) ?: throw TransactionResolutionException(ref.txhash)
-        return definingTx.tx.outRef<T>(ref.index)
+    @Throws(TransactionResolutionException::class)
+    fun <T : ContractState> toStateAndRef(stateRef: StateRef): StateAndRef<T> {
+        val stx = validatedTransactions.getTransaction(stateRef.txhash) ?: throw TransactionResolutionException(stateRef.txhash)
+        return stx.tx.outRef<T>(stateRef.index)
     }
 
     /**
@@ -102,7 +106,7 @@ interface ServiceHub : ServicesForResolution {
      * Node's primary signing identity.
      * Typical use is during signing in flows and for unit test signing.
      * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
-     * the matching [PrivateKey] will be looked up internally and used to sign.
+     * the matching [java.security.PrivateKey] will be looked up internally and used to sign.
      * If the key is actually a CompositeKey, the first leaf key hosted on this node
      * will be used to create the signature.
      */
@@ -114,8 +118,8 @@ interface ServiceHub : ServicesForResolution {
      * otherwise an IllegalArgumentException will be thrown.
      * Typical use is during signing in flows and for unit test signing.
      * When this [PublicKey] is passed into the signing methods below, or on the KeyManagementService
-     * the matching [PrivateKey] will be looked up internally and used to sign.
-     * If the key is actually a [CompositeKey], the first leaf key hosted on this node
+     * the matching [java.security.PrivateKey] will be looked up internally and used to sign.
+     * If the key is actually a [net.corda.core.crypto.CompositeKey], the first leaf key hosted on this node
      * will be used to create the signature.
      */
     val notaryIdentityKey: PublicKey get() = this.myInfo.notaryIdentity.owningKey
@@ -125,7 +129,7 @@ interface ServiceHub : ServicesForResolution {
      * using keys stored inside the node.
      * @param builder The [TransactionBuilder] to seal with the node's signature.
      * Any existing signatures on the builder will be preserved.
-     * @param publicKey The [PublicKey] matched to the internal [PrivateKey] to use in signing this transaction.
+     * @param publicKey The [PublicKey] matched to the internal [java.security.PrivateKey] to use in signing this transaction.
      * If the passed in key is actually a CompositeKey the code searches for the first child key hosted within this node
      * to sign with.
      * @return Returns a SignedTransaction with the new node signature attached.
@@ -150,30 +154,30 @@ interface ServiceHub : ServicesForResolution {
      * using a set of keys all held in this node.
      * @param builder The [TransactionBuilder] to seal with the node's signature.
      * Any existing signatures on the builder will be preserved.
-     * @param signingPubKeys A list of [PublicKeys] used to lookup the matching [PrivateKey] and sign.
+     * @param signingPubKeys A list of [PublicKey]s used to lookup the matching [java.security.PrivateKey] and sign.
      * @throws IllegalArgumentException is thrown if any keys are unavailable locally.
      * @return Returns a [SignedTransaction] with the new node signature attached.
      */
     fun signInitialTransaction(builder: TransactionBuilder, signingPubKeys: Iterable<PublicKey>): SignedTransaction {
-        var stx: SignedTransaction? = null
-        for (pubKey in signingPubKeys) {
-            stx = if (stx == null) {
-                signInitialTransaction(builder, pubKey)
-            } else {
-                addSignature(stx, pubKey)
-            }
+        val it = signingPubKeys.iterator()
+        var stx = signInitialTransaction(builder, it.next())
+        while (it.hasNext()) {
+            stx = addSignature(stx, it.next())
         }
-        return stx!!
+        return stx
     }
 
     /**
      * Helper method to create an additional signature for an existing (partially) [SignedTransaction].
      * @param signedTransaction The [SignedTransaction] to which the signature will apply.
-     * @param publicKey The [PublicKey] matching to a signing [PrivateKey] hosted in the node.
-     * If the [PublicKey] is actually a [CompositeKey] the first leaf key found locally will be used for signing.
-     * @return The [DigitalSignature.WithKey] generated by signing with the internally held [PrivateKey].
+     * @param publicKey The [PublicKey] matching to a signing [java.security.PrivateKey] hosted in the node.
+     * If the [PublicKey] is actually a [net.corda.core.crypto.CompositeKey] the first leaf key found locally will be used
+     * for signing.
+     * @return The [DigitalSignature.WithKey] generated by signing with the internally held [java.security.PrivateKey].
      */
-    fun createSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): DigitalSignature.WithKey = keyManagementService.sign(signedTransaction.id.bytes, publicKey)
+    fun createSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): DigitalSignature.WithKey {
+        return keyManagementService.sign(signedTransaction.id.bytes, publicKey)
+    }
 
     /**
      * Helper method to create an additional signature for an existing (partially) SignedTransaction
@@ -181,16 +185,21 @@ interface ServiceHub : ServicesForResolution {
      * @param signedTransaction The SignedTransaction to which the signature will apply.
      * @return The DigitalSignature.WithKey generated by signing with the internally held identity PrivateKey.
      */
-    fun createSignature(signedTransaction: SignedTransaction): DigitalSignature.WithKey = createSignature(signedTransaction, legalIdentityKey)
+    fun createSignature(signedTransaction: SignedTransaction): DigitalSignature.WithKey {
+        return createSignature(signedTransaction, legalIdentityKey)
+    }
 
     /**
      * Helper method to append an additional signature to an existing (partially) [SignedTransaction].
      * @param signedTransaction The [SignedTransaction] to which the signature will be added.
-     * @param publicKey The [PublicKey] matching to a signing [PrivateKey] hosted in the node.
-     * If the [PublicKey] is actually a [CompositeKey] the first leaf key found locally will be used for signing.
+     * @param publicKey The [PublicKey] matching to a signing [java.security.PrivateKey] hosted in the node.
+     * If the [PublicKey] is actually a [net.corda.core.crypto.CompositeKey] the first leaf key found locally will be used
+     * for signing.
      * @return A new [SignedTransaction] with the addition of the new signature.
      */
-    fun addSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): SignedTransaction = signedTransaction + createSignature(signedTransaction, publicKey)
+    fun addSignature(signedTransaction: SignedTransaction, publicKey: PublicKey): SignedTransaction {
+        return signedTransaction + createSignature(signedTransaction, publicKey)
+    }
 
     /**
      * Helper method to ap-pend an additional signature for an existing (partially) [SignedTransaction]

@@ -1,12 +1,13 @@
 @file:JvmName("VaultFiller")
 
-package net.corda.contracts.testing
+package net.corda.testing.contracts
 
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
 import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.*
 import net.corda.core.contracts.*
+import net.corda.core.contracts.testing.DummyLinearContract
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -14,9 +15,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.CHARLIE
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.CHARLIE
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
@@ -62,12 +63,13 @@ fun ServiceHub.fillWithSomeTestLinearStates(numberToCreate: Int,
     val transactions: List<SignedTransaction> = (1..numberToCreate).map {
         // Issue a Linear state
         val dummyIssue = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
-            addOutputState(DummyLinearContract.State(linearId = UniqueIdentifier(externalId),
-                                                     participants = participants.plus(me),
-                                                     linearString = linearString,
-                                                     linearNumber = linearNumber,
-                                                     linearBoolean = linearBoolean,
-                                                     linearTimestamp = linearTimestamp))
+            addOutputState(DummyLinearContract.State(
+                    linearId = UniqueIdentifier(externalId),
+                    participants = participants.plus(me),
+                    linearString = linearString,
+                    linearNumber = linearNumber,
+                    linearBoolean = linearBoolean,
+                    linearTimestamp = linearTimestamp))
             signWith(DUMMY_NOTARY_KEY)
         }
 
@@ -201,7 +203,7 @@ fun <T : LinearState> ServiceHub.consumeAndProduce(stateAndRef: StateAndRef<T>):
     // Create a txn consuming different contract types
     val producedTx = TransactionType.General.Builder(notary = DUMMY_NOTARY).apply {
         addOutputState(DummyLinearContract.State(linearId = stateAndRef.state.data.linearId,
-                                                 participants = stateAndRef.state.data.participants))
+                participants = stateAndRef.state.data.participants))
         signWith(DUMMY_NOTARY_KEY)
     }.toSignedTransaction()
 

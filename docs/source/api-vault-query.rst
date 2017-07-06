@@ -50,27 +50,27 @@ The API provides both static (snapshot) and dynamic (snapshot with streaming upd
 Simple pagination (page number and size) and sorting (directional ordering using standard or custom property attributes) is also specifiable.
 Defaults are defined for Paging (pageNumber = 0, pageSize = 200) and Sorting (direction = ASC).
 
-The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of operators to include: binary logical (AND, OR), comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL), equality (EQUAL, NOT_EQUAL), likeness (LIKE, NOT_LIKE), nullability (IS_NULL, NOT_NULL), and collection based (IN, NOT_IN).
+The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of operators to include: binary logical (AND, OR), comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL), equality (EQUAL, NOT_EQUAL), likeness (LIKE, NOT_LIKE), nullability (IS_NULL, NOT_NULL), and collection based (IN, NOT_IN). Standard SQL-92 aggregate functions (SUM, AVG, MIN, MAX, COUNT) are also supported.
 
 There are four implementations of this interface which can be chained together to define advanced filters.
 
-	1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED, CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
+1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED, CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED).
 
-	   .. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, includeSoftlockedStates = true).
+	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, includeSoftlockedStates = true).
 
-	2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). Filterable attributes include: participants(s), owner(s), quantity, issuer party(s) and issuer reference(s).
+2. ``FungibleAssetQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``FungibleAsset`` contract state interface, used to represent assets that are fungible, countable and issued by a specific party (eg. ``Cash.State`` and ``CommodityContract.State`` in the Corda finance module). Filterable attributes include: participants(s), owner(s), quantity, issuer party(s) and issuer reference(s).
 	   
-	   .. note:: All contract states that extend the ``FungibleAsset`` now automatically persist that interfaces common state attributes to the **vault_fungible_states** table.
+	.. note:: All contract states that extend the ``FungibleAsset`` now automatically persist that interfaces common state attributes to the **vault_fungible_states** table.
 
-	3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo). Filterable attributes include: participant(s), linearId(s), dealRef(s).
+3. ``LinearStateQueryCriteria`` provides filterable criteria on attributes defined in the Corda Core ``LinearState`` and ``DealState`` contract state interfaces, used to represent entities that continuously supercede themselves, all of which share the same *linearId* (eg. trade entity states such as the ``IRSState`` defined in the SIMM valuation demo). Filterable attributes include: participant(s), linearId(s), dealRef(s).
 	   
-	   .. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those interfaces common state attributes to the **vault_linear_states** table.
+	.. note:: All contract states that extend ``LinearState`` or ``DealState`` now automatically persist those interfaces common state attributes to the **vault_linear_states** table.
 
-	4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the :doc:`Persistence </api-persistence>` documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression. The ColumnPredicateExpression allows for specification arbitrary criteria using the previously enumerated operator types. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``.
+4. ``VaultCustomQueryCriteria`` provides the means to specify one or many arbitrary expressions on attributes defined by a custom contract state that implements its own schema as described in the :doc:`Persistence </api-persistence>` documentation and associated examples. Custom criteria expressions are expressed using one of several type-safe ``CriteriaExpression``: BinaryLogical, Not, ColumnPredicateExpression, AggregateFunctionExpression. The ``ColumnPredicateExpression`` allows for specification arbitrary criteria using the previously enumerated operator types. The ``AggregateFunctionExpression`` allows for the specification of an aggregate function type (sum, avg, max, min, count) with optional grouping and sorting. Furthermore, a rich DSL is provided to enable simple construction of custom criteria using any combination of ``ColumnPredicate``. See the ``Builder`` object in ``QueryCriteriaUtils`` for a complete specification of the DSL. 
 
     .. note:: It is a requirement to register any custom contract schemas to be used in Vault Custom queries in the associated `CordaPluginRegistry` configuration for the respective CorDapp using the ``requiredSchemas`` configuration field (which specifies a set of `MappedSchema`)
 
-    An example is illustrated here:
+An example of a custom query is illustrated here:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
@@ -78,6 +78,8 @@ There are four implementations of this interface which can be chained together t
     :end-before: DOCEND VaultQueryExample20
 
 All ``QueryCriteria`` implementations are composable using ``and`` and ``or`` operators, as also illustrated above.
+
+All ``QueryCriteria`` implementations provide an explicitly specifiable ``StateStatus`` attribute which defaults to filtering on UNCONSUMED states.
 	   
 .. note:: Custom contract states that implement the ``Queryable`` interface may now extend common schemas types ``FungiblePersistentState`` or, ``LinearPersistentState``.  Previously, all custom contracts extended the root ``PersistentState`` class and defined repeated mappings of ``FungibleAsset`` and ``LinearState`` attributes. See ``SampleCashSchemaV2`` and ``DummyLinearStateSchemaV2`` as examples.
 
@@ -234,6 +236,37 @@ Query for fungible assets for a specifc issuer party:
     :start-after: DOCSTART VaultQueryExample14
     :end-before: DOCEND VaultQueryExample14
 
+**Aggregate Function queries using** ``VaultCustomQueryCriteria``
+
+.. note:: Query results for aggregate functions are contained in the `otherResults` attribute of a results Page.
+
+Aggregations on cash using various functions:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample21
+    :end-before: DOCEND VaultQueryExample21
+
+.. note:: `otherResults` will contain 5 items, one per calculated aggregate function.
+
+Aggregations on cash grouped by currency for various functions:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample22
+    :end-before: DOCEND VaultQueryExample22
+
+.. note:: `otherResults` will contain 24 items, one result per calculated aggregate function per currency (the grouping attribute - currency in this case - is returned per aggregate result).
+
+Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample23
+    :end-before: DOCEND VaultQueryExample23
+
+.. note:: `otherResults` will contain 12 items sorted from largest summed cash amount to smallest, one result per calculated aggregate function per issuer party and currency (grouping attributes are returned per aggregate result).
+
 **Dynamic queries** (also using ``VaultQueryCriteria``) are an extension to the snapshot queries by returning an additional ``QueryResults`` return type in the form of an ``Observable<Vault.Update>``. Refer to `ReactiveX Observable <http://reactivex.io/documentation/observable.html>`_ for a detailed understanding and usage of this type. 
 
 Track unconsumed cash states:
@@ -298,6 +331,29 @@ Query for consumed deal states or linear ids, specify a paging specification and
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample2
     :end-before: DOCEND VaultJavaQueryExample2
+
+**Aggregate Function queries using** ``VaultCustomQueryCriteria``
+
+Aggregations on cash using various functions:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultJavaQueryExample21
+    :end-before: DOCEND VaultJavaQueryExample21
+
+Aggregations on cash grouped by currency for various functions:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultJavaQueryExample22
+    :end-before: DOCEND VaultJavaQueryExample22
+
+Sum aggregation on cash grouped by issuer party and currency and sorted by sum:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryJavaTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultJavaQueryExample23
+    :end-before: DOCEND VaultJavaQueryExample23
 
 Track unconsumed cash states:
 

@@ -7,6 +7,7 @@ import net.corda.node.services.messaging.TopicStringValidator
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.network.NetworkMapService
 import net.corda.testing.node.MockNetwork
+import org.junit.After
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -16,8 +17,13 @@ import kotlin.test.assertTrue
 class InMemoryMessagingTests {
     val mockNet = MockNetwork()
 
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
+    }
+
     @Test
-    fun topicStringValidation() {
+    fun `topic string validation`() {
         TopicStringValidator.check("this.is.ok")
         TopicStringValidator.check("this.is.OkAlso")
         assertFails {

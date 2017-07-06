@@ -1,15 +1,15 @@
 @file:JvmName("TestConstants")
 
-package net.corda.core.utilities
+package net.corda.testing
 
 import net.corda.core.crypto.*
+import net.corda.core.crypto.testing.DummyPublicKey
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.cert.CertificateFactory
 import java.time.Instant
 
 // A dummy time at which we will be pretending test transactions are created.
@@ -67,14 +67,3 @@ val DUMMY_CA: CertificateAndKeyPair by lazy {
     CertificateAndKeyPair(cert, DUMMY_CA_KEY)
 }
 
-/**
- * Build a test party with a nonsense certificate authority for testing purposes.
- */
-fun getTestPartyAndCertificate(name: X500Name, publicKey: PublicKey, trustRoot: CertificateAndKeyPair = DUMMY_CA) = getTestPartyAndCertificate(Party(name, publicKey), trustRoot)
-
-fun getTestPartyAndCertificate(party: Party, trustRoot: CertificateAndKeyPair = DUMMY_CA): PartyAndCertificate {
-    val certFactory = CertificateFactory.getInstance("X509")
-    val certHolder = X509Utilities.createCertificate(CertificateType.IDENTITY, trustRoot.certificate, trustRoot.keyPair, party.name, party.owningKey)
-    val certPath = certFactory.generateCertPath(listOf(certHolder.cert, trustRoot.certificate.cert))
-    return PartyAndCertificate(party, certHolder, certPath)
-}

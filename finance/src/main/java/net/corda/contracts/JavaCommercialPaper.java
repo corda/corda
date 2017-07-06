@@ -1,27 +1,36 @@
 package net.corda.contracts;
 
-import co.paralleluniverse.fibers.*;
-import com.google.common.collect.*;
-import kotlin.*;
-import net.corda.contracts.asset.*;
+import co.paralleluniverse.fibers.Suspendable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import kotlin.Pair;
+import kotlin.Unit;
+import net.corda.contracts.asset.CashKt;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.Contract;
-import net.corda.core.contracts.TransactionForContract.*;
-import net.corda.core.contracts.clauses.*;
-import net.corda.core.crypto.*;
+import net.corda.core.contracts.TransactionForContract.InOutGroup;
+import net.corda.core.contracts.clauses.AnyOf;
+import net.corda.core.contracts.clauses.Clause;
+import net.corda.core.contracts.clauses.ClauseVerifier;
+import net.corda.core.contracts.clauses.GroupClauseVerifier;
+import net.corda.core.crypto.SecureHash;
+import net.corda.core.crypto.testing.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
 import net.corda.core.identity.Party;
-import net.corda.core.node.services.*;
-import net.corda.core.transactions.*;
-import org.jetbrains.annotations.*;
+import net.corda.core.node.services.VaultService;
+import net.corda.core.transactions.TransactionBuilder;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.time.*;
-import java.util.*;
-import java.util.stream.*;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.Currency;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import static kotlin.collections.CollectionsKt.*;
-import static net.corda.core.contracts.ContractsDSL.*;
+import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
+import static net.corda.core.contracts.ContractsDSL.requireThat;
 
 
 /**
@@ -166,7 +175,7 @@ public class JavaCommercialPaper implements Contract {
                                                  State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
-                State input = single(inputs);
+                State input = Iterables.getOnlyElement(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -199,7 +208,7 @@ public class JavaCommercialPaper implements Contract {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
-                State input = single(inputs);
+                State input = Iterables.getOnlyElement(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -240,7 +249,7 @@ public class JavaCommercialPaper implements Contract {
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
                                                  State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
-                State output = single(outputs);
+                State output = Iterables.getOnlyElement(outputs);
                 TimeWindow timeWindowCommand = tx.getTimeWindow();
                 Instant time = null == timeWindowCommand
                         ? null

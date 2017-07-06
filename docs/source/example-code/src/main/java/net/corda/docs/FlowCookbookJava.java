@@ -7,6 +7,8 @@ import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.contracts.TransactionType.NotaryChange;
+import net.corda.core.contracts.testing.DummyContract;
+import net.corda.core.contracts.testing.DummyState;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
@@ -28,12 +30,13 @@ import net.corda.flows.SignTransactionFlow;
 import org.bouncycastle.asn1.x500.X500Name;
 
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.core.utilities.TestConstants.getDUMMY_PUBKEY_1;
+import static net.corda.testing.TestConstants.getDUMMY_PUBKEY_1;
 
 // We group our two flows inside a singleton object to indicate that they work
 // together.
@@ -301,7 +304,10 @@ public class FlowCookbookJava {
             regTxBuilder.addOutputState(ourOutput);
             regTxBuilder.addCommand(ourCommand);
             regTxBuilder.addAttachment(ourAttachment);
-            regTxBuilder.addTimeWindow(ourTimeWindow);
+
+            // We set the time-window within which the transaction must be notarised using either of:
+            regTxBuilder.setTimeWindow(ourTimeWindow);
+            regTxBuilder.setTimeWindow(getServiceHub().getClock().instant(), Duration.ofSeconds(30));
 
             /*-----------------------
              * TRANSACTION SIGNING *

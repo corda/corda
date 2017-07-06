@@ -1,14 +1,14 @@
 package net.corda.node.services
 
 import com.google.common.util.concurrent.Futures
-import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.identity.Party
+import net.corda.core.contracts.testing.DummyContract
 import net.corda.core.getOrThrow
+import net.corda.core.identity.Party
 import net.corda.core.map
-import net.corda.core.utilities.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_A
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -26,28 +26,28 @@ class RaftNotaryServiceTests : NodeBasedTest() {
 
     @Test
     fun `detect double spend`() {
-        val (masterNode, alice) = Futures.allAsList(
-                startNotaryCluster(notaryName, 3).map { it.first() },
-                startNode(DUMMY_BANK_A.name)
+        val (bankA) = Futures.allAsList(
+                startNode(DUMMY_BANK_A.name),
+                startNotaryCluster(notaryName, 3).map { it.first() }
         ).getOrThrow()
 
-        val notaryParty = alice.netMapCache.getNotary(notaryName)!!
+        val notaryParty = bankA.services.networkMapCache.getNotary(notaryName)!!
 
-        val inputState = issueState(alice, notaryParty)
+        val inputState = issueState(bankA, notaryParty)
 
         val firstTxBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState)
-        val firstSpendTx = alice.services.signInitialTransaction(firstTxBuilder)
+        val firstSpendTx = bankA.services.signInitialTransaction(firstTxBuilder)
 
-        val firstSpend = alice.services.startFlow(NotaryFlow.Client(firstSpendTx))
+        val firstSpend = bankA.services.startFlow(NotaryFlow.Client(firstSpendTx))
         firstSpend.resultFuture.getOrThrow()
 
         val secondSpendBuilder = TransactionType.General.Builder(notaryParty).withItems(inputState).run {
-            val dummyState = DummyContract.SingleOwnerState(0, alice.info.legalIdentity)
+            val dummyState = DummyContract.SingleOwnerState(0, bankA.info.legalIdentity)
             addOutputState(dummyState)
             this
         }
-        val secondSpendTx = alice.services.signInitialTransaction(secondSpendBuilder)
-        val secondSpend = alice.services.startFlow(NotaryFlow.Client(secondSpendTx))
+        val secondSpendTx = bankA.services.signInitialTransaction(secondSpendBuilder)
+        val secondSpend = bankA.services.startFlow(NotaryFlow.Client(secondSpendTx))
 
         val ex = assertFailsWith(NotaryException::class) { secondSpend.resultFuture.getOrThrow() }
         val error = ex.error as NotaryError.Conflict
@@ -58,7 +58,7 @@ class RaftNotaryServiceTests : NodeBasedTest() {
         return node.database.transaction {
             val builder = DummyContract.generateInitial(Random().nextInt(), notary, node.info.legalIdentity.ref(0))
             val stx = node.services.signInitialTransaction(builder)
-            node.services.recordTransactions(listOf(stx))
+            node.services.recordTransactions(stx)
             StateAndRef(builder.outputStates().first(), StateRef(stx.id, 0))
         }
     }

@@ -11,7 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_CA
+import net.corda.testing.DUMMY_CA
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.jackson.JacksonSupport
 import net.corda.node.services.identity.InMemoryIdentityService

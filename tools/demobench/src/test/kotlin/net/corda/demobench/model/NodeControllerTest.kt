@@ -1,7 +1,7 @@
 package net.corda.demobench.model
 
 import net.corda.core.crypto.X509Utilities.getX509Name
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.nodeapi.User
 import org.junit.Test
 import java.nio.file.Path

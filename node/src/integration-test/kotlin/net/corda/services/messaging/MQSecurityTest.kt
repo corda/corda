@@ -12,8 +12,8 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.random63BitValue
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.Node
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.INTERNAL_PREFIX

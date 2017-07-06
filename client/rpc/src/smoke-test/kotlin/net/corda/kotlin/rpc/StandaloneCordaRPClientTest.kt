@@ -20,7 +20,6 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.sizedInputStreamAndHash
-import net.corda.core.utilities.DUMMY_NOTARY
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow
@@ -28,6 +27,7 @@ import net.corda.nodeapi.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.apache.commons.io.output.NullOutputStream
+import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,7 +54,7 @@ class StandaloneCordaRPClientTest {
     private lateinit var notaryNode: NodeInfo
 
     private val notaryConfig = NodeConfig(
-        party = DUMMY_NOTARY,
+        legalName = X500Name("CN=Notary Service,O=R3,OU=corda,L=Zurich,C=CH"),
         p2pPort = port.andIncrement,
         rpcPort = port.andIncrement,
         webPort = port.andIncrement,
@@ -115,7 +115,7 @@ class StandaloneCordaRPClientTest {
 
     @Test
     fun `test network map`() {
-        assertEquals(DUMMY_NOTARY.name, notaryNode.legalIdentity.name)
+        assertEquals(notaryConfig.legalName, notaryNode.legalIdentity.name)
     }
 
     @Test

@@ -3,7 +3,6 @@ package net.corda.node.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
-import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
@@ -22,21 +21,23 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.node.services.TransactionStorage
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.LogHelper
+import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
@@ -76,6 +77,7 @@ class TwoPartyTradeFlowTests {
 
     @After
     fun after() {
+        mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 
@@ -153,7 +155,7 @@ class TwoPartyTradeFlowTests {
             val cashLockId = UUID.randomUUID()
             bobNode.database.transaction {
                 // lock the cash states with an arbitrary lockId (to prevent the Buyer flow from claiming the states)
-                bobNode.vault.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
+                bobNode.services.vaultService.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
             }
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,
@@ -284,8 +286,8 @@ class TwoPartyTradeFlowTests {
                                 entropyRoot: BigInteger): MockNetwork.MockNode {
                 return object : MockNetwork.MockNode(config, network, networkMapAddr, advertisedServices, id, overrideServices, entropyRoot) {
                     // That constructs a recording tx storage
-                    override fun createTransactionStorage(): TransactionStorage {
-                        return RecordingTransactionStorage(database, super.createTransactionStorage())
+                    override fun makeTransactionStorage(): WritableTransactionStorage {
+                        return RecordingTransactionStorage(database, super.makeTransactionStorage())
                     }
                 }
             }
@@ -311,7 +313,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val extraKey = bobNode.keyManagement.keys.single()
+            val extraKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(extraKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -410,7 +412,7 @@ class TwoPartyTradeFlowTests {
                 attachment(ByteArrayInputStream(stream.toByteArray()))
             }
 
-            val bobsKey = bobNode.keyManagement.keys.single()
+            val bobsKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = fillUpForBuyer(false, AnonymousParty(bobsKey),
                     DUMMY_CASH_ISSUER.party,
                     notaryNode.info.notaryIdentity).second
@@ -675,7 +677,7 @@ class TwoPartyTradeFlowTests {
     }
 
 
-    class RecordingTransactionStorage(val database: Database, val delegate: TransactionStorage) : TransactionStorage {
+    class RecordingTransactionStorage(val database: Database, val delegate: WritableTransactionStorage) : WritableTransactionStorage {
         override fun track(): DataFeed<List<SignedTransaction>, SignedTransaction> {
             return database.transaction {
                 delegate.track()

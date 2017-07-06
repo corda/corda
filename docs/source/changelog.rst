@@ -17,6 +17,12 @@ UNRELEASED
 * ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
   ``ServiceHub``.
 
+* Mock identity constants used in tests, such as ``ALICE``, ``BOB``, ``DUMMY_NOTARY``, have moved to ``net.corda.testing``
+  in the ``test-utils`` module.
+
+* In Java, ``QueryCriteriaUtilsKt`` has moved to ``QueryCriteriaUtils``. Also ``and`` and ``or`` are now instance methods
+  of ``QueryCrtieria``.
+
 Milestone 13
 ------------
 

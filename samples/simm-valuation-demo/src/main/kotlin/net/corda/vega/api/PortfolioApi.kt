@@ -12,8 +12,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.DUMMY_MAP
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.node.services.ServiceType
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
@@ -32,7 +31,6 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 //TODO: Change import namespaces vega -> ....
-
 
 @Path("simmvaluationdemo")
 class PortfolioApi(val rpc: CordaRPCOps) {
@@ -228,7 +226,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { party ->
             withPortfolio(party) { state ->
                 if (state.valuation != null) {
-                    val isValuer = state.valuer as AbstractParty == ownParty
+                    val isValuer = state.valuer == ownParty
                     val rawMtm = state.valuation.presentValues.map {
                         it.value.amounts.first().amount
                     }.reduce { a, b -> a + b }
@@ -254,12 +252,11 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     @Path("whoami")
     @Produces(MediaType.APPLICATION_JSON)
     fun getWhoAmI(): AvailableParties {
-        val (parties, partyUpdates) = rpc.networkMapUpdates()
+        val (parties, partyUpdates) = rpc.networkMapFeed()
         partyUpdates.notUsed()
-        val counterParties = parties.filter {
-            it.legalIdentity.name != DUMMY_MAP.name
-                    && it.legalIdentity.name != DUMMY_NOTARY.name
-                    && it.legalIdentity.name != ownParty.name
+        val counterParties = parties.filterNot {
+            it.advertisedServices.any { it.info.type in setOf(ServiceType.networkMap, ServiceType.notary) }
+                    || it.legalIdentity == ownParty
         }
 
         return AvailableParties(
@@ -280,8 +277,6 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         return withParty(partyName) { otherParty ->
             val existingSwap = getPortfolioWith(otherParty)
             val flowHandle = if (existingSwap == null) {
-                // TODO: Remove this suppress when we upgrade to kotlin 1.1 or when JetBrain fixes the bug.
-                @Suppress("UNSUPPORTED_FEATURE")
                 rpc.startFlow(SimmFlow::Requester, otherParty, params.valuationDate)
             } else {
                 rpc.startFlow(SimmRevaluation::Initiator, getPortfolioStateAndRefWith(otherParty).ref, params.valuationDate)
@@ -295,4 +290,3 @@ class PortfolioApi(val rpc: CordaRPCOps) {
         }
     }
 }
-

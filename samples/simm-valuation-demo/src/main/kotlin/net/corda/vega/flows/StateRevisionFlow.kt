@@ -20,7 +20,7 @@ object StateRevisionFlow {
         override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {
             val state = originalState.state.data
             val tx = state.generateRevision(originalState.state.notary, originalState, modification)
-            tx.addTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            tx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
 
             val stx = serviceHub.signInitialTransaction(tx)
             val participantKeys = state.participants.map { it.owningKey }

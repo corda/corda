@@ -3,8 +3,8 @@ package net.corda.node.services.network
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import org.junit.After
@@ -38,13 +38,13 @@ class InMemoryNetworkMapCacheTest {
         mockNet.runNetwork()
 
         // Node A currently knows only about itself, so this returns node A
-        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeA.info)
+        assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeA.info)
 
         nodeA.database.transaction {
-            nodeA.netMapCache.addNode(nodeB.info)
+            nodeA.services.networkMapCache.addNode(nodeB.info)
         }
         // The details of node B write over those for node A
-        assertEquals(nodeA.netMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeB.info)
+        assertEquals(nodeA.services.networkMapCache.getNodeByLegalIdentityKey(nodeA.info.legalIdentity.owningKey), nodeB.info)
     }
 
     @Test

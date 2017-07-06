@@ -82,7 +82,7 @@ class SellerFlow(val otherParty: Party,
             tx.addAttachment(serviceHub.attachments.openAttachment(PROSPECTUS_HASH)!!.id)
 
             // Requesting a time-window to be set, all CP must have a validation window.
-            tx.addTimeWindow(Instant.now(), 30.seconds)
+            tx.setTimeWindow(Instant.now(), 30.seconds)
 
             // Sign it as ourselves.
             val stx = serviceHub.signInitialTransaction(tx)

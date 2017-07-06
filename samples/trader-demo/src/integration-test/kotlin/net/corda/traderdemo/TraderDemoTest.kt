@@ -6,9 +6,9 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.getOrThrow
 import net.corda.core.millis
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.IssuerFlow
 import net.corda.testing.driver.poll
 import net.corda.node.services.startFlowPermission
