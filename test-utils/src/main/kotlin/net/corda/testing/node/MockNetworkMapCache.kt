@@ -8,7 +8,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapCache
-import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.getTestX509Name
 import rx.Observable
@@ -29,8 +28,8 @@ class MockNetworkMapCache(serviceHub: ServiceHub) : InMemoryNetworkMapCache(serv
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()
 
     init {
-        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), BANK_C, setOf(BANK_C), MOCK_VERSION_INFO.platformVersion)
-        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), BANK_D, setOf(BANK_D), MOCK_VERSION_INFO.platformVersion)
+        val mockNodeA = NodeInfo(listOf(BANK_C_ADDR), BANK_C, setOf(BANK_C), 1)
+        val mockNodeB = NodeInfo(listOf(BANK_D_ADDR), BANK_D, setOf(BANK_D), 1)
         registeredNodes[mockNodeA.legalIdentity.owningKey] = mockNodeA
         registeredNodes[mockNodeB.legalIdentity.owningKey] = mockNodeB
         runWithoutMapService()

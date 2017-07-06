@@ -8,7 +8,6 @@ import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.messaging.RPCOps
 import net.corda.core.node.services.DEFAULT_SESSION_ID
-import net.corda.testing.ALICE
 import net.corda.core.utilities.LogHelper
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.RPCUserServiceImpl
@@ -21,9 +20,10 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.ALICE
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
+import net.corda.testing.node.MOCK_VERSION_INFO
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat

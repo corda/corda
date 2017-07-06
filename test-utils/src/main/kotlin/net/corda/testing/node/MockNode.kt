@@ -144,7 +144,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
-        override val platformVersion: Int get() = MOCK_VERSION_INFO.platformVersion
+        override val platformVersion: Int get() = 1
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
                     ServiceAffinityExecutor("Mock node $id thread", 1)

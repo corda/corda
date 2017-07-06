@@ -1,4 +1,4 @@
-package net.corda.core.node
+package net.corda.node
 
 /**
  * Encapsulates various pieces of version information of the node.
