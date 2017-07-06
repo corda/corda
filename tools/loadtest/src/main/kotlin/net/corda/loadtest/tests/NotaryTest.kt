@@ -6,7 +6,7 @@ import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicate
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.flows.FlowException
 import net.corda.core.messaging.startFlow
 import net.corda.core.success

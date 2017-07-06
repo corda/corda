@@ -5,7 +5,7 @@ import net.corda.core.ErrorOr
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.div

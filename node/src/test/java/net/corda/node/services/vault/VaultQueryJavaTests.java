@@ -5,7 +5,7 @@ import kotlin.Pair;
 import net.corda.contracts.DealState;
 import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
-import net.corda.core.contracts.testing.DummyLinearContract;
+import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.core.crypto.*;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.messaging.DataFeed;

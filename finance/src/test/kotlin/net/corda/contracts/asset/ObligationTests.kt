@@ -4,7 +4,7 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.NetType
 import net.corda.contracts.asset.Obligation.Lifecycle
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyState
+import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.hours
 import net.corda.core.crypto.testing.NULL_PARTY

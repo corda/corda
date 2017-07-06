@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo

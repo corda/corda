@@ -2,7 +2,7 @@ package net.corda.contracts.asset
 
 import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyState
+import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty

@@ -7,7 +7,7 @@ import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.contracts.fillWithSomeTestDeals
 import net.corda.testing.contracts.fillWithSomeTestLinearStates
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyLinearContract
+import net.corda.testing.contracts.DummyLinearContract
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.consumedStates

@@ -2,7 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic

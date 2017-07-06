@@ -20,6 +20,9 @@ UNRELEASED
 * Mock identity constants used in tests, such as ``ALICE``, ``BOB``, ``DUMMY_NOTARY``, have moved to ``net.corda.testing``
   in the ``test-utils`` module.
 
+* ``DummyContract``, ``DummyContractV2``, ``DummyLinearContract`` and ``DummyState`` have moved to ``net.corda.testing.contracts``
+  in the ``test-utils`` modules.
+
 * In Java, ``QueryCriteriaUtilsKt`` has moved to ``QueryCriteriaUtils``. Also ``and`` and ``or`` are now instance methods
   of ``QueryCrtieria``.
 

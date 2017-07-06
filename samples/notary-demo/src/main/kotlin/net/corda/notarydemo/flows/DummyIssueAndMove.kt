@@ -1,7 +1,7 @@
 package net.corda.notarydemo.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party

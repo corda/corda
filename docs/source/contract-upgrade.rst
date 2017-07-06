@@ -86,7 +86,7 @@ Bank A and Bank B decided to upgrade the contract to ``DummyContractV2``
 
 1. Developer will create a new contract extending the ``UpgradedContract`` class, and a new state object ``DummyContractV2.State`` referencing the new contract.
 
-.. literalinclude:: /../../core/src/main/kotlin/net/corda/core/contracts/DummyContractV2.kt
+.. literalinclude:: /../../test-utils/src/main/kotlin/net/corda/testing/contracts/DummyContractV2.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
