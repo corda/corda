@@ -190,7 +190,7 @@ CorDapp is made up of three key parts:
 
 * The ``IOUState``, representing IOUs on the ledger
 * The ``IOUContract``, controlling the evolution of IOUs over time
-* The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger.
+* The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
 Together, these three parts completely determine how IOUs are created and evolved on the ledger.
 
