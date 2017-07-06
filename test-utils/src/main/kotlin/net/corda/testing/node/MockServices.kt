@@ -12,8 +12,8 @@ import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_CA
 import net.corda.flows.AnonymisedIdentity
+import net.corda.node.VersionInfo
 import net.corda.node.services.api.StateMachineRecordedTransactionMappingStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.database.HibernateConfiguration
@@ -25,9 +25,9 @@ import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
+import net.corda.testing.DUMMY_CA
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MOCK_IDENTITIES
-import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.getTestPartyAndCertificate
 import org.bouncycastle.operator.ContentSigner
 import rx.Observable
@@ -76,7 +76,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(listOf(HostAndPort.fromHost("localhost")), identity, setOf(identity), MOCK_VERSION_INFO.platformVersion)
+        return NodeInfo(listOf(HostAndPort.fromHost("localhost")), identity, setOf(identity), 1)
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
@@ -195,3 +195,5 @@ fun makeTestDataSourceProperties(nodeName: String = SecureHash.randomSHA256().to
     props.setProperty("dataSource.password", "")
     return props
 }
+
+val MOCK_VERSION_INFO = VersionInfo(1, "Mock release", "Mock revision", "Mock Vendor")
