@@ -28,6 +28,9 @@ UNRELEASED
 
 * ``random63BitValue()`` has moved to ``CryptoUtils``
 
+* Added additional common Sort attributes (see ``Sort.CommandStateAttribute``) for use in Vault Query criteria
+  to include STATE_REF, STATE_REF_TXN_ID, STATE_REF_INDEX
+
 Milestone 13
 ------------
 
