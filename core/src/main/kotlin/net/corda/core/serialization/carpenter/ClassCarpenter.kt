@@ -4,7 +4,10 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
-import java.lang.Character.*
+
+import java.lang.Character.isJavaIdentifierPart
+import java.lang.Character.isJavaIdentifierStart
+
 import java.util.*
 
 /**
@@ -333,7 +336,7 @@ class ClassCarpenter {
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
                     java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                            java.lang.Character.TYPE, TYPE -> visitInsn(IRETURN)
+                            java.lang.Character.TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
@@ -399,7 +402,7 @@ class ClassCarpenter {
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
             java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
-                    java.lang.Character.TYPE, TYPE -> visitVarInsn(ILOAD, slot)
+                    java.lang.Character.TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
