@@ -24,7 +24,7 @@ class NetworkHostAndPortTest {
         listOf(65536, -1).forEach {
             assertThatThrownBy {
                 NetworkHostAndPort("example.com", it)
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(invalidPortFormat.format(it))
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.invalidPortFormat.format(it))
         }
     }
 
@@ -49,12 +49,12 @@ class NetworkHostAndPortTest {
         listOf("0:0:0:0:0:0:0:1:1234", ":1234", "example.com:-1").forEach {
             assertThatThrownBy {
                 it.parseNetworkHostAndPort()
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(unparseableAddressFormat.format(it))
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.unparseableAddressFormat.format(it))
         }
         listOf("example.com:", "example.com").forEach {
             assertThatThrownBy {
                 it.parseNetworkHostAndPort()
-            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(missingPortFormat.format(it))
+            }.isInstanceOf(IllegalArgumentException::class.java).hasMessage(NetworkHostAndPort.missingPortFormat.format(it))
         }
     }
 }

@@ -8,6 +8,12 @@ import java.net.URI
  * @param port a valid port number.
  */
 data class NetworkHostAndPort(val host: String, val port: Int) {
+    companion object {
+        internal val invalidPortFormat = "Invalid port: %s"
+        internal val unparseableAddressFormat = "Unparseable address: %s"
+        internal val missingPortFormat = "Missing port: %s"
+    }
+
     init {
         require(port in (0..0xffff)) { invalidPortFormat.format(port) }
     }
@@ -23,12 +29,9 @@ data class NetworkHostAndPort(val host: String, val port: Int) {
  */
 fun String.parseNetworkHostAndPort() = run {
     val uri = URI(null, this, null, null, null)
-    require(uri.host != null) { unparseableAddressFormat.format(this) }
-    require(uri.port != -1) { missingPortFormat.format(this) }
+    require(uri.host != null) { NetworkHostAndPort.unparseableAddressFormat.format(this) }
+    require(uri.port != -1) { NetworkHostAndPort.missingPortFormat.format(this) }
     NetworkHostAndPort(bracketedHost.matchEntire(uri.host)?.groupValues?.get(1) ?: uri.host, uri.port)
 }
 
 private val bracketedHost = "\\[(.*)]".toRegex()
-internal val invalidPortFormat = "Invalid port: %s"
-internal val unparseableAddressFormat = "Unparseable address: %s"
-internal val missingPortFormat = "Missing port: %s"
