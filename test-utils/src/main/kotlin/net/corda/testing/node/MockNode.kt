@@ -21,7 +21,6 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.TransactionKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -413,7 +412,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun stopNodes() {
-        require(nodes.isNotEmpty())
         nodes.forEach { if (it.started) it.stop() }
     }
 
