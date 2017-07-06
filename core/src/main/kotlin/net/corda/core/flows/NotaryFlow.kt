@@ -3,9 +3,9 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
@@ -32,7 +32,7 @@ object NotaryFlow {
      */
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
-                      override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
+                      override val progressTracker: ProgressTracker) : FlowLogic<List<TransactionSignature>>() {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
@@ -46,7 +46,7 @@ object NotaryFlow {
 
         @Suspendable
         @Throws(NotaryException::class)
-        override fun call(): List<DigitalSignature.WithKey> {
+        override fun call(): List<TransactionSignature> {
             progressTracker.currentStep = REQUESTING
 
             notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
@@ -67,7 +67,7 @@ object NotaryFlow {
             val response = try {
                 if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                     subFlow(SendTransactionWithRetry(notaryParty, stx))
-                    receive<List<DigitalSignature.WithKey>>(notaryParty)
+                    receive<List<TransactionSignature>>(notaryParty)
                 } else {
                     val tx: Any = if (stx.isNotaryChangeTransaction()) {
                         stx.notaryChangeTx
@@ -84,14 +84,14 @@ object NotaryFlow {
             }
 
             return response.unwrap { signatures ->
-                signatures.forEach { validateSignature(it, stx.id.bytes) }
+                signatures.forEach { validateSignature(it, stx.id) }
                 signatures
             }
         }
 
-        private fun validateSignature(sig: DigitalSignature.WithKey, data: ByteArray) {
+        private fun validateSignature(sig: TransactionSignature, txId: SecureHash) {
             check(sig.by in notaryParty.owningKey.keys) { "Invalid signer for the notary result" }
-            sig.verify(data)
+            sig.verify(txId)
         }
     }
 
@@ -124,7 +124,7 @@ object NotaryFlow {
 
         @Suspendable
         private fun signAndSendResponse(txId: SecureHash) {
-            val signature = service.sign(txId.bytes)
+            val signature = service.sign(txId)
             send(otherSide, listOf(signature))
         }
     }

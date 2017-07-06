@@ -124,8 +124,12 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     override fun sign(bytes: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
         val keyPair = getSigningKeyPair(publicKey)
-        val signature = keyPair.sign(bytes)
-        return signature
+        return keyPair.sign(bytes)
+    }
+
+    override fun sign(signableData: SignableData, publicKey: PublicKey): TransactionSignature {
+        val keyPair = getSigningKeyPair(publicKey)
+        return keyPair.sign(signableData)
     }
 }
 

@@ -4,10 +4,7 @@ import io.requery.Persistable
 import io.requery.kotlin.eq
 import io.requery.sql.KotlinEntityDataStore
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.testing.NullPublicKey
-import net.corda.core.crypto.toBase58String
+import net.corda.core.crypto.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.Vault
 import net.corda.core.serialization.serialize
@@ -20,6 +17,7 @@ import net.corda.node.services.vault.schemas.requery.VaultSchema
 import net.corda.node.services.vault.schemas.requery.VaultStatesEntity
 import net.corda.node.utilities.CordaPersistence
 import net.corda.node.utilities.configureDatabase
+import net.corda.testing.ALICE_PUBKEY
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_PUBKEY_1
 import net.corda.testing.TestDependencyInjectionBase
@@ -212,6 +210,6 @@ class RequeryConfigurationTest : TestDependencyInjectionBase() {
                 notary = DUMMY_NOTARY,
                 timeWindow = null
         )
-        return SignedTransaction(wtx, listOf(DigitalSignature.WithKey(NullPublicKey, ByteArray(1))))
+        return SignedTransaction(wtx, listOf(TransactionSignature(ByteArray(1), ALICE_PUBKEY, SignatureMetadata(1, Crypto.findSignatureScheme(ALICE_PUBKEY).schemeNumberID))))
     }
 }

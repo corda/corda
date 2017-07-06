@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -95,7 +95,7 @@ abstract class AbstractStateReplacementFlow {
         abstract protected fun assembleTx(): UpgradeTx
 
         @Suspendable
-        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<TransactionSignature> {
             val parties = participants.map {
                 val participantNode = serviceHub.networkMapCache.getNodeByLegalIdentityKey(it) ?:
                         throw IllegalStateException("Participant $it to state $originalState not found on the network")
@@ -113,10 +113,10 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getParticipantSignature(party: Party, stx: SignedTransaction): DigitalSignature.WithKey {
+        private fun getParticipantSignature(party: Party, stx: SignedTransaction): TransactionSignature {
             val proposal = Proposal(originalState.ref, modification)
             subFlow(SendTransactionFlow(party, stx))
-            return sendAndReceive<DigitalSignature.WithKey>(party, proposal).unwrap {
+            return sendAndReceive<TransactionSignature>(party, proposal).unwrap {
                 check(party.owningKey.isFulfilledBy(it.by)) { "Not signed by the required participant" }
                 it.verify(stx.id)
                 it
@@ -124,7 +124,7 @@ abstract class AbstractStateReplacementFlow {
         }
 
         @Suspendable
-        private fun getNotarySignatures(stx: SignedTransaction): List<DigitalSignature.WithKey> {
+        private fun getNotarySignatures(stx: SignedTransaction): List<TransactionSignature> {
             progressTracker.currentStep = NOTARY
             try {
                 return subFlow(NotaryFlow.Client(stx))
@@ -165,7 +165,7 @@ abstract class AbstractStateReplacementFlow {
             progressTracker.currentStep = APPROVING
 
             val mySignature = sign(stx)
-            val swapSignatures = sendAndReceive<List<DigitalSignature.WithKey>>(otherSide, mySignature)
+            val swapSignatures = sendAndReceive<List<TransactionSignature>>(otherSide, mySignature)
 
             // TODO: This step should not be necessary, as signatures are re-checked in verifyRequiredSignatures.
             val allSignatures = swapSignatures.unwrap { signatures ->
@@ -203,7 +203,7 @@ abstract class AbstractStateReplacementFlow {
             require(myKey in requiredKeys) { "Party is not a participant for any of the input states of transaction ${stx.id}" }
         }
 
-        private fun sign(stx: SignedTransaction): DigitalSignature.WithKey {
+        private fun sign(stx: SignedTransaction): TransactionSignature {
             return serviceHub.createSignature(stx)
         }
     }

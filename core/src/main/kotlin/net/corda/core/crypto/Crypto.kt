@@ -4,6 +4,7 @@ import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeSignature
 import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.provider.CordaSecurityProvider
+import net.corda.core.serialization.serialize
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -401,23 +402,23 @@ object Crypto {
     }
 
     /**
-     * Generic way to sign [MetaData] objects with a [PrivateKey].
-     * [MetaData] is a wrapper over the transaction's Merkle root in order to attach extra information, such as a timestamp or partial and blind signature indicators.
+     * Generic way to sign [SignableData] objects with a [PrivateKey].
+     * [SignableData] is a wrapper over the transaction's id (Merkle root) in order to attach extra information, such as a timestamp or partial and blind signature indicators.
      * @param privateKey the signer's [PrivateKey].
-     * @param metaData a [MetaData] object that adds extra information to a transaction.
-     * @return a [TransactionSignature] object than contains the output of a successful signing and the metaData.
-     * @throws IllegalArgumentException if the signature scheme is not supported for this private key or
-     * if metaData.schemeCodeName is not aligned with key type.
+     * @param signableData a [SignableData] object that adds extra information to a transaction.
+     * @return a [TransactionSignature] object than contains the output of a successful signing, signer's public key and the signature metadata.
+     * @throws IllegalArgumentException if the signature scheme is not supported for this private key.
      * @throws InvalidKeyException if the private key is invalid.
      * @throws SignatureException if signing is not possible due to malformed data or private key.
      */
     @Throws(IllegalArgumentException::class, InvalidKeyException::class, SignatureException::class)
-    fun doSign(privateKey: PrivateKey, metaData: MetaData): TransactionSignature {
-        val sigKey: SignatureScheme = findSignatureScheme(privateKey)
-        val sigMetaData: SignatureScheme = findSignatureScheme(metaData.schemeCodeName)
-        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${metaData.schemeCodeName} is not aligned with the key type.")
-        val signatureData = doSign(sigKey.schemeCodeName, privateKey, metaData.bytes())
-        return TransactionSignature(signatureData, metaData)
+    fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
+        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
+        val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
+        if (sigKey != sigMetaData) throw IllegalArgumentException("Metadata schemeCodeName: ${sigMetaData.schemeCodeName}" +
+                " is not aligned with the key type: ${sigKey.schemeCodeName}.")
+        val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)
+        return TransactionSignature(signatureBytes, keyPair.public, signableData.signatureMetadata)
     }
 
     /**
@@ -434,7 +435,7 @@ object Crypto {
      * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
-    @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
+    @Throws(InvalidKeyException::class, SignatureException::class)
     fun doVerify(schemeCodeName: String, publicKey: PublicKey, signatureData: ByteArray, clearData: ByteArray) = doVerify(findSignatureScheme(schemeCodeName), publicKey, signatureData, clearData)
 
     /**
@@ -485,9 +486,9 @@ object Crypto {
     /**
      * Utility to simplify the act of verifying a [TransactionSignature].
      * It returns true if it succeeds, but it always throws an exception if verification fails.
-     * @param publicKey the signer's [PublicKey].
-     * @param transactionSignature the signatureData on a message.
-     * @return true if verification passes or throws an exception if verification fails.
+     * @param txId transaction's id (Merkle root).
+     * @param transactionSignature the signature on the transaction.
+     * @return true if verification passes or throw exception if verification fails.
      * @throws InvalidKeyException if the key is invalid.
      * @throws SignatureException if this signatureData object is not initialized properly,
      * the passed-in signatureData is improperly encoded or of the wrong type,
@@ -495,9 +496,26 @@ object Crypto {
      * @throws IllegalArgumentException if the signature scheme is not supported or if any of the clear or signature data is empty.
      */
     @Throws(InvalidKeyException::class, SignatureException::class, IllegalArgumentException::class)
-    fun doVerify(publicKey: PublicKey, transactionSignature: TransactionSignature): Boolean {
-        if (publicKey != transactionSignature.metaData.publicKey) IllegalArgumentException("MetaData's publicKey: ${transactionSignature.metaData.publicKey.toStringShort()} does not match")
-        return Crypto.doVerify(publicKey, transactionSignature.signatureData, transactionSignature.metaData.bytes())
+    fun doVerify(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
+        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        return Crypto.doVerify(transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
+    }
+
+    /**
+     * Utility to simplify the act of verifying a digital signature by identifying the signature scheme used from the input public key's type.
+     * It returns true if it succeeds and false if not. In comparison to [doVerify] if the key and signature
+     * do not match it returns false rather than throwing an exception. Normally you should use the function which throws,
+     * as it avoids the risk of failing to test the result.
+     * @param txId transaction's id (Merkle root).
+     * @param transactionSignature the signature on the transaction.
+     * @throws SignatureException if this signatureData object is not initialized properly,
+     * the passed-in signatureData is improperly encoded or of the wrong type,
+     * if this signatureData scheme is unable to process the input data provided, if the verification is not possible.
+     */
+    @Throws(SignatureException::class)
+    fun isValid(txId: SecureHash, transactionSignature: TransactionSignature): Boolean {
+        val signableData = SignableData(txId, transactionSignature.signatureMetadata)
+        return isValid(findSignatureScheme(transactionSignature.by), transactionSignature.by, transactionSignature.bytes, signableData.serialize().bytes)
     }
 
     /**

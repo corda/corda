@@ -5,8 +5,11 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -154,7 +157,7 @@ class ForeignExchangeFlow(val tradeId: String,
         // pass transaction details to the counterparty to revalidate and confirm with a signature
         // Allow otherParty to access our data to resolve the transaction.
         subFlow(SendTransactionFlow(remoteRequestWithNotary.owner, signedTransaction))
-        val allPartySignedTx = receive<DigitalSignature.WithKey>(remoteRequestWithNotary.owner).unwrap {
+        val allPartySignedTx = receive<TransactionSignature>(remoteRequestWithNotary.owner).unwrap {
             val withNewSignature = signedTransaction + it
             // check all signatures are present except the notary
             withNewSignature.verifySignaturesExcept(withNewSignature.tx.notary!!.owningKey)

@@ -1,8 +1,8 @@
 package net.corda.core.transactions
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
@@ -36,7 +36,7 @@ data class NotaryChangeWireTransaction(
      */
     override val id: SecureHash by lazy { serializedHash(inputs + notary + newNotary) }
 
-    fun resolve(services: ServiceHub, sigs: List<DigitalSignature.WithKey>): NotaryChangeLedgerTransaction {
+    fun resolve(services: ServiceHub, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = inputs.map { ref ->
             services.loadState(ref).let { StateAndRef(it, ref) }
         }
@@ -54,7 +54,7 @@ data class NotaryChangeLedgerTransaction(
         override val notary: Party,
         val newNotary: Party,
         override val id: SecureHash,
-        override val sigs: List<DigitalSignature.WithKey>
+        override val sigs: List<TransactionSignature>
 ) : FullTransaction(), TransactionWithSignatures {
     init {
         checkEncumbrances()

@@ -2,8 +2,8 @@ package net.corda.docs
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -188,7 +188,7 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
         val selfSignedTx = serviceHub.signInitialTransaction(tx)
         //DOCEND 2
         // Send the signed transaction to the originator and await their signature to confirm
-        val allPartySignedTx = sendAndReceive<DigitalSignature.WithKey>(newState.source, selfSignedTx).unwrap {
+        val allPartySignedTx = sendAndReceive<TransactionSignature>(newState.source, selfSignedTx).unwrap {
             // Add their signature to our unmodified transaction. To check they signed the same tx.
             val agreedTx = selfSignedTx + it
             // Receive back their signature and confirm that it is for an unmodified transaction
