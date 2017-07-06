@@ -414,21 +414,21 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
         val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
-                when(sortAttribute) {
-                    is Sort.CommonStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
-                    }
-                    is Sort.VaultStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    is Sort.LinearStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    is Sort.FungibleStateAttribute -> {
-                        Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
-                    }
-                    else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
+            when(sortAttribute) {
+                is Sort.CommonStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
                 }
+                is Sort.VaultStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.LinearStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.FungibleStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+                }
+                else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
+            }
         return entityClassAndColumnName
     }
 }
