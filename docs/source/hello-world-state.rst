@@ -38,11 +38,6 @@ If you do want to dive into Kotlin, there's an official
 `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
 `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_.
 
-If not, here's a quick primer on the Kotlinisms in the declaration of ``ContractState``:
-
-* ``val`` declares a read-only property, similar to Java's ``final`` keyword
-* The syntax ``varName: varType`` declares ``varName`` as being of type ``varType``
-
 We can see that the ``ContractState`` interface declares two properties:
 
 * ``contract``: the contract controlling transactions involving this state
@@ -53,7 +48,7 @@ Beyond this, our state is free to define any properties, methods, helpers or inn
 represent a given class of shared facts on the ledger.
 
 ``ContractState`` also has several child interfaces that you may wish to implement depending on your state, such as
-``LinearState`` and ``OwnableState``.
+``LinearState`` and ``OwnableState``. See :doc:`api-states` for more information.
 
 Modelling IOUs
 --------------
@@ -145,8 +140,7 @@ We've made the following changes:
     ``Party``. ``Party`` is a built-in Corda type that represents an entity on the network.
 
 * We've overridden ``participants`` to return a list of the ``lender`` and ``borrower``
-  * This means that actions such as changing the state's contract or its notary will require approval from both the
-    ``lender`` and the ``borrower``
+  * Actions such as changing a state's contract or notary will require approval from all the ``participants``
 
 We've left ``IOUState``'s contract as ``TemplateContract`` for now. We'll update this once we've defined the
 ``IOUContract``.

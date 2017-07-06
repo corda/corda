@@ -18,8 +18,8 @@ It's easy to imagine that most CorDapps will want to impose some constraints on 
 * An asset-trading CorDapp would not want to allow users to finalise a trade without the agreement of their counterparty
 
 In Corda, we impose constraints on what transactions are allowed using contracts. These contracts are very different
-to the smart contracts of other distributed ledger platforms. They do not represent the current state of the ledger.
-Instead, like a real-world contract, they simply impose rules on what kinds of agreements are allowed.
+to the smart contracts of other distributed ledger platforms. In Corda, contracts do not represent the current state of
+the ledger. Instead, like a real-world contract, they simply impose rules on what kinds of agreements are allowed.
 
 Every state is associated with a contract. A transaction is invalid if it does not satisfy the contract of every
 input and output state in the transaction.
@@ -42,7 +42,7 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
             val legalContractReference: SecureHash
         }
 
-A few more Kotlinisms here:
+You can read about function declarations in Kotlin `here <https://kotlinlang.org/docs/reference/functions.html>`_.
 
 * ``fun`` declares a function
 * The syntax ``fun funName(arg1Name: arg1Type): returnType`` declares that ``funName`` takes an argument of type
@@ -104,7 +104,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                 requireThat {
                     // Constraints on the shape of the transaction.
                     "No inputs should be consumed when issuing an IOU." using (tx.inputs.isEmpty())
-                    "Only one output state should be created." using (tx.outputs.size == 1)
+                    "There should be one output state of type IOUState." using (tx.outputs.size == 1)
 
                     // IOU-specific constraints.
                     val out = tx.outputs.single() as IOUState
@@ -112,7 +112,8 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
 
                     // Constraints on the signers.
-                    "The borrower must be a signer." using (command.signers.contains(out.borrower.owningKey))
+                    "There must only be one signer." using (command.signers.toSet().size == 1)
+                    "The signer must be the borrower." using (command.signers.contains(out.borrower.owningKey))
                 }
             }
 
@@ -124,6 +125,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
 
         package com.iou;
 
+        import com.google.common.collect.ImmutableSet;
         import net.corda.core.contracts.AuthenticatedObject;
         import net.corda.core.contracts.CommandData;
         import net.corda.core.contracts.Contract;
@@ -145,7 +147,7 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                 requireThat(check -> {
                     // Constraints on the shape of the transaction.
                     check.using("No inputs should be consumed when issuing an IOU.", tx.getInputs().isEmpty());
-                    check.using("Only one output state should be created.", tx.getOutputs().size() == 1);
+                    check.using("There should be one output state of type IOUState.", tx.getOutputs().size() == 1);
 
                     // IOU-specific constraints.
                     final IOUState out = (IOUState) tx.getOutputs().get(0);
@@ -155,7 +157,8 @@ Let's write a contract that enforces these constraints. We'll do this by modifyi
                     check.using("The lender and the borrower cannot be the same entity.", lender != borrower);
 
                     // Constraints on the signers.
-                    check.using("The borrower must be a signer.", command.getSigners().contains(borrower.getOwningKey()));
+                    check.using("There must only be one signer.", ImmutableSet.of(command.getSigners()).size() == 1);
+                    check.using("The signer must be the borrower.", command.getSigners().contains(borrower.getOwningKey()));
 
                     return null;
                 });
@@ -172,15 +175,11 @@ The Create command
 ^^^^^^^^^^^^^^^^^^
 The first thing we add to our contract is a *command*. Commands serve two functions:
 
-* They indicate the transaction's intent, allowing us to perform different verification given the situation
-
-  * For example, a transaction proposing the creation of an IOU could have to satisfy different constraints to one
-    redeeming an IOU
-
-* They allow us to define the required signers for the transaction
-
-  * For example, IOU creation might require signatures from the borrower alone, whereas the transfer of an IOU might
-    require signatures from both the IOU's borrower and lender
+* They indicate the transaction's intent, allowing us to perform different verification given the situation. For
+  example, a transaction proposing the creation of an IOU could have to satisfy different constraints to one redeeming
+  an IOU
+* They allow us to define the required signers for the transaction. For example, IOU creation might require signatures
+  from the borrower alone, whereas the transfer of an IOU might require signatures from both the IOU's borrower and lender
 
 Our contract has one command, a ``Create`` command. All commands must implement the ``CommandData`` interface.
 

@@ -16,13 +16,8 @@ Our flow needs to take the following steps for a borrower to issue a new IOU ont
   1. Create a valid transaction proposal for the creation of a new IOU
   2. Verify the transaction
   3. Sign the transaction ourselves
-  5. Have the transaction notarised, to:
-
-     * Protect against double-spends for transactions with inputs
-     * Timestamp transactions that have a ``TimeWindow``
-
-  6. Record the transaction in our vault
-  7. Send the transaction to the IOU's lender so that they can record it too
+  4. Record the transaction in our vault
+  5. Send the transaction to the IOU's lender so that they can record it too
 
 Subflows
 ^^^^^^^^
@@ -76,12 +71,12 @@ the following:
                 val txBuilder = TransactionBuilder(notary = notary)
 
                 // We add the items to the builder.
-                txBuilder.withItems(
-                        IOUState(iouValue, me, otherParty),
-                        Command(IOUContract.Create(), me.owningKey))
+                val state = IOUState(iouValue, me, otherParty)
+                val cmd = Command(IOUContract.Create(), me.owningKey)
+                txBuilder.withItems(state, cmd)
 
                 // Verifying the transaction.
-                txBuilder.toWireTransaction().toLedgerTransaction(serviceHub).verify()
+                txBuilder.verify(serviceHub)
 
                 // Signing the transaction.
                 val signedTx = serviceHub.signInitialTransaction(txBuilder)
@@ -137,13 +132,13 @@ the following:
                 final TransactionBuilder txBuilder = new TransactionBuilder();
                 txBuilder.setNotary(notary);
 
-                // Adding the items to the builder.
-                txBuilder.withItems(
-                        new IOUState(iouValue, me, otherParty),
-                        new Command(new IOUContract.Create(), me.getOwningKey()));
+                // We add the items to the builder.
+                IOUState state = new IOUState(iouValue, me, otherParty);
+                Command cmd = new Command(new IOUContract.Create(), me.getOwningKey());
+                txBuilder.withItems(state, cmd);
 
                 // Verifying the transaction.
-                txBuilder.toWireTransaction().toLedgerTransaction(getServiceHub()).verify();
+                txBuilder.verify(getServiceHub());
 
                 // Signing the transaction.
                 final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
@@ -212,26 +207,19 @@ in the transaction makes us one of the transaction's required signers.
 
 We add these items to the transaction using the ``TransactionBuilder.withItems`` method, which takes a ``vararg`` of:
 
-* `ContractState` objects, which are added to the builder as output states
-* `StateRef` objects (references to the outputs of previous transactions), which are added to the builder as input
+* ``ContractState`` or ``TransactionState`` objects, which are added to the builder as output states
+* ``StateRef`` objects (references to the outputs of previous transactions), which are added to the builder as input
   state references
-* `Command` objects, which are added to the builder as commands
+* ``Command`` objects, which are added to the builder as commands
+* ``SecureHash`` objects, which are added to the builder as attachments
+* ``TimeWindow`` objects, which set the time-window of the transaction
 
 It will modify the ``TransactionBuilder`` in-place to add these components to it.
 
 Verifying the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 We've now built our proposed transaction. Before we sign it, we should check that it represents a valid ledger update
-proposal by verifying the transaction, which will execute each of the transaction's contracts:
-
-To verify the transaction, we must:
-
-* Convert the builder into an immutable ``WireTransaction``
-* Convert the ``WireTransaction`` into a ``LedgerTransaction`` using the ``ServiceHub``. This step resolves the
-  transaction's input state references and attachment references into actual states and attachments (in case their
-  contents are needed to verify the transaction
-* Call ``LedgerTransaction.verify`` to test whether the transaction is valid based on the contract of every input and
-  output state in the transaction
+proposal by verifying the transaction, which will execute each of the transaction's contracts.
 
 If the verification fails, we have built an invalid transaction. Our flow will then end, throwing a
 ``TransactionVerificationException``.
@@ -252,7 +240,7 @@ automatically using a built-in flow called ``FinalityFlow``:
 
 ``FinalityFlow`` completely automates the process of:
 
-* Notarising the transaction
+* Notarising the transaction if required (i.e. if the transaction contains inputs and/or a time-window)
 * Recording it in our vault
 * Sending it to the other participants (i.e. the lender) for them to record as well
 

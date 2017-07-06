@@ -86,16 +86,12 @@ If we navigate to one of these folders, we'll see four node folder. Each node fo
     .. code:: python
 
         .
-        // The runnable node
-        |____corda.jar
-        // The node's webserver
-        |____corda-webserver.jar
+        |____corda.jar                     // The runnable node
+        |____corda-webserver.jar           // The node's webserver
         |____dependencies
-        // The node's configuration file
-        |____node.conf
+        |____node.conf                     // The node's configuration file
         |____plugins
-          // Our IOU CorDapp
-          |____java/kotlin-source-0.1.jar
+          |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
 Let's start the nodes by running the following commands from the root of the project:
 
@@ -134,7 +130,7 @@ We want to create an IOU of 100 with Node B. We start the ``IOUFlow`` by typing:
 
 .. code:: python
 
-    start IOUFlow arg0: 99, arg1: "CN=NodeB,O=NodeB,L=New York,C=US"
+    start IOUFlow arg0: 99, arg1: "NodeB"
 
 Node A and Node B will automatically agree an IOU.
 
@@ -196,11 +192,18 @@ Together, these three parts completely determine how IOUs are created and evolve
 
 Next steps
 ----------
-You should now be ready to develop your own CorDapps. There's
-`a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_
-with an API and web front-end, and a set of example CorDapps in
-`the main Corda repo <https://github.com/corda/corda>`_, under ``samples``. An explanation of how to run these
-samples :doc:`here <running-the-demos>`.
+There are a number of improvements we could make to this CorDapp:
+
+* We could require signatures from the lender as well the borrower, to give both parties a say in the creation of a new
+  ``IOUState``
+* We should add unit tests, using the contract-test and flow-test frameworks
+* We should change ``IOUState.value`` from an integer to a proper amount of a given currency
+* We could add an API, to make it easier to interact with the CorDapp
+
+We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
+CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_ with an
+API and web front-end, and a set of example CorDapps in `the main Corda repo <https://github.com/corda/corda>`_, under
+``samples``. An explanation of how to run these samples :doc:`here <running-the-demos>`.
 
 As you write CorDapps, you can learn more about the API available :doc:`here <api>`.
 
