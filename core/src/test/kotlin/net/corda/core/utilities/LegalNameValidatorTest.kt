@@ -1,5 +1,8 @@
 package net.corda.core.utilities
 
+import net.corda.core.crypto.X509Utilities
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.jce.provider.PKIXNameConstraintValidator
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -7,6 +10,13 @@ import kotlin.test.assertFailsWith
 class LegalNameValidatorTest {
     @Test
     fun `no double spaces`() {
+        val t = X500Name("CN=test,O=test1,OU=test2")
+        val t1 = X500Name("O=test1,OU=test2,CN=test")
+        val t2 = X500Name("O=test1,CN=test,OU=test2")
+        val v = PKIXNameConstraintValidator()
+      //  X509Utilities.validateCertificateChain()
+
+
         assertFailsWith(IllegalArgumentException::class) {
             validateLegalName("Test Legal  Name")
         }

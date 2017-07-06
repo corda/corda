@@ -2,6 +2,8 @@
 
 package net.corda.core.utilities
 
+import net.corda.core.crypto.commonName
+import org.bouncycastle.asn1.x500.X500Name
 import java.lang.Character.UnicodeScript.*
 import java.text.Normalizer
 import java.util.regex.Pattern
@@ -19,9 +21,13 @@ import javax.security.auth.x500.X500Principal
  *
  * @throws IllegalArgumentException if the name does not meet the required rules. The message indicates why not.
  */
-@Throws(IllegalArgumentException::class)
 fun validateLegalName(normalizedLegalName: String) {
-    rules.forEach { it.validate(normalizedLegalName) }
+    legalNameRules.forEach { it.validate(normalizedLegalName) }
+}
+
+// TODO: Implement X500 attribute validation once the specification has been finalised.
+fun validateX500Name(x500Name: X500Name) {
+    validateLegalName(x500Name.commonName)
 }
 
 val WHITESPACE = "\\s++".toRegex()
@@ -35,7 +41,7 @@ fun normaliseLegalName(legalName: String): String {
     return Normalizer.normalize(trimmedLegalName, Normalizer.Form.NFKC)
 }
 
-private val rules: List<Rule<String>> = listOf(
+private val legalNameRules: List<Rule<String>> = listOf(
         UnicodeNormalizationRule(),
         CharacterRule(',', '=', '$', '"', '\'', '\\'),
         WordRule("node", "server"),
@@ -107,7 +113,7 @@ private class X500NameRule : Rule<String> {
 private class MustHaveAtLeastTwoLettersRule : Rule<String> {
     override fun validate(legalName: String) {
         // Try to exclude names like "/", "£", "X" etc.
-        require(legalName.count { it.isLetter() } >= 3) { "Must have at least two letters" }
+        require(legalName.count { it.isLetter() } >= 3) { "Illegal input legal name '$legalName'. Legal name must have at least two letters" }
     }
 }
 

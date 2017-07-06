@@ -30,7 +30,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = X509Utilities.getDevX509Name(random63BitValue().toString())
+        val incorrectNetworkMapName = X509Utilities.getDevX509Name("NetworkMap-${random63BitValue()}")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),
