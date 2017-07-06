@@ -1,6 +1,29 @@
 This is a small guide on how to generate the required files for Intel's
 Whitelisting form.
 
+To build the build docker image
+===
+
+```
+docker build -t minimal sgx-jvm/dependencies/docker-minimal
+```
+
+To build the hsm-tool.jar
+===
+On the production box the docker image should be used for the build, defined in `sgx-jvm/dependencies/docker-minimal/Dockerfile`.
+
+To build the docker image:
+
+```
+docker build -t minimal sgx-jvm/dependencies/docker-minimal
+```
+
+To build the JAR inside the image:
+
+```
+bash run_in_image.sh minimal ./gradlew sgx-jvm/hsm-tool:jar
+```
+
 To generate the production key
 ===
 
@@ -13,7 +36,9 @@ this way the only dependency is a working JDK.
 
 To generate the key:
 
-`java -jar hsm-tool.jar --mode=GenerateSgxKey --profile=prod`
+```
+java -jar sgx-jvm/hsm-tool/build/libs/sgx-jvm/hsm-tool-1.0-SNAPSHOT.jar --mode=GenerateSgxKey --profile=prod
+```
 
 
 This will require two separate smartcard authentications. The generation
@@ -23,19 +48,27 @@ will fail if there is already an existing production key in the HSM.
 To generate a production enclave signature
 ===
 
-This may be done from a dev machine with an SGX device. This step requires
-the outer sgx-jvm to be built.
+This step requires the outer sgx-jvm to be built.
 
-To generate the signature and related files:
+First build the unsigned enclave within the docker image:
 
 ```
-make clean
-make sigstruct-hsm PROFILE=prod
+bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave unsigned
 ```
 
-This will require two separate smartcard authentications.
+Now sign the enclave outside of the image:
 
-Running the above will produce the following files in `build/`:
+```
+java -jar sgx-jvm/hsm-tool/build/libs/sgx-jvm/hsm-tool-1.0-SNAPSHOT.jar --mode=Sign --source=sgx-jvm/noop-enclave/build/noop_enclave_blob_to_sign.bin --signature=sgx-jvm/noop-enclave/build/noop_enclave.signature.hsm.sha256 --pubkey=sgx-jvm/noop-enclave/build/hsm.public.pem --profile=prod
+```
+
+Now assemble the signed enclave and extract the SIGSTRUCT within the docker image.
+
+```
+bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave sigstruct-hsm
+```
+
+Running the above steps will produce the following files in `sgx-jvm/noop-enclave/build/`:
 
 * `noop_enclave.unsigned.so`: The unsigned enclave
 
@@ -49,15 +82,16 @@ Running the above will produce the following files in `build/`:
 
 * `hsm.public.pem`: The public key corresponding to the signature of the HSM.
 
-To sanity check the signed enclave:
-
-```
-make noop_test
-./build/noop_test ./build/noop_enclave.signed.hsm.so
-```
-
-The above should return cleanly.
 
 Intel's whitelisting form requires the MRSIGNER value in hexadecimal
 from `noop_enclave.sigstruct-pretty.hsm.txt`, furthermore we need to attach
 `noop_enclave.sigstruct.hsm.bin`.
+
+To sanity check the signed enclave you need to build the test, load the isgx kernel module and load the aesmd systemd unit, then run the test itself. Note that this requires the kernel module to be built in `linux-sgx-driver`, and `aesm_service` to be built in `linux-sgx`.
+
+```
+bash run_in_image.sh minimal make -C sgx-jvm/noop-enclave noop_test
+bash with_isgx.sh bash with_aesmd.sh bash with_ld_library_path.sh noop-enclave/build/noop_test noop-enclave/build/noop_enclave.signed.hsm.so
+```
+
+The above should return cleanly.

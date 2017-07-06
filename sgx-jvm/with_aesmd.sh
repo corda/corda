@@ -10,7 +10,7 @@ mkdir -p $AESM_DIR
 
 SERVICE_FILES="aesm_service le_prod_css.bin libsgx_le.signed.so libsgx_pce.signed.so libsgx_pve.signed.so libsgx_qe.signed.so"
 
-sed -e "s:@aesm_folder@:$AESM_DIR:" $SCRIPT_DIR/linux-sgx/build/linux/aesmd.service | sed -e '/InaccessibleDirectories=/d' | sed -e "s!^\\[Service\\]![Service]\nEnvironment=LD_LIBRARY_PATH=$SCRIPT_DIR/linux-sgx/build/linux:$SCRIPT_DIR/dependencies/root/usr/lib/x86_64-linux-gnu!" > $AESM_DIR/aesmd.service
+sed -e "s:@aesm_folder@:$AESM_DIR:" $SCRIPT_DIR/linux-sgx/build/linux/aesmd.service | sed -e '/InaccessibleDirectories=/d' | sed -e "s!^\\[Service\\]![Service]\nEnvironment=LD_LIBRARY_PATH=$SCRIPT_DIR/linux-sgx/build/linux:$SCRIPT_DIR/dependencies/root/usr/lib/x86_64-linux-gnu:$SCRIPT_DIR/dependencies/root/lib/x86_64-linux-gnu\nStandardOutput=journal\nStandardError=journal!" > $AESM_DIR/aesmd.service
 
 for FILE in $SERVICE_FILES
 do
@@ -26,4 +26,9 @@ function finish {
 trap finish EXIT
 
 sudo systemctl start aesmd
+# Wait until aesmd is up
+while ! netstat -a --unix | grep sgx_aesm
+do
+    sleep 1
+done
 $@
