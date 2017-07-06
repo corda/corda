@@ -57,6 +57,29 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
     }
 
     /**
+     * Verifies the signatures on this transaction and throws if any are missing. In this context, "verifying" means
+     * checking they are valid signatures and that their public keys are in the contained transactions
+     * [BaseTransaction.mustSign] property.
+     *
+     * @throws SignatureException if any signatures are invalid or unrecognised.
+     * @throws SignaturesMissingException if any signatures were missing.
+     */
+    // DOCSTART 2
+    @Throws(SignatureException::class)
+    fun verifySignatures(): WireTransaction {
+    // DOCEND 2
+        // Embedded WireTransaction is not deserialised until after we check the signatures.
+        checkSignaturesAreValid()
+
+        val missing = getMissingSignatures()
+        if (missing.isNotEmpty()) {
+            throw SignaturesMissingException(missing, getMissingKeyDescriptions(missing), id)
+        }
+        check(tx.id == id)
+        return tx
+    }
+
+    /**
      * Verifies the signatures on this transaction and throws if any are missing which aren't passed as parameters.
      * In this context, "verifying" means checking they are valid signatures and that their public keys are in
      * the contained transactions [BaseTransaction.mustSign] property.
@@ -70,17 +93,14 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>,
      */
     // DOCSTART 2
     @Throws(SignatureException::class)
-    fun verifySignatures(vararg allowedToBeMissing: PublicKey): WireTransaction {
+    fun verifySignaturesExcept(vararg allowedToBeMissing: PublicKey): WireTransaction {
     // DOCEND 2
         // Embedded WireTransaction is not deserialised until after we check the signatures.
         checkSignaturesAreValid()
 
-        val missing = getMissingSignatures()
+        val missing = getMissingSignatures() - allowedToBeMissing.toSet()
         if (missing.isNotEmpty()) {
-            val allowed = allowedToBeMissing.toSet()
-            val needed = missing - allowed
-            if (needed.isNotEmpty())
-                throw SignaturesMissingException(needed, getMissingKeyDescriptions(needed), id)
+            throw SignaturesMissingException(missing, getMissingKeyDescriptions(missing), id)
         }
         check(tx.id == id)
         return tx

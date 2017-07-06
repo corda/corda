@@ -53,7 +53,7 @@ object NotaryFlow {
                 "Input states must have the same Notary"
             }
             try {
-                stx.verifySignatures(notaryParty.owningKey)
+                stx.verifySignaturesExcept(notaryParty.owningKey)
             } catch (ex: SignedTransaction.SignaturesMissingException) {
                 throw NotaryException(NotaryError.SignaturesMissing(ex))
             }
