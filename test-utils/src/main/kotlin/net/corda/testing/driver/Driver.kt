@@ -19,7 +19,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.*
+import net.corda.core.utilities.WHITESPACE
+import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.serialization.NodeClock
@@ -33,7 +34,11 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.*
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.node.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.bouncycastle.asn1.x500.X500Name

@@ -19,7 +19,6 @@ import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
 import org.jetbrains.exposed.sql.Database
 import java.io.Closeable

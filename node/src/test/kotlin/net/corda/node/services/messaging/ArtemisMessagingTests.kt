@@ -21,9 +21,9 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.MOCK_VERSION_INFO
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
+import net.corda.testing.node.MOCK_VERSION_INFO
 import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat

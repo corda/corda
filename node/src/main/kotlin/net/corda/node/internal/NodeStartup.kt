@@ -6,7 +6,7 @@ import joptsimple.OptionException
 import net.corda.core.*
 import net.corda.core.crypto.commonName
 import net.corda.core.crypto.orgName
-import net.corda.core.node.VersionInfo
+import net.corda.node.VersionInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.Emoji
 import net.corda.core.utilities.loggerFor
