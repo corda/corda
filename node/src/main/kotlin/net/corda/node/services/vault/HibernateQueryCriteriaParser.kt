@@ -10,8 +10,8 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.serialization.toHexString
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1

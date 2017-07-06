@@ -6,7 +6,7 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.map
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.ALICE

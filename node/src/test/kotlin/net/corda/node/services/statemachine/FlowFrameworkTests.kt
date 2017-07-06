@@ -21,7 +21,7 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder

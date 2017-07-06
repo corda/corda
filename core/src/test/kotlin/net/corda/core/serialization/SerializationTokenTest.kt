@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.io.Output
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.node.ServiceHub
+import net.corda.core.utilities.OpaqueBytes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before

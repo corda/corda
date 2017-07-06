@@ -19,7 +19,7 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.core.schemas.MappedSchema;
 import net.corda.core.schemas.testing.DummyLinearStateSchemaV1;
-import net.corda.core.serialization.OpaqueBytes;
+import net.corda.core.utilities.OpaqueBytes;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.WireTransaction;
 import net.corda.node.services.database.HibernateConfiguration;

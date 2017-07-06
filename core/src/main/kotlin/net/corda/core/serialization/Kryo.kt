@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.LazyPool
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec

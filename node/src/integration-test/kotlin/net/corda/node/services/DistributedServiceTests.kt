@@ -9,7 +9,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.ALICE
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.CashIssueFlow

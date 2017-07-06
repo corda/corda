@@ -3,7 +3,7 @@ package net.corda.core.schemas
 import io.requery.Persistable
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
-import net.corda.core.serialization.toHexString
+import net.corda.core.utilities.toHexString
 import java.io.Serializable
 import javax.persistence.Column
 import javax.persistence.Embeddable

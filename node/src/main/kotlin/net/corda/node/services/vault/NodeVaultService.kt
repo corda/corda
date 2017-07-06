@@ -26,7 +26,9 @@ import net.corda.core.serialization.*
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.trace
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl

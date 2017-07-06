@@ -9,7 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
 import java.nio.ByteBuffer
