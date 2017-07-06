@@ -463,6 +463,7 @@ inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 
 }
 
 /** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
+// TODO This is not needed anymore
 interface DeserializeAsKotlinObjectDef
 
 /** Serializer to deserialize kotlin object definitions marked with [DeserializeAsKotlinObjectDef]. */

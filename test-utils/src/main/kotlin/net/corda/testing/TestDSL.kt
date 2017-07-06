@@ -116,11 +116,12 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun _output(label: String?, notary: Party, encumbrance: Int?, contractState: ContractState) {
-        val outputIndex = transactionBuilder.addOutputState(contractState, notary, encumbrance)
+        transactionBuilder.addOutputState(contractState, notary, encumbrance)
         if (label != null) {
             if (label in labelToIndexMap) {
                 throw DuplicateOutputLabel(label)
             } else {
+                val outputIndex = transactionBuilder.outputStates().size - 1
                 labelToIndexMap[label] = outputIndex
             }
         }
@@ -145,7 +146,7 @@ data class TestTransactionDSLInterpreter private constructor(
     }
 
     override fun timeWindow(data: TimeWindow) {
-        transactionBuilder.timeWindow = data
+        transactionBuilder.setTimeWindow(data)
     }
 
     override fun tweak(

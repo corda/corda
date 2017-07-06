@@ -8,16 +8,17 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.NotaryChangeFlow
 import net.corda.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.bouncycastle.asn1.x500.X500Name
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -43,6 +44,11 @@ class NotaryChangeTests {
         newNotaryNode = mockNet.createNode(networkMapAddress = oldNotaryNode.network.myAddress, advertisedServices = ServiceInfo(SimpleNotaryService.type))
 
         mockNet.runNetwork() // Clear network map registration messages
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test

@@ -54,6 +54,7 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
@@ -106,11 +107,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `flow can lazily use the serviceHub in its constructor`() {
-        val flow = object : FlowLogic<Unit>() {
-            val lazyTime by lazy { serviceHub.clock.instant() }
-            @Suspendable
-            override fun call() = Unit
-        }
+        val flow = LazyServiceHubAccessFlow()
         node1.services.startFlow(flow)
         assertThat(flow.lazyTime).isNotNull()
     }
@@ -752,6 +749,12 @@ class FlowFrameworkTests {
                 .materialize()
                 .toList()
                 .toFuture()
+    }
+
+    private class LazyServiceHubAccessFlow : FlowLogic<Unit>() {
+        val lazyTime: Instant by lazy { serviceHub.clock.instant() }
+        @Suspendable
+        override fun call() = Unit
     }
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
