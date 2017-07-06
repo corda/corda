@@ -9,7 +9,6 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.and
 import net.corda.core.toFuture
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY

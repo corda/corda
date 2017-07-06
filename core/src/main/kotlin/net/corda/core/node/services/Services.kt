@@ -122,13 +122,19 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      *  4) a total number of states that met the given [QueryCriteria]
      *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
      *     further pagination (by issuing new queries).
+     *  5) Status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  6) Other results as a [List] of any type (eg. aggregate function results with/without group by)
+     *
+     *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
+     *  results will be empty)
      */
     @CordaSerializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
                                            val pageable: PageSpecification,
                                            val totalStatesAvailable: Int,
-                                           val stateTypes: StateStatus)
+                                           val stateTypes: StateStatus,
+                                           val otherResults: List<Any>)
 
     @CordaSerializable
     data class StateMetadata(val ref: StateRef,
@@ -349,6 +355,8 @@ interface VaultQueryService {
      *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
      *  3. the [PageSpecification] used in the query
      *  4. a total number of results available (for subsequent paging if necessary)
+     *  5. status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  6. other results (aggregate functions with/without using value groups)
      *
      * @throws VaultQueryException if the query cannot be executed for any reason
      *        (missing criteria or parsing error, invalid operator, unsupported query, underlying database error)
