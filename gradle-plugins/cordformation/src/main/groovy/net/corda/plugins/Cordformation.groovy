@@ -24,9 +24,11 @@ class Cordformation implements Plugin<Project> {
         // Note: project.afterEvaluate did not have full dependency resolution completed, hence a task is used instead
         def task = project.task('configureCordappFatJar') {
             doLast {
-                project.tasks.jar.from getDirectNonCordaDependencies(project).collect {
-                    project.zipTree(it).matching { exclude { it.path.contains('META-INF') } }
-                }.flatten()
+                project.tasks.jar.from(getDirectNonCordaDependencies(project).collect { project.zipTree(it)}) {
+                    exclude "META-INF/*.SF"
+                    exclude "META-INF/*.DSA"
+                    exclude "META-INF/*.RSA"
+                }
             }
         }
         project.tasks.jar.dependsOn task
@@ -45,7 +47,7 @@ class Cordformation implements Plugin<Project> {
         }, filePathInJar).asFile()
     }
 
-    static def getDirectNonCordaDependencies(Project project) {
+    private static def getDirectNonCordaDependencies(Project project) {
         def coreCordaNames = ['jfx', 'mock', 'rpc', 'core', 'corda', 'cordform-common', 'corda-webserver', 'finance', 'node', 'node-api', 'node-schemas', 'test-utils', 'jackson', 'verifier', 'webserver', 'capsule', 'webcapsule']
         def excludes = coreCordaNames.collect { [group: 'net.corda', name: it] } + [
                 [group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib'],
