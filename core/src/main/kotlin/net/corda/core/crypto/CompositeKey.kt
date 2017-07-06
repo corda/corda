@@ -5,6 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.security.PublicKey
+import java.util.*
 
 /**
  * A tree data structure that enables the representation of composite public keys.
@@ -28,16 +29,86 @@ class CompositeKey private constructor (val threshold: Int,
                    children: List<NodeAndWeight>) : PublicKey {
     val children = children.sorted()
     init {
-        require (children.size == children.toSet().size) { "Trying to construct CompositeKey with duplicated child nodes." }
-        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees but having different structures.
-        require(children.size > 1) { "Cannot construct CompositeKey with only one child node." }
+        // TODO: replace with the more extensive, but slower, checkValidity() test.
+        checkConstraints()
+    }
+
+    @Transient
+    private var validated = false
+
+    // Check for key duplication, threshold and weight constraints and test for aggregated weight integer overflow.
+    private fun checkConstraints() {
+        require(children.size == children.toSet().size) { "CompositeKey with duplicated child nodes detected." }
+        // If we want PublicKey we only keep one key, otherwise it will lead to semantically equivalent trees
+        // but having different structures.
+        require(children.size > 1) { "CompositeKey must consist of two or more child nodes." }
+        // We should ensure threshold is positive, because smaller allowable weight for a node key is 1.
+        require(threshold > 0) { "CompositeKey threshold is set to $threshold, but it should be a positive integer." }
+        // If threshold is bigger than total weight, then it will never be satisfied.
+        val totalWeight = totalWeight()
+        require(threshold <= totalWeight) { "CompositeKey threshold: $threshold cannot be bigger than aggregated weight of " +
+                "child nodes: $totalWeight"}
+    }
+
+    // Graph cycle detection in the composite key structure to avoid infinite loops on CompositeKey graph traversal and
+    // when recursion is used (i.e. in isFulfilledBy()).
+    // An IdentityHashMap Vs HashMap is used, because a graph cycle causes infinite loop on the CompositeKey.hashCode().
+    private fun cycleDetection(visitedMap: IdentityHashMap<CompositeKey, Boolean>) {
+        for ((node) in children) {
+            if (node is CompositeKey) {
+                val curVisitedMap = IdentityHashMap<CompositeKey, Boolean>()
+                curVisitedMap.putAll(visitedMap)
+                require(!curVisitedMap.contains(node)) { "Cycle detected for CompositeKey: $node" }
+                curVisitedMap.put(node, true)
+                node.cycleDetection(curVisitedMap)
+            }
+        }
+    }
+
+    /**
+     * This method will detect graph cycles in the full composite key structure to protect against infinite loops when
+     * traversing the graph and key duplicates in the each layer. It also checks if the threshold and weight constraint
+     * requirements are met, while it tests for aggregated-weight integer overflow.
+     * In practice, this method should be always invoked on the root [CompositeKey], as it inherently
+     * validates the child nodes (all the way till the leaves).
+     * TODO: Always call this method when deserialising [CompositeKey]s.
+     */
+    fun checkValidity() {
+        val visitedMap = IdentityHashMap<CompositeKey,Boolean>()
+        visitedMap.put(this, true)
+        cycleDetection(visitedMap) // Graph cycle testing on the root node.
+        checkConstraints()
+        for ((node, _) in children) {
+            if (node is CompositeKey) {
+                // We don't need to check for cycles on the rest of the nodes (testing on the root node is enough).
+                node.checkConstraints()
+            }
+        }
+        validated = true
+    }
+
+    // Method to check if the total (aggregated) weight of child nodes overflows.
+    // Unlike similar solutions that use long conversion, this approach takes advantage of the minimum weight being 1.
+    private fun totalWeight(): Int {
+        var sum = 0
+        for ((_, weight) in children) {
+            require (weight > 0) { "Non-positive weight: $weight detected." }
+            sum = Math.addExact(sum, weight) // Add and check for integer overflow.
+        }
+        return sum
     }
 
     /**
      * Holds node - weight pairs for a CompositeKey. Ordered first by weight, then by node's hashCode.
+     * Each node should be assigned with a positive weight to avoid certain types of weight underflow attacks.
      */
     @CordaSerializable
     data class NodeAndWeight(val node: PublicKey, val weight: Int): Comparable<NodeAndWeight>, ASN1Object() {
+
+        init {
+            // We don't allow zero or negative weights. Minimum weight = 1.
+            require (weight > 0) { "A non-positive weight was detected. Node info: $this"  }
+        }
         override fun compareTo(other: NodeAndWeight): Int {
             if (weight == other.weight) {
                 return node.hashCode().compareTo(other.node.hashCode())
@@ -50,6 +121,10 @@ class CompositeKey private constructor (val threshold: Int,
             vector.add(DERBitString(node.encoded))
             vector.add(ASN1Integer(weight.toLong()))
             return DERSequence(vector)
+        }
+
+        override fun toString(): String {
+            return "Public key: ${node.toStringShort()}, weight: $weight"
         }
     }
 
@@ -75,21 +150,30 @@ class CompositeKey private constructor (val threshold: Int,
     }
     override fun getFormat() = ASN1Encoding.DER
 
+    // Extracted method from isFulfilledBy.
+    private fun checkFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
+        if (keysToCheck.any { it is CompositeKey } ) return false
+        val totalWeight = children.map { (node, weight) ->
+            if (node is CompositeKey) {
+                if (node.checkFulfilledBy(keysToCheck)) weight else 0
+            } else {
+                if (keysToCheck.contains(node)) weight else 0
+            }
+        }.sum()
+        return totalWeight >= threshold
+    }
+
     /**
      * Function checks if the public keys corresponding to the signatures are matched against the leaves of the composite
      * key tree in question, and the total combined weight of all children is calculated for every intermediary node.
      * If all thresholds are satisfied, the composite key requirement is considered to be met.
      */
     fun isFulfilledBy(keysToCheck: Iterable<PublicKey>): Boolean {
-        if (keysToCheck.any { it is CompositeKey } ) return false
-        val totalWeight = children.map { (node, weight) ->
-            if (node is CompositeKey) {
-                if (node.isFulfilledBy(keysToCheck)) weight else 0
-            } else {
-                if (keysToCheck.contains(node)) weight else 0
-            }
-        }.sum()
-        return totalWeight >= threshold
+        // We validate keys only when checking if they're matched, as this checks subkeys as a result.
+        // Doing these checks at deserialization/construction time would result in duplicate checks.
+        if (!validated)
+            checkValidity() // TODO: remove when checkValidity() will be eventually invoked during/after deserialization.
+        return checkFulfilledBy(keysToCheck)
     }
 
     /**
@@ -134,14 +218,14 @@ class CompositeKey private constructor (val threshold: Int,
 
         /**
          * Builds the [CompositeKey]. If [threshold] is not specified, it will default to
-         * the size of the children, effectively generating an "N of N" requirement.
+         * the total (aggregated) weight of the children, effectively generating an "N of N" requirement.
          * During process removes single keys wrapped in [CompositeKey] and enforces ordering on child nodes.
          */
         @Throws(IllegalArgumentException::class)
         fun build(threshold: Int? = null): PublicKey {
             val n = children.size
             if (n > 1)
-                return CompositeKey(threshold ?: n, children)
+                return CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)
             else if (n == 1) {
                 require(threshold == null || threshold == children.first().weight)
                     { "Trying to build invalid CompositeKey, threshold value different than weight of single child node." }
