@@ -3,12 +3,12 @@ package net.corda.node.services.vault
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
-import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
 import net.corda.core.contracts.testing.DummyLinearContract
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.toBase58String
 import net.corda.core.days
 import net.corda.core.identity.Party
 import net.corda.core.node.services.*
@@ -18,9 +18,6 @@ import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.DUMMY_NOTARY_KEY
-import net.corda.testing.TEST_TX_TIME
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
@@ -556,6 +553,143 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `aggregate functions without group clause`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+
+            // DOCSTART VaultQueryExample21
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum() }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val count = builder { CashSchemaV1.PersistentCashState::pennies.count() }
+            val countCriteria = VaultCustomQueryCriteria(count)
+
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max() }
+            val maxCriteria = VaultCustomQueryCriteria(max)
+
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min() }
+            val minCriteria = VaultCustomQueryCriteria(min)
+
+            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg() }
+            val avgCriteria = VaultCustomQueryCriteria(avg)
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria
+                                                             .and(countCriteria)
+                                                             .and(maxCriteria)
+                                                             .and(minCriteria)
+                                                             .and(avgCriteria))
+            // DOCEND VaultQueryExample21
+
+            assertThat(results.otherResults).hasSize(5)
+            assertThat(results.otherResults[0]).isEqualTo(150000L)
+            assertThat(results.otherResults[1]).isEqualTo(15L)
+            assertThat(results.otherResults[2]).isEqualTo(11298L)
+            assertThat(results.otherResults[3]).isEqualTo(8702L)
+            assertThat(results.otherResults[4]).isEqualTo(10000.0)
+        }
+    }
+
+    @Test
+    fun `aggregate functions with single group clause`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+
+            // DOCSTART VaultQueryExample22
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val max = builder { CashSchemaV1.PersistentCashState::pennies.max(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val maxCriteria = VaultCustomQueryCriteria(max)
+
+            val min = builder { CashSchemaV1.PersistentCashState::pennies.min(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val minCriteria = VaultCustomQueryCriteria(min)
+
+            val avg = builder { CashSchemaV1.PersistentCashState::pennies.avg(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val avgCriteria = VaultCustomQueryCriteria(avg)
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria
+                                                             .and(maxCriteria)
+                                                             .and(minCriteria)
+                                                             .and(avgCriteria))
+            // DOCEND VaultQueryExample22
+
+            assertThat(results.otherResults).hasSize(24)
+            /** CHF */
+            assertThat(results.otherResults[0]).isEqualTo(50000L)
+            assertThat(results.otherResults[1]).isEqualTo("CHF")
+            assertThat(results.otherResults[2]).isEqualTo(10274L)
+            assertThat(results.otherResults[3]).isEqualTo("CHF")
+            assertThat(results.otherResults[4]).isEqualTo(9481L)
+            assertThat(results.otherResults[5]).isEqualTo("CHF")
+            assertThat(results.otherResults[6]).isEqualTo(10000.0)
+            assertThat(results.otherResults[7]).isEqualTo("CHF")
+            /** GBP */
+            assertThat(results.otherResults[8]).isEqualTo(40000L)
+            assertThat(results.otherResults[9]).isEqualTo("GBP")
+            assertThat(results.otherResults[10]).isEqualTo(10343L)
+            assertThat(results.otherResults[11]).isEqualTo("GBP")
+            assertThat(results.otherResults[12]).isEqualTo(9351L)
+            assertThat(results.otherResults[13]).isEqualTo("GBP")
+            assertThat(results.otherResults[14]).isEqualTo(10000.0)
+            assertThat(results.otherResults[15]).isEqualTo("GBP")
+            /** USD */
+            assertThat(results.otherResults[16]).isEqualTo(60000L)
+            assertThat(results.otherResults[17]).isEqualTo("USD")
+            assertThat(results.otherResults[18]).isEqualTo(11298L)
+            assertThat(results.otherResults[19]).isEqualTo("USD")
+            assertThat(results.otherResults[20]).isEqualTo(8702L)
+            assertThat(results.otherResults[21]).isEqualTo("USD")
+            assertThat(results.otherResults[22]).isEqualTo(10000.0)
+            assertThat(results.otherResults[23]).isEqualTo("USD")
+        }
+    }
+
+    @Test
+    fun `aggregate functions sum by issuer and currency and sort by aggregate sum`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L), issuedBy = BOC.ref(1), issuerKey = BOC_KEY)
+            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L), issuedBy = DUMMY_CASH_ISSUER)
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L), issuedBy = BOC.ref(2), issuerKey = BOC_KEY)
+
+            // DOCSTART VaultQueryExample23
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::issuerParty,
+                                                                                                      CashSchemaV1.PersistentCashState::currency),
+                                                                              orderBy = Sort.Direction.DESC)
+            }
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(VaultCustomQueryCriteria(sum))
+            // DOCEND VaultQueryExample23
+
+            assertThat(results.otherResults).hasSize(12)
+
+            assertThat(results.otherResults[0]).isEqualTo(40000L)
+            assertThat(results.otherResults[1]).isEqualTo(BOC_PUBKEY.toBase58String())
+            assertThat(results.otherResults[2]).isEqualTo("GBP")
+            assertThat(results.otherResults[3]).isEqualTo(30000L)
+            assertThat(results.otherResults[4]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
+            assertThat(results.otherResults[5]).isEqualTo("GBP")
+            assertThat(results.otherResults[6]).isEqualTo(20000L)
+            assertThat(results.otherResults[7]).isEqualTo(BOC_PUBKEY.toBase58String())
+            assertThat(results.otherResults[8]).isEqualTo("USD")
+            assertThat(results.otherResults[9]).isEqualTo(10000L)
+            assertThat(results.otherResults[10]).isEqualTo(DUMMY_CASH_ISSUER.party.owningKey.toBase58String())
+            assertThat(results.otherResults[11]).isEqualTo("USD")
+        }
+    }
+
     private val TODAY = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC)
 
     @Test
@@ -862,7 +996,7 @@ class VaultQueryTests {
             // DOCSTART VaultQueryExample9
             val linearStateCriteria = LinearStateQueryCriteria(linearId = listOf(linearId), status = Vault.StateStatus.ALL)
             val vaultCriteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria.and(vaultCriteria))
+            val results = vaultQuerySvc.queryBy<LinearState>(linearStateCriteria and vaultCriteria)
             // DOCEND VaultQueryExample9
             assertThat(results.states).hasSize(4)
         }
@@ -1173,6 +1307,52 @@ class VaultQueryTests {
             // DOCEND VaultQueryExample12
 
             assertThat(results.states).hasSize(3)
+        }
+    }
+
+    @Test
+    fun `unconsumed cash balance for single currency`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+
+            val sum = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val sumCriteria = VaultCustomQueryCriteria(sum)
+
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::currency.equal(USD.currencyCode) }
+            val ccyCriteria = VaultCustomQueryCriteria(ccyIndex)
+
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(sumCriteria.and(ccyCriteria))
+
+            assertThat(results.otherResults).hasSize(2)
+            assertThat(results.otherResults[0]).isEqualTo(30000L)
+            assertThat(results.otherResults[1]).isEqualTo("USD")
+        }
+    }
+
+    @Test
+    fun `unconsumed cash balances for all currencies`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(200.DOLLARS, DUMMY_NOTARY, 2, 2, Random(0L))
+            services.fillWithSomeTestCash(300.POUNDS, DUMMY_NOTARY, 3, 3, Random(0L))
+            services.fillWithSomeTestCash(400.POUNDS, DUMMY_NOTARY, 4, 4, Random(0L))
+            services.fillWithSomeTestCash(500.SWISS_FRANCS, DUMMY_NOTARY, 5, 5, Random(0L))
+            services.fillWithSomeTestCash(600.SWISS_FRANCS, DUMMY_NOTARY, 6, 6, Random(0L))
+
+            val ccyIndex = builder { CashSchemaV1.PersistentCashState::pennies.sum(groupByColumns = listOf(CashSchemaV1.PersistentCashState::currency)) }
+            val criteria = VaultCustomQueryCriteria(ccyIndex)
+            val results = vaultQuerySvc.queryBy<FungibleAsset<*>>(criteria)
+
+            assertThat(results.otherResults).hasSize(6)
+            assertThat(results.otherResults[0]).isEqualTo(110000L)
+            assertThat(results.otherResults[1]).isEqualTo("CHF")
+            assertThat(results.otherResults[2]).isEqualTo(70000L)
+            assertThat(results.otherResults[3]).isEqualTo("GBP")
+            assertThat(results.otherResults[4]).isEqualTo(30000L)
+            assertThat(results.otherResults[5]).isEqualTo("USD")
         }
     }
 

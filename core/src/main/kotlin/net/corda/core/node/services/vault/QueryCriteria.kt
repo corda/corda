@@ -1,3 +1,5 @@
+@file:JvmName("QueryCriteria")
+
 package net.corda.core.node.services.vault
 
 import net.corda.core.contracts.ContractState
@@ -5,8 +7,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.QueryCriteria.AndComposition
-import net.corda.core.node.services.vault.QueryCriteria.OrComposition
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.OpaqueBytes
@@ -96,13 +96,13 @@ sealed class QueryCriteria {
     }
 
     // enable composition of [QueryCriteria]
-    data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseAnd(this.a, this.b)
         }
     }
 
-    data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseOr(this.a, this.b)
         }
@@ -114,6 +114,9 @@ sealed class QueryCriteria {
         RECORDED,
         CONSUMED
     }
+
+    infix fun and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
+    infix fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
 }
 
 interface IQueryCriteriaParser {
@@ -126,6 +129,3 @@ interface IQueryCriteriaParser {
     fun parseAnd(left: QueryCriteria, right: QueryCriteria): Collection<Predicate>
     fun parse(criteria: QueryCriteria, sorting: Sort? = null) : Collection<Predicate>
 }
-
-infix fun QueryCriteria.and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
-infix fun QueryCriteria.or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
