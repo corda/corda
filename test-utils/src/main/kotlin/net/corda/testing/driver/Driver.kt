@@ -19,8 +19,10 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.WHITESPACE
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.serialization.NodeClock
