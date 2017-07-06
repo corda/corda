@@ -68,12 +68,15 @@ class ClassCarpenter {
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
 
-    class DuplicateName : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
-    class InterfaceMismatch(msg: String) : RuntimeException(msg)
-    class NullablePrimitive(msg: String) : RuntimeException(msg)
+    class DuplicateNameException : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
+    class InterfaceMismatchException(msg: String) : RuntimeException(msg)
+    class NullablePrimitiveException(msg: String) : RuntimeException(msg)
 
     abstract class Field(val field: Class<out Any?>) {
-        protected val unsetName = "Unset"
+        companion object {
+            const val unsetName = "Unset"
+        }
+
         var name: String = unsetName
         abstract val nullabilityAnnotation: String
 
@@ -107,7 +110,7 @@ class ClassCarpenter {
     }
 
     class NonNullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotations/Nullable;"
+        override val nullabilityAnnotation = "Ljavax/annotations/NotNull;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             this.name = name
@@ -135,11 +138,11 @@ class ClassCarpenter {
 
 
     class NullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotations/NotNull;"
+        override val nullabilityAnnotation = "Ljavax/annotations/Nullable;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             if (field.isPrimitive) {
-                throw NullablePrimitive (
+                throw NullablePrimitiveException (
                         "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
             }
 
@@ -329,7 +332,8 @@ class ClassCarpenter {
                 visitVarInsn(ALOAD, 0)  // Load 'this'
                 visitFieldInsn(GETFIELD, schema.jvmName, name, type.descriptor)
                 when (type.field) {
-                    java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE, TYPE -> visitInsn(IRETURN)
+                    java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
+                            java.lang.Character.TYPE, TYPE -> visitInsn(IRETURN)
                     java.lang.Long.TYPE -> visitInsn(LRETURN)
                     java.lang.Double.TYPE -> visitInsn(DRETURN)
                     java.lang.Float.TYPE -> visitInsn(FRETURN)
@@ -394,7 +398,8 @@ class ClassCarpenter {
 
     private fun MethodVisitor.load(slot: Int, type: Field): Int {
         when (type.field) {
-            java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE, TYPE -> visitVarInsn(ILOAD, slot)
+            java.lang.Boolean.TYPE, Integer.TYPE, java.lang.Short.TYPE, java.lang.Byte.TYPE,
+                    java.lang.Character.TYPE, TYPE -> visitVarInsn(ILOAD, slot)
             java.lang.Long.TYPE -> visitVarInsn(LLOAD, slot)
             java.lang.Double.TYPE -> visitVarInsn(DLOAD, slot)
             java.lang.Float.TYPE -> visitVarInsn(FLOAD, slot)
@@ -407,7 +412,7 @@ class ClassCarpenter {
     }
 
     private fun validateSchema(schema: Schema) {
-        if (schema.name in _loaded) throw DuplicateName()
+        if (schema.name in _loaded) throw DuplicateNameException()
         fun isJavaName(n: String) = n.isNotBlank() && isJavaIdentifierStart(n.first()) && n.all(::isJavaIdentifierPart)
         require(isJavaName(schema.name.split(".").last())) { "Not a valid Java name: ${schema.name}" }
         schema.fields.keys.forEach { require(isJavaName(it)) { "Not a valid Java name: $it" } }
@@ -419,11 +424,15 @@ class ClassCarpenter {
             itf.methods.forEach {
                 val fieldNameFromItf = when {
                     it.name.startsWith("get") -> it.name.substring(3).decapitalize()
-                    else -> throw InterfaceMismatch("Requested interfaces must consist only of methods that start with 'get': ${itf.name}.${it.name}")
+                    else -> throw InterfaceMismatchException(
+                            "Requested interfaces must consist only of methods that start "
+                            + "with 'get': ${itf.name}.${it.name}")
                 }
 
                 if ((schema is ClassSchema) and (fieldNameFromItf !in allFields))
-                    throw InterfaceMismatch("Interface ${itf.name} requires a field named $fieldNameFromItf but that isn't found in the schema or any superclass schemas")
+                    throw InterfaceMismatchException(
+                            "Interface ${itf.name} requires a field named $fieldNameFromItf but that "
+                            + "isn't found in the schema or any superclass schemas")
             }
         }
     }

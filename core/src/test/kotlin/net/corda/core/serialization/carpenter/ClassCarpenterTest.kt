@@ -90,7 +90,7 @@ class ClassCarpenterTest {
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
 
-    @Test(expected = ClassCarpenter.DuplicateName::class)
+    @Test(expected = ClassCarpenter.DuplicateNameException::class)
     fun duplicates() {
         cc.build(ClassCarpenter.ClassSchema("gen.EmptyClass", emptyMap(), null))
         cc.build(ClassCarpenter.ClassSchema("gen.EmptyClass", emptyMap(), null))
@@ -140,7 +140,7 @@ class ClassCarpenterTest {
         assertEquals(1, i.b)
     }
 
-    @Test(expected = ClassCarpenter.InterfaceMismatch::class)
+    @Test(expected = ClassCarpenter.InterfaceMismatchException::class)
     fun `mismatched interface`() {
         val schema1 = ClassCarpenter.ClassSchema(
                 "gen.A",
@@ -268,7 +268,7 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = ClassCarpenter.NullablePrimitive::class)
+    @Test(expected = ClassCarpenter.NullablePrimitiveException::class)
     fun `nullable parameter small int`() {
         val className = "iEnjoySwede"
         val schema = ClassCarpenter.ClassSchema(
