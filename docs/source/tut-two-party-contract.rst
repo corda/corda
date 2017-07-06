@@ -19,13 +19,11 @@ only require changing a single line of code. In ``IOUContract.java``/``IOUContra
 
     .. code-block:: kotlin
 
-        // Constraints on the signers.
         "The borrower and lender must be signers." using (command.signers.containsAll(listOf(
             out.borrower.owningKey, out.lender.owningKey)))
 
     .. code-block:: java
 
-        // Constraints on the signers.
         check.using("The borrower and lender must be signers.", command.getSigners().containsAll(
             ImmutableList.of(borrower.getOwningKey(), lender.getOwningKey())));
 
