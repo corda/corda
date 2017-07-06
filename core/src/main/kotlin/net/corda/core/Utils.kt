@@ -80,7 +80,7 @@ fun <F : ListenableFuture<*>, V> F.then(block: (F) -> V) = addListener(Runnable 
 fun <U, V> Future<U>.match(success: (U) -> V, failure: (Throwable) -> V): V {
     return success(try {
         getOrThrow()
-    } catch(t: Throwable) {
+    } catch (t: Throwable) {
         return failure(t)
     })
 }
