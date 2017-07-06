@@ -2,6 +2,7 @@ package net.corda.contracts;
 
 import co.paralleluniverse.fibers.Suspendable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import kotlin.Pair;
 import kotlin.Unit;
 import net.corda.contracts.asset.CashKt;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static kotlin.collections.CollectionsKt.single;
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 
@@ -175,7 +175,7 @@ public class JavaCommercialPaper implements Contract {
                                                  State groupingKey) {
                 AuthenticatedObject<Commands.Move> cmd = requireSingleCommand(tx.getCommands(), Commands.Move.class);
                 // There should be only a single input due to aggregation above
-                State input = single(inputs);
+                State input = Iterables.getOnlyElement(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -208,7 +208,7 @@ public class JavaCommercialPaper implements Contract {
                 AuthenticatedObject<Commands.Redeem> cmd = requireSingleCommand(tx.getCommands(), Commands.Redeem.class);
 
                 // There should be only a single input due to aggregation above
-                State input = single(inputs);
+                State input = Iterables.getOnlyElement(inputs);
 
                 if (!cmd.getSigners().contains(input.getOwner().getOwningKey()))
                     throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
@@ -249,7 +249,7 @@ public class JavaCommercialPaper implements Contract {
                                         @NotNull List<? extends AuthenticatedObject<? extends Commands>> commands,
                                                  State groupingKey) {
                 AuthenticatedObject<Commands.Issue> cmd = requireSingleCommand(tx.getCommands(), Commands.Issue.class);
-                State output = single(outputs);
+                State output = Iterables.getOnlyElement(outputs);
                 TimeWindow timeWindowCommand = tx.getTimeWindow();
                 Instant time = null == timeWindowCommand
                         ? null

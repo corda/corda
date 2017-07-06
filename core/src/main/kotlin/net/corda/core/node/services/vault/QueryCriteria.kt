@@ -96,13 +96,13 @@ sealed class QueryCriteria {
     }
 
     // enable composition of [QueryCriteria]
-    data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class AndComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseAnd(this.a, this.b)
         }
     }
 
-    data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
+    private data class OrComposition(val a: QueryCriteria, val b: QueryCriteria): QueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseOr(this.a, this.b)
         }

@@ -91,6 +91,7 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> {
     return when (column) {
         is Column.Java -> column.field.declaringClass as Class<O>
@@ -118,14 +119,14 @@ fun <O, C> getColumnName(column: Column<O, C>): String {
  *  paging and sorting capability:
  *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
  */
-val DEFAULT_PAGE_NUM = 0
-val DEFAULT_PAGE_SIZE = 200
+const val DEFAULT_PAGE_NUM = 0
+const val DEFAULT_PAGE_SIZE = 200
 
 /**
  * Note: this maximum size will be configurable in future (to allow for large JVM heap sized node configurations)
  *       Use [PageSpecification] to correctly handle a number of bounded pages of [MAX_PAGE_SIZE].
  */
-val MAX_PAGE_SIZE = 512
+const val MAX_PAGE_SIZE = 512
 
 /**
  * PageSpecification allows specification of a page number (starting from 0 as default) and page size (defaulting to
