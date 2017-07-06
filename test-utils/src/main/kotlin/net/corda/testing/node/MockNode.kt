@@ -10,6 +10,7 @@ import net.corda.core.*
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps

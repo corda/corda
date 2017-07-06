@@ -11,7 +11,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.map
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.testing.driver.ProcessUtilities
 import net.corda.core.utilities.loggerFor

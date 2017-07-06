@@ -1,6 +1,6 @@
 package net.corda.core.crypto
 
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
