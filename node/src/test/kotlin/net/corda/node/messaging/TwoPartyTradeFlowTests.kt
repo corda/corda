@@ -3,7 +3,6 @@ package net.corda.node.messaging
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.CommercialPaper
 import net.corda.contracts.asset.*
-import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.core.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
@@ -27,7 +26,8 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.*
+import net.corda.core.utilities.LogHelper
+import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
 import net.corda.node.internal.AbstractNode
@@ -37,6 +37,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.checkpoints
 import net.corda.node.utilities.transaction
 import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
@@ -76,6 +77,7 @@ class TwoPartyTradeFlowTests {
 
     @After
     fun after() {
+        mockNet.stopNodes()
         LogHelper.reset("platform.trade", "core.contract.TransactionGroup", "recordingmap")
     }
 

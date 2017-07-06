@@ -25,6 +25,7 @@ import java.time.Clock
 
 open class MockServiceHubInternal(
         override val database: Database,
+        override val configuration: NodeConfiguration,
         val customVault: VaultService? = null,
         val customVaultQuery: VaultQueryService? = null,
         val keyManagement: KeyManagementService? = null,
@@ -59,8 +60,6 @@ open class MockServiceHubInternal(
     override val clock: Clock
         get() = overrideClock ?: throw UnsupportedOperationException()
     override val myInfo: NodeInfo
-        get() = throw UnsupportedOperationException()
-    override val configuration: NodeConfiguration
         get() = throw UnsupportedOperationException()
     override val monitoringService: MonitoringService = MonitoringService(MetricRegistry())
     override val rpcFlows: List<Class<out FlowLogic<*>>>

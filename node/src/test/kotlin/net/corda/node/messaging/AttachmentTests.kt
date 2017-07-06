@@ -17,6 +17,7 @@ import net.corda.node.utilities.transaction
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.jetbrains.exposed.sql.Database
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -38,10 +39,13 @@ class AttachmentTests {
     @Before
     fun setUp() {
         mockNet = MockNetwork()
-
         val dataSourceProperties = makeTestDataSourceProperties()
-
         configuration = RequeryConfiguration(dataSourceProperties)
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     fun fakeAttachment(): ByteArray {

@@ -12,14 +12,15 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.utilities.transaction
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -33,6 +34,11 @@ class DataVendingServiceTests {
     @Before
     fun setup() {
         mockNet = MockNetwork()
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test

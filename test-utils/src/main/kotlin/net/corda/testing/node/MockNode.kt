@@ -412,7 +412,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun stopNodes() {
-        require(nodes.isNotEmpty())
         nodes.forEach { if (it.started) it.stop() }
     }
 
