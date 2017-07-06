@@ -13,6 +13,7 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import io.requery.util.CloseableIterator
 import net.corda.core.*
 import net.corda.core.crypto.SecureHash
@@ -35,15 +36,18 @@ import net.corda.node.services.messaging.TopicSession
 import net.corda.node.utilities.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.jetbrains.exposed.sql.Database
+import org.slf4j.Logger
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.collections.ArrayList
 
 /**
- * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachine] objects.
+ * A StateMachineManager is responsible for coordination and persistence of multiple [FlowStateMachineImpl] objects.
  * Each such object represents an instantiation of a (two-party) flow that has reached a particular point.
  *
  * An implementation of this class will persist state machines to long term storage so they can survive process restarts
@@ -75,9 +79,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private val quasarKryoPool = KryoPool.Builder {
         val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
-        DefaultKryoCustomizer.customize(serializer.kryo)
-        serializer.kryo.addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
-        serializer.kryo
+        val classResolver = makeNoWhitelistClassResolver().apply { setKryo(serializer.kryo) }
+        // TODO The ClassResolver can only be set in the Kryo constructor and Quasar doesn't provide us with a way of doing that
+        val field = Kryo::class.java.getDeclaredField("classResolver").apply { isAccessible = true }
+        serializer.kryo.apply {
+            field.set(this, classResolver)
+            DefaultKryoCustomizer.customize(this)
+            addDefaultSerializer(AutoCloseable::class.java, AutoCloseableSerialisationDetector)
+        }
     }.build()
 
     private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
@@ -107,8 +116,6 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    val scheduler = FiberScheduler()
-
     sealed class Change {
         abstract val logic: FlowLogic<*>
 
@@ -129,13 +136,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
+    private val scheduler = FiberScheduler()
     private val mutex = ThreadBox(InnerState())
+    // This thread (only enabled in dev mode) deserialises checkpoints in the background to shake out bugs in checkpoint restore.
+    private val checkpointCheckerThread = if (serviceHub.configuration.devMode) Executors.newSingleThreadExecutor() else null
+
+    @Volatile private var unrestorableCheckpoints = false
 
     // True if we're shutting down, so don't resume anything.
     @Volatile private var stopping = false
     // How many Fibers are running and not suspended.  If zero and stopping is true, then we are halted.
     private val liveFibers = ReusableLatch()
-
 
     // Monitoring support.
     private val metrics = serviceHub.monitoringService.metrics
@@ -225,6 +236,8 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         // Account for any expected Fibers in a test scenario.
         liveFibers.countDown(allowedUnsuspendedFiberCount)
         liveFibers.await()
+        checkpointCheckerThread?.let { MoreExecutors.shutdownAndAwaitTermination(it, 5, SECONDS) }
+        check(!unrestorableCheckpoints) { "Unrestorable checkpoints where created, please check the logs for details." }
     }
 
     /**
@@ -239,12 +252,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
 
     private fun restoreFibersFromCheckpoints() {
         mutex.locked {
-            checkpointStorage.forEach {
+            checkpointStorage.forEach { checkpoint ->
                 // If a flow is added before start() then don't attempt to restore it
-                if (!stateMachines.containsValue(it)) {
-                    val fiber = deserializeFiber(it)
-                    initFiber(fiber)
-                    stateMachines[fiber] = it
+                if (!stateMachines.containsValue(checkpoint)) {
+                    deserializeFiber(checkpoint, logger)?.let {
+                        initFiber(it)
+                        stateMachines[it] = checkpoint
+                    }
                 }
                 true
             }
@@ -396,12 +410,17 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun deserializeFiber(checkpoint: Checkpoint): FlowStateMachineImpl<*> {
-        return quasarKryoPool.run { kryo ->
-            // put the map of token -> tokenized into the kryo context
-            kryo.withSerializationContext(serializationContext) {
-                checkpoint.serializedFiber.deserialize(kryo)
-            }.apply { fromCheckpoint = true }
+    private fun deserializeFiber(checkpoint: Checkpoint, logger: Logger): FlowStateMachineImpl<*>? {
+        return try {
+            quasarKryoPool.run { kryo ->
+                // put the map of token -> tokenized into the kryo context
+                kryo.withSerializationContext(serializationContext) {
+                    checkpoint.serializedFiber.deserialize(kryo)
+                }.apply { fromCheckpoint = true }
+            }
+        } catch (t: Throwable) {
+            logger.error("Encountered unrestorable checkpoint!", t)
+            null
         }
     }
 
@@ -508,6 +527,14 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
         checkpointStorage.addCheckpoint(newCheckpoint)
         checkpointingMeter.mark()
+
+        checkpointCheckerThread?.execute {
+            // Immediately check that the checkpoint is valid by deserialising it. The idea is to plug any holes we have
+            // in our testing by failing any test where unrestorable checkpoints are created.
+            if (deserializeFiber(newCheckpoint, fiber.logger) == null) {
+                unrestorableCheckpoints = true
+            }
+        }
     }
 
     private fun resumeFiber(fiber: FlowStateMachineImpl<*>) {

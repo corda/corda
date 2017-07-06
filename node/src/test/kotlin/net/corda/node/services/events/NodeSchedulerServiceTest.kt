@@ -21,10 +21,12 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
+import net.corda.testing.getTestX509Name
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
@@ -32,6 +34,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.io.Closeable
+import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
 import java.time.Instant
@@ -67,7 +70,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         val testReference: NodeSchedulerServiceTest
     }
 
-
     @Before
     fun setup() {
         countDown = CountDownLatch(1)
@@ -87,7 +89,12 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
                     InMemoryMessagingNetwork.PeerHandle(0, nullIdentity),
                     AffinityExecutor.ServiceAffinityExecutor("test", 1),
                     database)
-            services = object : MockServiceHubInternal(database, overrideClock = testClock, keyManagement = kms, network = mockMessagingService), TestReference {
+            services = object : MockServiceHubInternal(
+                    database,
+                    testNodeConfiguration(Paths.get("."), getTestX509Name("Alice")),
+                    overrideClock = testClock,
+                    keyManagement = kms,
+                    network = mockMessagingService), TestReference {
                 override val vaultService: VaultService = NodeVaultService(this, dataSourceProps)
                 override val testReference = this@NodeSchedulerServiceTest
             }

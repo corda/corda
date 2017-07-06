@@ -1,11 +1,10 @@
 package net.corda.core.transactions
 
 import co.paralleluniverse.strands.Strand
-import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
 import java.security.KeyPair
@@ -40,23 +39,22 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command> = arrayListOf(),
         protected val signers: MutableSet<PublicKey> = mutableSetOf(),
-        window: TimeWindow? = null) {
+        protected var window: TimeWindow? = null) {
     constructor(type: TransactionType, notary: Party) : this(type, notary, (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID())
 
     /**
      * Creates a copy of the builder.
      */
-    fun copy(): TransactionBuilder =
-            TransactionBuilder(
-                    type = type,
-                    notary = notary,
-                    inputs = ArrayList(inputs),
-                    attachments = ArrayList(attachments),
-                    outputs = ArrayList(outputs),
-                    commands = ArrayList(commands),
-                    signers = LinkedHashSet(signers),
-                    window = timeWindow
-            )
+    fun copy() = TransactionBuilder(
+            type = type,
+            notary = notary,
+            inputs = ArrayList(inputs),
+            attachments = ArrayList(attachments),
+            outputs = ArrayList(outputs),
+            commands = ArrayList(commands),
+            signers = LinkedHashSet(signers),
+            window = window
+    )
 
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -64,10 +62,12 @@ open class TransactionBuilder(
         for (t in items) {
             when (t) {
                 is StateAndRef<*> -> addInputState(t)
+                is SecureHash -> addAttachment(t)
                 is TransactionState<*> -> addOutputState(t)
                 is ContractState -> addOutputState(t)
                 is Command -> addCommand(t)
                 is CommandData -> throw IllegalArgumentException("You passed an instance of CommandData, but that lacks the pubkey. You need to wrap it in a Command object first.")
+                is TimeWindow -> setTimeWindow(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
@@ -76,7 +76,7 @@ open class TransactionBuilder(
     // DOCEND 1
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(attachments),
-            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, timeWindow)
+            ArrayList(outputs), ArrayList(commands), notary, signers.toList(), type, window)
 
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
     fun toLedgerTransaction(services: ServiceHub) = toWireTransaction().toLedgerTransaction(services)
@@ -86,51 +86,55 @@ open class TransactionBuilder(
         toLedgerTransaction(services).verify()
     }
 
-    open fun addInputState(stateAndRef: StateAndRef<*>) {
+    open fun addInputState(stateAndRef: StateAndRef<*>): TransactionBuilder {
         val notary = stateAndRef.state.notary
         require(notary == this.notary) { "Input state requires notary \"$notary\" which does not match the transaction notary \"${this.notary}\"." }
         signers.add(notary.owningKey)
         inputs.add(stateAndRef.ref)
+        return this
     }
 
-    fun addAttachment(attachmentId: SecureHash) {
+    fun addAttachment(attachmentId: SecureHash): TransactionBuilder {
         attachments.add(attachmentId)
+        return this
     }
 
-    fun addOutputState(state: TransactionState<*>): Int {
+    fun addOutputState(state: TransactionState<*>): TransactionBuilder {
         outputs.add(state)
-        return outputs.size - 1
+        return this
     }
 
     @JvmOverloads
     fun addOutputState(state: ContractState, notary: Party, encumbrance: Int? = null) = addOutputState(TransactionState(state, notary, encumbrance))
 
     /** A default notary must be specified during builder construction to use this method */
-    fun addOutputState(state: ContractState): Int {
+    fun addOutputState(state: ContractState): TransactionBuilder {
         checkNotNull(notary) { "Need to specify a notary for the state, or set a default one on TransactionBuilder initialisation" }
-        return addOutputState(state, notary!!)
+        addOutputState(state, notary!!)
+        return this
     }
 
-    fun addCommand(arg: Command) {
+    fun addCommand(arg: Command): TransactionBuilder {
         // TODO: replace pubkeys in commands with 'pointers' to keys in signers
         signers.addAll(arg.signers)
         commands.add(arg)
+        return this
     }
 
     fun addCommand(data: CommandData, vararg keys: PublicKey) = addCommand(Command(data, listOf(*keys)))
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
-    var timeWindow: TimeWindow? = window
-        /**
-         * Sets the [TimeWindow] for this transaction, replacing the existing [TimeWindow] if there is one. To be valid, the
-         * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
-         * the Timestamp Authority.
-         */
-        set(value) {
-            check(notary != null) { "Only notarised transactions can have a time-window" }
-            signers.add(notary!!.owningKey)
-            field = value
-        }
+    /**
+     * Sets the [TimeWindow] for this transaction, replacing the existing [TimeWindow] if there is one. To be valid, the
+     * transaction must then be signed by the notary service within this window of time. In this way, the notary acts as
+     * the Timestamp Authority.
+     */
+    fun setTimeWindow(timeWindow: TimeWindow): TransactionBuilder {
+        check(notary != null) { "Only notarised transactions can have a time-window" }
+        signers.add(notary!!.owningKey)
+        window = timeWindow
+        return this
+    }
 
     /**
      * The [TimeWindow] for the transaction can also be defined as [time] +/- [timeTolerance]. The tolerance should be
@@ -139,9 +143,7 @@ open class TransactionBuilder(
      * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
      * node.
      */
-    fun setTimeWindow(time: Instant, timeTolerance: Duration) {
-        timeWindow = TimeWindow.withTolerance(time, timeTolerance)
-    }
+    fun setTimeWindow(time: Instant, timeTolerance: Duration) = setTimeWindow(TimeWindow.withTolerance(time, timeTolerance))
 
     // Accessors that yield immutable snapshots.
     fun inputStates(): List<StateRef> = ArrayList(inputs)

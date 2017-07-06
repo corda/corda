@@ -289,7 +289,7 @@ object FlowCookbook {
             regTxBuilder.addAttachment(ourAttachment)
 
             // We set the time-window within which the transaction must be notarised using either of:
-            regTxBuilder.timeWindow = ourTimeWindow
+            regTxBuilder.setTimeWindow(ourTimeWindow)
             regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(30))
 
             /**----------------------
