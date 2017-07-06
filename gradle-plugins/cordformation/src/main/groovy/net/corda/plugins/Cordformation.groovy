@@ -24,9 +24,7 @@ class Cordformation implements Plugin<Project> {
         // Note: project.afterEvaluate did not have full dependency resolution completed, hence a task is used instead
         def task = project.task('configureCordappFatJar') {
             doLast {
-                project.tasks.jar.from getDirectNonCordaDependencies(project).collect {
-                    project.zipTree(it).matching { exclude { it.path.contains('META-INF') } }
-                }.flatten()
+                project.tasks.jar.from getDirectNonCordaDependencies(project).collect { project.zipTree(it) }.flatten()
             }
         }
         project.tasks.jar.dependsOn task
