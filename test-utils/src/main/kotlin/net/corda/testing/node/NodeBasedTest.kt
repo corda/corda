@@ -9,7 +9,6 @@ import net.corda.core.crypto.appendToCommonName
 import net.corda.core.crypto.commonName
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.testing.DUMMY_MAP
 import net.corda.core.utilities.WHITESPACE
 import net.corda.node.internal.Node
 import net.corda.node.serialization.NodeClock
@@ -21,7 +20,7 @@ import net.corda.node.services.transactions.RaftValidatingNotaryService
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.nodeapi.User
 import net.corda.nodeapi.config.parseAs
-import net.corda.testing.MOCK_VERSION_INFO
+import net.corda.testing.DUMMY_MAP
 import net.corda.testing.driver.addressMustNotBeBoundFuture
 import net.corda.testing.getFreeLocalPorts
 import org.apache.logging.log4j.Level
