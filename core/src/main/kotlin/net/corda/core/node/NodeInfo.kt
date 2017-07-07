@@ -5,11 +5,11 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.NodeInfoSchema
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.NonEmptySet
+import net.corda.core.serialization.serialize
 
 /**
  * Information for an advertised service including the service specific identity information.
@@ -45,11 +45,13 @@ data class NodeInfo(val addresses: List<NetworkHostAndPort>,
     fun generateMappedObject(schema: MappedSchema): NodeInfoSchemaV1.PersistentNodeInfo {
         return when (schema) {
             is NodeInfoSchemaV1 -> NodeInfoSchemaV1.PersistentNodeInfo(
-                    addresses = this.addresses.map { NodeInfoSchemaV1.DBHostAndPort(it) },
-                    legalIdentityAndCert = this.legalIdentityAndCert.toString(),
-                    legalIdentitiesAndCerts = this.legalIdentitiesAndCerts.map { it.toString() }.toSet(),
+                    id = 0,
+                    addresses = this.addresses.map { NodeInfoSchemaV1.DBHostAndPort.fromHostAndPort(it) },
+                    legalIdentitiesAndCerts = this.legalIdentitiesAndCerts.map { NodeInfoSchemaV1.DBPartyAndCertificate(it) }.toSet()
+                            // TODO it's workaround to keep the main identity (btw it should be on linking table)
+                            + NodeInfoSchemaV1.DBPartyAndCertificate(this.legalIdentityAndCert, isMain = true),
                     platformVersion = this.platformVersion,
-                    advertisedServices = this.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it) },
+                    advertisedServices = this.advertisedServices.map { NodeInfoSchemaV1.DBServiceEntry(it.serialize().bytes) },
                     worldMapLocation = this.worldMapLocation?.let { NodeInfoSchemaV1.DBWorldMapLocation(it) }
             )
             else -> throw IllegalArgumentException("Unrecognised schema $schema")

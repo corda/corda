@@ -23,6 +23,7 @@ import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDete
 import net.corda.node.services.messaging.ArtemisMessagingServer.Companion.ipDetectResponseProperty
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.NodeMessagingClient
+import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AddressUtils
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.TestClock
@@ -206,6 +207,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * it back to the queue.
      * - Once the message is received the session is closed and the queue deleted.
      */
+    // TODO this is where P2P messaging fails
     private fun discoverPublicHost(serverAddress: NetworkHostAndPort): String? {
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
@@ -218,7 +220,8 @@ open class Node(override val configuration: FullNodeConfiguration,
         val clientFactory = try {
             locator.createSessionFactory()
         } catch (e: ActiveMQNotConnectedException) {
-            throw IOException("Unable to connect to the Network Map Service at $serverAddress for IP address discovery", e)
+            log.info("Unable to connect to the Network Map Service at $serverAddress for IP address discovery. Using configuration address.")
+            return null // TODO This should be rewritten, after NMS changes.
         }
 
         val session = clientFactory.createSession(PEER_USER, PEER_USER, false, true, true, locator.isPreAcknowledge, ActiveMQClient.DEFAULT_ACK_BATCH_SIZE)
@@ -253,11 +256,13 @@ open class Node(override val configuration: FullNodeConfiguration,
         (network as NodeMessagingClient).start(rpcOps, userService)
     }
 
+    //TODO persistent NetworkMapCache
+    override fun makeNetworkMapCache() = InMemoryNetworkMapCache(true, services, schemas)
+
     /**
      * Insert an initial step in the registration process which will throw an exception if a non-recoverable error is
      * encountered when trying to connect to the network map node.
      */
-    // TODO add possibility to run with network map from DB
     override fun registerWithNetworkMap(): CordaFuture<Unit> {
         val networkMapConnection = messageBroker?.networkMapConnectionFuture ?: doneFuture(Unit)
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }

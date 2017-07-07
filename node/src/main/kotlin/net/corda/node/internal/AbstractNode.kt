@@ -39,7 +39,6 @@ import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.sendRequest
-import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.network.NetworkMapService.RegistrationRequest
 import net.corda.node.services.network.NetworkMapService.RegistrationResponse
@@ -102,7 +101,6 @@ import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 abstract class AbstractNode(open val configuration: NodeConfiguration,
                             val advertisedServices: Set<ServiceInfo>,
                             val platformClock: Clock,
-                            val loadNetworkCacheDB: Boolean = false, // TODO move it configuration.loadNetworkCacheDB
                             @VisibleForTesting val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     // TODO: Persist this, as well as whether the node is registered.
@@ -484,7 +482,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
 
     private fun makeInfo(legalIdentity: PartyAndCertificate): NodeInfo {
         val advertisedServiceEntries = makeServiceEntries()
-        val allIdentities = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet()
+        val allIdentities = (advertisedServiceEntries.map { it.identity } + legalIdentity).toNonEmptySet() // TODO Add legalIdentity (after services removal).
         val addresses = myAddresses() // TODO There is no support for multiple IP addresses yet.
         return NodeInfo(addresses, legalIdentity, allIdentities, platformVersion, advertisedServiceEntries, findMyLocation())
     }
@@ -581,7 +579,13 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
             services.networkMapCache.runWithoutMapService()
             noNetworkMapConfigured()  // TODO This method isn't needed as runWithoutMapService sets the Future in the cache
         } else {
-            registerWithNetworkMap()
+            val netMapRegistration = registerWithNetworkMap()
+            // We may want to start node immediately with database data and not wait for network map registration (but send it either way).
+            // So we are ready to go.
+            // TODO we may want to wait some time for registration, and then just set it?
+            if (services.networkMapCache.loadDBSuccess)
+                Futures.immediateFuture(Unit)
+            else netMapRegistration
         }
     }
 
@@ -615,11 +619,16 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */
     protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
+    // TODO it should work also for normal nodes too - not throw exception, but check if it was loadedFromDB
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): CordaFuture<Unit> {
-        // TODO: There should be a consistent approach to configuration error exceptions.
-        throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
-                "has any other map node been configured.")
+        if (services.networkMapCache.loadDBSuccess) {
+            return Futures.immediateFuture(Unit)
+        } else {
+            // TODO: There should be a consistent approach to configuration error exceptions.
+            throw IllegalStateException("Configuration error: this node isn't being asked to act as the network map, nor " +
+                    "has any other map node been configured.")
+        }
     }
 
     protected open fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {

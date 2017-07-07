@@ -5,7 +5,6 @@ import net.corda.core.contracts.FungibleAsset
 import net.corda.core.contracts.LinearState
 import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.NodeInfoSchema
 import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState

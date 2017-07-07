@@ -32,6 +32,7 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.concurrent.thread
@@ -83,9 +84,10 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                             platformVersion: Int = 1,
                             advertisedServices: Set<ServiceInfo> = emptySet(),
                             rpcUsers: List<User> = emptyList(),
-                            configOverrides: Map<String, Any> = emptyMap()): Node {
+                            configOverrides: Map<String, Any> = emptyMap(),
+                            baseDirectoryOverride: Path? = null): Node {
         check(_networkMapNode == null)
-        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides).apply {
+        return startNodeInternal(legalName, platformVersion, advertisedServices, rpcUsers, configOverrides, baseDirectoryOverride = baseDirectoryOverride).apply {
             _networkMapNode = this
         }
     }
@@ -94,19 +96,24 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                   platformVersion: Int = 1,
                   advertisedServices: Set<ServiceInfo> = emptySet(),
                   rpcUsers: List<User> = emptyList(),
-                  configOverrides: Map<String, Any> = emptyMap()): CordaFuture<Node> {
+                  configOverrides: Map<String, Any> = emptyMap(),
+                  baseDirectoryOverride: Path? = null,
+                  noNetworkMap: Boolean = false): CordaFuture<Node> {
+        val networkMapConf = if (!noNetworkMap) {
+            mapOf(
+                    "networkMapService" to mapOf(
+                            "address" to networkMapNode.configuration.p2pAddress.toString(),
+                            "legalName" to networkMapNode.info.legalIdentity.name.toString()
+                    )
+            )
+        } else mapOf()
         val node = startNodeInternal(
                 legalName,
                 platformVersion,
                 advertisedServices,
                 rpcUsers,
-                mapOf(
-                        "networkMapService" to mapOf(
-                                "address" to networkMapNode.configuration.p2pAddress.toString(),
-                                "legalName" to networkMapNode.info.legalIdentity.name.toString()
-                        )
-                ) + configOverrides
-        )
+                networkMapConf + configOverrides,
+                baseDirectoryOverride = baseDirectoryOverride)
         return node.networkMapRegistrationFuture.map { node }
     }
 
@@ -148,8 +155,9 @@ abstract class NodeBasedTest : TestDependencyInjectionBase() {
                                   platformVersion: Int,
                                   advertisedServices: Set<ServiceInfo>,
                                   rpcUsers: List<User>,
-                                  configOverrides: Map<String, Any>): Node {
-        val baseDirectory = baseDirectory(legalName).createDirectories()
+                                  configOverrides: Map<String, Any>,
+                                  baseDirectoryOverride: Path?): Node {
+        val baseDirectory = baseDirectoryOverride ?: baseDirectory(legalName).createDirectories()
         val localPort = getFreeLocalPorts("localhost", 2)
         val config = ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
