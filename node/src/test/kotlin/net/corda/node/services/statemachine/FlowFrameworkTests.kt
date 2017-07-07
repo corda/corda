@@ -8,7 +8,7 @@ import net.corda.core.*
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.testing.DummyState
+import net.corda.testing.contracts.DummyState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.random63BitValue

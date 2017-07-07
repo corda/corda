@@ -1,7 +1,7 @@
 package net.corda.node.services
 
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyContract
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party

@@ -7,8 +7,8 @@ import net.corda.contracts.asset.Cash;
 import net.corda.core.contracts.*;
 import net.corda.core.contracts.TransactionType.General;
 import net.corda.core.contracts.TransactionType.NotaryChange;
-import net.corda.core.contracts.testing.DummyContract;
-import net.corda.core.contracts.testing.DummyState;
+import net.corda.testing.contracts.DummyContract;
+import net.corda.testing.contracts.DummyState;
 import net.corda.core.crypto.DigitalSignature;
 import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
@@ -239,8 +239,8 @@ public class FlowCookbookJava {
             // When building a transaction, input states are passed in as
             // ``StateRef`` instances, which pair the hash of the transaction
             // that generated the state with the state's index in the outputs
-            // of that transaction. In practice, we'd pass the transaction hash 
-            // or the ``StateRef`` as a parameter to the flow, or extract the 
+            // of that transaction. In practice, we'd pass the transaction hash
+            // or the ``StateRef`` as a parameter to the flow, or extract the
             // ``StateRef`` from our vault.
             // DOCSTART 20
             StateRef ourStateRef = new StateRef(SecureHash.sha256("DummyTransactionHash"), 0);
@@ -381,10 +381,10 @@ public class FlowCookbookJava {
             // DOCEND 39
 
             // We can also generate a signature over the transaction without
-            // adding it to the transaction itself. We may do this when 
-            // sending just the signature in a flow instead of returning the 
-            // entire transaction with our signature. This way, the receiving 
-            // node does not need to check we haven't changed anything in the 
+            // adding it to the transaction itself. We may do this when
+            // sending just the signature in a flow instead of returning the
+            // entire transaction with our signature. This way, the receiving
+            // node does not need to check we haven't changed anything in the
             // transaction.
             // DOCSTART 40
             DigitalSignature.WithKey sig = getServiceHub().createSignature(onceSignedTx);

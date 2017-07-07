@@ -1,4 +1,4 @@
-package net.corda.core.contracts.testing
+package net.corda.testing.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash

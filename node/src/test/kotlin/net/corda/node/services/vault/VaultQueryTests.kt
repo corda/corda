@@ -6,7 +6,7 @@ import net.corda.contracts.DealState
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
-import net.corda.core.contracts.testing.DummyLinearContract
+import net.corda.testing.contracts.DummyLinearContract
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.days
@@ -841,7 +841,7 @@ class VaultQueryTests {
             }
 
             assertThat(states).hasSize(20)
-            assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.core.contracts.testing.DummyLinearContract\$State")
+            assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.testing.contracts.DummyLinearContract\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
             assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.contracts.DummyDealContract\$State")
             assertThat(metadata.last().status).isEqualTo(Vault.StateStatus.CONSUMED)    // 1 = CONSUMED
