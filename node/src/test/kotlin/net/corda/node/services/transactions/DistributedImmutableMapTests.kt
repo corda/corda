@@ -1,6 +1,5 @@
 package net.corda.node.services.transactions
 
-import com.google.common.net.HostAndPort
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
 import io.atomix.copycat.client.CopycatClient
@@ -8,6 +7,7 @@ import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.getOrThrow
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.configureDatabase
@@ -87,7 +87,7 @@ class DistributedImmutableMapTests {
         return cluster.map { it.getOrThrow() }
     }
 
-    private fun createReplica(myAddress: HostAndPort, clusterAddress: HostAndPort? = null): CompletableFuture<Member> {
+    private fun createReplica(myAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): CompletableFuture<Member> {
         val storage = Storage.builder().withStorageLevel(StorageLevel.MEMORY).build()
         val address = Address(myAddress.host, myAddress.port)
 

@@ -1,7 +1,7 @@
 package net.corda.testing.http
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.net.HostAndPort
+import net.corda.core.utilities.NetworkHostAndPort
 import java.net.URL
 
 class HttpApi(val root: URL, val mapper: ObjectMapper = defaultMapper) {
@@ -27,7 +27,7 @@ class HttpApi(val root: URL, val mapper: ObjectMapper = defaultMapper) {
     private fun toJson(any: Any) = any as? String ?: HttpUtils.defaultMapper.writeValueAsString(any)
 
     companion object {
-        fun fromHostAndPort(hostAndPort: HostAndPort, base: String, protocol: String = "http", mapper: ObjectMapper = defaultMapper): HttpApi
+        fun fromHostAndPort(hostAndPort: NetworkHostAndPort, base: String, protocol: String = "http", mapper: ObjectMapper = defaultMapper): HttpApi
                 = HttpApi(URL("$protocol://$hostAndPort/$base/"), mapper)
         private val defaultMapper: ObjectMapper by lazy {
             net.corda.jackson.JacksonSupport.createNonRpcMapper()

@@ -3,7 +3,6 @@
 
 package net.corda.testing
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.StateRef
@@ -14,6 +13,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.config.configureDevKeyAndTrustStores
@@ -88,7 +88,7 @@ val ALL_TEST_KEYS: List<KeyPair> get() = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, AL
 val MOCK_IDENTITIES = listOf(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_NOTARY_IDENTITY)
 val MOCK_IDENTITY_SERVICE: IdentityService get() = InMemoryIdentityService(MOCK_IDENTITIES, emptyMap(), DUMMY_CA.certificate.cert)
 
-val MOCK_HOST_AND_PORT = HostAndPort.fromParts("mockHost", 30000)
+val MOCK_HOST_AND_PORT = NetworkHostAndPort("mockHost", 30000)
 
 fun generateStateRef() = StateRef(SecureHash.randomSHA256(), 0)
 
@@ -99,7 +99,7 @@ private val freePortCounter = AtomicInteger(30000)
  * Unsafe for getting multiple ports!
  * Use [getFreeLocalPorts] for getting multiple ports.
  */
-fun freeLocalHostAndPort(): HostAndPort = HostAndPort.fromParts("localhost", freePort())
+fun freeLocalHostAndPort() = NetworkHostAndPort("localhost", freePort())
 
 /**
  * Returns a free port.
@@ -115,9 +115,9 @@ fun freePort(): Int = freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (
  * Unlikely, but in the time between running this function and handing the ports
  * to the Node, some other process else could allocate the returned ports.
  */
-fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<HostAndPort> {
+fun getFreeLocalPorts(hostName: String, numberToAlloc: Int): List<NetworkHostAndPort> {
     val freePort =  freePortCounter.getAndAccumulate(0) { prev, _ -> 30000 + (prev - 30000 + numberToAlloc) % 10000 }
-    return (freePort .. freePort + numberToAlloc - 1).map { HostAndPort.fromParts(hostName, it) }
+    return (freePort .. freePort + numberToAlloc - 1).map { NetworkHostAndPort(hostName, it) }
 }
 
 /**

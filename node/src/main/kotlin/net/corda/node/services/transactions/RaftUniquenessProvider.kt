@@ -1,6 +1,5 @@
 package net.corda.node.services.transactions
 
-import com.google.common.net.HostAndPort
 import io.atomix.catalyst.buffer.BufferInput
 import io.atomix.catalyst.buffer.BufferOutput
 import io.atomix.catalyst.serializer.Serializer
@@ -48,13 +47,13 @@ class RaftUniquenessProvider(services: ServiceHubInternal) : UniquenessProvider,
     /** Directory storing the Raft log and state machine snapshots */
     private val storagePath: Path = services.configuration.baseDirectory
     /** Address of the Copycat node run by this Corda node */
-    private val myAddress: HostAndPort = services.configuration.notaryNodeAddress
+    private val myAddress = services.configuration.notaryNodeAddress
             ?: throw IllegalArgumentException("notaryNodeAddress must be specified in configuration")
     /**
      * List of node addresses in the existing Copycat cluster. At least one active node must be
      * provided to join the cluster. If empty, a new cluster will be bootstrapped.
      */
-    private val clusterAddresses: List<HostAndPort> = services.configuration.notaryClusterAddresses
+    private val clusterAddresses = services.configuration.notaryClusterAddresses
     /** The database to store the state machine state in */
     private val db: Database = services.database
     /** SSL configuration */
