@@ -3,7 +3,7 @@ package net.corda.core.serialization.amqp
 import com.google.common.hash.Hasher
 import com.google.common.hash.Hashing
 import net.corda.core.crypto.toBase64
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedLong
 import org.apache.qpid.proton.codec.Data

@@ -2,7 +2,7 @@ package net.corda.node.services.persistence
 
 import com.google.common.primitives.Ints
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.node.services.api.Checkpoint
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.transactions.PersistentUniquenessProvider

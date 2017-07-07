@@ -10,7 +10,7 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.map
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.DUMMY_NOTARY

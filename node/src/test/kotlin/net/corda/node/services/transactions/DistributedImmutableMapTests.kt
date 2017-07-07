@@ -8,7 +8,7 @@ import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
 import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.utilities.configureDatabase
 import net.corda.testing.freeLocalHostAndPort

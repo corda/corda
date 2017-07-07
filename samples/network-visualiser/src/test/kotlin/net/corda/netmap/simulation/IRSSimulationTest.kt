@@ -1,7 +1,7 @@
 package net.corda.netmap.simulation
 
 import net.corda.core.getOrThrow
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import org.junit.Test
 
 class IRSSimulationTest {

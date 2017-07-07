@@ -2,7 +2,7 @@ package net.corda.core.crypto
 
 import com.google.common.io.BaseEncoding
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import java.security.MessageDigest
 
 /**
