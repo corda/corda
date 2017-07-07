@@ -14,7 +14,6 @@ import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformNode
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.demorun.runNodes
-import net.corda.demorun.util.node
 import org.bouncycastle.asn1.x500.X500Name
 
 fun main(args: Array<String>) = RaftNotaryCordform.runNodes()

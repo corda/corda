@@ -1,6 +1,6 @@
 package net.corda.plugins
 
-import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
+import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME
 import net.corda.cordform.CordformContext
 import net.corda.cordform.CordformDefinition
 import org.apache.tools.ant.filters.FixCrLfFilter
@@ -99,7 +99,7 @@ class Cordform extends DefaultTask {
      */
     private CordformDefinition loadCordformDefinition() {
         def plugin = project.convention.getPlugin(JavaPluginConvention.class)
-        def classpath = plugin.sourceSets.getByName(MAIN_SOURCE_SET_NAME).runtimeClasspath
+        def classpath = plugin.sourceSets.getByName(TEST_SOURCE_SET_NAME).runtimeClasspath
         URL[] urls = classpath.files.collect { it.toURI().toURL() }
         (CordformDefinition) new URLClassLoader(urls, CordformDefinition.classLoader).loadClass(definitionClass).newInstance()
     }

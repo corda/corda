@@ -275,6 +275,8 @@ task buildCordappDependenciesZip(type: Zip) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+apply from: 'graphs.gradle'
+
 artifactory {
     publish {
         contextUrl = 'https://ci-artifactory.corda.r3cev.com/artifactory'
