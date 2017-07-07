@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.*
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.driver.poll

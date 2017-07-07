@@ -201,9 +201,23 @@ fun secureRandomBytes(numOfBytes: Int): ByteArray {
  */
 @Throws(NoSuchAlgorithmException::class)
 fun newSecureRandom(): SecureRandom {
-    if (System.getProperty("os.name") == "Linux") {
-        return SecureRandom.getInstance("NativePRNGNonBlocking")
+    return if (System.getProperty("os.name") == "Linux") {
+        SecureRandom.getInstance("NativePRNGNonBlocking")
     } else {
-        return SecureRandom.getInstanceStrong()
+        SecureRandom.getInstanceStrong()
+    }
+}
+
+/**
+ * Returns a random positive non-zero long generated using a secure RNG. This function sacrifies a bit of entropy in order
+ * to avoid potential bugs where the value is used in a context where negative numbers or zero are not expected.
+ */
+fun random63BitValue(): Long {
+    while (true) {
+        val candidate = Math.abs(newSecureRandom().nextLong())
+        // No need to check for -0L
+        if (candidate != 0L && candidate != Long.MIN_VALUE) {
+            return candidate
+        }
     }
 }

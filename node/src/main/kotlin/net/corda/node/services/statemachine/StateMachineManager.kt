@@ -17,6 +17,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import io.requery.util.CloseableIterator
 import net.corda.core.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic

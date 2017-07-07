@@ -10,9 +10,9 @@ import net.corda.client.rpc.internal.RPCClientConfiguration
 import net.corda.core.div
 import net.corda.core.map
 import net.corda.core.messaging.RPCOps
-import net.corda.core.random63BitValue
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseNetworkHostAndPort
+import net.corda.core.crypto.random63BitValue
 import net.corda.testing.driver.ProcessUtilities
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.messaging.ArtemisMessagingServer
