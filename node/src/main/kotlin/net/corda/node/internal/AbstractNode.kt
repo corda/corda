@@ -3,7 +3,6 @@ package net.corda.node.internal
 import com.codahale.metrics.MetricRegistry
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.MutableClassToInstanceMap
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
@@ -24,6 +23,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
 import net.corda.flows.*
 import net.corda.node.services.*
@@ -621,7 +621,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     }
 
     /** Return list of node's addresses. It's overridden in MockNetwork as we don't have real addresses for MockNodes. */
-    protected abstract fun myAddresses(): List<HostAndPort>
+    protected abstract fun myAddresses(): List<NetworkHostAndPort>
 
     /** This is overriden by the mock node implementation to enable operation without any network map service */
     protected open fun noNetworkMapConfigured(): ListenableFuture<Unit> {

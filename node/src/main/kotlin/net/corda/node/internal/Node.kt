@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import com.codahale.metrics.JmxReporter
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -12,7 +11,9 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.success
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.parseNetworkHostAndPort
 import net.corda.core.utilities.trace
 import net.corda.node.VersionInfo
 import net.corda.node.serialization.NodeClock
@@ -155,21 +156,21 @@ open class Node(override val configuration: FullNodeConfiguration,
                 advertisedAddress)
     }
 
-    private fun makeLocalMessageBroker(): HostAndPort {
+    private fun makeLocalMessageBroker(): NetworkHostAndPort {
         with(configuration) {
             messageBroker = ArtemisMessagingServer(this, p2pAddress.port, rpcAddress?.port, services.networkMapCache, userService)
-            return HostAndPort.fromParts("localhost", p2pAddress.port)
+            return NetworkHostAndPort("localhost", p2pAddress.port)
         }
     }
 
-    private fun getAdvertisedAddress(): HostAndPort {
+    private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
             val useHost = if (detectPublicIp) {
                 tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
             } else {
                 p2pAddress.host
             }
-            HostAndPort.fromParts(useHost, p2pAddress.port)
+            NetworkHostAndPort(useHost, p2pAddress.port)
         }
     }
 
@@ -201,7 +202,7 @@ open class Node(override val configuration: FullNodeConfiguration,
      * it back to the queue.
      * - Once the message is received the session is closed and the queue deleted.
      */
-    private fun discoverPublicHost(serverAddress: HostAndPort): String? {
+    private fun discoverPublicHost(serverAddress: NetworkHostAndPort): String? {
         log.trace { "Trying to detect public hostname through the Network Map Service at $serverAddress" }
         val tcpTransport = ArtemisTcpTransport.tcpTransport(ConnectionDirection.Outbound(), serverAddress, configuration)
         val locator = ActiveMQClient.createServerLocatorWithoutHA(tcpTransport).apply {
@@ -227,14 +228,14 @@ open class Node(override val configuration: FullNodeConfiguration,
         val consumer = session.createConsumer(queueName)
         val artemisMessage: ClientMessage = consumer.receive(10.seconds.toMillis()) ?:
                 throw IOException("Did not receive a response from the Network Map Service at $serverAddress")
-        val publicHostAndPort = HostAndPort.fromString(artemisMessage.getStringProperty(ipDetectResponseProperty))
+        val publicHostAndPort = artemisMessage.getStringProperty(ipDetectResponseProperty)
         log.info("Detected public address: $publicHostAndPort")
 
         consumer.close()
         session.deleteQueue(queueName)
         clientFactory.close()
 
-        return publicHostAndPort.host.removePrefix("/")
+        return publicHostAndPort.removePrefix("/").parseNetworkHostAndPort().host
     }
 
     override fun startMessagingService(rpcOps: RPCOps) {
@@ -257,7 +258,7 @@ open class Node(override val configuration: FullNodeConfiguration,
         return networkMapConnection.flatMap { super.registerWithNetworkMap() }
     }
 
-    override fun myAddresses(): List<HostAndPort> {
+    override fun myAddresses(): List<NetworkHostAndPort> {
         val address = network.myAddress as ArtemisMessagingComponent.ArtemisPeerAddress
         return listOf(address.hostAndPort)
     }
@@ -359,4 +360,4 @@ open class Node(override val configuration: FullNodeConfiguration,
 
 class ConfigurationException(message: String) : Exception(message)
 
-data class NetworkMapInfo(val address: HostAndPort, val legalName: X500Name)
+data class NetworkMapInfo(val address: NetworkHostAndPort, val legalName: X500Name)

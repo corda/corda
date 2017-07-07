@@ -1,7 +1,7 @@
 package net.corda.webserver
 
-import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
 import java.nio.file.Path
@@ -15,6 +15,6 @@ class WebServerConfig(override val baseDirectory: Path, val config: Config) : No
     val exportJMXto: String get() = "http"
     val useHTTPS: Boolean by config
     val myLegalName: String by config
-    val p2pAddress: HostAndPort by config // TODO: Use RPC port instead of P2P port (RPC requires authentication, P2P does not)
-    val webAddress: HostAndPort by config
+    val p2pAddress: NetworkHostAndPort by config // TODO: Use RPC port instead of P2P port (RPC requires authentication, P2P does not)
+    val webAddress: NetworkHostAndPort by config
 }

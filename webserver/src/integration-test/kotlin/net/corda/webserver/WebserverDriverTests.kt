@@ -1,7 +1,7 @@
 package net.corda.webserver
 
-import com.google.common.net.HostAndPort
 import net.corda.core.getOrThrow
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.DUMMY_BANK_A
 import net.corda.testing.driver.WebserverHandle
 import net.corda.testing.driver.addressMustBeBound
@@ -19,7 +19,7 @@ class DriverTests {
             addressMustBeBound(executorService, webserverHandle.listenAddress, webserverHandle.process)
         }
 
-        fun webserverMustBeDown(webserverAddr: HostAndPort) {
+        fun webserverMustBeDown(webserverAddr: NetworkHostAndPort) {
             addressMustNotBeBound(executorService, webserverAddr)
         }
     }

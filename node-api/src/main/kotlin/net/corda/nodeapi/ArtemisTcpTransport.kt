@@ -1,6 +1,6 @@
 package net.corda.nodeapi
 
-import com.google.common.net.HostAndPort
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
@@ -36,7 +36,7 @@ class ArtemisTcpTransport {
 
         fun tcpTransport(
                 direction: ConnectionDirection,
-                hostAndPort: HostAndPort,
+                hostAndPort: NetworkHostAndPort,
                 config: SSLConfiguration?,
                 enableSSL: Boolean = true
         ): TransportConfiguration {
