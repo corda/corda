@@ -38,7 +38,7 @@ We can write our CorDapp in either Java or Kotlin, and will be providing the cod
 you want to write the CorDapp in Java, you'll be modifying the files under ``java-source``. If you prefer to use
 Kotlin, you'll be modifying the files under ``kotlin-source``.
 
-To implement our IOU CorDapp, we'll only need to modify five files:
+To implement our IOU CorDapp, we'll only need to modify three files:
 
 .. container:: codeset
 
@@ -53,13 +53,6 @@ To implement our IOU CorDapp, we'll only need to modify five files:
         // 3. The flow
         java-source/src/main/java/com/template/flow/TemplateFlow.java
 
-        // Tests for our contract and flow:
-          // 1. The contract tests
-        java-source/src/test/java/com/template/contract/ContractTests.java
-
-          // 2. The flow tests
-        java-source/src/test/java/com/template/flow/FlowTests.java
-
     .. code-block:: kotlin
 
         // 1. The state
@@ -70,13 +63,6 @@ To implement our IOU CorDapp, we'll only need to modify five files:
 
         // 3. The flow
         kotlin-source/src/main/kotlin/com/template/flow/TemplateFlow.kt
-
-        // Tests for our contract and flow:
-          // 1. The contract tests
-        kotlin-source/src/test/kotlin/com/template/contract/ContractTests.kt
-
-          // 2. The flow tests
-        kotlin-source/src/test/kotlin/com/template/flow/FlowTests.kt
 
 Progress so far
 ---------------

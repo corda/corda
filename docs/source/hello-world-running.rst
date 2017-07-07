@@ -86,16 +86,12 @@ If we navigate to one of these folders, we'll see four node folder. Each node fo
     .. code:: python
 
         .
-        // The runnable node
-        |____corda.jar
-        // The node's webserver
-        |____corda-webserver.jar
+        |____corda.jar                     // The runnable node
+        |____corda-webserver.jar           // The node's webserver
         |____dependencies
-        // The node's configuration file
-        |____node.conf
+        |____node.conf                     // The node's configuration file
         |____plugins
-          // Our IOU CorDapp
-          |____java/kotlin-source-0.1.jar
+          |____java/kotlin-source-0.1.jar  // Our IOU CorDapp
 
 Let's start the nodes by running the following commands from the root of the project:
 
@@ -132,9 +128,15 @@ commands.
 
 We want to create an IOU of 100 with Node B. We start the ``IOUFlow`` by typing:
 
-.. code:: python
+.. container:: codeset
 
-    start IOUFlow arg0: 99, arg1: "CN=NodeB,O=NodeB,L=New York,C=US"
+    .. code-block:: java
+
+        start IOUFlow arg0: 99, arg1: "NodeB"
+
+    .. code-block:: kotlin
+
+        start IOUFlow iouValue: 99, otherParty: "NodeB"
 
 Node A and Node B will automatically agree an IOU.
 
@@ -162,8 +164,8 @@ The vaults of Node A and Node B should both display the following output:
     - state:
         data:
           value: 99
-          sender: "CN=NodeA,O=NodeA,L=London,C=GB"
-          recipient: "CN=NodeB,O=NodeB,L=New York,C=US"
+          lender: "CN=NodeA,O=NodeA,L=London,C=GB"
+          borrower: "CN=NodeB,O=NodeB,L=New York,C=US"
           contract:
             legalContractReference: "559322B95BCF7913E3113962DC3F3CBD71C818C66977721580C045DC41C813A5"
           participants:
@@ -190,17 +192,24 @@ CorDapp is made up of three key parts:
 
 * The ``IOUState``, representing IOUs on the ledger
 * The ``IOUContract``, controlling the evolution of IOUs over time
-* The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger.
+* The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
 Together, these three parts completely determine how IOUs are created and evolved on the ledger.
 
 Next steps
 ----------
-You should now be ready to develop your own CorDapps. There's
-`a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_
-with an API and web front-end, and a set of example CorDapps in
-`the main Corda repo <https://github.com/corda/corda>`_, under ``samples``. An explanation of how to run these
-samples :doc:`here <running-the-demos>`.
+There are a number of improvements we could make to this CorDapp:
+
+* We could require signatures from the lender as well the borrower, to give both parties a say in the creation of a new
+  ``IOUState``
+* We should add unit tests, using the contract-test and flow-test frameworks
+* We should change ``IOUState.value`` from an integer to a proper amount of a given currency
+* We could add an API, to make it easier to interact with the CorDapp
+
+We will explore some of these improvements in future tutorials. But you should now be ready to develop your own
+CorDapps. There's `a more fleshed-out version of the IOU CorDapp <https://github.com/corda/cordapp-tutorial>`_ with an
+API and web front-end, and a set of example CorDapps in `the main Corda repo <https://github.com/corda/corda>`_, under
+``samples``. An explanation of how to run these samples :doc:`here <running-the-demos>`.
 
 As you write CorDapps, you can learn more about the API available :doc:`here <api>`.
 
