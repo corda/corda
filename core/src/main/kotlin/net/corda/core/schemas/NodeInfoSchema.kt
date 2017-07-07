@@ -1,90 +1,167 @@
 package net.corda.core.schemas
 
 import com.google.common.net.HostAndPort
-import io.requery.Persistable
+import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.crypto.toBase58String
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceEntry
+import net.corda.core.node.WorldCoordinate
 import net.corda.core.node.WorldMapLocation
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.X509CertificateHolder
+import java.io.Serializable
+import java.security.cert.CertPath
+import javax.persistence.CascadeType
 import javax.persistence.Column
 import javax.persistence.ElementCollection
 import javax.persistence.Embeddable
+import javax.persistence.Embedded
 import javax.persistence.Entity
+import javax.persistence.GeneratedValue
 import javax.persistence.Id
+import javax.persistence.JoinColumn
+import javax.persistence.Lob
+import javax.persistence.ManyToMany
 import javax.persistence.Table
 
 object NodeInfoSchema
-/**
- * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
- * at the time of writing.
- */
-object NodeInfoSchemaV1 : MappedSchema(schemaFamily = NodeInfoSchema.javaClass, version = 1, mappedTypes = listOf(PersistentNodeInfo::class.java)) {
+
+object NodeInfoSchemaV1 : MappedSchema(
+        schemaFamily = NodeInfoSchema.javaClass,
+        version = 1,
+        mappedTypes = listOf(PersistentNodeInfo::class.java, DBPartyAndCertificate::class.java)
+) {
     @Entity
-    @Table(name = "node_infos"
-            // TODO just for record how the syntax looks like
-//            indexes = arrayOf(
-//                    Index(name = "addresses_index", columnList = "addresses"),
-//                    Index(name = "legal_identity_cert_index", columnList = "legal_identity_cert"))
-    )
+    @Table(name = "node_infos")
     class PersistentNodeInfo(
+            @Id
+            @GeneratedValue
+            @Column(name = "node_info_id")
+            var id: Int,
+
+            // TODO bidirectional OneToMany, or just composite id
             @Column(name = "addresses")
             @ElementCollection
+            @Embedded
             val addresses: List<NodeInfoSchemaV1.DBHostAndPort>,
 
-            @Id //TODO it is stupid, id shouldn't be on that, need schema for PartyAndCertificate
-            @Column(name = "legal_identity_cert")
-//            val legalIdentityAndCert: PartyAndCertificate, //TODO Specify schema for PartyAndCertificate - blocked on identity work
-            val legalIdentityAndCert: String,
-
             @Column(name = "legal_identities_certs")
-            @ElementCollection // TODO ElementCollection is not good as there are problems with reconstructing the whole collection when removing elements. @OrderColumn annotation
-//            val legalIdentitiesAndCerts: Set<PartyAndCertificate>,
-            val legalIdentitiesAndCerts: Set<String>,
+            @ManyToMany(cascade = arrayOf(CascadeType.ALL)) // TODO look into distributed services
+            val legalIdentitiesAndCerts: Set<DBPartyAndCertificate>,
 
             @Column(name = "platform_version")
             val platformVersion: Int,
 
+            // TODO This concept will be removed in next PR, so I don't care about storing it properly
             @Column(name = "advertised_services")
             @ElementCollection
             var advertisedServices: List<DBServiceEntry> = emptyList(),
 
             @Column(name = "world_map_location", nullable = true)
             val worldMapLocation: DBWorldMapLocation?
-    ) : Persistable
-
-    @Embeddable
-    class DBHostAndPort(
-            val host: String,
-            val port: Int
-    ) {
-        constructor(hostAndPort: HostAndPort): this(hostAndPort.host, hostAndPort.port)
+    ) : Serializable {
+        fun toNodeInfo(): NodeInfo {
+            return NodeInfo(
+                    this.addresses.map { it.toHostAndPort() },
+                    this.legalIdentitiesAndCerts.filter { it.isMain }.single().toLegalIdentityAndCert(), //TODO workaround
+                    this.legalIdentitiesAndCerts.map { it.toLegalIdentityAndCert() }.toSet(),
+                    this.platformVersion,
+                    this.advertisedServices.map {
+                        it.serviceEntry?.deserialize<ServiceEntry>() ?: throw IllegalStateException("Service entry shouldn't be null") },
+                    this.worldMapLocation?.toWorldMapLocation())
+        }
     }
 
     @Embeddable
-    class DBWorldMapLocation(
-            val latitude: Double,
-            val longitude: Double,
-            val description: String,
-            val countryCode: String
+    class DBHostAndPort(
+            val host: String?,
+            val port: Int?
     ) {
+        constructor(): this(null, null)
+        companion object {
+            fun fromHostAndPort(hostAndPort: HostAndPort) = DBHostAndPort(
+                    hostAndPort.host,
+                    if(hostAndPort.hasPort()) hostAndPort.port else null
+            )
+        }
+        fun toHostAndPort(): HostAndPort {
+            val host = HostAndPort.fromHost(this.host)
+            return if (port != null) host.withDefaultPort(port) else host
+        }
+    }
+
+    // TODO This will be removed in future PR.
+    @Embeddable
+    class DBServiceEntry(
+            @Column(length = 65535)
+            val serviceEntry: ByteArray?
+    ) {
+        constructor(): this(null)
+    }
+
+    // TODO it's probably not worth storing that this way, as we won't access it
+    @Embeddable
+    class DBWorldMapLocation(
+            val latitude: Double?,
+            val longitude: Double?,
+            val description: String?,
+            val countryCode: String?
+    ) {
+        constructor(): this(null, null, null, null)
         constructor(location: WorldMapLocation): this(
                 location.coordinate.latitude,
                 location.coordinate.longitude,
                 location.description,
                 location.countryCode
         )
+        fun toWorldMapLocation(): WorldMapLocation {
+            if (latitude == null || longitude == null || description == null || countryCode == null)
+                throw IllegalStateException("Any entry in WorldMapLocation shouldn't be null")
+            else
+                return WorldMapLocation(WorldCoordinate(latitude, longitude), description, countryCode)
+        }
     }
 
-    // TODO after removing services it won't be a problem
-    @Embeddable
-    class DBServiceEntry(
-            val type: String,
-            val name: String? = null, // TODO X500Name
-            val identity: String // TODO it should be PartyAndCertificate but I don't bother for now
+    /**
+     *  PartyAndCertificate entity (to be replaced by referencing final Identity Schema) - TODO blocked on identity work
+     */
+    @Entity
+    @Table(name = "node_info_party_cert")
+            //indexes = arrayOf(Index(name = "party_cert_idx", columnList = "party_name")))
+    class DBPartyAndCertificate(
+            @Column(name = "owning_key", length = 65535, nullable = false)
+            val owningKey: String,
+
+            @Id // TODO Do we assume that names are unique?
+            @Column(name = "party_name", nullable = false)
+            val name: String,
+
+            @Column(name = "certificate")
+            @Lob
+            val certificate: ByteArray,
+
+            @Column(name = "certificate_path")
+            @Lob
+            val certPath: ByteArray,
+
+            val isMain: Boolean,
+
+            @ManyToMany(mappedBy = "legalIdentitiesAndCerts") // Because of distributed services
+            private val persistentNodeInfos: Set<PersistentNodeInfo> = emptySet()
     ) {
-        constructor(serviceEntry: ServiceEntry): this(
-                serviceEntry.info.type.toString(),
-                serviceEntry.identity.name.toString(),
-                serviceEntry.identity.owningKey.toBase58String()
-        )
+        constructor(partyAndCert: PartyAndCertificate, isMain: Boolean = false)
+                : this(partyAndCert.party.owningKey.toBase58String(), partyAndCert.party.name.toString(), partyAndCert.certificate.serialize().bytes, partyAndCert.certPath.serialize().bytes, isMain)
+        fun toLegalIdentityAndCert(): PartyAndCertificate {
+            return PartyAndCertificate(
+                    Party(X500Name(name),
+                            parsePublicKeyBase58(owningKey)),
+                    certificate.deserialize<X509CertificateHolder>(),
+                    certPath.deserialize<CertPath>()
+            )
+        }
     }
 }

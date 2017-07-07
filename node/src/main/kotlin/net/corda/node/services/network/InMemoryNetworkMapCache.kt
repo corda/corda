@@ -3,6 +3,7 @@ package net.corda.node.services.network
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.crypto.parsePublicKeyBase58
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
@@ -13,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
+import net.corda.core.schemas.NodeInfoSchemaV1
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -20,6 +22,8 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.DEFAULT_SESSION_ID
 import net.corda.node.services.api.NetworkCacheError
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.api.SchemaService
+import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.messaging.createMessage
 import net.corda.node.services.messaging.sendRequest
@@ -28,6 +32,9 @@ import net.corda.node.services.network.NetworkMapService.SubscribeResponse
 import net.corda.node.utilities.AddOrRemove
 import net.corda.node.utilities.bufferUntilDatabaseCommit
 import net.corda.node.utilities.wrapWithDatabaseTransaction
+import org.hibernate.FlushMode
+import org.hibernate.SessionFactory
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.PublicKey
@@ -42,17 +49,18 @@ import javax.annotation.concurrent.ThreadSafe
  * than the identity service directly, as this avoids problems with service start sequence (network map cache
  * and identity services depend on each other). Should always be provided except for unit test cases.
  */
+// TODO Split into InMemory- and Persistent- NetworkMapCache
 @ThreadSafe
-open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private val serviceHub: ServiceHub?) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
+open class InMemoryNetworkMapCache(
+        val loadNetworkCacheDB: Boolean = false,
+        private val serviceHub: ServiceHub?,
+        schemaService: SchemaService? = null) : SingletonSerializeAsToken(), NetworkMapCacheInternal {
     companion object {
         val logger = loggerFor<InMemoryNetworkMapCache>()
     }
 
-    init {
-        if (loadNetworkCacheDB) {
-            loadFromDB()
-        }
-    }
+    private var sessionFactory: SessionFactory? = null
+    private var registeredForPush = false
 
     override val partyNodes: List<NodeInfo> get() = registeredNodes.map { it.value }
     override val networkMapNodes: List<NodeInfo> get() = getNodesWithService(NetworkMapService.type)
@@ -63,9 +71,18 @@ open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private 
 
     private val _registrationFuture = openFuture<Void?>()
     override val mapServiceRegistered: CordaFuture<Void?> get() = _registrationFuture
+    protected val registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
+    private var _loadDBSuccess: Boolean = false
+    override val loadDBSuccess get() = _loadDBSuccess //todo move it to persistent network map cache
 
-    private var registeredForPush = false
-    protected var registeredNodes: MutableMap<PublicKey, NodeInfo> = Collections.synchronizedMap(HashMap())
+    init {
+        schemaService?.let {
+            sessionFactory = HibernateConfiguration(schemaService).sessionFactoryForRegisteredSchemas()
+        }
+        if (loadNetworkCacheDB) {
+            loadFromDB()
+        }
+    }
 
     override fun getPartyInfo(party: Party): PartyInfo? {
         val node = registeredNodes[party.owningKey]
@@ -82,6 +99,7 @@ open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private 
         return null
     }
 
+    // TODO DB query, for now registeredNodes will be just populated as before
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
     override fun getNodeByLegalIdentity(party: AbstractParty): NodeInfo? {
         val wellKnownParty = if (serviceHub != null) {
@@ -137,6 +155,7 @@ open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private 
         synchronized(_changed) {
             val previousNode = registeredNodes.put(node.legalIdentity.owningKey, node)
             if (previousNode == null) {
+                updateInfoDB(node)
                 changePublisher.onNext(MapChange.Added(node))
             } else if (previousNode != node) {
                 changePublisher.onNext(MapChange.Modified(node, previousNode))
@@ -147,6 +166,7 @@ open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private 
     override fun removeNode(node: NodeInfo) {
         synchronized(_changed) {
             registeredNodes.remove(node.legalIdentity.owningKey)
+            removeInfoDB(node)
             changePublisher.onNext(MapChange.Removed(node))
         }
     }
@@ -192,39 +212,59 @@ open class InMemoryNetworkMapCache(loadNetworkCacheDB: Boolean = false, private 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Changes related to NetworkMap redesign
+    // TODO have InMemoryNetworkMapCache and PersistentNetworkMapCache (not a cache...)
 
     /**
      * Load NetworkMap data from the database if present. Node can start without having NetworkMapService configured.
      */
-    // TODO in companionObject
     fun loadFromDB() {
-        // Populate:
-        // * partyNodes: List<NodeInfo>
-        // * val networkMapNodes: List<NodeInfo>
-        // rest should go on init
-
-//        // TODO taken from hibernate tutorial, list of entities
-////        sessionFactory = Persistence.createEntityManagerFactory( "org.hibernate.tutorial.jpa" );
-//        val entityManager = sessionFactory.createEntityManager()
-//        entityManager = sessionFactory.createEntityManager()
-//        entityManager.getTransaction().begin()
-//        val result = entityManager.createQuery("from node_infos", NodeInfoSchema::class.java).getResultList()
-//        for (event in result) {
-//            System.out.println("Event (" + event.getDate() + ") : " + event.getTitle())
-//        }
-//        entityManager.getTransaction().commit()
-//        entityManager.close()
-        TODO()
+        logger.info("Loading node infos from database...")
+        val session = sessionFactory?.withOptions()?.
+                connection(TransactionManager.current().connection)?.
+                openSession()
+        session?.use {
+            val criteria = session.criteriaBuilder.createQuery(NodeInfoSchemaV1.PersistentNodeInfo::class.java)
+            criteria.select(criteria.from(NodeInfoSchemaV1.PersistentNodeInfo::class.java))
+            val result = session.createQuery(criteria).resultList
+            if (result.isNotEmpty()) _loadDBSuccess = true
+            for (nodeInfo in result) {
+                logger.info("Loaded node info: $nodeInfo")
+                val publicKey = parsePublicKeyBase58(nodeInfo.legalIdentitiesAndCerts.filter { it.isMain }.single().owningKey) // TODO workaround
+                val node = nodeInfo.toNodeInfo()
+                registeredNodes.put(publicKey, node) // TODO it will change, we won't store it in memory
+            }
+            if (loadDBSuccess) // Useful only if we don't have NetworkMapService configured, it will be overridden by `addNetworkService`
+                _registrationFuture.set(Unit)
+        }
     }
 
-    fun updateInfoDB() {
-        //TODO look into HibernateObserver
-//        val entityManager = sessionFactory.createEntityManager()
-//        entityManager.getTransaction().begin()
-//        entityManager.persist(Event("Our very first event!", Date()))
-//        entityManager.persist(Event("A follow up event", Date()))
-//        entityManager.getTransaction().commit()
-//        entityManager.close()
-        TODO()
+    fun updateInfoDB(nodeInfo: NodeInfo) {
+        if(loadNetworkCacheDB) {
+            val session = sessionFactory?.withOptions()?.
+                    connection(TransactionManager.current().connection)?.
+                    flushMode(FlushMode.MANUAL)?.
+                    openSession()
+            session?.use {
+                val nodeInfoEntry = nodeInfo.generateMappedObject(NodeInfoSchemaV1)
+                session.merge(nodeInfoEntry)
+                session.flush()
+            }
+        }
     }
+
+    fun removeInfoDB(nodeInfo: NodeInfo) {
+        if(loadNetworkCacheDB) {
+            val session = sessionFactory?.withOptions()?.
+                    connection(TransactionManager.current().connection)?.
+                    flushMode(FlushMode.MANUAL)?.
+                    openSession()
+            session?.use { // TODO remove by linking table!
+                val info = session.find(NodeInfoSchemaV1.PersistentNodeInfo::class.java, mapOf("party_name" to nodeInfo.legalIdentity.name)) //find by name
+                session.remove(info)
+                // TODO with legalIdentityAndCert
+                session.flush()
+            }
+        }
+    }
+
 }

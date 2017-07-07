@@ -59,6 +59,9 @@ interface NetworkMapCacheInternal : NetworkMapCache {
     /** For testing where the network map cache is manipulated marks the service as immediately ready. */
     @VisibleForTesting
     fun runWithoutMapService()
+
+    /** Indicates if loading network map data from database was successful. */
+    val loadDBSuccess: Boolean
 }
 
 @CordaSerializable

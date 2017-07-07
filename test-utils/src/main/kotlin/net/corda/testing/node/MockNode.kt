@@ -26,6 +26,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.*
@@ -135,7 +136,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                         val id: Int,
                         val overrideServices: Map<ServiceInfo, KeyPair>?,
                         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue())) :
-            AbstractNode(config, advertisedServices, TestClock(), false, mockNet.busyLatch) {
+            AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
         override val platformVersion: Int get() = 1
@@ -161,6 +162,8 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
                     .start()
                     .getOrThrow()
         }
+
+        override fun makeNetworkMapCache() = InMemoryNetworkMapCache(false, services, null)
 
         override fun makeIdentityService(trustRoot: X509Certificate,
                                          clientCa: CertificateAndKeyPair?,
