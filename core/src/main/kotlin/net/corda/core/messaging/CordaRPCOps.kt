@@ -14,6 +14,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.VaultQueryException
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -78,13 +80,18 @@ interface CordaRPCOps : RPCOps {
      * and returns a [Vault.Page] object containing the following:
      *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
      *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
-     *  3. the [PageSpecification] used in the query
-     *  4. a total number of results available (for subsequent paging if necessary)
-     *  5. status types used in this query: UNCONSUMED, CONSUMED, ALL
-     *  6. other results (aggregate functions with/without using value groups)
+     *  3. total number of results available if [PageSpecification] supplied (otherwise returns -1)
+     *  4. status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  5. other results (aggregate functions with/without using value groups)
      *
-     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
-     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
+     * @throws VaultQueryException if the query cannot be executed for any reason
+     *        (missing criteria or parsing error, paging errors, unsupported query, underlying database error)
+     *
+     * Notes
+     *   If no [PageSpecification] is provided, a maximum of [DEFAULT_PAGE_SIZE] results will be returned.
+     *   API users must specify a [PageSpecification] if they are expecting more than [DEFAULT_PAGE_SIZE] results,
+     *   otherwise a [VaultQueryException] will be thrown alerting to this condition.
+     *   It is the responsibility of the API user to request further pages and/or specify a more suitable [PageSpecification].
      */
     // DOCSTART VaultQueryByAPI
     @RPCReturnsObservables

@@ -15,6 +15,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
@@ -118,12 +119,10 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * A Page contains:
      *  1) a [List] of actual [StateAndRef] requested by the specified [QueryCriteria] to a maximum of [MAX_PAGE_SIZE]
      *  2) a [List] of associated [Vault.StateMetadata], one per [StateAndRef] result
-     *  3) the [PageSpecification] definition used to bound this result set
-     *  4) a total number of states that met the given [QueryCriteria]
-     *     Note that this may be more than the specified [PageSpecification.pageSize], and should be used to perform
-     *     further pagination (by issuing new queries).
-     *  5) Status types used in this query: UNCONSUMED, CONSUMED, ALL
-     *  6) Other results as a [List] of any type (eg. aggregate function results with/without group by)
+     *  3) a total number of states that met the given [QueryCriteria] if a [PageSpecification] was provided
+     *     (otherwise defaults to -1)
+     *  4) Status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  5) Other results as a [List] of any type (eg. aggregate function results with/without group by)
      *
      *  Note: currently otherResults are used only for Aggregate Functions (in which case, the states and statesMetadata
      *  results will be empty)
@@ -131,7 +130,6 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     @CordaSerializable
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
-                                           val pageable: PageSpecification,
                                            val totalStatesAvailable: Long,
                                            val stateTypes: StateStatus,
                                            val otherResults: List<Any>)
@@ -353,17 +351,18 @@ interface VaultQueryService {
      * and returns a [Vault.Page] object containing the following:
      *  1. states as a List of <StateAndRef> (page number and size defined by [PageSpecification])
      *  2. states metadata as a List of [Vault.StateMetadata] held in the Vault States table.
-     *  3. the [PageSpecification] used in the query
-     *  4. a total number of results available (for subsequent paging if necessary)
-     *  5. status types used in this query: UNCONSUMED, CONSUMED, ALL
-     *  6. other results (aggregate functions with/without using value groups)
+     *  3. total number of results available if [PageSpecification] supplied (otherwise returns -1)
+     *  4. status types used in this query: UNCONSUMED, CONSUMED, ALL
+     *  5. other results (aggregate functions with/without using value groups)
      *
      * @throws VaultQueryException if the query cannot be executed for any reason
-     *        (missing criteria or parsing error, invalid operator, unsupported query, underlying database error)
+     *        (missing criteria or parsing error, paging errors, unsupported query, underlying database error)
      *
-     * Note: a default [PageSpecification] is applied to the query returning the 1st page (indexed from 0) with up to 200 entries.
-     *       It is the responsibility of the Client to request further pages and/or specify a more suitable [PageSpecification].
-     * Note2: you can also annotate entity fields with JPA OrderBy annotation to achieve the same effect as explicit sorting
+     * Notes
+     *   If no [PageSpecification] is provided, a maximum of [DEFAULT_PAGE_SIZE] results will be returned.
+     *   API users must specify a [PageSpecification] if they are expecting more than [DEFAULT_PAGE_SIZE] results,
+     *   otherwise a [VaultQueryException] will be thrown alerting to this condition.
+     *   It is the responsibility of the API user to request further pages and/or specify a more suitable [PageSpecification].
      */
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _queryBy(criteria: QueryCriteria,

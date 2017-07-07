@@ -13,10 +13,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
-import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.*
 import net.corda.core.seconds
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.sizedInputStreamAndHash
@@ -190,7 +187,7 @@ class StandaloneCordaRPClientTest {
                 .returnValue.getOrThrow(timeout)
 
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-        val paging = PageSpecification(0, 10)
+        val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
         val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.DESC)))
 
         val queryResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)

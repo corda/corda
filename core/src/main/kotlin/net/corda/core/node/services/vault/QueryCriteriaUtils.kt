@@ -119,7 +119,7 @@ fun <O, C> getColumnName(column: Column<O, C>): String {
  *  paging and sorting capability:
  *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
  */
-const val DEFAULT_PAGE_NUM = 0
+const val DEFAULT_PAGE_NUM = 1
 const val DEFAULT_PAGE_SIZE = 200
 
 /**
@@ -129,7 +129,7 @@ const val DEFAULT_PAGE_SIZE = 200
 const val MAX_PAGE_SIZE = 512
 
 /**
- * PageSpecification allows specification of a page number (starting from 0 as default) and page size (defaulting to
+ * PageSpecification allows specification of a page number (starting from 1 as default) and page size (defaulting to
  * [DEFAULT_PAGE_SIZE] with a maximum page size of [MAX_PAGE_SIZE]
  */
 @CordaSerializable

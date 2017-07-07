@@ -48,7 +48,7 @@ The API provides both static (snapshot) and dynamic (snapshot with streaming upd
 .. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
 
 Simple pagination (page number and size) and sorting (directional ordering using standard or custom property attributes) is also specifiable.
-Defaults are defined for Paging (pageNumber = 0, pageSize = 200) and Sorting (direction = ASC).
+Defaults are defined for Paging (pageNumber = 1, pageSize = 200) and Sorting (direction = ASC).
 
 The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of operators to include: binary logical (AND, OR), comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL), equality (EQUAL, NOT_EQUAL), likeness (LIKE, NOT_LIKE), nullability (IS_NULL, NOT_NULL), and collection based (IN, NOT_IN). Standard SQL-92 aggregate functions (SUM, AVG, MIN, MAX, COUNT) are also supported.
 
@@ -103,6 +103,13 @@ An example of a custom query in Java is illustrated here:
     :end-before: DOCEND VaultJavaQueryExample3
 
 .. note:: Current queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, then no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria. Ongoing design work on identity manangement is likely to enhance identity based queries (including composite key criteria selection).
+
+Pagination
+----------
+The API provides support for paging where large numbers of results are expected (by default, a page size is set to 200 results).
+Defining a sensible default page size enables efficient checkpointing within flows, and frees the developer from worrying about pagination where
+result sets are expected to be constrained to 200 or fewer entries. Where large result sets are expected (such as using the RPC API for reporting and/or UI display), it is strongly recommended to define a ``PageSpecification`` to correctly process results with efficient memory utilistion. A fail-fast mode is in place to alert API users to the need for pagination where a single query returns more than 200 results and no ``PageSpecification``
+has been supplied.
 
 Example usage
 -------------

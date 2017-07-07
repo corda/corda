@@ -45,6 +45,7 @@ import java.util.stream.StreamSupport;
 
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
 import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
 import static net.corda.testing.CoreTestUtils.getBOC;
 import static net.corda.testing.CoreTestUtils.getBOC_KEY;
 import static net.corda.testing.CoreTestUtils.getBOC_PUBKEY;
@@ -219,7 +220,7 @@ public class VaultQueryJavaTests {
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
             QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);
 
-            PageSpecification pageSpec  = new PageSpecification(0, MAX_PAGE_SIZE);
+            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class, compositeCriteria2, pageSpec, sorting);
@@ -328,7 +329,7 @@ public class VaultQueryJavaTests {
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
             QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
-            PageSpecification pageSpec  = new PageSpecification(0, MAX_PAGE_SIZE);
+            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);

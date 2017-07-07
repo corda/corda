@@ -42,7 +42,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
 
         // calculate total results where a page specification has been defined
-        var totalStates = 0L
+        var totalStates = -1L
         if (!paging.isDefault) {
             val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
             val countCriteria = VaultCustomQueryCriteria(count)
@@ -72,14 +72,14 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 // pagination checks
                 if (!paging.isDefault) {
                     // pagination
-                    if (paging.pageNumber < 0) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from 0]")
+                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from ${DEFAULT_PAGE_NUM}]")
                     if (paging.pageSize < 0 || paging.pageSize > MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum page size is ${MAX_PAGE_SIZE}]")
 
-                    if ((paging.pageNumber != 0) && (paging.pageSize * paging.pageNumber >= totalStates))
+                    if ((paging.pageNumber != DEFAULT_PAGE_NUM) && (paging.pageSize * (paging.pageNumber - 1) >= totalStates))
                         throw VaultQueryException("Requested more results than available [${paging.pageSize} * ${paging.pageNumber} >= $totalStates]")
                 }
 
-                query.firstResult = paging.pageNumber * paging.pageSize
+                query.firstResult = (paging.pageNumber - 1) * paging.pageSize
                 query.maxResults = paging.pageSize + 1  // detection too many results
 
                 // execution
@@ -110,7 +110,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                             }
                         }
 
-                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, pageable = paging, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults) as Vault.Page<T>
+                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults) as Vault.Page<T>
 
             } catch (e: Exception) {
                 log.error(e.message)

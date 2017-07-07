@@ -823,7 +823,7 @@ class VaultQueryTests {
 
             // Last page implies we need to perform a row count for the Query first,
             // and then re-query for a given offset defined by (count - pageSize)
-            val pagingSpec = PageSpecification(9, 10)
+            val pagingSpec = PageSpecification(10, 10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
@@ -845,7 +845,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-            val pagingSpec = PageSpecification(-1, 10)
+            val pagingSpec = PageSpecification(0, 10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
@@ -862,7 +862,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-            val pagingSpec = PageSpecification(0, MAX_PAGE_SIZE + 1)
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
@@ -879,7 +879,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-            val pagingSpec = PageSpecification(10, 10)  // this requests results 101 .. 110
+            val pagingSpec = PageSpecification(11, 10)  // this requests results 101 .. 110
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
