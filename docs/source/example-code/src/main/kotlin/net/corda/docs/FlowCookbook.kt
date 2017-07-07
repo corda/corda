@@ -222,7 +222,9 @@ object FlowCookbook {
             // When building a transaction, input states are passed in as
             // ``StateRef`` instances, which pair the hash of the transaction
             // that generated the state with the state's index in the outputs
-            // of that transaction.
+            // of that transaction. In practice, we'd pass the transaction hash 
+            // or the ``StateRef`` as a parameter to the flow, or extract the 
+            // ``StateRef`` from our vault.
             // DOCSTART 20
             val ourStateRef: StateRef = StateRef(SecureHash.sha256("DummyTransactionHash"), 0)
             // DOCEND 20
