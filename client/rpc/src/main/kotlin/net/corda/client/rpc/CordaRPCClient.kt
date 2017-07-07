@@ -46,6 +46,10 @@ class CordaRPCClient(
         return CordaRPCConnection(rpcClient.start(CordaRPCOps::class.java, username, password))
     }
 
+    fun dispose() {
+        rpcClient.close()
+    }
+
     inline fun <A> use(username: String, password: String, block: (CordaRPCConnection) -> A): A {
         return start(username, password).use(block)
     }

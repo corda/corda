@@ -22,6 +22,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.util.*
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -36,7 +38,13 @@ class CordaRPCClientTest : NodeBasedTest() {
     private var connection: CordaRPCConnection? = null
 
     private fun login(username: String, password: String) {
-        connection = client.start(username, password)
+        // Do it in the background to protect the test runner thread from interrupts:
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            connection = executor.submit(Callable { client.start(username, password) }).getOrThrow()
+        } finally {
+            executor.shutdown()
+        }
     }
 
     @Before
