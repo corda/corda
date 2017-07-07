@@ -417,10 +417,11 @@ This query returned an ``Iterable<StateAndRef<T>>``
 
 The query returns a ``Vault.Page`` result containing:
 
-	- states as a ``List<StateAndRef<T : ContractState>>`` sized according to the default Page specification of ``DEFAULT_PAGE_NUM`` (0) and ``DEFAULT_PAGE_SIZE`` (200).
+	- states as a ``List<StateAndRef<T : ContractState>>`` up to a maximum of ``DEFAULT_PAGE_SIZE`` (200) where no ``PageSpecification`` provided, otherwise returns results according to the parameters ``pageNumber`` and ``pageSize`` specified in the supplied ``PageSpecification``.
 	- states metadata as a ``List<Vault.StateMetadata>`` containing Vault State metadata held in the Vault states table.
-	- the ``PagingSpecification`` used in the query
-	- a ``total`` number of results available. This value can be used issue subsequent queries with appropriately specified ``PageSpecification`` (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
+	- a ``total`` number of results available if ``PageSpecification`` provided (otherwise returns -1). For pagination, this value can be used to issue subsequent queries with appropriately specified ``PageSpecification`` parameters (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
+	- status types used in this query: UNCONSUMED, CONSUMED, ALL
+	- other results as a [List] of any type (eg. aggregate function results with/without group by)
 
 2. ServiceHub usage obtaining linear heads for a given contract state type
    
