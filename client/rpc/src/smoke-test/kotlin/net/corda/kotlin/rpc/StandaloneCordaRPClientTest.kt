@@ -18,7 +18,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.seconds
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashIssueFlow

@@ -3,10 +3,10 @@ package net.corda.core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.google.common.primitives.Ints
 import net.corda.core.crypto.*
+import net.corda.core.utilities.opaque
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.ALICE
 import net.corda.testing.BOB
-import net.corda.node.services.messaging.Ack
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.BOB_PUBKEY
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -16,7 +16,8 @@ import org.junit.Test
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.security.cert.*
+import java.security.cert.CertPath
+import java.security.cert.CertificateFactory
 import java.time.Instant
 import java.util.*
 import kotlin.test.assertEquals
@@ -92,11 +93,10 @@ class KryoTests {
     }
 
     @Test
-    fun `write and read Ack`() {
-        val tokenizableBefore = Ack
-        val serializedBytes = tokenizableBefore.serialize(kryo)
-        val tokenizableAfter = serializedBytes.deserialize(kryo)
-        assertThat(tokenizableAfter).isSameAs(tokenizableBefore)
+    fun `write and read Kotlin object singleton`() {
+        val serialised = TestSingleton.serialize(kryo)
+        val deserialised = serialised.deserialize(kryo)
+        assertThat(deserialised).isSameAs(TestSingleton)
     }
 
     @Test
@@ -172,5 +172,8 @@ class KryoTests {
         override fun hashCode(): Int = value.hashCode()
         override fun toString(): String = "Cyclic($value)"
     }
+
+    @CordaSerializable
+    private object TestSingleton
 
 }

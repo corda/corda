@@ -44,10 +44,10 @@ However, we can easily extend our CorDapp to handle additional use-cases later o
 
 Flow
 ^^^^
-Our flow will be the IOUFlow. It will allow two nodes to orchestrate the creation of a new IOU on the ledger, via the
+Our flow will be the IOUFlow. It will allow a node to orchestrate the creation of a new IOU on the ledger, via the
 following steps:
 
-  .. image:: resources/tutorial-flow.png
+  .. image:: resources/simple-tutorial-flow.png
      :scale: 25%
      :align: center
 

@@ -8,7 +8,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.DeserializeAsKotlinObjectDef
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import org.bouncycastle.asn1.x500.X500Name
@@ -229,10 +228,3 @@ object TopicStringValidator {
     /** @throws IllegalArgumentException if the given topic contains invalid characters */
     fun check(tag: String) = require(regex.matcher(tag).matches())
 }
-
-/**
- * A general Ack message that conveys no content other than it's presence for use when you want an acknowledgement
- * from a recipient.  Using [Unit] can be ambiguous as it is similar to [Void] and so could mean no response.
- */
-@CordaSerializable
-object Ack : DeserializeAsKotlinObjectDef

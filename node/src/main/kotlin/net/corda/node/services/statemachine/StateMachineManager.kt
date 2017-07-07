@@ -89,6 +89,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }.build()
 
+    // TODO Move this into the blacklist and upgrade the blacklist to allow custom messages
     private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() {
         override fun write(kryo: Kryo, output: Output, closeable: AutoCloseable) {
             val message = if (closeable is CloseableIterator<*>) {

@@ -15,8 +15,8 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.thenMatch
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.*
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService

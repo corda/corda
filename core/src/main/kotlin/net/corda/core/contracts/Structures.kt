@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.*
+import net.corda.core.utilities.OpaqueBytes
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream

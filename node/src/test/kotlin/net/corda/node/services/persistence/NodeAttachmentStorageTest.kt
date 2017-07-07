@@ -7,7 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.read
 import net.corda.core.readAll
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.core.write
 import net.corda.core.writeLines
 import net.corda.node.services.database.RequeryConfiguration

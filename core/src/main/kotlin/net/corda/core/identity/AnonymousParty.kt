@@ -2,7 +2,7 @@ package net.corda.core.identity
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.crypto.toBase58String
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import java.security.PublicKey
 
