@@ -9,7 +9,7 @@ import net.corda.core.requireExternal
 import net.corda.core.serialization.*
 import net.corda.core.toFuture
 import net.corda.core.toObservable
-import net.corda.core.utilities.CordaRuntimeException
+import net.corda.core.CordaRuntimeException
 import net.corda.nodeapi.config.OldConfig
 import rx.Observable
 import java.io.InputStream

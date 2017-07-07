@@ -7,7 +7,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.EmptyWhitelist
 import net.corda.core.serialization.KryoAMQPSerializer
-import net.corda.core.utilities.CordaRuntimeException
+import net.corda.core.CordaRuntimeException
 import net.corda.nodeapi.RPCException
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.MEGA_CORP_PUBKEY

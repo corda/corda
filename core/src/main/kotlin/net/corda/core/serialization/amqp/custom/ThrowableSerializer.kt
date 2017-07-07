@@ -4,8 +4,8 @@ import net.corda.core.serialization.amqp.CustomSerializer
 import net.corda.core.serialization.amqp.SerializerFactory
 import net.corda.core.serialization.amqp.constructorForDeserialization
 import net.corda.core.serialization.amqp.propertiesForSerialization
-import net.corda.core.utilities.CordaRuntimeException
-import net.corda.core.utilities.CordaThrowable
+import net.corda.core.CordaRuntimeException
+import net.corda.core.CordaThrowable
 import java.io.NotSerializableException
 
 class ThrowableSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Throwable, ThrowableSerializer.ThrowableProxy>(Throwable::class.java, ThrowableProxy::class.java, factory) {
