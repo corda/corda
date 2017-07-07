@@ -18,11 +18,22 @@ In the original CorDapp, we automated the process of notarising a transaction an
 by invoking a built-in flow called ``FinalityFlow`` as a subflow. We're going to use another pre-defined flow, called
 ``CollectSignaturesFlow``, to gather the lender's signature.
 
+We also need to add the lender's public key to the transaction's command, making the lender one of the required signers
+on the transaction.
+
 In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
 .. container:: codeset
 
     .. code-block:: kotlin
+
+        // We add the items to the builder.
+        val state = IOUState(iouValue, me, otherParty)
+        val cmd = Command(IOUContract.Create(), listOf(me.owningKey, otherParty.owningKey))
+        txBuilder.withItems(state, cmd)
+
+        // Verifying the transaction.
+        txBuilder.verify(serviceHub)
 
         // Signing the transaction.
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
@@ -35,6 +46,15 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
 
     .. code-block:: java
 
+        // We add the items to the builder.
+        IOUState state = new IOUState(iouValue, me, otherParty);
+        List<PublicKey> requiredSigners = ImmutableList.of(me.getOwningKey(), otherParty.getOwningKey());
+        Command cmd = new Command(new IOUContract.Create(), requiredSigners);
+        txBuilder.withItems(state, cmd);
+
+        // Verifying the transaction.
+        txBuilder.verify(getServiceHub());
+
         // Signing the transaction.
         final SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
@@ -44,8 +64,11 @@ In ``IOUFlow.java``/``IOUFlow.kt``, update ``IOUFlow.call`` as follows:
         // Finalising the transaction.
         subFlow(new FinalityFlow(fullySignedTx));
 
-``CollectSignaturesFlow`` takes a transaction signed by the flow initiator, and returns a transaction signed by all the
-transaction's other required signers. We then pass this fully-signed transaction into ``FinalityFlow``.
+To make the lender a required signer, we simply add the lender's public key to the list of signers on the command.
+
+``CollectSignaturesFlow``, meanwhile, takes a transaction signed by the flow initiator, and returns a transaction
+signed by all the transaction's other required signers. We then pass this fully-signed transaction into
+``FinalityFlow``.
 
 The lender's flow
 -----------------
