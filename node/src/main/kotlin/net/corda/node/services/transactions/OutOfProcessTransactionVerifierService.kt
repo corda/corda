@@ -6,7 +6,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
