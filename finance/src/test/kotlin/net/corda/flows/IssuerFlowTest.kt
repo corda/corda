@@ -1,22 +1,24 @@
 package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
-import net.corda.testing.contracts.calculateRandomlySizedAmounts
+import net.corda.contracts.asset.Cash
+import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
-import net.corda.core.internal.FlowStateMachine
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.internal.FlowStateMachine
 import net.corda.core.map
-import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.node.services.trackBy
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.IssuerFlow.IssuanceRequester
-import net.corda.testing.BOC
-import net.corda.testing.MEGA_CORP
+import net.corda.node.utilities.transaction
+import net.corda.testing.*
+import net.corda.testing.contracts.calculateRandomlySizedAmounts
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.After
@@ -53,11 +55,47 @@ class IssuerFlowTest {
 
     @Test
     fun `test issuer flow`() {
-        // using default IssueTo Party Reference
-        val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
-                bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
-        assertEquals(issuerResult.get().stx, issuer.get().resultFuture.get())
+        bankOfCordaNode.database.transaction {
+            // Register for vault updates
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
+            val (_, vaultUpdatesBankClient) = bankClientNode.services.vaultQueryService.trackBy<Cash.State>()
 
+            // using default IssueTo Party Reference
+            val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
+                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
+            assertEquals(issuerResult.get().stx, issuer.get().resultFuture.get())
+
+            // Check Bank of Corda Vault Updates
+            vaultUpdatesBoc.expectEvents {
+                sequence(
+                        // ISSUE
+                        expect { update ->
+                            require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
+                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                        },
+                        // MOVE
+                        expect { update ->
+                            require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
+                            require(update.produced.isEmpty()) { "Expected 0 produced states, actual: $update" }
+                        }
+                )
+            }
+
+            // Check Bank Client Vault Updates
+            vaultUpdatesBankClient.expectEvents {
+                sequence(
+                        // MOVE
+                        expect { update ->
+                            require(update.consumed.isEmpty()) { update.consumed.size }
+                            require(update.produced.size == 1) { update.produced.size }
+                        }
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `test issuer flow rejects restricted`() {
         // try to issue an amount of a restricted currency
         assertFailsWith<FlowException> {
             runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, currency("BRL")),
