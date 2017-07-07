@@ -1,7 +1,6 @@
 package net.corda.attachmentdemo
 
 import co.paralleluniverse.fibers.Suspendable
-import com.google.common.net.HostAndPort
 import joptsimple.OptionParser
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.Contract
@@ -53,14 +52,14 @@ fun main(args: Array<String>) {
     val role = options.valueOf(roleArg)!!
     when (role) {
         Role.SENDER -> {
-            val host = HostAndPort.fromString("localhost:10006")
+            val host = NetworkHostAndPort("localhost", 10006)
             println("Connecting to sender node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
                 sender(it.proxy)
             }
         }
         Role.RECIPIENT -> {
-            val host = HostAndPort.fromString("localhost:10009")
+            val host = NetworkHostAndPort("localhost", 10009)
             println("Connecting to the recipient node ($host)")
             CordaRPCClient(host).start("demo", "demo").use {
                 recipient(it.proxy)

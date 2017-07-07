@@ -1,12 +1,12 @@
 package net.corda.testing.node
 
 import co.paralleluniverse.common.util.VisibleForTesting
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.NetworkMapCache
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.testing.getTestPartyAndCertificate
 import net.corda.testing.getTestX509Name
@@ -21,8 +21,8 @@ class MockNetworkMapCache(serviceHub: ServiceHub) : InMemoryNetworkMapCache(serv
     private companion object {
         val BANK_C = getTestPartyAndCertificate(getTestX509Name("Bank C"), entropyToKeyPair(BigInteger.valueOf(1000)).public)
         val BANK_D = getTestPartyAndCertificate(getTestX509Name("Bank D"), entropyToKeyPair(BigInteger.valueOf(2000)).public)
-        val BANK_C_ADDR: HostAndPort = HostAndPort.fromParts("bankC", 8080)
-        val BANK_D_ADDR: HostAndPort = HostAndPort.fromParts("bankD", 8080)
+        val BANK_C_ADDR = NetworkHostAndPort("bankC", 8080)
+        val BANK_D_ADDR = NetworkHostAndPort("bankD", 8080)
     }
 
     override val changed: Observable<NetworkMapCache.MapChange> = PublishSubject.create<NetworkMapCache.MapChange>()

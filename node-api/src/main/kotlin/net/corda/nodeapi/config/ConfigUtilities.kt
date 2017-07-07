@@ -1,9 +1,10 @@
 package net.corda.nodeapi.config
 
-import com.google.common.net.HostAndPort
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigUtil
 import net.corda.core.noneOrSingle
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.parseNetworkHostAndPort
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.LoggerFactory
 import java.net.Proxy
@@ -67,7 +68,7 @@ private fun Config.getSingleValue(path: String, type: KType): Any? {
         Boolean::class -> getBoolean(path)
         LocalDate::class -> LocalDate.parse(getString(path))
         Instant::class -> Instant.parse(getString(path))
-        HostAndPort::class -> HostAndPort.fromString(getString(path))
+        NetworkHostAndPort::class -> getString(path).parseNetworkHostAndPort()
         Path::class -> Paths.get(getString(path))
         URL::class -> URL(getString(path))
         Properties::class -> getConfig(path).toProperties()
@@ -95,7 +96,7 @@ private fun Config.getCollectionValue(path: String, type: KType): Collection<Any
         Boolean::class -> getBooleanList(path)
         LocalDate::class -> getStringList(path).map(LocalDate::parse)
         Instant::class -> getStringList(path).map(Instant::parse)
-        HostAndPort::class -> getStringList(path).map(HostAndPort::fromString)
+        NetworkHostAndPort::class -> getStringList(path).map { it.parseNetworkHostAndPort() }
         Path::class -> getStringList(path).map { Paths.get(it) }
         URL::class -> getStringList(path).map(::URL)
         X500Name::class -> getStringList(path).map(::X500Name)
