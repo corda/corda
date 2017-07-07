@@ -1,6 +1,5 @@
 package net.corda.loadtest
 
-import com.google.common.util.concurrent.ListenableFuture
 import com.jcraft.jsch.ChannelExec
 import com.jcraft.jsch.Session
 import net.corda.client.rpc.CordaRPCClient
@@ -14,6 +13,7 @@ import net.corda.nodeapi.internal.addShutdownHook
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.OutputStream
+import java.util.concurrent.Future
 
 /**
  * [NodeConnection] allows executing remote shell commands on the node as well as executing RPCs.
@@ -85,7 +85,7 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
         return ShellCommandOutput(command, exitCode, stdoutStream.toString(), stderrStream.toString())
     }
 
-    private fun runShellCommand(command: String, stdout: OutputStream, stderr: OutputStream): ListenableFuture<Int> {
+    private fun runShellCommand(command: String, stdout: OutputStream, stderr: OutputStream): Future<Int> {
         log.info("Running '$command' on ${remoteNode.hostname}")
         return future {
             val (exitCode, _) = withChannelExec(command) { channel ->

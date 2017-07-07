@@ -10,14 +10,13 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.failure
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
+import net.corda.core.thenMatch
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.success
 import net.corda.flows.*
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
@@ -133,11 +132,11 @@ class ExplorerSimulation(val options: OptionSet) {
         // Log to logger when flow finish.
         fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
-            returnValue.success { (stx) ->
+            returnValue.thenMatch({ (stx) ->
                 Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
-            }.failure {
+            }, {
                 Main.log.info("$out ${it.message}")
-            }
+            })
         }
 
         for (i in 0..maxIterations) {

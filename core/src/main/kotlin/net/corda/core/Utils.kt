@@ -25,7 +25,6 @@ import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.*
 import java.util.concurrent.locks.ReentrantLock
-import java.util.function.BiConsumer
 import java.util.stream.Stream
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -67,38 +66,20 @@ fun <T> Future<T>.getOrThrow(timeout: Duration? = null): T {
     }
 }
 
-fun <T> future(block: () -> T): ListenableFuture<T> = CompletableToListenable(CompletableFuture.supplyAsync(block))
+fun <V> future(block: () -> V): Future<V> = CompletableFuture.supplyAsync(block)
 
-private class CompletableToListenable<T>(private val base: CompletableFuture<T>) : Future<T> by base, ListenableFuture<T> {
-    override fun addListener(listener: Runnable, executor: Executor) {
-        base.whenCompleteAsync(BiConsumer { _, _ -> listener.run() }, executor)
-    }
-}
+fun <F : ListenableFuture<*>, V> F.then(block: (F) -> V) = addListener(Runnable { block(this) }, MoreExecutors.directExecutor())
 
-// Some utilities for working with Guava listenable futures.
-fun <T> ListenableFuture<T>.then(executor: Executor, body: () -> Unit) = addListener(Runnable(body), executor)
-
-fun <T> ListenableFuture<T>.success(executor: Executor, body: (T) -> Unit) = then(executor) {
-    val r = try {
-        get()
-    } catch(e: Throwable) {
-        return@then
-    }
-    body(r)
-}
-
-fun <T> ListenableFuture<T>.failure(executor: Executor, body: (Throwable) -> Unit) = then(executor) {
-    try {
+fun <U, V> Future<U>.match(success: (U) -> V, failure: (Throwable) -> V): V {
+    return success(try {
         getOrThrow()
     } catch (t: Throwable) {
-        body(t)
-    }
+        return failure(t)
+    })
 }
 
-infix fun <T> ListenableFuture<T>.then(body: () -> Unit): ListenableFuture<T> = apply { then(RunOnCallerThread, body) }
-infix fun <T> ListenableFuture<T>.success(body: (T) -> Unit): ListenableFuture<T> = apply { success(RunOnCallerThread, body) }
-infix fun <T> ListenableFuture<T>.failure(body: (Throwable) -> Unit): ListenableFuture<T> = apply { failure(RunOnCallerThread, body) }
-fun ListenableFuture<*>.andForget(log: Logger) = failure(RunOnCallerThread) { log.error("Background task failed:", it) }
+fun <U, V, W> ListenableFuture<U>.thenMatch(success: (U) -> V, failure: (Throwable) -> W) = then { it.match(success, failure) }
+fun ListenableFuture<*>.andForget(log: Logger) = then { it.match({}, { log.error("Background task failed:", it) }) }
 @Suppress("UNCHECKED_CAST") // We need the awkward cast because otherwise F cannot be nullable, even though it's safe.
 infix fun <F, T> ListenableFuture<F>.map(mapper: (F) -> T): ListenableFuture<T> = Futures.transform(this, { (mapper as (F?) -> T)(it) })
 infix fun <F, T> ListenableFuture<F>.flatMap(mapper: (F) -> ListenableFuture<T>): ListenableFuture<T> = Futures.transformAsync(this) { mapper(it!!) }
@@ -114,12 +95,12 @@ inline fun <T> SettableFuture<T>.catch(block: () -> T) {
 
 fun <A> ListenableFuture<out A>.toObservable(): Observable<A> {
     return Observable.create { subscriber ->
-        success {
+        thenMatch({
             subscriber.onNext(it)
             subscriber.onCompleted()
-        } failure {
+        }, {
             subscriber.onError(it)
-        }
+        })
     }
 }
 
@@ -203,9 +184,6 @@ fun <T> List<T>.randomOrNull(): T? {
 
 /** Returns a random element in the list matching the given predicate, or null if none found */
 fun <T> List<T>.randomOrNull(predicate: (T) -> Boolean) = filter(predicate).randomOrNull()
-
-// An alias that can sometimes make code clearer to read.
-val RunOnCallerThread: Executor = MoreExecutors.directExecutor()
 
 inline fun elapsedTime(block: () -> Unit): Duration {
     val start = System.nanoTime()

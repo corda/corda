@@ -4,13 +4,11 @@ import com.codahale.metrics.JmxReporter
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.flatMap
+import net.corda.core.*
 import net.corda.core.messaging.RPCOps
-import net.corda.core.minutes
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
-import net.corda.core.success
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.parseNetworkHostAndPort
@@ -298,27 +296,29 @@ open class Node(override val configuration: FullNodeConfiguration,
     override fun start(): Node {
         super.start()
 
-        networkMapRegistrationFuture.success(serverThread) {
-            // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
-            //
-            // https://jolokia.org/agent/jvm.html
-            JmxReporter.
-                    forRegistry(services.monitoringService.metrics).
-                    inDomain("net.corda").
-                    createsObjectNamesWith { _, domain, name ->
-                        // Make the JMX hierarchy a bit better organised.
-                        val category = name.substringBefore('.')
-                        val subName = name.substringAfter('.', "")
-                        if (subName == "")
-                            ObjectName("$domain:name=$category")
-                        else
-                            ObjectName("$domain:type=$category,name=$subName")
-                    }.
-                    build().
-                    start()
+        networkMapRegistrationFuture.thenMatch({
+            serverThread.execute {
+                // Begin exporting our own metrics via JMX. These can be monitored using any agent, e.g. Jolokia:
+                //
+                // https://jolokia.org/agent/jvm.html
+                JmxReporter.
+                        forRegistry(services.monitoringService.metrics).
+                        inDomain("net.corda").
+                        createsObjectNamesWith { _, domain, name ->
+                            // Make the JMX hierarchy a bit better organised.
+                            val category = name.substringBefore('.')
+                            val subName = name.substringAfter('.', "")
+                            if (subName == "")
+                                ObjectName("$domain:name=$category")
+                            else
+                                ObjectName("$domain:type=$category,name=$subName")
+                        }.
+                        build().
+                        start()
 
-            (startupComplete as SettableFuture<Unit>).set(Unit)
-        }
+                (startupComplete as SettableFuture<Unit>).set(Unit)
+            }
+        }, {})
         shutdownHook = addShutdownHook {
             stop()
         }

@@ -3,11 +3,10 @@ package net.corda.loadtest.tests
 import net.corda.client.mock.Generator
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.USD
-import net.corda.core.failure
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
+import net.corda.core.thenMatch
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.success
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.CashFlowCommand
 import net.corda.loadtest.LoadTest
@@ -25,12 +24,11 @@ object StabilityTest {
             interpret = { _, _ -> },
             execute = { command ->
                 val result = command.command.startFlow(command.node.proxy).returnValue
-                result.failure {
-                    log.error("Failure[$command]", it)
-                }
-                result.success {
+                result.thenMatch({
                     log.info("Success[$command]: $result")
-                }
+                }, {
+                    log.error("Failure[$command]", it)
+                })
             },
             gatherRemoteState = {}
     )
