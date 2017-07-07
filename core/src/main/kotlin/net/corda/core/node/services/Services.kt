@@ -132,7 +132,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
     data class Page<out T : ContractState>(val states: List<StateAndRef<T>>,
                                            val statesMetadata: List<StateMetadata>,
                                            val pageable: PageSpecification,
-                                           val totalStatesAvailable: Int,
+                                           val totalStatesAvailable: Long,
                                            val stateTypes: StateStatus,
                                            val otherResults: List<Any>)
 

@@ -37,10 +37,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.bouncycastle.asn1.x500.X500Name
 import org.jetbrains.exposed.sql.Database
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
-import org.junit.Test
+import org.junit.*
+import org.junit.rules.ExpectedException
 import java.io.Closeable
 import java.lang.Thread.sleep
 import java.math.BigInteger
@@ -834,9 +832,15 @@ class VaultQueryTests {
         }
     }
 
+    @get:Rule
+    val expectedEx = ExpectedException.none()!!
+
     // pagination: invalid page number
-    @Test(expected = VaultQueryException::class)
+    @Test
     fun `invalid page number`() {
+        expectedEx.expect(VaultQueryException::class.java)
+        expectedEx.expectMessage("Page specification: invalid page number")
+
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
@@ -844,14 +848,16 @@ class VaultQueryTests {
             val pagingSpec = PageSpecification(-1, 10)
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
-            assertThat(results.states).hasSize(10) // should retrieve states 90..99
+            vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
     }
 
     // pagination: invalid page size
-    @Test(expected = VaultQueryException::class)
+    @Test
     fun `invalid page size`() {
+        expectedEx.expect(VaultQueryException::class.java)
+        expectedEx.expectMessage("Page specification: invalid page size")
+
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
@@ -860,13 +866,15 @@ class VaultQueryTests {
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
-            assertFails { }
         }
     }
 
     // pagination: out or range request (page number * page size) > total rows available
-    @Test(expected = VaultQueryException::class)
+    @Test
     fun `out of range page request`() {
+        expectedEx.expect(VaultQueryException::class.java)
+        expectedEx.expectMessage("Requested more results than available")
+
         database.transaction {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
@@ -874,8 +882,22 @@ class VaultQueryTests {
             val pagingSpec = PageSpecification(10, 10)  // this requests results 101 .. 110
 
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
-            assertFails { println("Query should throw an exception [${results.states.count()}]") }
+            vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
+        }
+    }
+
+    // pagination not specified but more than DEFAULT_PAGE_SIZE results available (fail-fast test)
+    @Test
+    fun `pagination not specified but more than default results available`() {
+        expectedEx.expect(VaultQueryException::class.java)
+        expectedEx.expectMessage("Please specify a `PageSpecification`")
+
+        database.transaction {
+
+            services.fillWithSomeTestCash(201.DOLLARS, DUMMY_NOTARY, 201, 201, Random(0L))
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            vaultQuerySvc.queryBy<ContractState>(criteria)
         }
     }
 

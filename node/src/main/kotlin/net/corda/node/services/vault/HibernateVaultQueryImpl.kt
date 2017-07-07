@@ -11,10 +11,8 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.VaultQueryService
-import net.corda.core.node.services.vault.MAX_PAGE_SIZE
-import net.corda.core.node.services.vault.PageSpecification
-import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
@@ -43,6 +41,15 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): Vault.Page<T> {
         log.info("Vault Query for contract type: $contractType, criteria: $criteria, pagination: $paging, sorting: $sorting")
 
+        // calculate total results where a page specification has been defined
+        var totalStates = 0L
+        if (!paging.isDefault) {
+            val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+            val countCriteria = VaultCustomQueryCriteria(count)
+            val results = queryBy(contractType, criteria.and(countCriteria))
+            totalStates = results.otherResults[0] as Long
+        }
+
         val session = sessionFactory.withOptions().
                 connection(TransactionManager.current().connection).
                 openSession()
@@ -62,39 +69,44 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 // prepare query for execution
                 val query = session.createQuery(criteriaQuery)
 
-                // pagination
-                if (paging.pageNumber < 0) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from 0]")
-                if (paging.pageSize < 0 || paging.pageSize > MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum page size is ${MAX_PAGE_SIZE}]")
+                // pagination checks
+                if (!paging.isDefault) {
+                    // pagination
+                    if (paging.pageNumber < 0) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from 0]")
+                    if (paging.pageSize < 0 || paging.pageSize > MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum page size is ${MAX_PAGE_SIZE}]")
 
-                // count total results available
-                val countQuery = criteriaBuilder.createQuery(Long::class.java)
-                countQuery.select(criteriaBuilder.count(countQuery.from(VaultSchemaV1.VaultStates::class.java)))
-                val totalStates = session.createQuery(countQuery).singleResult.toInt()
-
-                if ((paging.pageNumber != 0) && (paging.pageSize * paging.pageNumber >= totalStates))
-                    throw VaultQueryException("Requested more results than available [${paging.pageSize} * ${paging.pageNumber} >= ${totalStates}]")
+                    if ((paging.pageNumber != 0) && (paging.pageSize * paging.pageNumber >= totalStates))
+                        throw VaultQueryException("Requested more results than available [${paging.pageSize} * ${paging.pageNumber} >= $totalStates]")
+                }
 
                 query.firstResult = paging.pageNumber * paging.pageSize
-                query.maxResults = paging.pageSize
+                query.maxResults = paging.pageSize + 1  // detection too many results
 
                 // execution
                 val results = query.resultList
+
+                // final pagination check (fail-fast on too many results when no pagination specified)
+                if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
+                    throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
+
                 val statesAndRefs: MutableList<StateAndRef<*>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
                 val otherResults: MutableList<Any> = mutableListOf()
 
                 results.asSequence()
-                        .forEach { it ->
-                            if (it[0] is VaultSchemaV1.VaultStates) {
-                                val it = it[0] as VaultSchemaV1.VaultStates
+                        .forEachIndexed { index, result ->
+                            if (result[0] is VaultSchemaV1.VaultStates) {
+                                if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
+                                    return@forEachIndexed
+                                val it = result[0] as VaultSchemaV1.VaultStates
                                 val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
                                 val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
                                 statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
-                                log.debug { "OtherResults: ${Arrays.toString(it.toArray())}" }
-                                otherResults.addAll(it.toArray().asList())
+                                log.debug { "OtherResults: ${Arrays.toString(result.toArray())}" }
+                                otherResults.addAll(result.toArray().asList())
                             }
                         }
 

@@ -133,7 +133,9 @@ const val MAX_PAGE_SIZE = 512
  * [DEFAULT_PAGE_SIZE] with a maximum page size of [MAX_PAGE_SIZE]
  */
 @CordaSerializable
-data class PageSpecification(val pageNumber: Int = DEFAULT_PAGE_NUM, val pageSize: Int = DEFAULT_PAGE_SIZE)
+data class PageSpecification(val pageNumber: Int = DEFAULT_PAGE_NUM, val pageSize: Int = DEFAULT_PAGE_SIZE) {
+    val isDefault = (pageSize == DEFAULT_PAGE_SIZE && pageNumber == DEFAULT_PAGE_NUM)
+}
 
 /**
  * Sort allows specification of a set of entity attribute names and their associated directionality
