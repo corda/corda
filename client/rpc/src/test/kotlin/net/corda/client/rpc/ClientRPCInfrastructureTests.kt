@@ -5,7 +5,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
-import net.corda.core.success
+import net.corda.core.thenMatch
 import net.corda.node.services.messaging.getRpcContext
 import net.corda.nodeapi.RPCSinceVersion
 import net.corda.testing.RPCDriverExposedDSLInterface
@@ -158,12 +158,12 @@ class ClientRPCInfrastructureTests : AbstractRPCTest() {
             val clientQuotes = LinkedBlockingQueue<String>()
             val clientFuture = proxy.makeComplicatedListenableFuture()
 
-            clientFuture.success {
+            clientFuture.thenMatch({
                 val name = it.first
-                it.second.success {
+                it.second.thenMatch({
                     clientQuotes += "Quote by $name: $it"
-                }
-            }
+                }, {})
+            }, {})
 
             assertThat(clientQuotes).isEmpty()
 

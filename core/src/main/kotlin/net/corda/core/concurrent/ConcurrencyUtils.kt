@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.catch
-import net.corda.core.failure
+import net.corda.core.match
 import net.corda.core.then
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -29,7 +29,7 @@ internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Lo
             if (winnerChosen.compareAndSet(false, true)) {
                 resultFuture.catch { handler(it) }
             } else if (!it.isCancelled) {
-                it.failure { log.error(shortCircuitedTaskFailedMessage, it) }
+                it.match({}, { log.error(shortCircuitedTaskFailedMessage, it) })
             }
         }
     }

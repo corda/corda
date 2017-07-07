@@ -9,7 +9,7 @@ import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
 import net.corda.testing.contracts.DummyContract
 import net.corda.core.flows.FlowException
 import net.corda.core.messaging.startFlow
-import net.corda.core.success
+import net.corda.core.thenMatch
 import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest
@@ -42,9 +42,9 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
             try {
                 val proxy = node.proxy
                 val issueFlow = proxy.startFlow(::FinalityFlow, issueTx)
-                issueFlow.returnValue.success {
+                issueFlow.returnValue.thenMatch({
                     val moveFlow = proxy.startFlow(::FinalityFlow, moveTx)
-                }
+                }, {})
             } catch (e: FlowException) {
                 log.error("Failure", e)
             }

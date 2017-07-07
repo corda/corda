@@ -25,7 +25,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     init {
         // The future is public and can be completed by something else to indicate we don't wish to follow
         // anymore (e.g. the user pressing Ctrl-C).
-        future then { unsubscribe() }
+        future.then { unsubscribe() }
     }
 
     @Synchronized

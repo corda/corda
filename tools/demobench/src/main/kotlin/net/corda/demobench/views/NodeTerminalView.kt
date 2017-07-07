@@ -18,8 +18,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
 import net.corda.core.crypto.commonName
-import net.corda.core.failure
-import net.corda.core.success
+import net.corda.core.match
 import net.corda.core.then
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.demobench.explorer.ExplorerController
@@ -157,19 +156,20 @@ class NodeTerminalView : Fragment() {
             launchWebButton.graphic = ProgressIndicator()
 
             log.info("Starting web server for ${config.legalName}")
-            webServer.open(config) then {
+            webServer.open(config).then {
                 Platform.runLater {
                     launchWebButton.graphic = null
                 }
-            } success {
-                log.info("Web server for ${config.legalName} started on $it")
-                Platform.runLater {
-                    webURL = it
-                    launchWebButton.text = "Reopen\nweb site"
-                    app.hostServices.showDocument(it.toString())
-                }
-            } failure {
-                launchWebButton.text = oldLabel
+                it.match({
+                    log.info("Web server for ${config.legalName} started on $it")
+                    Platform.runLater {
+                        webURL = it
+                        launchWebButton.text = "Reopen\nweb site"
+                        app.hostServices.showDocument(it.toString())
+                    }
+                }, {
+                    launchWebButton.text = oldLabel
+                })
             }
         }
     }

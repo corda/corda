@@ -103,7 +103,7 @@ open class NodeStartup(val args: Array<String>) {
         node.start()
         printPluginsAndServices(node)
 
-        node.networkMapRegistrationFuture.success {
+        node.networkMapRegistrationFuture.thenMatch({
             val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
             // TODO: Replace this with a standard function to get an unambiguous rendering of the X.500 name.
             val name = node.info.legalIdentity.name.orgName ?: node.info.legalIdentity.name.commonName
@@ -111,14 +111,14 @@ open class NodeStartup(val args: Array<String>) {
 
             // Don't start the shell if there's no console attached.
             val runShell = !cmdlineOptions.noLocalShell && System.console() != null
-            node.startupComplete then {
+            node.startupComplete.then {
                 try {
                     InteractiveShell.startShell(cmdlineOptions.baseDirectory, runShell, cmdlineOptions.sshdServer, node)
                 } catch(e: Throwable) {
                     logger.error("Shell failed to start", e)
                 }
             }
-        }
+        }, {})
         node.run()
     }
 
