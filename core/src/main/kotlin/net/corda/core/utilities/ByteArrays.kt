@@ -1,6 +1,9 @@
-package net.corda.core.serialization
+@file:JvmName("ByteArrays")
+
+package net.corda.core.utilities
 
 import com.google.common.io.BaseEncoding
+import net.corda.core.serialization.CordaSerializable
 import java.io.ByteArrayInputStream
 import java.util.*
 
@@ -11,12 +14,13 @@ import java.util.*
  */
 @CordaSerializable
 open class OpaqueBytes(val bytes: ByteArray) {
-    init {
-        check(bytes.isNotEmpty())
+    companion object {
+        @JvmStatic
+        fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
     }
 
-    companion object {
-        fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
+    init {
+        check(bytes.isNotEmpty())
     }
 
     override fun equals(other: Any?): Boolean {

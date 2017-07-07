@@ -3,7 +3,7 @@ package net.corda.docs
 import net.corda.core.contracts.*
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.toFuture
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY

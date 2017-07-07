@@ -4,7 +4,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
 import net.corda.core.identity.Party
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashFlowCommand
 import java.util.*
 

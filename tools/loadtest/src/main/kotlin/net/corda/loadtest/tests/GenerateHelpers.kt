@@ -7,7 +7,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.withoutIssuer
 import net.corda.core.identity.Party
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashFlowCommand
 import java.util.*
 

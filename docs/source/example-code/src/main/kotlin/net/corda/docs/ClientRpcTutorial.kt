@@ -9,7 +9,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.SerializationCustomization
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.ALICE

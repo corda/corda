@@ -9,7 +9,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.serialization.opaque
+import net.corda.core.utilities.opaque
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace

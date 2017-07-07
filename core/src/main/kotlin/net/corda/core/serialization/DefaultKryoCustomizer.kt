@@ -86,9 +86,6 @@ object DefaultKryoCustomizer {
             // This ensures a NonEmptySetSerializer is constructed with an initial value.
             register(NonEmptySet::class.java, NonEmptySetSerializer)
 
-            /** This ensures any kotlin objects that implement [DeserializeAsKotlinObjectDef] are read back in as singletons. */
-            addDefaultSerializer(DeserializeAsKotlinObjectDef::class.java, KotlinObjectSerializer)
-
             addDefaultSerializer(SerializeAsToken::class.java, SerializeAsTokenSerializer<SerializeAsToken>())
 
             register(MetaData::class.java, MetaDataSerializer)

@@ -6,7 +6,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import org.bouncycastle.asn1.x500.X500Name
