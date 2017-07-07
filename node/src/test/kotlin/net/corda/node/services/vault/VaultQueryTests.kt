@@ -17,8 +17,8 @@ import net.corda.core.node.services.vault.QueryCriteria.*
 import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.serialization.toHexString
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
