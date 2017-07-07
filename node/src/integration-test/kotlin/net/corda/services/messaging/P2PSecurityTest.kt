@@ -6,7 +6,7 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.cert
 import net.corda.core.getOrThrow
 import net.corda.core.node.NodeInfo
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.seconds
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate

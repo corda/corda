@@ -13,7 +13,7 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.VaultService
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState

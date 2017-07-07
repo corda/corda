@@ -4,7 +4,7 @@ import com.google.common.net.HostAndPort
 import net.corda.core.logElapsedTime
 import net.corda.core.messaging.RPCOps
 import net.corda.core.minutes
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.seconds
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.ArtemisTcpTransport.Companion.tcpTransport
