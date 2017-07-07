@@ -379,7 +379,11 @@ public class FlowCookbookJava {
             // DOCEND 39
 
             // We can also generate a signature over the transaction without
-            // adding it to the transaction itself:
+            // adding it to the transaction itself. We may do this when 
+            // sending just the signature in a flow instead of returning the 
+            // entire transaction with our signature. This way, the receiving 
+            // node does not need to check we haven't changed anything in the 
+            // transaction.
             // DOCSTART 40
             DigitalSignature.WithKey sig = getServiceHub().createSignature(onceSignedTx);
             // DOCEND 40
