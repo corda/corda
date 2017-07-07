@@ -87,14 +87,11 @@ We will end up with the following structure:
 
     .. code-block:: kotlin
 
-        // Signing the transaction.
-        val signedTx = serviceHub.signInitialTransaction(txBuilder)
-
-        // Obtaining the counterparty's signature
-        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx))
-
-        // Finalising the transaction.
-        subFlow(FinalityFlow(fullySignedTx))
+        object IOUFlow {
+            @InitiatingFlow
+            @StartableByRPC
+            class Initiator(val iouValue: Int,
+                val otherParty: Party) : FlowLogic<Unit>() {
 
     .. code-block:: java
 
