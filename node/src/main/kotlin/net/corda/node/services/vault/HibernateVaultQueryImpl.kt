@@ -18,19 +18,20 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
 import java.lang.Exception
+import java.util.*
 import javax.persistence.EntityManager
 import javax.persistence.Tuple
 
 
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                               val updatesPublisher: PublishSubject<Vault.Update>) : SingletonSerializeAsToken(), VaultQueryService {
-
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -80,17 +81,24 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 val results = query.resultList
                 val statesAndRefs: MutableList<StateAndRef<*>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
+                val otherResults: MutableList<Any> = mutableListOf()
 
                 results.asSequence()
                         .forEach { it ->
-                            val it = it[0] as VaultSchemaV1.VaultStates
-                            val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
-                            val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                            statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
-                            statesAndRefs.add(StateAndRef(state, stateRef))
+                            if (it[0] is VaultSchemaV1.VaultStates) {
+                                val it = it[0] as VaultSchemaV1.VaultStates
+                                val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
+                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
+                                statesAndRefs.add(StateAndRef(state, stateRef))
+                            }
+                            else {
+                                log.debug { "OtherResults: ${Arrays.toString(it.toArray())}" }
+                                otherResults.addAll(it.toArray().asList())
+                            }
                         }
 
-                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, pageable = paging, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates) as Vault.Page<T>
+                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, pageable = paging, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults) as Vault.Page<T>
 
             } catch (e: Exception) {
                 log.error(e.message)

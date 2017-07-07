@@ -7,6 +7,7 @@ import net.corda.testing.ALICE
 import net.corda.testing.BOB
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -20,6 +21,11 @@ class TransactionKeyFlowTests {
     @Before
     fun before() {
         mockNet = MockNetwork(false)
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
     }
 
     @Test

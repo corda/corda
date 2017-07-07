@@ -1,6 +1,8 @@
 package net.corda.core.serialization
 
 import com.esotericsoftware.kryo.*
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.util.DefaultClassResolver
 import com.esotericsoftware.kryo.util.Util
 import net.corda.core.node.AttachmentsClassLoader
@@ -77,11 +79,18 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
         // case for flow checkpoints (ignoring all cases where AMQP is disabled) since our top level messaging data structures
         // are annotated and once we enter AMQP serialisation we stay with it for the entire object subgraph.
         if (!hasAnnotation || !amqpEnabled) {
+            val objectInstance = try {
+                type.kotlin.objectInstance
+            } catch (t: Throwable) {
+                // objectInstance will throw if the type is something like a lambda
+                null
+            }
             // We have to set reference to true, since the flag influences how String fields are treated and we want it to be consistent.
             val references = kryo.references
             try {
                 kryo.references = true
-                return register(Registration(type, kryo.getDefaultSerializer(type), NAME.toInt()))
+                val serializer = if (objectInstance != null) KotlinObjectSerializer(objectInstance) else kryo.getDefaultSerializer(type)
+                return register(Registration(type, serializer, NAME.toInt()))
             } finally {
                 kryo.references = references
             }
@@ -89,6 +98,12 @@ class CordaClassResolver(val whitelist: ClassWhitelist, val amqpEnabled: Boolean
             // Build AMQP serializer
             return register(Registration(type, KryoAMQPSerializer, NAME.toInt()))
         }
+    }
+
+    // Trivial Serializer which simply returns the given instance which we already know is a Kotlin object
+    private class KotlinObjectSerializer(val objectInstance: Any) : Serializer<Any>() {
+        override fun read(kryo: Kryo, input: Input, type: Class<Any>): Any = objectInstance
+        override fun write(kryo: Kryo, output: Output, obj: Any) = Unit
     }
 
     // We don't allow the annotation for classes in attachments for now.  The class will be on the main classpath if we have the CorDapp installed.
@@ -165,8 +180,6 @@ class GlobalTransientClassWhiteList(val delegate: ClassWhitelist) : MutableClass
 /**
  * This class is not currently used, but can be installed to log a large number of missing entries from the whitelist
  * and was used to track down the initial set.
- *
- * @suppress
  */
 @Suppress("unused")
 class LoggingWhitelist(val delegate: ClassWhitelist, val global: Boolean = true) : MutableClassWhitelist {

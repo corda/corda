@@ -14,16 +14,12 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.ALICE
-import net.corda.testing.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.irs.flows.RatesFixFlow
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.ALICE_PUBKEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -232,6 +228,7 @@ class NodeInterestRatesTest {
         val fix = tx.toWireTransaction().commands.map { it.value as Fix }.first()
         assertEquals(fixOf, fix.of)
         assertEquals("0.678".bd, fix.value)
+        mockNet.stopNodes()
     }
 
     class FilteredRatesFlow(tx: TransactionBuilder,

@@ -326,11 +326,11 @@ object FlowCookbook {
             // There are several ways of setting the transaction's time-window.
             // We can set a time-window directly:
             // DOCSTART 44
-            regTxBuilder.timeWindow = ourTimeWindow
+            regTxBuilder.setTimeWindow(ourTimeWindow)
             // DOCEND 44
             // Or as a start time plus a duration (e.g. 45 seconds):
             // DOCSTART 45
-            regTxBuilder.setTimeWindow(Instant.now(), Duration.ofSeconds(45))
+            regTxBuilder.setTimeWindow(serviceHub.clock.instant(), Duration.ofSeconds(45))
             // DOCEND 45
 
             /**----------------------

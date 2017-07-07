@@ -24,13 +24,13 @@ Open a terminal window in the directory where you want to download the CorDapp t
 .. code-block:: text
 
     # Clone the template from GitHub:
-    git clone https://github.com/corda/cordapp-template.git & cd cordapp-template
+    git clone https://github.com/corda/cordapp-template.git ; cd cordapp-template
 
     # Retrieve a list of the stable Milestone branches using:
     git branch -a --list *release-M*
 
     # Check out the Milestone branch with the latest version number:
-    git checkout release-M[*version number*] & git pull
+    git checkout release-M[*version number*] ; git pull
 
 Template structure
 ------------------

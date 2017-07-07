@@ -1,3 +1,5 @@
+@file:JvmName("QueryCriteriaUtils")
+
 package net.corda.core.node.services.vault
 
 import net.corda.core.schemas.PersistentState
@@ -45,10 +47,22 @@ enum class CollectionOperator {
 }
 
 @CordaSerializable
+enum class AggregateFunctionType {
+    COUNT,
+    AVG,
+    MIN,
+    MAX,
+    SUM,
+}
+
+@CordaSerializable
 sealed class CriteriaExpression<O, out T> {
     data class BinaryLogical<O>(val left: CriteriaExpression<O, Boolean>, val right: CriteriaExpression<O, Boolean>, val operator: BinaryLogicalOperator) : CriteriaExpression<O, Boolean>()
     data class Not<O>(val expression: CriteriaExpression<O, Boolean>) : CriteriaExpression<O, Boolean>()
     data class ColumnPredicateExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>) : CriteriaExpression<O, Boolean>()
+    data class AggregateFunctionExpression<O, C>(val column: Column<O, C>, val predicate: ColumnPredicate<C>,
+                                                 val groupByColumns: List<Column<O, C>>?,
+                                                 val orderBy: Sort.Direction?) : CriteriaExpression<O, Boolean>()
 }
 
 @CordaSerializable
@@ -65,6 +79,7 @@ sealed class ColumnPredicate<C> {
     data class CollectionExpression<C>(val operator: CollectionOperator, val rightLiteral: Collection<C>) : ColumnPredicate<C>()
     data class Between<C : Comparable<C>>(val rightFromLiteral: C, val rightToLiteral: C) : ColumnPredicate<C>()
     data class NullExpression<C>(val operator: NullOperator) : ColumnPredicate<C>()
+    data class AggregateFunction<C>(val type: AggregateFunctionType) : ColumnPredicate<C>()
 }
 
 fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O, R>): Class<O> {
@@ -72,9 +87,11 @@ fun <O, R> resolveEnclosingObjectFromExpression(expression: CriteriaExpression<O
         is CriteriaExpression.BinaryLogical -> resolveEnclosingObjectFromExpression(expression.left)
         is CriteriaExpression.Not -> resolveEnclosingObjectFromExpression(expression.expression)
         is CriteriaExpression.ColumnPredicateExpression<O, *> -> resolveEnclosingObjectFromColumn(expression.column)
+        is CriteriaExpression.AggregateFunctionExpression<O, *> -> resolveEnclosingObjectFromColumn(expression.column)
     }
 }
 
+@Suppress("UNCHECKED_CAST")
 fun <O, C> resolveEnclosingObjectFromColumn(column: Column<O, C>): Class<O> {
     return when (column) {
         is Column.Java -> column.field.declaringClass as Class<O>
@@ -102,14 +119,14 @@ fun <O, C> getColumnName(column: Column<O, C>): String {
  *  paging and sorting capability:
  *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
  */
-val DEFAULT_PAGE_NUM = 0
-val DEFAULT_PAGE_SIZE = 200
+const val DEFAULT_PAGE_NUM = 0
+const val DEFAULT_PAGE_SIZE = 200
 
 /**
  * Note: this maximum size will be configurable in future (to allow for large JVM heap sized node configurations)
  *       Use [PageSpecification] to correctly handle a number of bounded pages of [MAX_PAGE_SIZE].
  */
-val MAX_PAGE_SIZE = 512
+const val MAX_PAGE_SIZE = 512
 
 /**
  * PageSpecification allows specification of a page number (starting from 0 as default) and page size (defaulting to
@@ -140,14 +157,14 @@ data class Sort(val columns: Collection<SortColumn>) {
         STATE_STATUS("stateStatus"),
         RECORDED_TIME("recordedTime"),
         CONSUMED_TIME("consumedTime"),
-        LOCK_ID("lockId"),
+        LOCK_ID("lockId")
     }
 
     enum class LinearStateAttribute(val columnName: String) : Attribute {
         /** Vault Linear States */
         UUID("uuid"),
         EXTERNAL_ID("externalId"),
-        DEAL_REFERENCE("dealReference"),
+        DEAL_REFERENCE("dealReference")
     }
 
     enum class FungibleStateAttribute(val columnName: String) : Attribute {
@@ -183,9 +200,14 @@ sealed class SortAttribute {
 object Builder {
 
     fun <R : Comparable<R>> compare(operator: BinaryComparisonOperator, value: R) = ColumnPredicate.BinaryComparison(operator, value)
-
     fun <O, R> KProperty1<O, R?>.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Kotlin(this), predicate)
+
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column.Java<Any, R>(this), predicate)
+
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns:  List<Column.Kotlin<O, R>>? = null, orderBy: Sort.Direction? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Kotlin(this), predicate, groupByColumns, orderBy)
+    fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column.Java<Any, R>>? = null, orderBy: Sort.Direction? = null)
+            = CriteriaExpression.AggregateFunctionExpression(Column.Java<Any, R>(this), predicate, groupByColumns, orderBy)
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
     fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
@@ -200,15 +222,15 @@ object Builder {
     fun <O, R : Comparable<R>> KProperty1<O, R?>.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
     fun <O, R : Comparable<R>> KProperty1<O, R?>.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
 
-    fun <R> Field.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
-    fun <R> Field.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
-    fun <R : Comparable<R>> Field.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
-    fun <R : Comparable<R>> Field.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
-    fun <R : Comparable<R>> Field.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
-    fun <R : Comparable<R>> Field.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
-    fun <R : Comparable<R>> Field.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
-    fun <R : Comparable<R>> Field.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
-    fun <R : Comparable<R>> Field.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
+    @JvmStatic fun <R> Field.equal(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value))
+    @JvmStatic fun <R> Field.notEqual(value: R) = predicate(ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value))
+    @JvmStatic fun <R : Comparable<R>> Field.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
+    @JvmStatic fun <R : Comparable<R>> Field.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
+    @JvmStatic fun <R : Comparable<R>> Field.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
+    @JvmStatic fun <R : Comparable<R>> Field.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
+    @JvmStatic fun <R : Comparable<R>> Field.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
+    @JvmStatic fun <R : Comparable<R>> Field.`in`(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.IN, collection))
+    @JvmStatic fun <R : Comparable<R>> Field.notIn(collection: Collection<R>) = predicate(ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection))
 
     fun <R> equal(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, value)
     fun <R> notEqual(value: R) = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.NOT_EQUAL, value)
@@ -221,14 +243,45 @@ object Builder {
     fun <R : Comparable<R>> notIn(collection: Collection<R>) = ColumnPredicate.CollectionExpression(CollectionOperator.NOT_IN, collection)
 
     fun <O> KProperty1<O, String?>.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
-    fun Field.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
+    @JvmStatic fun Field.like(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.LIKE, string))
     fun <O> KProperty1<O, String?>.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
-    fun Field.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
+    @JvmStatic fun Field.notLike(string: String) = predicate(ColumnPredicate.Likeness(LikenessOperator.NOT_LIKE, string))
 
     fun <O, R> KProperty1<O, R?>.isNull() = predicate(ColumnPredicate.NullExpression(NullOperator.IS_NULL))
-    fun Field.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
+    @JvmStatic fun Field.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
     fun <O, R> KProperty1<O, R?>.notNull() = predicate(ColumnPredicate.NullExpression(NullOperator.NOT_NULL))
-    fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
+    @JvmStatic fun Field.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
+
+    /** aggregate functions */
+    fun <O, R> KProperty1<O, R?>.sum(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.SUM), groupByColumns?.map { Column.Kotlin(it) }, orderBy)
+    @JvmStatic @JvmOverloads
+    fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.SUM), groupByColumns?.map { Column.Java<Any,R>(it) }, orderBy)
+
+    fun <O, R> KProperty1<O, R?>.count() = functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.COUNT))
+    @JvmStatic fun Field.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
+
+    fun <O, R> KProperty1<O, R?>.avg(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.AVG), groupByColumns?.map { Column.Kotlin(it) }, orderBy)
+    @JvmStatic
+    @JvmOverloads
+    fun <R> Field.avg(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.AVG), groupByColumns?.map { Column.Java<Any,R>(it) }, orderBy)
+
+    fun <O, R> KProperty1<O, R?>.min(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MIN), groupByColumns?.map { Column.Kotlin(it) }, orderBy)
+    @JvmStatic
+    @JvmOverloads
+    fun <R> Field.min(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MIN), groupByColumns?.map { Column.Java<Any,R>(it) }, orderBy)
+
+    fun <O, R> KProperty1<O, R?>.max(groupByColumns: List<KProperty1<O, R>>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX), groupByColumns?.map { Column.Kotlin(it) }, orderBy)
+    @JvmStatic
+    @JvmOverloads
+    fun <R> Field.max(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) =
+            functionPredicate(ColumnPredicate.AggregateFunction<R>(AggregateFunctionType.MAX), groupByColumns?.map { Column.Java<Any,R>(it) }, orderBy)
 }
 
 inline fun <A> builder(block: Builder.() -> A) = block(Builder)

@@ -10,14 +10,15 @@ import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
-import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.node.MockNetwork
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -30,7 +31,8 @@ class NotaryServiceTests {
     lateinit var notaryNode: MockNetwork.MockNode
     lateinit var clientNode: MockNetwork.MockNode
 
-    @Before fun setup() {
+    @Before
+    fun setup() {
         mockNet = MockNetwork()
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
@@ -39,7 +41,13 @@ class NotaryServiceTests {
         mockNet.runNetwork() // Clear network map registration messages
     }
 
-    @Test fun `should sign a unique transaction with a valid time-window`() {
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
+    }
+
+    @Test
+    fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -52,7 +60,8 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should sign a unique transaction without a time-window`() {
+    @Test
+    fun `should sign a unique transaction without a time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -64,7 +73,8 @@ class NotaryServiceTests {
         signatures.forEach { it.verify(stx.id) }
     }
 
-    @Test fun `should report error for transaction with an invalid time-window`() {
+    @Test
+    fun `should report error for transaction with an invalid time-window`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -78,7 +88,8 @@ class NotaryServiceTests {
         assertThat(ex.error).isInstanceOf(NotaryError.TimeWindowInvalid::class.java)
     }
 
-    @Test fun `should sign identical transaction multiple times (signing is idempotent)`() {
+    @Test
+    fun `should sign identical transaction multiple times (signing is idempotent)`() {
         val stx = run {
             val inputState = issueState(clientNode)
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)
@@ -95,7 +106,8 @@ class NotaryServiceTests {
         assertEquals(f1.resultFuture.getOrThrow(), f2.resultFuture.getOrThrow())
     }
 
-    @Test fun `should report conflict when inputs are reused across transactions`() {
+    @Test
+    fun `should report conflict when inputs are reused across transactions`() {
         val inputState = issueState(clientNode)
         val stx = run {
             val tx = TransactionType.General.Builder(notaryNode.info.notaryIdentity).withItems(inputState)

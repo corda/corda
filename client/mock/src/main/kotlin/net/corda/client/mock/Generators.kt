@@ -1,7 +1,7 @@
 package net.corda.client.mock
 
 import net.corda.core.contracts.Amount
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import java.util.*
 
 fun generateCurrency(): Generator<Currency> {

@@ -7,13 +7,13 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
-import net.corda.core.node.VersionInfo
 import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.TransactionVerifierService
-import net.corda.core.serialization.opaque
+import net.corda.core.utilities.opaque
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
+import net.corda.node.VersionInfo
 import net.corda.node.services.RPCUserService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.config.NodeConfiguration

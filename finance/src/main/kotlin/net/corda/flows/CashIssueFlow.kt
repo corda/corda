@@ -7,7 +7,7 @@ import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*

@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.LazyPool
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -462,19 +463,6 @@ inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 
     return list
 }
 
-/** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
-interface DeserializeAsKotlinObjectDef
-
-/** Serializer to deserialize kotlin object definitions marked with [DeserializeAsKotlinObjectDef]. */
-object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<DeserializeAsKotlinObjectDef>): DeserializeAsKotlinObjectDef {
-        // read the public static INSTANCE field that kotlin compiler generates.
-        return type.getField("INSTANCE").get(null) as DeserializeAsKotlinObjectDef
-    }
-
-    override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
-}
-
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeAllButBlacklistedClassResolver())) }.build()
 private val kryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeStandardClassResolver())) }.build()
@@ -532,7 +520,7 @@ inline fun <T : Any> Kryo.register(
     return register(
             type.java,
             object : Serializer<T>() {
-                override fun read(kryo: Kryo, input: Input, type: Class<T>): T = read(kryo, input)
+                override fun read(kryo: Kryo, input: Input, clazz: Class<T>): T = read(kryo, input)
                 override fun write(kryo: Kryo, output: Output, obj: T) = write(kryo, output, obj)
             }
     )

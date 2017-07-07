@@ -21,11 +21,11 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.unwrap
@@ -54,6 +54,7 @@ import org.junit.Before
 import org.junit.Test
 import rx.Notification
 import rx.Observable
+import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
@@ -106,11 +107,7 @@ class FlowFrameworkTests {
 
     @Test
     fun `flow can lazily use the serviceHub in its constructor`() {
-        val flow = object : FlowLogic<Unit>() {
-            val lazyTime by lazy { serviceHub.clock.instant() }
-            @Suspendable
-            override fun call() = Unit
-        }
+        val flow = LazyServiceHubAccessFlow()
         node1.services.startFlow(flow)
         assertThat(flow.lazyTime).isNotNull()
     }
@@ -752,6 +749,12 @@ class FlowFrameworkTests {
                 .materialize()
                 .toList()
                 .toFuture()
+    }
+
+    private class LazyServiceHubAccessFlow : FlowLogic<Unit>() {
+        val lazyTime: Instant by lazy { serviceHub.clock.instant() }
+        @Suspendable
+        override fun call() = Unit
     }
 
     private class NoOpFlow(val nonTerminating: Boolean = false) : FlowLogic<Unit>() {
