@@ -55,7 +55,7 @@ import static net.corda.node.utilities.DatabaseSupportKt.transaction;
 import static net.corda.testing.CoreTestUtils.getMEGA_CORP;
 import static net.corda.testing.CoreTestUtils.getMEGA_CORP_KEY;
 import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
-import static net.corda.core.serialization.ByteArraysKt.toHexString;
+import static net.corda.core.utilities.ByteArrays.toHexString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
