@@ -44,10 +44,6 @@ Just as every Corda state must implement the ``ContractState`` interface, every 
 
 You can read about function declarations in Kotlin `here <https://kotlinlang.org/docs/reference/functions.html>`_.
 
-* ``fun`` declares a function
-* The syntax ``fun funName(arg1Name: arg1Type): returnType`` declares that ``funName`` takes an argument of type
-  ``arg1Type`` and returns a value of type ``returnType``
-
 We can see that ``Contract`` expresses its constraints in two ways:
 
 * In legal prose, through a hash referencing a legal contract that expresses the contract's constraints in legal prose
