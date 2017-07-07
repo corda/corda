@@ -23,6 +23,8 @@ UNRELEASED
 * In Java, ``QueryCriteriaUtilsKt`` has moved to ``QueryCriteriaUtils``. Also ``and`` and ``or`` are now instance methods
   of ``QueryCrtieria``.
 
+* ``random63BitValue()`` has moved to ``CryptoUtils``
+
 Milestone 13
 ------------
 

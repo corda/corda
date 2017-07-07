@@ -7,7 +7,6 @@ import com.google.common.base.Throwables
 import com.google.common.io.ByteStreams
 import com.google.common.util.concurrent.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
@@ -57,12 +56,6 @@ infix fun Int.checkedAdd(b: Int) = Math.addExact(this, b)
 /** Like the + operator but throws an exception in case of integer overflow. */
 @Suppress("unused")
 infix fun Long.checkedAdd(b: Long) = Math.addExact(this, b)
-
-/**
- * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
- * avoid potential bugs where the value is used in a context where negative numbers are not expected.
- */
-fun random63BitValue(): Long = Math.abs(newSecureRandom().nextLong())
 
 /** Same as [Future.get] but with a more descriptive name, and doesn't throw [ExecutionException], instead throwing its cause */
 fun <T> Future<T>.getOrThrow(timeout: Duration? = null): T {
