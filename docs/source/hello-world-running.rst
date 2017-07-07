@@ -128,9 +128,15 @@ commands.
 
 We want to create an IOU of 100 with Node B. We start the ``IOUFlow`` by typing:
 
-.. code:: python
+.. container:: codeset
 
-    start IOUFlow arg0: 99, arg1: "NodeB"
+    .. code-block:: java
+
+        start IOUFlow arg0: 99, arg1: "NodeB"
+
+    .. code-block:: kotlin
+
+        start IOUFlow iouValue: 99, otherParty: "NodeB"
 
 Node A and Node B will automatically agree an IOU.
 
