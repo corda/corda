@@ -43,7 +43,7 @@ Transaction workflow
 --------------------
 There are four states the transaction can occupy:
 
-* ``TransactionBuilder``, a mutable transaction-in-construction
+* ``TransactionBuilder``, a builder for a transaction in construction
 * ``WireTransaction``, an immutable transaction
 * ``SignedTransaction``, an immutable transaction with 1+ associated signatures
 * ``LedgerTransaction``, a transaction that can be checked for validity
