@@ -10,7 +10,7 @@ import net.corda.core.hours
 import net.corda.core.crypto.testing.NULL_PARTY
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.*
 import net.corda.testing.*
 import net.corda.testing.node.MockServices

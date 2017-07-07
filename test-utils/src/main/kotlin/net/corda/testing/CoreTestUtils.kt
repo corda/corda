@@ -12,7 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.IdentityService
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType

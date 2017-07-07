@@ -9,7 +9,7 @@ import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction

@@ -21,11 +21,11 @@ import net.corda.core.node.services.PartyInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.ProgressTracker.Change
 import net.corda.core.utilities.unwrap

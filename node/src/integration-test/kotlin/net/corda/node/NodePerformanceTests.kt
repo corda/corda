@@ -9,7 +9,7 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
 import net.corda.core.minutes
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.div
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow

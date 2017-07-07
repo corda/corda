@@ -8,10 +8,10 @@ import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
+import net.corda.testing.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.BOC

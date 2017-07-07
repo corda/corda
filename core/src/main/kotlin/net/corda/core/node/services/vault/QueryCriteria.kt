@@ -9,7 +9,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*

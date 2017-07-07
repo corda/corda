@@ -5,7 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import java.util.*
 
 /**

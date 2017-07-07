@@ -1,25 +1,11 @@
-package net.corda.core.utilities
+package net.corda.testing
 
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.config.Configurator
 import org.apache.logging.log4j.core.config.LoggerConfig
-import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
-
-// A couple of inlined utility functions: the first is just a syntax convenience, the second lets us use
-// Kotlin's string interpolation efficiently: the message is never calculated/concatenated together unless
-// logging at that level is enabled.
-inline fun <reified T : Any> loggerFor(): org.slf4j.Logger = LoggerFactory.getLogger(T::class.java)
-
-inline fun org.slf4j.Logger.trace(msg: () -> String) {
-    if (isTraceEnabled) trace(msg())
-}
-
-inline fun org.slf4j.Logger.debug(msg: () -> String) {
-    if (isDebugEnabled) debug(msg())
-}
 
 /** A configuration helper that allows modifying the log level for specific loggers */
 object LogHelper {
