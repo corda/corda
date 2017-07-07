@@ -1,6 +1,5 @@
 package net.corda.node.services
 
-import com.google.common.net.HostAndPort
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.ErrorOr
 import net.corda.core.contracts.ContractState
@@ -13,6 +12,7 @@ import net.corda.core.div
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -53,7 +53,7 @@ class BFTNotaryServiceTests {
                 serviceType.id,
                 clusterName)
         val bftNotaryService = ServiceInfo(serviceType, clusterName)
-        val notaryClusterAddresses = replicaIds.map { HostAndPort.fromParts("localhost", 11000 + it * 10) }
+        val notaryClusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
         replicaIds.forEach { replicaId ->
             mockNet.createNode(
                     node.network.myAddress,

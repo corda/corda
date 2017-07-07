@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import com.google.common.net.HostAndPort
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.*
 import net.corda.core.flows.StateMachineRunId
@@ -76,7 +75,7 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     override val clock: Clock get() = Clock.systemUTC()
     override val myInfo: NodeInfo get() {
         val identity = getTestPartyAndCertificate(MEGA_CORP.name, key.public)
-        return NodeInfo(listOf(HostAndPort.fromHost("localhost")), identity, setOf(identity), 1)
+        return NodeInfo(emptyList(), identity, setOf(identity), 1)
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
