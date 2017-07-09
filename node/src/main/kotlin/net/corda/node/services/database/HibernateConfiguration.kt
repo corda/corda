@@ -1,10 +1,9 @@
 package net.corda.node.services.database
 
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
-import net.corda.node.utilities.TransactionTracker
+import net.corda.node.utilities.CordaTransactionManager
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -14,7 +13,6 @@ import org.hibernate.cfg.Configuration
 import org.hibernate.engine.jdbc.connections.spi.ConnectionProvider
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.service.UnknownUnwrapTypeException
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -98,7 +96,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
             //val tx = TransactionManager.current()
             //tx.commit()
             //tx.close()
-            val tx = TransactionTracker.currentOrNull()
+            val tx = CordaTransactionManager.currentOrNull()
             tx?.commit() ?: throw IllegalStateException("Was expecting to find database connection.")
             tx.close()
         }
@@ -108,7 +106,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         override fun getConnection(): Connection {
             //val tx = TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
             //return tx.connection
-            val tx = TransactionTracker.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+            val tx = CordaTransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
             return tx.connection
         }
 

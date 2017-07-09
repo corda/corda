@@ -8,8 +8,7 @@ import io.requery.sql.KotlinEntityDataStore
 import io.requery.sql.SchemaModifier
 import io.requery.sql.TableCreationMode
 import net.corda.core.utilities.loggerFor
-import net.corda.node.utilities.TransactionTracker
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import net.corda.node.utilities.CordaTransactionManager
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -51,7 +50,7 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
         //val ctx = TransactionManager.manager.currentOrNull()
         //return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
 
-        val ctx = TransactionTracker.manager.currentOrNull()
+        val ctx = CordaTransactionManager.manager.currentOrNull()
         return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
     }
 }

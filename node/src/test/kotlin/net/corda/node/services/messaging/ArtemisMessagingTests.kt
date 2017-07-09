@@ -19,8 +19,7 @@ import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
 import net.corda.testing.node.MOCK_VERSION_INFO
@@ -28,7 +27,6 @@ import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -53,7 +51,7 @@ class ArtemisMessagingTests {
 
     lateinit var config: NodeConfiguration
     lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var userService: RPCUserService
     lateinit var networkMapRegistrationFuture: ListenableFuture<Unit>
 
@@ -75,7 +73,7 @@ class ArtemisMessagingTests {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        val dataSourceAndDatabase = CordaPersistence.configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         networkMapRegistrationFuture = Futures.immediateFuture(Unit)

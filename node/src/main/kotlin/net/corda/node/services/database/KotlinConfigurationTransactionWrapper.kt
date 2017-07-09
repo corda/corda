@@ -13,8 +13,7 @@ import net.corda.core.schemas.requery.converters.InstantConverter
 import net.corda.core.schemas.requery.converters.SecureHashConverter
 import net.corda.core.schemas.requery.converters.StateRefConverter
 import net.corda.core.schemas.requery.converters.VaultStateStatusConverter
-import net.corda.node.utilities.TransactionTracker
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import net.corda.node.utilities.CordaTransactionManager
 import java.sql.Connection
 import java.util.*
 import java.util.concurrent.Executor
@@ -135,7 +134,7 @@ class KotlinConfigurationTransactionWrapper(private val model: EntityModel,
             //        tx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
             //)
 
-            val tx = TransactionTracker.manager.currentOrNull()
+            val tx = CordaTransactionManager.manager.currentOrNull()
             return CordaConnection(
                     tx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
             )

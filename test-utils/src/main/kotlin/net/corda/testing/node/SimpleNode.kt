@@ -17,10 +17,8 @@ import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.freeLocalHostAndPort
-import org.jetbrains.exposed.sql.Database
 import java.io.Closeable
 import java.security.KeyPair
 import java.security.cert.X509Certificate
@@ -34,8 +32,8 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
                  rpcAddress: NetworkHostAndPort = freeLocalHostAndPort(),
                  trustRoot: X509Certificate) : AutoCloseable {
 
-    private val databaseWithCloseable: Pair<Closeable, Database> = configureDatabase(config.dataSourceProperties)
-    val database: Database get() = databaseWithCloseable.second
+    private val databaseWithCloseable: Pair<Closeable, CordaPersistence> = CordaPersistence.configureDatabase(config.dataSourceProperties)
+    val database: CordaPersistence get() = databaseWithCloseable.second
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()

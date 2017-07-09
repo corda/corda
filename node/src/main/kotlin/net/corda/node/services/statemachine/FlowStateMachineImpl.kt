@@ -18,11 +18,7 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
-import net.corda.node.utilities.CordaTransaction
-import net.corda.node.utilities.StrandLocalTransactionManager
-import net.corda.node.utilities.TransactionTracker
-import net.corda.node.utilities.createTransaction
-import org.jetbrains.exposed.sql.Database
+import net.corda.node.utilities.*
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.slf4j.Logger
@@ -67,7 +63,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient override lateinit var serviceHub: ServiceHubInternal
-    @Transient internal lateinit var database: Database
+    @Transient internal lateinit var database: CordaPersistence
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
     @Transient internal lateinit var actionOnEnd: (Try<R>, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
@@ -388,8 +384,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
-        cordaTxTrampoline = TransactionTracker.currentOrNull()
-        TransactionTracker.setThreadLocalTx(null)
+        cordaTxTrampoline = CordaTransactionManager.currentOrNull()
+        CordaTransactionManager.setThreadLocalTx(null)
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -400,7 +396,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             try {
                 StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
                 txTrampoline = null
-                TransactionTracker.setThreadLocalTx(cordaTxTrampoline)
+                CordaTransactionManager.setThreadLocalTx(cordaTxTrampoline)
                 cordaTxTrampoline = null
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {

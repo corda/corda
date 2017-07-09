@@ -18,9 +18,7 @@ import net.corda.node.services.persistence.DBCheckpointStorage
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.utilities.AffinityExecutor
-import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
+import net.corda.node.utilities.*
 import net.corda.testing.getTestX509Name
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockKeyManagementService
@@ -29,7 +27,6 @@ import net.corda.testing.node.makeTestDataSourceProperties
 import net.corda.testing.testNodeConfiguration
 import org.assertj.core.api.Assertions.assertThat
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -55,7 +52,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
     lateinit var dataSource: Closeable
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllFlows: CountDownLatch
 
@@ -76,7 +73,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = configureDatabase(dataSourceProps)
+        val dataSourceAndDatabase = CordaPersistence.configureDatabase(dataSourceProps)
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)

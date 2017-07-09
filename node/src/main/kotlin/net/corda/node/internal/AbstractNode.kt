@@ -63,7 +63,6 @@ import net.corda.node.utilities.*
 import net.corda.node.utilities.AddOrRemove.ADD
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
-import org.jetbrains.exposed.sql.Database
 import org.slf4j.Logger
 import rx.Observable
 import java.io.IOException
@@ -131,7 +130,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     var inNodeNetworkMapService: NetworkMapService? = null
     lateinit var network: MessagingService
     protected val runOnStop = ArrayList<() -> Any?>()
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
     protected var dbCloser: (() -> Any?)? = null
 
     var isPreviousCheckpointsPresent = false
@@ -547,10 +546,10 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            val (toClose, database) = configureDatabase(props)
+            val (toClose, database) = CordaPersistence.configureDatabase(props)
             this.database = database
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            log.info("Connected to ${database.vendor} database.")
+            log.info("Connected to ${database.database.vendor} database.")
             toClose::close.let {
                 dbCloser = it
                 runOnStop += it
@@ -811,7 +810,7 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
         override val clock: Clock get() = platformClock
         override val myInfo: NodeInfo get() = info
         override val schemaService by lazy { NodeSchemaService(pluginRegistries.flatMap { it.requiredSchemas }.toSet()) }
-        override val database: Database get() = this@AbstractNode.database
+        override val database: CordaPersistence get() = this@AbstractNode.database
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
 
         override fun <T : SerializeAsToken> cordaService(type: Class<T>): T {

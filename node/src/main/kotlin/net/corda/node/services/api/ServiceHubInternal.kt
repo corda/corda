@@ -23,7 +23,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import org.jetbrains.exposed.sql.Database
+import net.corda.node.utilities.CordaPersistence
 
 interface NetworkMapCacheInternal : NetworkMapCache {
     /**
@@ -81,7 +81,7 @@ interface ServiceHubInternal : PluginServiceHub {
     val auditService: AuditService
     val rpcFlows: List<Class<out FlowLogic<*>>>
     val networkService: MessagingService
-    val database: Database
+    val database: CordaPersistence
     val configuration: NodeConfiguration
 
     @Suppress("DEPRECATION")

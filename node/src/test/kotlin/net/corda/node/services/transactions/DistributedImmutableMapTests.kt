@@ -10,10 +10,9 @@ import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.LogHelper
 import net.corda.node.services.network.NetworkMapService
-import net.corda.node.utilities.configureDatabase
+import net.corda.node.utilities.CordaPersistence
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.node.makeTestDataSourceProperties
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.junit.After
 import org.junit.Before
@@ -29,13 +28,13 @@ class DistributedImmutableMapTests {
     lateinit var cluster: List<Member>
     lateinit var dataSource: Closeable
     lateinit var transaction: Transaction
-    lateinit var database: Database
+    lateinit var database: CordaPersistence
 
     @Before
     fun setup() {
         LogHelper.setLevel("-org.apache.activemq")
         LogHelper.setLevel(NetworkMapService::class)
-        val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
+        val dataSourceAndDatabase = CordaPersistence.configureDatabase(makeTestDataSourceProperties())
         dataSource = dataSourceAndDatabase.first
         database = dataSourceAndDatabase.second
         cluster = setUpCluster()
