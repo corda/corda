@@ -8,6 +8,7 @@ import io.requery.sql.KotlinEntityDataStore
 import io.requery.sql.SchemaModifier
 import io.requery.sql.TableCreationMode
 import net.corda.core.utilities.loggerFor
+import net.corda.node.utilities.TransactionTracker
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Connection
 import java.util.*
@@ -47,7 +48,10 @@ class RequeryConfiguration(val properties: Properties, val useDefaultLogging: Bo
 
     // TODO: remove once Requery supports QUERY WITH COMPOSITE_KEY IN
     fun jdbcSession(): Connection {
-        val ctx = TransactionManager.manager.currentOrNull()
+        //val ctx = TransactionManager.manager.currentOrNull()
+        //return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
+
+        val ctx = TransactionTracker.manager.currentOrNull()
         return ctx?.connection ?: throw IllegalStateException("Was expecting to find database transaction: must wrap calling code within a transaction.")
     }
 }

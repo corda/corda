@@ -43,19 +43,21 @@ fun <T> databaseTransaction(db: Database, statement: Transaction.() -> T) = db.t
 fun <T> Database.transaction(statement: Transaction.() -> T): T {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
     StrandLocalTransactionManager.database = this
+    println("thread=${Thread.currentThread().id} db change to $this")
     return org.jetbrains.exposed.sql.transactions.transaction(Connection.TRANSACTION_REPEATABLE_READ, 1, statement)
 }
 
 fun Database.createTransaction(): Transaction {
     // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
     StrandLocalTransactionManager.database = this
+    println("thread=${Thread.currentThread().id} db change to $this for create")
     return TransactionManager.currentOrNew(Connection.TRANSACTION_REPEATABLE_READ)
 }
 
 fun configureDatabase(props: Properties): Pair<Closeable, Database> {
     val config = HikariConfig(props)
     val dataSource = HikariDataSource(config)
-    val database = Database.connect(dataSource) { db -> StrandLocalTransactionManager(db) }
+    val database = Database.connect(dataSource) { db -> StrandLocalTransactionManager(db, TransactionTracker(dataSource)) }
     // Check not in read-only mode.
     database.transaction {
         check(!database.metadata.isReadOnly) { "Database should not be readonly." }
@@ -65,10 +67,12 @@ fun configureDatabase(props: Properties): Pair<Closeable, Database> {
 
 fun <T> Database.isolatedTransaction(block: Transaction.() -> T): T {
     val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
+    val old2 = TransactionTracker.setThreadLocalTx(null)
     return try {
         transaction(block)
     } finally {
         StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
+        TransactionTracker.restoreThreadLocalTx(old2)
     }
 }
 
@@ -86,7 +90,7 @@ fun <T> Database.isolatedTransaction(block: Transaction.() -> T): T {
  * facilitates the use of [Observable.afterDatabaseCommit] to create event streams that only emit once the database
  * transaction is closed and the data has been persisted and becomes visible to other observers.
  */
-class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionManager {
+class StrandLocalTransactionManager(initWithDatabase: Database, initTransactionTracker : TransactionTracker) : TransactionManager {
 
     companion object {
         private val TX_ID = Key<UUID>()
@@ -137,10 +141,14 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
         databaseToInstance[database] = this
     }
 
+    val transactionTracker: TransactionTracker = initTransactionTracker
+
     override fun newTransaction(isolation: Int): Transaction {
-        val impl = StrandLocalTransaction(database, isolation, threadLocalTx, transactionBoundaries)
+        var cordaTransaction = transactionTracker.newTransaction(isolation)
+        val impl = StrandLocalTransaction(database, isolation, threadLocalTx, transactionBoundaries, cordaTransaction)
         return Transaction(impl).apply {
             threadLocalTx.set(this)
+            println("thread=${Thread.currentThread().id} $this")
             putUserData(TX_ID, impl.id)
         }
     }
@@ -148,30 +156,38 @@ class StrandLocalTransactionManager(initWithDatabase: Database) : TransactionMan
     override fun currentOrNull(): Transaction? = threadLocalTx.get()
 
     // Direct copy of [ThreadLocalTransaction].
-    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>, val transactionBoundaries: Subject<Boundary, Boundary>) : TransactionInterface {
+    private class StrandLocalTransaction(override val db: Database, isolation: Int, val threadLocal: ThreadLocal<Transaction>, val transactionBoundaries: Subject<Boundary, Boundary>
+                                         , val cordaTransaction: CordaTransaction) : TransactionInterface {
         val id = UUID.randomUUID()
 
         override val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
-            db.connector().apply {
-                autoCommit = false
-                transactionIsolation = isolation
-            }
+//            db.connector().apply {
+//                autoCommit = false
+//                transactionIsolation = isolation
+//            }
+            cordaTransaction.connection
         }
 
         override val outerTransaction = threadLocal.get()
 
         override fun commit() {
-            connection.commit()
+//            connection.commit()
+            println("thread=${Thread.currentThread().id} commit ")
+            cordaTransaction.commit()
         }
 
         override fun rollback() {
-            if (!connection.isClosed) {
-                connection.rollback()
-            }
+//            if (!connection.isClosed) {
+//                connection.rollback()
+//            }
+            println("thread=${Thread.currentThread().id} rollback ")
+            cordaTransaction.rollback()
         }
 
         override fun close() {
-            connection.close()
+            println("thread=${Thread.currentThread().id} ${threadLocal.get()} <- $outerTransaction (close)")
+//            connection.close()
+            cordaTransaction.close()
             threadLocal.set(outerTransaction)
             if (outerTransaction == null) {
                 transactionBoundaries.onNext(Boundary(id))

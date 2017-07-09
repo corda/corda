@@ -18,7 +18,9 @@ import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.utilities.CordaTransaction
 import net.corda.node.utilities.StrandLocalTransactionManager
+import net.corda.node.utilities.TransactionTracker
 import net.corda.node.utilities.createTransaction
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
@@ -70,6 +72,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient internal lateinit var actionOnEnd: (Try<R>, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
+    @Transient private var cordaTxTrampoline: CordaTransaction? = null
 
     /**
      * Return the logger for this state machine. The logger name incorporates [id] and so including it in the log message
@@ -385,6 +388,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         // swaps them out.
         txTrampoline = TransactionManager.currentOrNull()
         StrandLocalTransactionManager.setThreadLocalTx(null)
+        cordaTxTrampoline = TransactionTracker.currentOrNull()
+        TransactionTracker.setThreadLocalTx(null)
         if (ioRequest is WaitingRequest)
             waitingForResponse = ioRequest
 
@@ -395,6 +400,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             try {
                 StrandLocalTransactionManager.setThreadLocalTx(txTrampoline)
                 txTrampoline = null
+                TransactionTracker.setThreadLocalTx(cordaTxTrampoline)
+                cordaTxTrampoline = null
                 actionOnSuspend(ioRequest)
             } catch (t: Throwable) {
                 // Quasar does not terminate the fiber properly if an exception occurs during a suspend. We have to
