@@ -90,20 +90,21 @@ class ClassCarpenter {
             get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
 
         fun generateField(cw: ClassWriter) {
+            println ("generateField $name $nullabilityAnnotation")
             val fieldVisitor = cw.visitField(ACC_PROTECTED + ACC_FINAL, name, descriptor, null, null)
-            cw.visitAnnotation(nullabilityAnnotation, false).visitEnd()
+            fieldVisitor.visitAnnotation(nullabilityAnnotation, true).visitEnd()
             fieldVisitor.visitEnd()
         }
 
         fun addNullabilityAnnotation(mv: MethodVisitor) {
-            mv.visitAnnotation(nullabilityAnnotation, false)
+            mv.visitAnnotation(nullabilityAnnotation, true).visitEnd()
         }
 
         fun visitParameter(mv: MethodVisitor, idx: Int) {
             with(mv) {
                 visitParameter(name, 0)
                 if (!field.isPrimitive) {
-                    visitParameterAnnotation(idx, nullabilityAnnotation, false).visitEnd()
+                    visitParameterAnnotation(idx, nullabilityAnnotation, true).visitEnd()
                 }
             }
         }
@@ -113,7 +114,7 @@ class ClassCarpenter {
     }
 
     class NonNullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotations/NotNull;"
+        override val nullabilityAnnotation = "Ljavax/annotation/Nonnull;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             this.name = name
@@ -141,7 +142,7 @@ class ClassCarpenter {
 
 
     class NullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotations/Nullable;"
+        override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
 
         constructor(name: String, field: Class<out Any?>) : this(field) {
             if (field.isPrimitive) {

@@ -5,6 +5,7 @@ import org.junit.Test
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 
 class ClassCarpenterTest {
@@ -464,4 +465,30 @@ class ClassCarpenterTest {
         assertEquals("some pickles", arr2[0])
         assertEquals("some fries", arr2[1])
     }
+
+    @Test
+    fun `nullable sets annotations`() {
+        val className = "iEnjoyJam"
+        val schema = ClassCarpenter.ClassSchema(
+                "gen.$className",
+                mapOf("a" to ClassCarpenter.NullableField(String::class.java),
+                      "b" to ClassCarpenter.NonNullableField(String::class.java)))
+
+        val clazz = cc.build(schema)
+
+        assertEquals (2, clazz.declaredFields.size)
+
+        assertEquals (1, clazz.getDeclaredField("a").annotations.size)
+        assertEquals (javax.annotation.Nullable::class.java, clazz.getDeclaredField("a").annotations[0].annotationClass.java)
+
+        assertEquals (1, clazz.getDeclaredField("b").annotations.size)
+        assertEquals (javax.annotation.Nonnull::class.java, clazz.getDeclaredField("b").annotations[0].annotationClass.java)
+
+        assertEquals (1, clazz.getMethod("getA").annotations.size)
+        assertEquals (javax.annotation.Nullable::class.java, clazz.getMethod("getA").annotations[0].annotationClass.java)
+
+        assertEquals (1, clazz.getMethod("getB").annotations.size)
+        assertEquals (javax.annotation.Nonnull::class.java, clazz.getMethod("getB").annotations[0].annotationClass.java)
+    }
+
 }
