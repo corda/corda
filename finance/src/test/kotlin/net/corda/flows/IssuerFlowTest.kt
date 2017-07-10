@@ -41,11 +41,6 @@ class IssuerFlowTest {
         notaryNode = mockNet.createNotaryNode(null, DUMMY_NOTARY.name)
         bankOfCordaNode = mockNet.createPartyNode(notaryNode.network.myAddress, BOC.name)
         bankClientNode = mockNet.createPartyNode(notaryNode.network.myAddress, MEGA_CORP.name)
-        val nodes = listOf(notaryNode, bankOfCordaNode, bankClientNode)
-
-        nodes.forEach { node ->
-            nodes.map { it.info.legalIdentityAndCert }.forEach(node.services.identityService::registerIdentity)
-        }
     }
 
     @After
