@@ -4,7 +4,7 @@ import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.util.*
 
@@ -110,11 +110,11 @@ class CompositeKey private constructor (val threshold: Int,
             // We don't allow zero or negative weights. Minimum weight = 1.
             require (weight > 0) { "A non-positive weight was detected. Node info: $this"  }
         }
+
         override fun compareTo(other: NodeAndWeight): Int {
-            if (weight == other.weight) {
-                return BigInteger(1, node.toSHA256Bytes()).compareTo(BigInteger(1, other.node.toSHA256Bytes()))
-            }
-            else return weight.compareTo(other.weight)
+            return if (weight == other.weight) {
+                ByteBuffer.wrap(node.toSHA256Bytes()).compareTo(ByteBuffer.wrap(other.node.toSHA256Bytes()))
+            } else weight.compareTo(other.weight)
         }
 
         override fun toASN1Primitive(): ASN1Primitive {
