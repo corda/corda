@@ -288,10 +288,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             Set<Class<ContractState>> contractStateTypes = new HashSet(Collections.singletonList(Cash.State.class));
 
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes);
-            DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, criteria);
+            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, criteria);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
-            Observable<Vault.Update> updates = results.getUpdates();
+            Observable<Vault.Update<ContractState>> updates = results.getUpdates();
 
             // DOCEND VaultJavaQueryExample4
             assertThat(snapshot.getStates()).hasSize(3);
@@ -325,10 +325,10 @@ public class VaultQueryJavaTests extends TestDependencyInjectionBase {
             PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
-            DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
+            DataFeed<Vault.Page<ContractState>, Vault.Update<ContractState>> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);
 
             Vault.Page<ContractState> snapshot = results.getSnapshot();
-            Observable<Vault.Update> updates = results.getUpdates();
+            Observable<Vault.Update<ContractState>> updates = results.getUpdates();
             // DOCEND VaultJavaQueryExample5
 
             assertThat(snapshot.getStates()).hasSize(13);

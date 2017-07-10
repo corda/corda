@@ -45,7 +45,7 @@ class CordaRPCOpsImpl(
         }
     }
 
-    override fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update> {
+    override fun vaultAndUpdates(): DataFeed<List<StateAndRef<ContractState>>, Vault.Update<ContractState>> {
         return database.transaction {
             val (vault, updates) = services.vaultService.track()
             DataFeed(vault.states.toList(), updates)
@@ -65,7 +65,7 @@ class CordaRPCOpsImpl(
     override fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                                   paging: PageSpecification,
                                                   sorting: Sort,
-                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
+                                                  contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return database.transaction {
             services.vaultQueryService._trackBy(criteria, paging, sorting, contractType)
         }
