@@ -9,6 +9,7 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction

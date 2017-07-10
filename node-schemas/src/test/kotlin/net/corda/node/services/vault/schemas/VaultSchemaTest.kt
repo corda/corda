@@ -9,7 +9,7 @@ import io.requery.sql.*
 import io.requery.sql.platform.Generic
 import net.corda.core.contracts.*
 import net.corda.testing.contracts.DummyContract
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.toBase58String

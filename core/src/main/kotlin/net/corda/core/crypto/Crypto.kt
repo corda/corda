@@ -1,6 +1,8 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.composite.CompositeSignature
+import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -151,13 +153,13 @@ object Crypto {
      * Corda composite key type
      */
     val COMPOSITE_KEY = SignatureScheme(
-            SPHINCS256_SHA256.schemeNumberID + 1,
+            6,
             "COMPOSITE",
-            AlgorithmIdentifier(CompositeSignature.ALGORITHM_IDENTIFIER.algorithm, null),
+            CompositeSignature.SIGNATURE_ALGORITHM_IDENTIFIER,
             emptyList(),
-            BouncyCastleProvider.PROVIDER_NAME,
-            "COMPOSITE",
-            "COMPOSITESIG",
+            CordaSecurityProvider.PROVIDER_NAME,
+            CompositeKey.KEY_ALGORITHM,
+            CompositeSignature.SIGNATURE_ALGORITHM,
             null,
             null,
             "Composite keys composed from individual public keys"
@@ -194,6 +196,7 @@ object Crypto {
     // The val is private to avoid any harmful state changes.
     private val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
+            CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
             "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
@@ -205,6 +208,7 @@ object Crypto {
         // This registration is needed for reading back EdDSA key from java keystore.
         // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
         Security.addProvider(getBouncyCastleProvider())
+        Security.addProvider(CordaSecurityProvider())
     }
 
     /**
@@ -219,7 +223,7 @@ object Crypto {
     }
 
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
-        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
+        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
     }
 
     /**

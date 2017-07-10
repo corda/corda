@@ -10,6 +10,7 @@ import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 import io.github.lukehutch.fastclasspathscanner.scanner.ScanResult
 import net.corda.core.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate

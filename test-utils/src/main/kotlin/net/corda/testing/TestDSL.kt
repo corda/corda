@@ -2,6 +2,7 @@ package net.corda.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.expandedCompositeKeys
 import net.corda.core.crypto.testing.NullSignature
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
