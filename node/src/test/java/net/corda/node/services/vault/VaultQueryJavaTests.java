@@ -55,6 +55,7 @@ import static net.corda.node.utilities.DatabaseSupportKt.transaction;
 import static net.corda.testing.CoreTestUtils.getMEGA_CORP;
 import static net.corda.testing.CoreTestUtils.getMEGA_CORP_KEY;
 import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
+import static net.corda.core.utilities.ByteArrays.toHexString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class VaultQueryJavaTests {
@@ -129,6 +130,31 @@ public class VaultQueryJavaTests {
             // DOCEND VaultJavaQueryExample0
 
             assertThat(results.getStates()).hasSize(3);
+
+            return tx;
+        });
+    }
+
+    @Test
+    public void unconsumedStatesForStateRefsSortedByTxnId() {
+        transaction(database, tx -> {
+
+            VaultFiller.fillWithSomeTestLinearStates(services, 8);
+            Vault<LinearState> issuedStates = VaultFiller.fillWithSomeTestLinearStates(services, 2);
+
+            Stream<StateRef> stateRefsStream = StreamSupport.stream(issuedStates.getStates().spliterator(), false).map(StateAndRef::getRef);
+            List<StateRef> stateRefs = stateRefsStream.collect(Collectors.toList());
+
+            SortAttribute.Standard sortAttribute = new SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID);
+            Sort sorting = new Sort(Arrays.asList(new Sort.SortColumn(sortAttribute, Sort.Direction.ASC)));
+            VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, stateRefs);
+            Vault.Page<DummyLinearContract.State> results = vaultQuerySvc.queryBy(DummyLinearContract.State.class, criteria, sorting);
+
+            assertThat(results.getStates()).hasSize(2);
+
+            stateRefs.sort(Comparator.comparing(stateRef -> toHexString(stateRef.getTxhash().getBytes())));
+            assertThat(results.getStates().get(0).getRef()).isEqualTo(stateRefs.get(0));
+            assertThat(results.getStates().get(1).getRef()).isEqualTo(stateRefs.get(1));
 
             return tx;
         });

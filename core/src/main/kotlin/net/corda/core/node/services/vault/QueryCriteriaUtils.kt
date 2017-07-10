@@ -150,7 +150,13 @@ data class Sort(val columns: Collection<SortColumn>) {
     @CordaSerializable
     interface Attribute
 
-    enum class VaultStateAttribute(val columnName: String) : Attribute {
+    enum class CommonStateAttribute(val attributeParent: String, val attributeChild: String?) : Attribute {
+        STATE_REF("stateRef", null),
+        STATE_REF_TXN_ID("stateRef", "txId"),
+        STATE_REF_INDEX("stateRef", "index")
+    }
+
+    enum class VaultStateAttribute(val attributeName: String) : Attribute {
         /** Vault States */
         NOTARY_NAME("notaryName"),
         CONTRACT_TYPE("contractStateClassName"),
@@ -160,14 +166,14 @@ data class Sort(val columns: Collection<SortColumn>) {
         LOCK_ID("lockId")
     }
 
-    enum class LinearStateAttribute(val columnName: String) : Attribute {
+    enum class LinearStateAttribute(val attributeName: String) : Attribute {
         /** Vault Linear States */
         UUID("uuid"),
         EXTERNAL_ID("externalId"),
         DEAL_REFERENCE("dealReference")
     }
 
-    enum class FungibleStateAttribute(val columnName: String) : Attribute {
+    enum class FungibleStateAttribute(val attributeName: String) : Attribute {
         /** Vault Fungible States */
         QUANTITY("quantity"),
         ISSUER_REF("issuerRef")

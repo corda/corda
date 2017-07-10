@@ -18,6 +18,7 @@ import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
@@ -220,21 +221,80 @@ class VaultQueryTests {
     }
 
     @Test
-    fun `unconsumed states for state refs`() {
+    fun `unconsumed cash states sorted by state ref`() {
+        database.transaction {
 
+            var stateRefs : MutableList<StateRef> = mutableListOf()
+
+            val issuedStates = services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
+            val issuedStateRefs = issuedStates.states.map { it.ref }.toList()
+            stateRefs.addAll(issuedStateRefs)
+
+            val spentStates = services.consumeCash(25.DOLLARS)
+            var spentStateRefs = spentStates.states.map { it.ref }.toList()
+            stateRefs.addAll(spentStateRefs)
+
+            val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF)
+            val criteria = VaultQueryCriteria()
+            val results = vaultQuerySvc.queryBy<Cash.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
+
+            // default StateRef sort is by index then txnId:
+            // order by
+            //    vaultschem1_.output_index,
+            //    vaultschem1_.transaction_id asc
+            assertThat(results.states).hasSize(8)       // -3 CONSUMED + 1 NEW UNCONSUMED (change)
+
+            val sortedStateRefs = stateRefs.sortedBy { it.index }
+
+            assertThat(results.states.first().ref.index).isEqualTo(sortedStateRefs.first().index)   // 0
+            assertThat(results.states.last().ref.index).isEqualTo(sortedStateRefs.last().index)     // 1
+        }
+    }
+
+    @Test
+    fun `unconsumed cash states sorted by state ref txnId and index`() {
+        database.transaction {
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 10, 10, Random(0L))
+            services.consumeCash(10.DOLLARS)
+            services.consumeCash(10.DOLLARS)
+
+            val sortAttributeTxnId = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
+            val sortAttributeIndex = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_INDEX)
+            val sortBy = Sort(setOf(Sort.SortColumn(sortAttributeTxnId, Sort.Direction.ASC),
+                                    Sort.SortColumn(sortAttributeIndex, Sort.Direction.ASC)))
+            val criteria = VaultQueryCriteria()
+            val results = vaultQuerySvc.queryBy<Cash.State>(criteria, sortBy)
+
+            results.statesMetadata.forEach {
+                println(" ${it.ref}")
+            }
+
+            // explicit sort order asc by txnId and then index:
+            // order by
+            //    vaultschem1_.transaction_id asc,
+            //    vaultschem1_.output_index asc
+            assertThat(results.states).hasSize(9)   // -2 CONSUMED + 1 NEW UNCONSUMED (change)
+        }
+    }
+
+    @Test
+    fun `unconsumed states for state refs`() {
         database.transaction {
             services.fillWithSomeTestLinearStates(8)
             val issuedStates = services.fillWithSomeTestLinearStates(2)
             val stateRefs = issuedStates.states.map { it.ref }.toList()
 
             // DOCSTART VaultQueryExample2
+            val sortAttribute = SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID)
             val criteria = VaultQueryCriteria(stateRefs = listOf(stateRefs.first(), stateRefs.last()))
-            val results = vaultQuerySvc.queryBy<DummyLinearContract.State>(criteria)
+            val results = vaultQuerySvc.queryBy<DummyLinearContract.State>(criteria, Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC))))
             // DOCEND VaultQueryExample2
 
             assertThat(results.states).hasSize(2)
-            assertThat(results.states.first().ref).isEqualTo(issuedStates.states.first().ref)
-            assertThat(results.states.last().ref).isEqualTo(issuedStates.states.last().ref)
+
+            val sortedStateRefs = stateRefs.sortedBy { it.txhash.bytes.toHexString() }
+            assertThat(results.states.first().ref).isEqualTo(sortedStateRefs.first())
+            assertThat(results.states.last().ref).isEqualTo(sortedStateRefs.last())
         }
     }
 

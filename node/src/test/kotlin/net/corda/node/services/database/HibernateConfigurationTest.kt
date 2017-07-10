@@ -203,6 +203,67 @@ class HibernateConfigurationTest {
     }
 
     @Test
+    fun `with sorting by state ref desc and asc`() {
+        // generate additional state ref indexes
+        database.transaction {
+            services.consumeCash(1.DOLLARS)
+            services.consumeCash(2.DOLLARS)
+            services.consumeCash(3.DOLLARS)
+            services.consumeCash(4.DOLLARS)
+            services.consumeCash(5.DOLLARS)
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
+        val sortByStateRef = vaultStates.get<PersistentStateRef>("stateRef")
+
+        // order by DESC
+        criteriaQuery.orderBy(criteriaBuilder.desc(sortByStateRef))
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        println("DESC by stateRef")
+        queryResults.map { println(it.stateRef) }
+
+        // order by ASC
+        criteriaQuery.orderBy(criteriaBuilder.asc(sortByStateRef))
+        val queryResultsAsc = entityManager.createQuery(criteriaQuery).resultList
+        println("ASC by stateRef")
+        queryResultsAsc.map { println(it.stateRef) }
+    }
+
+    @Test
+    fun `with sorting by state ref index and txId desc and asc`() {
+        // generate additional state ref indexes
+        database.transaction {
+            services.consumeCash(1.DOLLARS)
+            services.consumeCash(2.DOLLARS)
+            services.consumeCash(3.DOLLARS)
+            services.consumeCash(4.DOLLARS)
+            services.consumeCash(5.DOLLARS)
+        }
+
+        // structure query
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val vaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+
+        val sortByIndex = vaultStates.get<PersistentStateRef>("stateRef").get<String>("index")
+        val sortByTxId = vaultStates.get<PersistentStateRef>("stateRef").get<String>("txId")
+
+        // order by DESC
+        criteriaQuery.orderBy(criteriaBuilder.desc(sortByIndex), criteriaBuilder.desc(sortByTxId))
+        val queryResults = entityManager.createQuery(criteriaQuery).resultList
+        println("DESC by index txId")
+        queryResults.map { println(it.stateRef) }
+
+        // order by ASC
+        criteriaQuery.orderBy(criteriaBuilder.asc(sortByIndex), criteriaBuilder.asc(sortByTxId))
+        val queryResultsAsc = entityManager.createQuery(criteriaQuery).resultList
+        println("ASC by index txId")
+        queryResultsAsc.map { println(it.stateRef) }
+    }
+
+    @Test
     fun `with pagination`() {
         // add 100 additional cash entries
         database.transaction {
