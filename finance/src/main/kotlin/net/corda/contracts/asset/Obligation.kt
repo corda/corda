@@ -10,15 +10,13 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.clauses.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.entropyToKeyPair
-import net.corda.core.crypto.testing.NULL_PARTY
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.Emoji
-import net.corda.core.utilities.NonEmptySet
 import org.bouncycastle.asn1.x500.X500Name
 import java.math.BigInteger
 import java.security.PublicKey
@@ -97,7 +95,8 @@ class Obligation<P : Any> : Contract {
             val lifecycleClause = Clauses.VerifyLifecycle<ContractState, C, Unit, P>()
             override fun toString(): String = "Net obligations"
 
-            override fun verify(tx: TransactionForContract, inputs: List<ContractState>, outputs: List<ContractState>, commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
+            override fun verify(tx: TransactionForContract, inputs: List<ContractState>, outputs: List<ContractState>,
+                                commands: List<AuthenticatedObject<C>>, groupingKey: Unit?): Set<C> {
                 lifecycleClause.verify(tx, inputs, outputs, commands, groupingKey)
                 return super.verify(tx, inputs, outputs, commands, groupingKey)
             }
@@ -137,7 +136,8 @@ class Obligation<P : Any> : Contract {
                 val command = commands.requireSingleCommand<Commands.Settle<P>>()
                 val obligor = groupingKey!!.issuer.party
                 val template = groupingKey.product
-                val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>() ?: throw IllegalArgumentException("there is at least one obligation input for this group")
+                val inputAmount: Amount<Issued<Terms<P>>> = inputs.sumObligationsOrNull<P>()
+                        ?: throw IllegalArgumentException("there is at least one obligation input for this group")
                 val outputAmount: Amount<Issued<Terms<P>>> = outputs.sumObligationsOrZero(groupingKey)
 
                 // Sum up all asset state objects that are moving and fulfil our requirements
@@ -202,7 +202,7 @@ class Obligation<P : Any> : Contract {
                     "amount in settle command ${command.value.amount} matches settled total $totalAmountSettled" using (command.value.amount == totalAmountSettled)
                     "signatures are present from all obligors" using command.signers.containsAll(requiredSigners)
                     "there are no zero sized inputs" using inputs.none { it.amount.quantity == 0L }
-                    "at obligor ${obligor} the obligations after settlement balance" using
+                    "at obligor $obligor the obligations after settlement balance" using
                             (inputAmount == outputAmount + Amount(totalPenniesSettled, groupingKey))
                 }
                 return setOf(command.value)
@@ -215,7 +215,7 @@ class Obligation<P : Any> : Contract {
          * any lifecycle change clause, which is the only clause that involve
          * non-standard lifecycle states on input/output.
          */
-        class VerifyLifecycle<S : ContractState, C : CommandData, T : Any, P : Any> : Clause<S, C, T>() {
+        class VerifyLifecycle<in S : ContractState, C : CommandData, in T : Any, P : Any> : Clause<S, C, T>() {
             override fun verify(tx: TransactionForContract,
                                 inputs: List<S>,
                                 outputs: List<S>,
@@ -256,18 +256,20 @@ class Obligation<P : Any> : Contract {
      * @param P the product the obligation is for payment of.
      */
     @CordaSerializable
-    data class Terms<P : Any>(
+    data class Terms<out P : Any>(
             /** The hash of the asset contract we're willing to accept in payment for this debt. */
-            val acceptableContracts: NonEmptySet<SecureHash>,
+            val acceptableContracts: Set<SecureHash>,
             /** The parties whose assets we are willing to accept in payment for this debt. */
-            val acceptableIssuedProducts: NonEmptySet<Issued<P>>,
-
+            val acceptableIssuedProducts: Set<Issued<P>>,
             /** When the contract must be settled by. */
             val dueBefore: Instant,
             val timeTolerance: Duration = Duration.ofSeconds(30)
     ) {
-        val product: P
-            get() = acceptableIssuedProducts.map { it.product }.toSet().single()
+        init {
+            require(acceptableContracts.isNotEmpty()) { "acceptableContracts cannot be empty" }
+            require(acceptableIssuedProducts.isNotEmpty()) { "acceptableIssuedProducts cannot be empty" }
+        }
+        val product: P get() = acceptableIssuedProducts.map { it.product }.toSet().single()
     }
 
     /**
@@ -379,7 +381,7 @@ class Obligation<P : Any> : Contract {
         data class Exit<P : Any>(override val amount: Amount<Issued<Terms<P>>>) : Commands, FungibleAsset.Commands.Exit<Terms<P>>
     }
 
-    override fun verify(tx: TransactionForContract) = verifyClause<Commands>(tx, FirstOf<ContractState, Commands, Unit>(
+    override fun verify(tx: TransactionForContract) = verifyClause(tx, FirstOf(
             Clauses.Net<Commands, P>(),
             Clauses.Group<P>()
     ), tx.commands.select<Obligation.Commands>())
