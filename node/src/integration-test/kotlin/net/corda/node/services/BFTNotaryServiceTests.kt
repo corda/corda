@@ -67,13 +67,11 @@ class BFTNotaryServiceTests {
     }
 
     @Test
-    @Ignore("Under investigation due to failure on TC build server")
     fun `detect double spend 1 faulty`() {
         detectDoubleSpend(1)
     }
 
     @Test
-    @Ignore("Under investigation due to failure on TC build server")
     fun `detect double spend 2 faulty`() {
         detectDoubleSpend(2)
     }
