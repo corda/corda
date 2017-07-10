@@ -23,14 +23,6 @@ import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 
-// DOCSTART 1
-// Helper method to locate the latest Vault version of a LinearState from a possibly out of date StateRef
-inline fun <reified T : LinearState> ServiceHub.latest(ref: StateRef): StateAndRef<T> {
-    val linearHeads = vaultQueryService.queryBy<T>(VaultQueryCriteria(stateRefs = listOf(ref)))
-    return linearHeads.states.single()
-}
-// DOCEND 1
-
 // Minimal state model of a manual approval process
 @CordaSerializable
 enum class WorkflowState {
@@ -151,8 +143,11 @@ class SubmitCompletionFlow(val ref: StateRef, val verdict: WorkflowState) : Flow
 
     @Suspendable
     override fun call(): StateAndRef<TradeApprovalContract.State> {
-        // Pull in the latest Vault version of the StateRef as a full StateAndRef
-        val latestRecord = serviceHub.latest<TradeApprovalContract.State>(ref)
+        // DOCSTART 1
+        val criteria = VaultQueryCriteria(stateRefs = listOf(ref))
+        val latestRecord = serviceHub.vaultQueryService.queryBy<TradeApprovalContract.State>(criteria).states.single()
+        // DOCEND 1
+
         // Check the protocol hasn't already been run
         require(latestRecord.ref == ref) {
             "Input trade $ref is not latest version $latestRecord"

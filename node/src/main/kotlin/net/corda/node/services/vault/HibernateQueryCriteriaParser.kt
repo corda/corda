@@ -378,12 +378,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             if (aggregateExpressions.isEmpty())
                 listOf(vaultStates).plus(rootEntities.map { it.value })
             else
-                aggregateExpressions
+                aggregateExpressions as List<Root<out Any>>
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
-        val selections = listOf(vaultStates).plus(rootEntities.map { it.value })
         return Triple(selections, combinedPredicates, orderSpec)
     }
 
@@ -445,7 +444,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             is Sort.CommonStateAttribute -> {
                 Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
             }
-            isSort.VaultStateAttribute -> {
+            is Sort.VaultStateAttribute -> {
                 Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
             }
             is Sort.LinearStateAttribute -> {
