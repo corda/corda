@@ -4,6 +4,7 @@ import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DummyFungibleContract
 import net.corda.core.contracts.*
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
@@ -34,6 +35,7 @@ import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.hibernate.SessionFactory
 import org.junit.After
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
@@ -83,6 +85,8 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
                 }
+
+                override fun jdbcSession(): Connection = database.createSession()
             }
         }
         setUpDb()
@@ -852,4 +856,25 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
         assertThat(queryResults).hasSize(6)
     }
 
+    /**
+     *  Test invoking SQL query using JDBC connection (session)
+     */
+    @Test
+    fun `test calling an arbitrary JDBC native query`() {
+        val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
+
+        database.transaction {
+
+            val jdbcSession = database.createSession()
+            val prepStatement = jdbcSession.prepareStatement(nativeQuery)
+            val rs = prepStatement.executeQuery()
+            var count = 0
+            while (rs.next()) {
+                val stateRef = StateRef(SecureHash.parse(rs.getString(1)), rs.getInt(2))
+                Assert.assertTrue(cashStates.map { it.ref }.contains(stateRef))
+                count++
+            }
+            Assert.assertEquals(cashStates.count(), count)
+        }
+    }
 }

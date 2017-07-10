@@ -39,6 +39,7 @@ import java.io.InputStream
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.sql.Connection
 import java.time.Clock
 import java.util.*
 import java.util.jar.JarInputStream
@@ -51,6 +52,7 @@ import java.util.jar.JarInputStream
  * building chains of transactions and verifying them. It isn't sufficient for testing flows however.
  */
 open class MockServices(vararg val keys: KeyPair) : ServiceHub {
+
     constructor() : this(generateKeyPair())
 
     val key: KeyPair get() = keys.first()
@@ -87,6 +89,8 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
 
     override fun <T : SerializeAsToken> cordaService(type: Class<T>): T = throw IllegalArgumentException("${type.name} not found")
+
+    override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 }
 
 class MockKeyManagementService(val identityService: IdentityService,
