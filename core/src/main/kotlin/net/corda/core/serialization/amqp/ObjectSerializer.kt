@@ -71,11 +71,14 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
         return interfaces.map { nameForType(it) }
     }
 
-
     fun construct(properties: List<Any?>): Any {
         if (javaConstructor == null) {
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
         }
-        return javaConstructor.newInstance(*properties.toTypedArray())
+
+        /* remember that the properties list contain all of the serialised properties of a class, not just
+           those set by the constructor. These are guaranteed to be listed after those set by the constructor
+           so it' safe to simply slice the list */
+        return javaConstructor.newInstance(* properties.subList(0,javaConstructor.parameterCount).toTypedArray())
     }
 }
