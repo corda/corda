@@ -37,12 +37,12 @@ val selfIssueTest = LoadTest<SelfIssueCommand, SelfIssueState>(
         "Self issuing cash randomly",
 
         generate = { _, parallelism ->
-            val generateIssue = Generator.pickOne(simpleNodes).bind { node ->
+            val generateIssue = Generator.pickOne(simpleNodes).flatMap { node ->
                 generateIssue(1000, USD, notary.info.notaryIdentity, listOf(node.info.legalIdentity), anonymous = true).map {
                     SelfIssueCommand(it, node)
                 }
             }
-            Generator.replicatePoisson(parallelism.toDouble(), generateIssue).bind {
+            Generator.replicatePoisson(parallelism.toDouble(), generateIssue).flatMap {
                 // We need to generate at least one
                 if (it.isEmpty()) {
                     Generator.sequence(listOf(generateIssue))

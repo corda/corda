@@ -15,7 +15,8 @@ import com.google.common.collect.HashMultimap
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import io.requery.util.CloseableIterator
-import net.corda.core.*
+import net.corda.core.ThreadBox
+import net.corda.core.bufferUntilSubscribed
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.FlowException
@@ -25,6 +26,8 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.then
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
@@ -122,7 +125,7 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         abstract val logic: FlowLogic<*>
 
         data class Add(override val logic: FlowLogic<*>) : Change()
-        data class Removed(override val logic: FlowLogic<*>, val result: ErrorOr<*>) : Change()
+        data class Removed(override val logic: FlowLogic<*>, val result: Try<*>) : Change()
     }
 
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
@@ -442,13 +445,13 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
             processIORequest(ioRequest)
             decrementLiveFibers()
         }
-        fiber.actionOnEnd = { resultOrError, propagated ->
+        fiber.actionOnEnd = { result, propagated ->
             try {
                 mutex.locked {
                     stateMachines.remove(fiber)?.let { checkpointStorage.removeCheckpoint(it) }
-                    notifyChangeObservers(Change.Removed(fiber.logic, resultOrError))
+                    notifyChangeObservers(Change.Removed(fiber.logic, result))
                 }
-                endAllFiberSessions(fiber, resultOrError.error, propagated)
+                endAllFiberSessions(fiber, result, propagated)
             } finally {
                 fiber.commitTransaction()
                 decrementLiveFibers()
@@ -463,10 +466,10 @@ class StateMachineManager(val serviceHub: ServiceHubInternal,
         }
     }
 
-    private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, exception: Throwable?, propagated: Boolean) {
+    private fun endAllFiberSessions(fiber: FlowStateMachineImpl<*>, result: Try<*>, propagated: Boolean) {
         openSessions.values.removeIf { session ->
             if (session.fiber == fiber) {
-                session.endSession(exception, propagated)
+                session.endSession((result as? Try.Failure)?.exception, propagated)
                 true
             } else {
                 false

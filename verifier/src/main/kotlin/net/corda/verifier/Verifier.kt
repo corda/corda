@@ -3,8 +3,6 @@ package net.corda.verifier
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import net.corda.core.ErrorOr
-import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.core.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.debug
@@ -15,6 +13,7 @@ import net.corda.nodeapi.VerifierApi
 import net.corda.nodeapi.VerifierApi.VERIFICATION_REQUESTS_QUEUE_NAME
 import net.corda.nodeapi.config.NodeSSLConfiguration
 import net.corda.nodeapi.config.getValue
+import net.corda.nodeapi.internal.addShutdownHook
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -61,14 +60,15 @@ class Verifier {
             consumer.setMessageHandler {
                 val request = VerifierApi.VerificationRequest.fromClientMessage(it)
                 log.debug { "Received verification request with id ${request.verificationId}" }
-                val result = ErrorOr.catch {
+                val error = try {
                     request.transaction.verify()
-                }
-                if (result.error != null) {
-                    log.debug { "Verification returned with error ${result.error}" }
+                    null
+                } catch (t: Throwable) {
+                    log.debug("Verification returned with error:", t)
+                    t
                 }
                 val reply = session.createMessage(false)
-                val response = VerifierApi.VerificationResponse(request.verificationId, result.error)
+                val response = VerifierApi.VerificationResponse(request.verificationId, error)
                 response.writeToClientMessage(reply)
                 replyProducer.send(request.responseAddress, reply)
                 it.acknowledge()

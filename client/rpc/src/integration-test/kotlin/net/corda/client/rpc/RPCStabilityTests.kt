@@ -8,15 +8,19 @@ import com.esotericsoftware.kryo.pool.KryoPool
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.RPCClientConfiguration
-import net.corda.core.*
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.future
+import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
+import net.corda.core.millis
+import net.corda.core.seconds
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.testing.driver.poll
+import net.corda.core.utilities.Try
 import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
+import net.corda.testing.driver.poll
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,7 +29,10 @@ import rx.Observable
 import rx.subjects.PublishSubject
 import rx.subjects.UnicastSubject
 import java.time.Duration
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RPCStabilityTests {
@@ -78,9 +85,9 @@ class RPCStabilityTests {
         val executor = Executors.newScheduledThreadPool(1)
         fun startAndStop() {
             rpcDriver {
-                ErrorOr.catch { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() }
+                Try.on { startRpcClient<RPCOps>(NetworkHostAndPort("localhost", 9999)).get() }
                 val server = startRpcServer<RPCOps>(ops = DummyOps)
-                ErrorOr.catch { startRpcClient<RPCOps>(
+                Try.on { startRpcClient<RPCOps>(
                         server.get().broker.hostAndPort!!,
                         configuration = RPCClientConfiguration.default.copy(minimumServerProtocolVersion = 1)
                 ).get() }

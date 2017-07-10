@@ -12,9 +12,9 @@ import com.google.common.cache.RemovalListener
 import com.google.common.util.concurrent.SettableFuture
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import net.corda.core.ThreadBox
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.RPCOps
-import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.KryoPoolWithContext
 import net.corda.core.utilities.*
 import net.corda.nodeapi.*
@@ -229,14 +229,15 @@ class RPCClientProxyHandler(
                 if (replyFuture == null) {
                     log.error("RPC reply arrived to unknown RPC ID ${serverToClient.id}, this indicates an internal RPC error.")
                 } else {
-                    val rpcCallSite = callSiteMap?.get(serverToClient.id.toLong)
-                    serverToClient.result.match(
-                            onError = {
-                                if (rpcCallSite != null) addRpcCallSiteToThrowable(it, rpcCallSite)
-                                replyFuture.setException(it)
-                            },
-                            onValue = { replyFuture.set(it) }
-                    )
+                    val result = serverToClient.result
+                    when (result) {
+                        is Try.Success -> replyFuture.set(result.value)
+                        is Try.Failure -> {
+                            val rpcCallSite = callSiteMap?.get(serverToClient.id.toLong)
+                            if (rpcCallSite != null) addRpcCallSiteToThrowable(result.exception, rpcCallSite)
+                            replyFuture.setException(result.exception)
+                        }
+                    }
                 }
             }
             is RPCApi.ServerToClient.Observation -> {

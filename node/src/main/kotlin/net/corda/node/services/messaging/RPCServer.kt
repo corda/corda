@@ -12,15 +12,11 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimaps
 import com.google.common.collect.SetMultimap
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import net.corda.core.ErrorOr
-import net.corda.core.messaging.RPCOps
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.messaging.RPCOps
 import net.corda.core.seconds
 import net.corda.core.serialization.KryoPoolWithContext
-import net.corda.core.utilities.LazyStickyPool
-import net.corda.core.utilities.LifeCycle
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.*
 import net.corda.node.services.RPCUserService
 import net.corda.nodeapi.*
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -43,7 +39,6 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.time.Duration
 import java.util.concurrent.*
-import kotlin.collections.ArrayList
 
 data class RPCServerConfiguration(
         /** The number of threads to use for handling RPC requests */
@@ -270,14 +265,7 @@ class RPCServer(
                 )
                 rpcExecutor!!.submit {
                     val result = invokeRpc(rpcContext, clientToServer.methodName, clientToServer.arguments)
-                    val resultWithExceptionUnwrapped = result.mapError {
-                        if (it is InvocationTargetException) {
-                            it.cause ?: RPCException("Caught InvocationTargetException without cause")
-                        } else {
-                            it
-                        }
-                    }
-                    sendReply(clientToServer.id, clientToServer.clientAddress, resultWithExceptionUnwrapped)
+                    sendReply(clientToServer.id, clientToServer.clientAddress, result)
                 }
             }
             is RPCApi.ClientToServer.ObservablesClosed -> {
@@ -287,25 +275,24 @@ class RPCServer(
         artemisMessage.acknowledge()
     }
 
-    private fun invokeRpc(rpcContext: RpcContext, methodName: String, arguments: List<Any?>): ErrorOr<Any> {
-        return ErrorOr.catch {
+    private fun invokeRpc(rpcContext: RpcContext, methodName: String, arguments: List<Any?>): Try<Any> {
+        return Try.on {
             try {
                 CURRENT_RPC_CONTEXT.set(rpcContext)
                 log.debug { "Calling $methodName" }
                 val method = methodTable[methodName] ?:
                         throw RPCException("Received RPC for unknown method $methodName - possible client/server version skew?")
                 method.invoke(ops, *arguments.toTypedArray())
+            } catch (e: InvocationTargetException) {
+                throw e.cause ?: RPCException("Caught InvocationTargetException without cause")
             } finally {
                 CURRENT_RPC_CONTEXT.remove()
             }
         }
     }
 
-    private fun sendReply(requestId: RPCApi.RpcRequestId, clientAddress: SimpleString, resultWithExceptionUnwrapped: ErrorOr<Any>) {
-        val reply = RPCApi.ServerToClient.RpcReply(
-                id = requestId,
-                result = resultWithExceptionUnwrapped
-        )
+    private fun sendReply(requestId: RPCApi.RpcRequestId, clientAddress: SimpleString, result: Try<Any>) {
+        val reply = RPCApi.ServerToClient.RpcReply(requestId, result)
         val observableContext = ObservableContext(
                 requestId,
                 observableMap,

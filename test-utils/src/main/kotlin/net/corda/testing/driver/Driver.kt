@@ -19,10 +19,7 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.WHITESPACE
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.parseNetworkHostAndPort
+import net.corda.core.utilities.*
 import net.corda.node.internal.Node
 import net.corda.node.internal.NodeStartup
 import net.corda.node.serialization.NodeClock
@@ -352,15 +349,16 @@ fun <A> poll(
             if (++counter == warnCount) {
                 log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
             }
-            ErrorOr.catch(check).match(onValue = {
-                if (it != null) {
-                    resultFuture.set(it)
+            try {
+                val checkResult = check()
+                if (checkResult != null) {
+                    resultFuture.set(checkResult)
                 } else {
                     executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
                 }
-            }, onError = {
-                resultFuture.setException(it)
-            })
+            } catch (t: Throwable) {
+                resultFuture.setException(t)
+            }
         }
     }
     executorService.submit(task) // The check may be expensive, so always run it in the background even the first time.
@@ -389,7 +387,7 @@ class ShutdownManager(private val executorService: ExecutorService) {
     }
 
     fun shutdown() {
-        val shutdownFutures = state.locked {
+        val shutdownActionFutures = state.locked {
             if (isShutdown) {
                 emptyList<ListenableFuture<() -> Unit>>()
             } else {
@@ -397,21 +395,16 @@ class ShutdownManager(private val executorService: ExecutorService) {
                 registeredShutdowns
             }
         }
-        val shutdowns = shutdownFutures.map { ErrorOr.catch { it.getOrThrow(1.seconds) } }
-        shutdowns.reversed().forEach { errorOrShutdown ->
-            errorOrShutdown.match(
-                    onValue = { shutdown ->
-                        try {
-                            shutdown()
-                        } catch (throwable: Throwable) {
-                            log.error("Exception while shutting down", throwable)
-                        }
-                    },
-                    onError = { error ->
-                        log.error("Exception while getting shutdown method, disregarding", error)
-                    }
-            )
-        }
+        val shutdowns = shutdownActionFutures.map { Try.on { it.getOrThrow(1.seconds) } }
+        shutdowns.reversed().forEach { when (it) {
+            is Try.Success ->
+                try {
+                    it.value()
+                } catch (t: Throwable) {
+                    log.warn("Exception while shutting down", t)
+                }
+            is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
+        } }
     }
 
     fun registerShutdown(shutdown: ListenableFuture<() -> Unit>) {

@@ -1,7 +1,7 @@
 package net.corda.client.mock
 
 import net.corda.client.mock.Generator.Companion.choice
-import net.corda.core.ErrorOr
+import net.corda.core.utilities.Try
 import java.util.*
 
 /**
@@ -12,7 +12,7 @@ import java.util.*
  * [Generator.choice] picks a generator from the specified list and runs that.
  * [Generator.frequency] is similar to [choice] but the probability may be specified for each generator (it is normalised before picking).
  * [Generator.combine] combines two generators of A and B with a function (A, B) -> C. Variants exist for other arities.
- * [Generator.bind] sequences two generators using an arbitrary A->Generator<B> function. Keep the usage of this
+ * [Generator.flatMap] sequences two generators using an arbitrary A->Generator<B> function. Keep the usage of this
  *   function minimal as it may explode the stack, especially when using recursion.
  *
  * There are other utilities as well, the type of which are usually descriptive.
@@ -31,7 +31,7 @@ import java.util.*
  *
  *   The above will generate a random list of animals.
  */
-class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
+class Generator<out A>(val generate: (SplittableRandom) -> Try<A>) {
 
     // Functor
     fun <B> map(function: (A) -> B): Generator<B> =
@@ -54,18 +54,19 @@ class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
             product<R>(other1.product(other2.product(other3.product(other4.product(pure({ e -> { d -> { c -> { b -> { a -> function(a, b, c, d, e) } } } } }))))))
 
     // Monad
-    fun <B> bind(function: (A) -> Generator<B>) =
-            Generator { generate(it).bind { a -> function(a).generate(it) } }
+    fun <B> flatMap(function: (A) -> Generator<B>): Generator<B> {
+        return Generator { random -> generate(random).flatMap { function(it).generate(random) } }
+    }
 
     companion object {
-        fun <A> pure(value: A) = Generator { ErrorOr(value) }
-        fun <A> impure(valueClosure: () -> A) = Generator { ErrorOr(valueClosure()) }
-        fun <A> fail(error: Exception) = Generator<A> { ErrorOr.of(error) }
+        fun <A> pure(value: A) = Generator { Try.Success(value) }
+        fun <A> impure(valueClosure: () -> A) = Generator { Try.Success(valueClosure()) }
+        fun <A> fail(error: Exception) = Generator<A> { Try.Failure(error) }
 
         // Alternative
-        fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).bind { generators[it] }
+        fun <A> choice(generators: List<Generator<A>>) = intRange(0, generators.size - 1).flatMap { generators[it] }
 
-        fun <A> success(generate: (SplittableRandom) -> A) = Generator { ErrorOr(generate(it)) }
+        fun <A> success(generate: (SplittableRandom) -> A) = Generator { Try.Success(generate(it)) }
         fun <A> frequency(generators: List<Pair<Double, Generator<A>>>): Generator<A> {
             val ranges = mutableListOf<Pair<Double, Double>>()
             var current = 0.0
@@ -74,11 +75,11 @@ class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
                 ranges.add(Pair(current, next))
                 current = next
             }
-            return doubleRange(0.0, current).bind { value ->
-                generators[ranges.binarySearch { range ->
-                    if (value < range.first) {
+            return doubleRange(0.0, current).flatMap { value ->
+                generators[ranges.binarySearch { (first, second) ->
+                    if (value < first) {
                         1
-                    } else if (value < range.second) {
+                    } else if (value < second) {
                         0
                     } else {
                         -1
@@ -91,14 +92,12 @@ class Generator<out A>(val generate: (SplittableRandom) -> ErrorOr<A>) {
             val result = mutableListOf<A>()
             for (generator in generators) {
                 val element = generator.generate(it)
-                val v = element.value
-                if (v != null) {
-                    result.add(v)
-                } else {
-                    return@Generator ErrorOr.of(element.error!!)
+                when (element) {
+                    is Try.Success -> result.add(element.value)
+                    is Try.Failure -> return@Generator element
                 }
             }
-            ErrorOr(result)
+            Try.Success(result)
         }
     }
 }
@@ -109,11 +108,9 @@ fun <A> Generator<A>.generateOrFail(random: SplittableRandom, numberOfTries: Int
     var error: Throwable? = null
     for (i in 0..numberOfTries - 1) {
         val result = generate(random)
-        val v = result.value
-        if (v != null) {
-            return v
-        } else {
-            error = result.error
+        error = when (result) {
+            is Try.Success -> return result.value
+            is Try.Failure -> result.exception
         }
     }
     if (error == null) {
@@ -147,9 +144,9 @@ fun Generator.Companion.doubleRange(from: Double, to: Double): Generator<Double>
 fun Generator.Companion.char() = Generator {
     val codePoint = Math.abs(it.nextInt()) % (17 * (1 shl 16))
     if (Character.isValidCodePoint(codePoint)) {
-        return@Generator ErrorOr(codePoint.toChar())
+        return@Generator Try.Success(codePoint.toChar())
     } else {
-        ErrorOr.of(IllegalStateException("Could not generate valid codepoint"))
+        Try.Failure(IllegalStateException("Could not generate valid codepoint"))
     }
 }
 
@@ -175,20 +172,19 @@ fun <A> Generator.Companion.replicatePoisson(meanSize: Double, generator: Genera
     val result = mutableListOf<A>()
     var finish = false
     while (!finish) {
-        val errorOr = Generator.doubleRange(0.0, 1.0).generate(it).bind { value ->
+        val result = Generator.doubleRange(0.0, 1.0).generate(it).flatMap { value ->
             if (value < chance) {
                 generator.generate(it).map { result.add(it) }
             } else {
                 finish = true
-                ErrorOr(Unit)
+                Try.Success(Unit)
             }
         }
-        val e = errorOr.error
-        if (e != null) {
-            return@Generator ErrorOr.of(e)
+        if (result is Try.Failure) {
+            return@Generator result
         }
     }
-    ErrorOr(result)
+    Try.Success(result)
 }
 
 fun <A> Generator.Companion.pickOne(list: List<A>) = Generator.intRange(0, list.size - 1).map { list[it] }
@@ -211,7 +207,7 @@ fun <A> Generator.Companion.pickN(number: Int, list: List<A>) = Generator<List<A
             resultList.add(a)
         }
     }
-    ErrorOr(resultList)
+    Try.Success(resultList)
 }
 
 fun <A> Generator.Companion.sampleBernoulli(maxRatio: Double = 1.0, vararg collection: A) =

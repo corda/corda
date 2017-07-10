@@ -117,7 +117,7 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
         generate = { (nodeVaults), parallelism ->
             val nodeMap = simpleNodes.associateBy { it.info.legalIdentity }
             val anonymous = true
-            Generator.pickN(parallelism, simpleNodes).bind { nodes ->
+            Generator.pickN(parallelism, simpleNodes).flatMap { nodes ->
                 Generator.sequence(
                         nodes.map { node ->
                             val quantities = nodeVaults[node.info.legalIdentity] ?: mapOf()

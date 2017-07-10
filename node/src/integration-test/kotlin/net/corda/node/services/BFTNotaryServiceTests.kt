@@ -1,11 +1,9 @@
 package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.ErrorOr
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.div
@@ -13,6 +11,7 @@ import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.Try
 import net.corda.flows.NotaryError
 import net.corda.flows.NotaryException
 import net.corda.flows.NotaryFlow
@@ -23,10 +22,10 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Files
 import kotlin.test.assertEquals
@@ -95,10 +94,10 @@ class BFTNotaryServiceTests {
             val flows = spendTxs.map { NotaryFlow.Client(it) }
             val stateMachines = flows.map { services.startFlow(it) }
             mockNet.runNetwork()
-            val results = stateMachines.map { ErrorOr.catch { it.resultFuture.getOrThrow() } }
+            val results = stateMachines.map { Try.on { it.resultFuture.getOrThrow() } }
             val successfulIndex = results.mapIndexedNotNull { index, result ->
-                if (result.error == null) {
-                    val signers = result.getOrThrow().map { it.by }
+                if (result is Try.Success) {
+                    val signers = result.value.map { it.by }
                     assertEquals(minCorrectReplicas(clusterSize), signers.size)
                     signers.forEach {
                         assertTrue(it in (notary.owningKey as CompositeKey).leafKeys)
@@ -109,8 +108,8 @@ class BFTNotaryServiceTests {
                 }
             }.single()
             spendTxs.zip(results).forEach { (tx, result) ->
-                if (result.error != null) {
-                    val error = (result.error as NotaryException).error as NotaryError.Conflict
+                if (result is Try.Failure) {
+                    val error = (result.exception as NotaryException).error as NotaryError.Conflict
                     assertEquals(tx.id, error.txId)
                     val (stateRef, consumingTx) = error.conflict.verified().stateHistory.entries.single()
                     assertEquals(StateRef(issueTx.id, 0), stateRef)

@@ -6,7 +6,6 @@ import net.corda.client.mock.pickOne
 import net.corda.client.mock.replicate
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER_KEY
-import net.corda.testing.contracts.DummyContract
 import net.corda.core.flows.FlowException
 import net.corda.core.messaging.startFlow
 import net.corda.core.thenMatch
@@ -14,6 +13,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.flows.FinalityFlow
 import net.corda.loadtest.LoadTest
 import net.corda.loadtest.NodeConnection
+import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockServices
 import org.slf4j.LoggerFactory
 
@@ -25,7 +25,7 @@ val dummyNotarisationTest = LoadTest<NotariseCommand, Unit>(
         "Notarising dummy transactions",
         generate = { _, _ ->
             val issuerServices = MockServices(DUMMY_CASH_ISSUER_KEY)
-            val generateTx = Generator.pickOne(simpleNodes).bind { node ->
+            val generateTx = Generator.pickOne(simpleNodes).flatMap { node ->
                 Generator.int().map {
                     val issueBuilder = DummyContract.generateInitial(it, notary.info.notaryIdentity, DUMMY_CASH_ISSUER)
                     val issueTx = issuerServices.signInitialTransaction(issueBuilder)
