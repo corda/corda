@@ -861,13 +861,14 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
      */
     @Test
     fun `test calling an arbitrary JDBC native query`() {
+        // DOCSTART JdbcSession
         val nativeQuery = "SELECT v.transaction_id, v.output_index FROM vault_states v WHERE v.state_status = 0"
 
         database.transaction {
-
             val jdbcSession = database.createSession()
             val prepStatement = jdbcSession.prepareStatement(nativeQuery)
             val rs = prepStatement.executeQuery()
+        // DOCEND JdbcSession
             var count = 0
             while (rs.next()) {
                 val stateRef = StateRef(SecureHash.parse(rs.getString(1)), rs.getInt(2))

@@ -92,3 +92,18 @@ Several examples of entities and mappings are provided in the codebase, includin
 
 .. literalinclude:: ../../finance/src/main/kotlin/net/corda/schemas/CashSchemaV1.kt
     :language: kotlin
+
+JDBC session
+------------
+CorDapp developer's may also interact directly with the underlying Node's database by using a standard
+JDBC connection (session) as described by the `Java SQL Connection API <https://docs.oracle.com/javase/8/docs/api/java/sql/Connection.html>`_
+
+Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as illustrated in the following example:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/database/HibernateConfigurationTest.kt
+  :language: kotlin
+  :start-after: DOCSTART JdbcSession
+  :end-before: DOCEND JdbcSession
+
+JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+
