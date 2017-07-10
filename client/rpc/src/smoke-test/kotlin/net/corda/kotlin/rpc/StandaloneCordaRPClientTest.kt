@@ -159,7 +159,7 @@ class StandaloneCordaRPClientTest {
     }
 
     @Test
-    fun `test vault track by`() {
+    fun `test vault`() {
         val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>()
         assertEquals(0, vault.states.size)
 
@@ -167,6 +167,29 @@ class StandaloneCordaRPClientTest {
         vaultUpdates.subscribe { update ->
             log.info("Vault>> FlowId=${update.flowId}")
             updateCount.incrementAndGet()
+        }
+
+        // Now issue some cash
+        rpcProxy.startFlow(::CashIssueFlow, 629.POUNDS, OpaqueBytes.of(0), notaryNode.legalIdentity, notaryNode.notaryIdentity)
+            .returnValue.getOrThrow(timeout)
+        assertNotEquals(0, updateCount)
+
+        // Check that this cash exists in the vault
+        val cashBalance = rpcProxy.getCashBalances()
+        log.info("Cash Balances: $cashBalance")
+        assertEquals(1, cashBalance.size)
+        assertEquals(629.POUNDS, cashBalance[Currency.getInstance("GBP")])
+    }
+
+    @Test
+    fun `test vault track by`() {
+        val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>()
+        assertEquals(0, vault.totalStatesAvailable)
+
+        var updateCount = 0
+        vaultUpdates.subscribe { update ->
+            log.info("Vault>> FlowId=${update.flowId}")
+            ++updateCount
         }
 
         // Now issue some cash

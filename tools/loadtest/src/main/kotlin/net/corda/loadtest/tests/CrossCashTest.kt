@@ -8,6 +8,7 @@ import net.corda.core.contracts.Issued
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.USD
 import net.corda.core.identity.AbstractParty
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.thenMatch
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.CashFlowCommand
@@ -218,14 +219,11 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
             val currentNodeVaults = HashMap<AbstractParty, HashMap<AbstractParty, Long>>()
             simpleNodes.forEach {
                 val quantities = HashMap<AbstractParty, Long>()
-                val (vault, vaultUpdates) = it.proxy.vaultAndUpdates()
-                vaultUpdates.notUsed()
+                val vault = it.proxy.vaultQueryBy<Cash.State>().states
                 vault.forEach {
                     val state = it.state.data
-                    if (state is Cash.State) {
-                        val issuer = state.amount.token.issuer.party
-                        quantities.put(issuer, (quantities[issuer] ?: 0L) + state.amount.quantity)
-                    }
+                    val issuer = state.amount.token.issuer.party
+                    quantities.put(issuer, (quantities[issuer] ?: 0L) + state.amount.quantity)
                 }
                 currentNodeVaults.put(it.info.legalIdentity, quantities)
             }

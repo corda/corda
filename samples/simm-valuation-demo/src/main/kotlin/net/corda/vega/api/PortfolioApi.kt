@@ -12,7 +12,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.ServiceType
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.vega.analytics.InitialMarginTriple
 import net.corda.vega.contracts.IRSState
 import net.corda.vega.contracts.PortfolioState
@@ -38,9 +40,7 @@ class PortfolioApi(val rpc: CordaRPCOps) {
     private val portfolioUtils = PortfolioApiUtils(ownParty)
 
     private inline fun <reified T : DealState> dealsWith(party: AbstractParty): List<StateAndRef<T>> {
-        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
-        vaultUpdates.notUsed()
-        return vault.filterStatesOfType<T>().filter { it.state.data.participants.any { it == party } }
+        return rpc.vaultQueryBy<T>(QueryCriteria.LinearStateQueryCriteria(participants = listOf(party))).states
     }
 
     /**

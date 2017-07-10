@@ -18,7 +18,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
 import net.corda.core.match
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.vaultTrackBy
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.then
 import net.corda.demobench.explorer.ExplorerController

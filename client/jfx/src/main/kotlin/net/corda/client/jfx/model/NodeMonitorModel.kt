@@ -5,15 +5,13 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.contracts.ContractState
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.messaging.StateMachineInfo
-import net.corda.core.messaging.StateMachineTransactionMapping
-import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.*
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.*
+import net.corda.core.utilities.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.seconds
 import rx.Observable
 import rx.subjects.PublishSubject
 
@@ -84,9 +82,9 @@ class NodeMonitorModel {
         val currentStateMachines = stateMachines.map { StateMachineUpdate.Added(it) }
         stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
 
-        // Vault updates
-        val (vault, vaultUpdates) = proxy.vaultAndUpdates()
-        val initialVaultUpdate = Vault.Update(setOf(), vault.toSet())
+        // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
+        val (vaultSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(paging = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+        val initialVaultUpdate = Vault.Update(setOf(), vaultSnapshot.states.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
         // Transactions

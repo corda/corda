@@ -13,9 +13,15 @@ import net.corda.core.getOrThrow
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.node.services.vault.Builder.count
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.loggerFor
 import net.corda.flows.IssuerFlow.IssuanceRequester
+import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.schemas.CashSchemaV1
 import net.corda.testing.BOC
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.contracts.calculateRandomlySizedAmounts
@@ -32,17 +38,17 @@ class TraderDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     val cashCount: Int get() {
-        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
-        vaultUpdates.notUsed()
-        return vault.filterStatesOfType<Cash.State>().size
+        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+        return rpc.vaultQueryBy<Cash.State>(countCriteria).otherResults.single() as Int
     }
 
     val dollarCashBalance: Amount<Currency> get() = rpc.getCashBalance(USD)
 
     val commercialPaperCount: Int get() {
-        val (vault, vaultUpdates) = rpc.vaultAndUpdates()
-        vaultUpdates.notUsed()
-        return vault.filterStatesOfType<CommercialPaper.State>().size
+        val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
+        val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count)
+        return rpc.vaultQueryBy<CommercialPaper.State>(countCriteria).otherResults.single() as Int
     }
 
     fun runBuyer(amount: Amount<Currency> = 30000.DOLLARS, anonymous: Boolean = true) {
