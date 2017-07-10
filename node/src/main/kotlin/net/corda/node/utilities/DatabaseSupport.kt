@@ -68,12 +68,12 @@ fun configureDatabase(props: Properties): Pair<Closeable, Database> {
 
 fun <T> Database.isolatedTransaction(block: Transaction.() -> T): T {
     val oldContext = StrandLocalTransactionManager.setThreadLocalTx(null)
-    val old2 = CordaTransactionManager.setThreadLocalTx(null)
+    val oldCordaContext = CordaTransactionManager.setThreadLocalTx(null)
     return try {
         transaction(block)
     } finally {
         StrandLocalTransactionManager.restoreThreadLocalTx(oldContext)
-        CordaTransactionManager.restoreThreadLocalTx(old2)
+        CordaTransactionManager.restoreThreadLocalTx(oldCordaContext)
     }
 }
 
