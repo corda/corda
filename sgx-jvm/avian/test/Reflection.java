@@ -49,9 +49,10 @@ public class Reflection {
   private static void innerClasses() throws Exception {
     Class c = Reflection.class;
     Class[] inner = c.getDeclaredClasses();
-    expect(2 == inner.length);
+    expect(3 == inner.length);
     expect(Hello.class == inner[0]
-           || Hello.class == inner[1]);
+           || Hello.class == inner[1]
+           || Hello.class == inner[2]);
   }
 
   private int egads;
@@ -98,7 +99,7 @@ public class Reflection {
     expect(1 == args.length);
     expect(args[0] == String.class);
   }
-  
+
   public static void throwOOME() {
     throw new OutOfMemoryError();
   }
@@ -110,15 +111,23 @@ public class Reflection {
     expect(!Reflection.class.isMemberClass());
 
     expect(Reflection.Hello.class.isMemberClass());
-    
+
     Cloneable anonymousLocal = new Cloneable() {};
     expect(anonymousLocal.getClass().isAnonymousClass());
-    
+
     class NamedLocal {}
     expect(NamedLocal.class.isLocalClass());
   }
 
+  private static class MyClassLoader extends ClassLoader {
+    public Package definePackage1(String name) {
+      return definePackage(name, null, null, null, null, null, null, null);
+    }
+  }
+
   public static void main(String[] args) throws Exception {
+    expect(new MyClassLoader().definePackage1("foo").getName().equals("foo"));
+
     innerClasses();
     annotations();
     genericType();

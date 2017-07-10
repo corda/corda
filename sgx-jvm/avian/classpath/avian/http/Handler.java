@@ -23,8 +23,11 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Map; 
+import java.util.List;
+import java.util.Map;
 
 public class Handler extends URLStreamHandler
 {
@@ -35,10 +38,12 @@ public class Handler extends URLStreamHandler
     
     class HttpURLConnection extends URLConnection
     {
+        private static final String HKEY_CONTENT_LENGTH = "content-length";
+
         Socket socket;
         private BufferedWriter writer;
         private InputStream bin;
-        private Map<String,String> header = new HashMap<String, String>();
+        private Map<String, List<String>> header = new HashMap<String, List<String>>();
         private int status;
         
         protected HttpURLConnection(URL url)
@@ -97,7 +102,12 @@ public class Handler extends URLStreamHandler
                 int i = line.indexOf(':');
                 if(i > 0)
                 {
-                    header.put(line.substring(0, i), line.substring(i + 1) .trim());
+                    String key = line.substring(0, i).toLowerCase();
+                    String value = line.substring(i + 1).trim();
+
+                    List<String> valueList = new ArrayList<String>();
+                    valueList.add(value);
+                    header.put(key, Collections.unmodifiableList(valueList));
                 }
                 line = reader.readLine();
             }
@@ -115,6 +125,24 @@ public class Handler extends URLStreamHandler
         public OutputStream getOutputStream() throws IOException
         {
             throw new UnsupportedOperationException("Can' write to HTTP Connection");
+        }
+
+        @Override
+        public int getContentLength()
+        {
+            return getHeaderFieldInt(HKEY_CONTENT_LENGTH, -1);
+        }
+
+        @Override
+        public long getContentLengthLong()
+        {
+            return getHeaderFieldLong(HKEY_CONTENT_LENGTH, -1l);
+        }
+
+        @Override
+        public Map<String,List<String>> getHeaderFields()
+        {
+            return Collections.unmodifiableMap(header);
         }
     }
 }

@@ -45,9 +45,31 @@ public abstract class ClassLoader {
   }
 
   protected Package getPackage(String name) {
+    Package p;
     synchronized (this) {
-      return packages().get(name);
+      p = packages().get(name);
     }
+
+    if (parent != null) {
+      p = parent.getPackage(name);
+    } else {
+      // todo: load attributes from JAR manifest if available
+      p = definePackage(name, null, null, null, null, null, null, null);
+    }
+
+    if (p != null) {
+      synchronized (this) {
+        Package p2 = packages().get(name);
+        if (p2 != null) {
+          p = p2;
+        } else {
+          packages().put(name, p);
+        }
+      }
+    }
+
+
+    return p;
   }
 
   protected Package[] getPackages() {
@@ -145,7 +167,7 @@ public abstract class ClassLoader {
   public final ClassLoader getParent() {
     return parent;
   }
-  
+
   protected URL findResource(String path) {
     return null;
   }
@@ -183,11 +205,11 @@ public abstract class ClassLoader {
   public static InputStream getSystemResourceAsStream(String path) {
     return getSystemClassLoader().getResourceAsStream(path);
   }
-  
+
   public static Enumeration<URL> getSystemResources(String name) throws IOException {
     return getSystemClassLoader().getResources(name);
   }
-  
+
   public Enumeration<URL> getResources(String name)
     throws IOException {
     Collection<URL> resources = collectResources(name);
@@ -209,5 +231,5 @@ public abstract class ClassLoader {
 
   static native Class getCaller();
 
-  static native void load(String name, Class caller, boolean mapName);  
+  static native void load(String name, Class caller, boolean mapName);
 }

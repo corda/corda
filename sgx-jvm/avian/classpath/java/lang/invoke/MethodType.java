@@ -267,7 +267,13 @@ public final class MethodType implements java.io.Serializable {
     }
   }
 
-  public static class Parameter {
+  public interface TypeSpec {
+    public Class type();
+
+    public String spec();
+  }
+
+  public static class Parameter implements TypeSpec {
     private final int index;
     private final int position;
     private final String spec;
@@ -299,12 +305,16 @@ public final class MethodType implements java.io.Serializable {
       return spec;
     }
 
+    public Class type() {
+      return type;
+    }
+
     public int load() {
       return load;
     }
   }
 
-  public static class Result {
+  public static class Result implements TypeSpec {
     private final String spec;
     private final Class type;
     private final int return_;
@@ -317,6 +327,14 @@ public final class MethodType implements java.io.Serializable {
 
     public int return_() {
       return return_; // :)
+    }
+
+    public String spec() {
+      return spec;
+    }
+
+    public Class type() {
+      return type;
     }
   }
 }

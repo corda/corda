@@ -686,4 +686,30 @@ public class Arrays {
     System.arraycopy(array, 0, result, 0, length);
     return result;
   }
+
+  public static int binarySearch(int[] a, int key) {
+    return binarySearch(a, 0, a.length - 1, key);
+  }
+
+  public static int binarySearch(int[] a, int fromIndex, int toIndex, int key) {
+    checkRange(a.length, fromIndex, toIndex);
+
+    // Assume array is already sorted
+    int left = fromIndex;
+    int right = toIndex - 1;
+    int mid;
+    while(left <= right) {
+      mid = (left + right) / 2;
+      if(a[mid] < key) {
+        left = mid + 1;
+      } else if(a[mid] > key) {
+        right = mid - 1;
+      } else {
+        return mid;
+      }
+    }
+
+    return -left - 1;
+  }
+
 }

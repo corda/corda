@@ -26,6 +26,7 @@ public class ConstantPool {
   private static final int CONSTANT_NameAndType = 12;
   private static final int CONSTANT_Fieldref = 9;
   private static final int CONSTANT_Methodref = 10;
+  private static final int CONSTANT_InterfaceMethodref = 11;
   
   public static int add(List<PoolEntry> pool, PoolEntry e) {
     int i = 0;
@@ -83,6 +84,16 @@ public class ConstantPool {
     return add(pool, new MethodRefPoolEntry
                (addClass(pool, className),
                 addNameAndType(pool, name, spec)));
+  }
+
+  public static int addInterfaceMethodRef(List<PoolEntry> pool,
+                                          String interfaceName,
+                                          String name,
+                                          String spec)
+  {
+    return add(pool, new InterfaceMethodRefPoolEntry
+               (addClass(pool, interfaceName),
+               addNameAndType(pool, name, spec)));
   }
 
   public interface PoolEntry {
@@ -232,6 +243,32 @@ public class ConstantPool {
     public boolean equals(Object o) {
       if (o instanceof MethodRefPoolEntry) {
         MethodRefPoolEntry other = (MethodRefPoolEntry) o;
+        return other.classIndex == classIndex
+          && other.nameAndTypeIndex == nameAndTypeIndex;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  private static class InterfaceMethodRefPoolEntry implements PoolEntry {
+    private final int classIndex;
+    private final int nameAndTypeIndex;
+
+    public InterfaceMethodRefPoolEntry(int classIndex, int nameAndTypeIndex) {
+      this.classIndex = classIndex;
+      this.nameAndTypeIndex = nameAndTypeIndex;
+    }
+
+    public void writeTo(OutputStream out) throws IOException {
+      write1(out, CONSTANT_InterfaceMethodref);
+      write2(out, classIndex + 1);
+      write2(out, nameAndTypeIndex + 1);
+    }
+
+    public boolean equals(Object o) {
+      if (o instanceof InterfaceMethodRefPoolEntry) {
+        InterfaceMethodRefPoolEntry other = (InterfaceMethodRefPoolEntry) o;
         return other.classIndex == classIndex
           && other.nameAndTypeIndex == nameAndTypeIndex;
       } else {

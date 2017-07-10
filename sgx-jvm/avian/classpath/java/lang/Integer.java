@@ -139,4 +139,14 @@ public final class Integer extends Number implements Comparable<Integer> {
     }
     return new Integer(parseInt(string, 10));
   }
+
+  public static int numberOfLeadingZeros(int i) {
+    // See nlz5 at http://www.hackersdelight.org/hdcodetxt/nlz.c.txt
+    i |= i >> 1;
+    i |= i >> 2;
+    i |= i >> 4;
+    i |= i >> 8;
+    i |= i >> 16;
+    return bitCount(~i);
+  }
 }

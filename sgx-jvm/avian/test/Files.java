@@ -26,6 +26,15 @@ public class Files {
     
   }
 
+  private static void isRootParent() {
+    if(!IsWindows) {
+      File f = new File("/root");
+      File f2 = f.getParentFile();
+      System.out.println("------------"+f2);
+      expect(f2.getPath().equals("/"));
+    }
+  }
+
   private static void setExecutableTestWithPermissions(boolean executable)
     throws Exception
   {
@@ -49,6 +58,7 @@ public class Files {
     isAbsoluteTest(false);
     setExecutableTestWithPermissions(true);
     setExecutableTestWithPermissions(false);
+    isRootParent();
   
     { File f = new File("test.txt");
       f.createNewFile();

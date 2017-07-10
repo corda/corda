@@ -332,3 +332,19 @@
   <methods>;
 }
 
+# Needed to create temporary file paths, amongst other things.
+-keep class sun.security.provider.NativePRNG
+-keep class sun.security.provider.SHA
+
+# Character set codecs
+-keep class sun.nio.cs.ISO_8859_1
+-keep class sun.nio.cs.UTF_8
+-keep class sun.nio.cs.UTF_16
+-keep class sun.nio.cs.UTF_16BE
+-keep class sun.nio.cs.UTF_16LE
+-keep class sun.nio.cs.US_ASCII
+
+# Accessed from native code
+-keep class java.util.zip.Deflater {
+    <fields>;
+}

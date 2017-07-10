@@ -2345,21 +2345,21 @@ ifeq ($(kernel),darwin)
 		$(header-sysroot)/usr/include/netinet/icmp6.h \
 		$(header-sysroot)/usr/include/netinet/ip_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
-			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
+			ln -s "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/netinet6
 	for file in \
 		$(header-sysroot)/usr/include/netinet6/in6_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
-			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
+			ln -s "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/net
 	for file in \
 		$(header-sysroot)/usr/include/net/if_arp.h; do \
 		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
-			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
+			ln -s "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/sys
@@ -2367,7 +2367,7 @@ ifeq ($(kernel),darwin)
 		$(header-sysroot)/usr/include/sys/kern_event.h \
 		$(header-sysroot)/usr/include/sys/sys_domain.h; do \
 		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
-			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
+			ln -s "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
 		fi; \
 	done
 endif

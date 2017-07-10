@@ -6094,13 +6094,13 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
   PROTECT(t, bootstrapArray);
 
   // Resolve the bootstrap method itself.
-  GcMethod* bootstrap = cast<GcMethod>(t,
+  GcMethod* bootstrap = cast<GcMethodHandle>(t,
                                        resolve(t,
                                                c->loader(),
                                                invocation->pool(),
                                                bootstrapArray->body()[0],
                                                findMethodInClass,
-                                               GcNoSuchMethodError::Type));
+                                               GcNoSuchMethodError::Type))->method();
   PROTECT(t, bootstrap);
 
   // Caller context info to be passed to the bootstrap method.
@@ -6219,22 +6219,13 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
 
         array->setBodyElement(t, i + argument, type);
       } else if (strncmp(p, methodHandle, strlen(methodHandle)) == 0) {
-        GcReference* reference = cast<GcReference>(
-            t,
-            singletonObject(
-                t, invocation->pool(), bootstrapArray->body()[i + 1]));
-        int kind = reference->kind();
-
-        GcMethod* method = cast<GcMethod>(t,
+        GcMethodHandle* handle = cast<GcMethodHandle>(t,
                                           resolve(t,
                                                   c->loader(),
                                                   invocation->pool(),
                                                   bootstrapArray->body()[i + 1],
                                                   findMethodInClass,
                                                   GcNoSuchMethodError::Type));
-
-        GcMethodHandle* handle
-            = makeMethodHandle(t, kind, c->loader(), method, 0);
 
         array->setBodyElement(t, i + argument, handle);
       } else {
@@ -6265,6 +6256,7 @@ GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
     } break;
 
     default:
+      fprintf(stderr, "todo: unsupported bootstrap argument type: %s", p);
       abort(t);
     }
 

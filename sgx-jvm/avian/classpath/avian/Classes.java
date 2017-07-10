@@ -46,7 +46,7 @@ public class Classes {
   public static native VMClass toVMClass(Class c);
 
   public static native VMMethod toVMMethod(Method m);
-  
+
   private static native VMClass resolveVMClass(ClassLoader loader, byte[] spec)
     throws ClassNotFoundException;
 
@@ -295,7 +295,7 @@ public class Classes {
     if (loader == null) {
       loader = Class.class.getClassLoader();
     }
-    Class c = loader.loadClass(name);
+    Class c = loader.loadClass(name.replace('/', '.'));
     VMClass vmc = SystemClassLoader.vmClass(c);
     link(vmc, loader);
     if (initialize) {
@@ -443,7 +443,7 @@ public class Classes {
     }
     return null;
   }
-  
+
   public static int findMethod(VMClass vmClass, String name,
                                 Class[] parameterTypes)
   {
@@ -599,6 +599,6 @@ public class Classes {
   private static native void acquireClassLock();
 
   private static native void releaseClassLock();
-  
+
   public static native String makeString(byte[] array, int offset, int length);
 }

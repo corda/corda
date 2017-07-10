@@ -85,7 +85,7 @@ public class File implements Serializable {
   }
 
   private static String stripSeparators(String p) {
-    while (p.endsWith(FileSeparator)) {
+    while (p.length() > 1 && p.endsWith(FileSeparator)) {
       p = p.substring(0, p.length() - 1);
     }
     return p;
@@ -173,8 +173,10 @@ public class File implements Serializable {
 
   public String getParent() {
     int index = path.lastIndexOf(FileSeparator);
-    if (index >= 0) {
+    if (index > 0) {
       return normalize(path.substring(0, index));
+    } else if (index == 0) {
+      return normalize(path.substring(0, FileSeparator.length()));
     } else {
       return null;
     }    

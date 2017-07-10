@@ -40,6 +40,37 @@ public class ArraysTest {
     }
   }
 
+  public static void testBinarySearch() {
+    int[] a = new int[]{ 1, 5, 7, 8, 10, 13, 17, 18, 21, 26 };
+
+    int i = Arrays.binarySearch(a, 5);
+    expect(i == 1);
+    i = Arrays.binarySearch(a, 17);
+    expect(i == 6);
+    i = Arrays.binarySearch(a, 6);
+    expect(i == -3);
+    i = Arrays.binarySearch(a, 1, 4, 8);
+    expect(i == 3);
+    i = Arrays.binarySearch(a, 1, 4, 10);
+    expect(i == -5);
+
+    Exception exception = null;
+    try {
+      Arrays.binarySearch(a, -1, a.length, 4);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      exception = e;
+    }
+    expect(exception != null);
+
+    exception = null;
+    try {
+      Arrays.binarySearch(a, 0, a.length + 1, 4);
+    } catch (ArrayIndexOutOfBoundsException e) {
+      exception = e;
+    }
+    expect(exception != null);
+  }
+
   public static void main(String[] args) {
     { int[] array = new int[0];
       Exception exception = null;
@@ -170,5 +201,6 @@ public class ArraysTest {
     }
 
     testSort();
+    testBinarySearch();
   }
 }

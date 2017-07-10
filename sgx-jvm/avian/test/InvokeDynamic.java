@@ -1,3 +1,5 @@
+import java.util.*;
+
 public class InvokeDynamic {
   private final int foo;
 
@@ -25,6 +27,40 @@ public class InvokeDynamic {
 
   private interface Supplier<T> extends java.io.Serializable {
     T get();
+  }
+
+  private interface Consumer<T> {
+    void accept(T obj);
+  }
+
+  private interface Function<T, R> {
+    R apply(T obj);
+  }
+
+  private interface BiFunction<T, U, R> {
+    R apply(T t, U u);
+  }
+
+  private interface GetLong {
+    long get(long l);
+  }
+
+  private interface GetDouble {
+    double get(double d);
+  }
+
+  private static class LongHolder implements GetLong {
+    @Override
+    public long get(long l) {
+        return l;
+    }
+  }
+
+  private static class DoubleHolder implements GetDouble {
+    @Override
+    public double get(double d) {
+        return d;
+    }
   }
 
   private static void expect(boolean v) {
@@ -93,19 +129,56 @@ public class InvokeDynamic {
       s.someFunction(1, 2, "");
     }
 
+    { Consumer<String> c = System.out::println;
+      c.accept("invoke virtual");
+    }
+
+    { Function<CharSequence, String> f = CharSequence::toString;
+      expect(f.apply("invoke interface") == "invoke interface");
+    }
+
+    { Function<CharSequence, Integer> f = CharSequence::length;
+      expect(f.apply("invoke interface") == 16);
+    }
+
+    { BiFunction<CharSequence, Integer, Character> f = CharSequence::charAt;
+      String data = "0123456789";
+      for (int i = 0; i < data.length(); ++i) {
+        expect(f.apply(data, i) == data.charAt(i));
+      }
+    }
+
+    { Function<java.util.List<String>, Iterator<String>> f = java.util.List<String>::iterator;
+      Iterator<String> iter = f.apply(Arrays.asList("1", "22", "333"));
+      expect(iter.next() == "1");
+      expect(iter.next() == "22");
+      expect(iter.next() == "333");
+      expect(! iter.hasNext());
+    }
+
+    { BiFunction<GetLong, Long, Long> f = GetLong::get;
+      expect(f.apply(new LongHolder(), 20L) == 20L);
+    }
+
+    { BiFunction<GetDouble, Double, Double> f = GetDouble::get;
+      expect(f.apply(new DoubleHolder(), 20d) == 20d);
+    }
+
     // This abort()s in machine.cpp
     // { Foo s = (Foo & Marker) this::requiresBridge;
     //   s.someFunction(1, 2, "");
     // }
 
-    // NPE
-    // { UnboxedSerializable s = InvokeDynamic::addBoxed;
-    //   expect(s.add(1, 2) == 3);
-    // }
+    { UnboxedSerializable s = InvokeDynamic::addBoxed;
+      expect(s.add(1, 2) == 3);
+    }
 
-    // NPE
-    // { Unboxed s = InvokeDynamic::addBoxed;
-    //   expect(s.add(1, 2) == 3);
-    // }
+    { Unboxed s = InvokeDynamic::addBoxed;
+      expect(s.add(1, 2) == 3);
+    }
+
+    { Supplier<java.util.List<String>> s = java.util.ArrayList<String>::new;
+      java.util.List<String> list = s.get();
+    }
   }
 }

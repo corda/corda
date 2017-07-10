@@ -24,7 +24,9 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.io.IOException;
 
 import avian.Classes;
@@ -145,6 +147,127 @@ public class LambdaMetafactory {
     return result;
   }
 
+  private static void maybeBoxOrUnbox(ByteArrayOutputStream out,
+                                      List<PoolEntry> pool,
+                                      MethodType.TypeSpec from,
+                                      MethodType.TypeSpec to)
+    throws IOException
+  {
+    if (to.type().isPrimitive()) {
+      if (! from.type().isPrimitive()) {
+        write1(out, invokevirtual);
+
+        try {
+          switch (to.spec()) {
+          case "Z":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Boolean.class.getMethod("booleanValue")));
+            break;
+
+          case "B":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Byte.class.getMethod("byteValue")));
+            break;
+
+          case "S":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Short.class.getMethod("shortValue")));
+            break;
+
+          case "C":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Character.class.getMethod("charValue")));
+            break;
+
+          case "I":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Integer.class.getMethod("intValue")));
+            break;
+
+          case "F":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Float.class.getMethod("floatValue")));
+            break;
+
+          case "J":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Long.class.getMethod("longValue")));
+            break;
+
+          case "D":
+            writeMethodReference(out, pool, Classes.toVMMethod
+                                 (Double.class.getMethod("doubleValue")));
+            break;
+
+          default:
+            throw new AssertionError("don't know how to auto-unbox to " + to.spec());
+          }
+        } catch (NoSuchMethodException e) {
+          throw new Error(e);
+        }
+      }
+    } else if (from.type().isPrimitive()) {
+      write1(out, invokestatic);
+
+      try {
+        switch (from.spec()) {
+        case "Z":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Boolean.class.getMethod
+                                ("valueOf", Boolean.TYPE)));
+          break;
+
+        case "B":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Byte.class.getMethod
+                                ("valueOf", Byte.TYPE)));
+          break;
+
+        case "S":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Short.class.getMethod
+                                ("valueOf", Short.TYPE)));
+          break;
+
+        case "C":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Character.class.getMethod
+                                ("valueOf", Character.TYPE)));
+          break;
+
+        case "I":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Integer.class.getMethod
+                                ("valueOf", Integer.TYPE)));
+          break;
+
+        case "F":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Float.class.getMethod
+                                ("valueOf", Float.TYPE)));
+          break;
+
+        case "J":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Long.class.getMethod
+                                ("valueOf", Long.TYPE)));
+          break;
+
+        case "D":
+          writeMethodReference(out, pool, Classes.toVMMethod
+                               (Double.class.getMethod
+                                ("valueOf", Double.TYPE)));
+          break;
+
+        default:
+          throw new AssertionError("don't know how to autobox from " + from.spec());
+        }
+      } catch (NoSuchMethodException e) {
+        throw new Error(e);
+      }
+    }
+  }
+
   private static byte[] makeInvocationCode(List<PoolEntry> pool,
                                            String className,
                                            String constructorSpec,
@@ -155,47 +278,81 @@ public class LambdaMetafactory {
   {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     write2(out, fieldType.footprint()
-           + localType.footprint() + 2); // max stack
+           + localType.footprint() + 4); // max stack
     write2(out, localType.footprint() + 1); // max locals
     write4(out, 0); // length (we'll set the real value later)
 
     write1(out, aload_0);
+
+    Iterator<MethodType.Parameter> dst = implementation.type().parameters().iterator();
+
+    boolean skip = implementation.kind != MethodHandle.REF_invokeStatic;
 
     for (MethodType.Parameter p: fieldType.parameters()) {
       write1(out, aload_0);
       write1(out, getfield);
       write2(out, ConstantPool.addFieldRef
              (pool, className, "field" + p.index(), p.spec()) + 1);
+      if (skip) {
+        skip = false;
+      } else {
+        maybeBoxOrUnbox(out, pool, p, dst.next());
+      }
     }
 
     for (MethodType.Parameter p: localType.parameters()) {
       write1(out, p.load());
       write1(out, p.position() + 1);
+      if (skip) {
+        skip = false;
+      } else {
+        maybeBoxOrUnbox(out, pool, p, dst.next());
+      }
     }
 
     switch (implementation.kind) {
+    case MethodHandle.REF_invokeVirtual:
+      write1(out, invokevirtual);
+      writeMethodReference(out, pool, implementation.method);
+      break;
+
     case MethodHandle.REF_invokeStatic:
       write1(out, invokestatic);
+      writeMethodReference(out, pool, implementation.method);
       break;
 
     case MethodHandle.REF_invokeSpecial:
       write1(out, invokespecial);
+      writeMethodReference(out, pool, implementation.method);
+      break;
+
+    case MethodHandle.REF_newInvokeSpecial:
+      write1(out, new_);
+      write2(out, ConstantPool.addClass
+             (pool,
+              Classes.makeString
+              (implementation.method.class_.name, 0,
+               implementation.method.class_.name.length - 1)) + 1);
+      write1(out, dup);
+      write1(out, invokespecial);
+      writeMethodReference(out, pool, implementation.method);
+      break;
+
+    case MethodHandle.REF_invokeInterface:
+      write1(out, invokeinterface);
+      writeInterfaceMethodReference(out, pool, implementation.method);
+      write1(out, implementation.method.parameterFootprint);
+      write1(out, 0);
       break;
 
     default: throw new AssertionError
-        ("todo: implement per http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.3.5");
+        ("todo: implement '" + implementation.kind + "' per http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.3.5");
     }
 
-    write2(out, ConstantPool.addMethodRef
-           (pool,
-            Classes.makeString(implementation.method.class_.name, 0,
-                               implementation.method.class_.name.length - 1),
-            Classes.makeString(implementation.method.name, 0,
-                               implementation.method.name.length - 1),
-            Classes.makeString(implementation.method.spec, 0,
-                               implementation.method.spec.length - 1)) + 1);
-
-    write1(out, implementation.type().result().return_());
+    if (implementation.kind != MethodHandle.REF_newInvokeSpecial) {
+      maybeBoxOrUnbox(out, pool, implementation.type().result(), localType.result());
+    }
+    write1(out, localType.result().return_());
 
     write2(out, 0); // exception handler table length
     write2(out, 0); // attribute count
@@ -204,6 +361,36 @@ public class LambdaMetafactory {
     set4(result, 4, result.length - 12);
 
     return result;
+  }
+
+  private static void writeMethodReference(OutputStream out,
+                                           List<PoolEntry> pool,
+                                           avian.VMMethod method)
+    throws IOException
+  {
+    write2(out, ConstantPool.addMethodRef
+           (pool,
+            Classes.makeString(method.class_.name, 0,
+                               method.class_.name.length - 1),
+            Classes.makeString(method.name, 0,
+                               method.name.length - 1),
+            Classes.makeString(method.spec, 0,
+                               method.spec.length - 1)) + 1);
+  }
+
+  private static void writeInterfaceMethodReference(OutputStream out,
+                                                    List<PoolEntry> pool,
+                                                    avian.VMMethod method)
+    throws IOException
+  {
+    write2(out, ConstantPool.addInterfaceMethodRef
+           (pool,
+            Classes.makeString(method.class_.name, 0,
+                               method.class_.name.length - 1),
+            Classes.makeString(method.name, 0,
+                               method.name.length - 1),
+            Classes.makeString(method.spec, 0,
+                               method.spec.length - 1)) + 1);
   }
 
   public static byte[] makeLambda(String invokedName,

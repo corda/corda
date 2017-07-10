@@ -2102,6 +2102,8 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
       if (fileInputStreamFdField) {
         cp->fileInputStreamFdField = fileInputStreamFdField->offset();
 
+        // Some OpenJDK versions wrap the native call in a simple forwarder method, others don't.
+
         if (findMethodOrNull(t, fileInputStreamClass, "open0", "(Ljava/lang/String;)V") != 0) {
           intercept(t,
                     fileInputStreamClass,
@@ -2141,19 +2143,37 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
                   voidPointer(readBytesFromFile),
                   updateRuntimeData);
 
-        intercept(t,
-                  fileInputStreamClass,
-                  "skip",
-                  "(J)J",
-                  voidPointer(skipBytesInFile),
-                  updateRuntimeData);
+        if (findMethodOrNull(t, fileInputStreamClass, "skip0", "()I") != 0) {
+            intercept(t,
+                      fileInputStreamClass,
+                      "skip0",
+                      "(J)J",
+                      voidPointer(skipBytesInFile),
+                      updateRuntimeData);
+        } else {
+            intercept(t,
+                      fileInputStreamClass,
+                      "skip",
+                      "(J)J",
+                      voidPointer(skipBytesInFile),
+                      updateRuntimeData);
+        }
 
-        intercept(t,
-                  fileInputStreamClass,
-                  "available",
-                  "()I",
-                  voidPointer(availableBytesInFile),
-                  updateRuntimeData);
+        if (findMethodOrNull(t, fileInputStreamClass, "available0", "()I") != 0) {
+            intercept(t,
+                      fileInputStreamClass,
+                      "available0",
+                      "()I",
+                      voidPointer(availableBytesInFile),
+                      updateRuntimeData);
+        } else {
+            intercept(t,
+                      fileInputStreamClass,
+                      "available",
+                      "()I",
+                      voidPointer(availableBytesInFile),
+                      updateRuntimeData);
+        }
 
         intercept(t,
                   fileInputStreamClass,
