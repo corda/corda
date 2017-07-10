@@ -74,16 +74,16 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     val session = configuration.sessionForModel(Models.VAULT)
 
     private class InnerState {
-        val _updatesPublisher = PublishSubject.create<Vault.Update>()!!
-        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update>()!!
+        val _updatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()!!
+        val _rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()!!
         val _updatesInDbTx = _updatesPublisher.wrapWithDatabaseTransaction().asObservable()!!
 
         // For use during publishing only.
-        val updatesPublisher: rx.Observer<Vault.Update> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
+        val updatesPublisher: rx.Observer<Vault.Update<ContractState>> get() = _updatesPublisher.bufferUntilDatabaseCommit().tee(_rawUpdatesPublisher)
     }
     private val mutex = ThreadBox(InnerState())
 
-    private fun recordUpdate(update: Vault.Update): Vault.Update {
+    private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (update != Vault.NoUpdate) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
@@ -126,16 +126,16 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         return update
     }
 
-    override val rawUpdates: Observable<Vault.Update>
+    override val rawUpdates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _rawUpdatesPublisher }
 
-    override val updates: Observable<Vault.Update>
+    override val updates: Observable<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesInDbTx }
 
-    override val updatesPublisher: PublishSubject<Vault.Update>
+    override val updatesPublisher: PublishSubject<Vault.Update<ContractState>>
         get() = mutex.locked { _updatesPublisher }
 
-    override fun track(): DataFeed<Vault<ContractState>, Vault.Update> {
+    override fun track(): DataFeed<Vault<ContractState>, Vault.Update<ContractState>> {
         return mutex.locked {
             DataFeed(Vault(unconsumedStates<ContractState>()), _updatesPublisher.bufferUntilSubscribed().wrapWithDatabaseTransaction())
         }
@@ -421,7 +421,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
     @VisibleForTesting
-    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
+    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update<ContractState> {
         val ourNewStates = tx.filterOutRefs<ContractState> { isRelevant(it, ourKeys) }
 
         // Retrieve all unconsumed states for this transaction's inputs

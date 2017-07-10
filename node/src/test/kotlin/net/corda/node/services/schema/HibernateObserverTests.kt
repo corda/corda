@@ -86,7 +86,7 @@ class HibernateObserverTests {
     @Test
     fun testChildObjectsArePersisted() {
         val testSchema = object : MappedSchema(SchemaFamily::class.java, 1, setOf(Parent::class.java, Child::class.java)) {}
-        val rawUpdatesPublisher = PublishSubject.create<Vault.Update>()
+        val rawUpdatesPublisher = PublishSubject.create<Vault.Update<ContractState>>()
         val schemaService = object : SchemaService {
             override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = emptyMap()
 

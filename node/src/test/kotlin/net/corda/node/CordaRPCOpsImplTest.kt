@@ -53,8 +53,8 @@ class CordaRPCOpsImplTest {
     lateinit var rpc: CordaRPCOps
     lateinit var stateMachineUpdates: Observable<StateMachineUpdate>
     lateinit var transactions: Observable<SignedTransaction>
-    lateinit var vaultUpdates: Observable<Vault.Update>             // TODO: deprecated
-    lateinit var vaultTrackCash: Observable<Vault.Update>
+    lateinit var vaultUpdates: Observable<Vault.Update<ContractState>>             // TODO: deprecated
+    lateinit var vaultTrackCash: Observable<Vault.Update<Cash.State>>
 
     @Before
     fun setup() {

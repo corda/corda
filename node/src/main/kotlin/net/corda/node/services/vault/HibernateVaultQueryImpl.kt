@@ -21,6 +21,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.node.services.database.HibernateConfiguration
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import rx.subjects.PublishSubject
+import rx.Observable
 import java.lang.Exception
 import java.util.*
 import javax.persistence.EntityManager
@@ -28,7 +29,7 @@ import javax.persistence.Tuple
 
 
 class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
-                              val updatesPublisher: PublishSubject<Vault.Update>) : SingletonSerializeAsToken(), VaultQueryService {
+                              val updatesPublisher: PublishSubject<Vault.Update<ContractState>>) : SingletonSerializeAsToken(), VaultQueryService {
     companion object {
         val log = loggerFor<HibernateVaultQueryImpl>()
     }
@@ -107,7 +108,6 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                         }
 
                 return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
-
             } catch (e: Exception) {
                 log.error(e.message)
                 throw e.cause ?: e
@@ -118,10 +118,11 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
     private val mutex = ThreadBox({ updatesPublisher })
 
     @Throws(VaultQueryException::class)
-    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update> {
+    override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
-            val snapshotResults = _queryBy<T>(criteria, paging, sorting, contractType)
-            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) }
+            val snapshotResults = _queryBy(criteria, paging, sorting, contractType)
+            @Suppress("UNCHECKED_CAST")
+            val updates = updatesPublisher.bufferUntilSubscribed().filter { it.containsType(contractType, snapshotResults.stateTypes) } as Observable<Vault.Update<T>>
             DataFeed(snapshotResults, updates)
         }
     }

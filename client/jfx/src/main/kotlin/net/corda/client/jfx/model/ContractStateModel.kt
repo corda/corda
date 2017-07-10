@@ -19,7 +19,7 @@ data class Diff<out T : ContractState>(
  * This model exposes the list of owned contract states.
  */
 class ContractStateModel {
-    private val vaultUpdates: Observable<Vault.Update> by observable(NodeMonitorModel::vaultUpdates)
+    private val vaultUpdates: Observable<Vault.Update<ContractState>> by observable(NodeMonitorModel::vaultUpdates)
 
     private val contractStatesDiff: Observable<Diff<ContractState>> = vaultUpdates.map {
         Diff(it.produced, it.consumed)
