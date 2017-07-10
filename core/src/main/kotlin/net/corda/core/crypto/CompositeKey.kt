@@ -4,6 +4,7 @@ import net.corda.core.crypto.CompositeKey.NodeAndWeight
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import java.math.BigInteger
 import java.security.PublicKey
 import java.util.*
 
@@ -111,7 +112,7 @@ class CompositeKey private constructor (val threshold: Int,
         }
         override fun compareTo(other: NodeAndWeight): Int {
             if (weight == other.weight) {
-                return node.hashCode().compareTo(other.node.hashCode())
+                return BigInteger(1, node.toSHA256Bytes()).compareTo(BigInteger(1, other.node.toSHA256Bytes()))
             }
             else return weight.compareTo(other.weight)
         }
