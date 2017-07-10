@@ -1,63 +1,45 @@
 package net.corda.node.services.vault;
 
-import com.google.common.collect.ImmutableSet;
-import kotlin.Pair;
-import net.corda.contracts.DealState;
-import net.corda.contracts.asset.Cash;
+import com.google.common.collect.*;
+import kotlin.*;
+import net.corda.contracts.*;
+import net.corda.contracts.asset.*;
 import net.corda.core.contracts.*;
-import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.core.crypto.*;
-import net.corda.core.identity.AbstractParty;
-import net.corda.core.messaging.DataFeed;
-import net.corda.core.node.services.Vault;
-import net.corda.core.node.services.VaultQueryException;
-import net.corda.core.node.services.VaultQueryService;
-import net.corda.core.node.services.VaultService;
+import net.corda.core.identity.*;
+import net.corda.core.messaging.*;
+import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
-import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
-import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import net.corda.core.schemas.MappedSchema;
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV1;
-import net.corda.core.utilities.OpaqueBytes;
-import net.corda.core.transactions.SignedTransaction;
-import net.corda.core.transactions.WireTransaction;
-import net.corda.node.services.database.HibernateConfiguration;
-import net.corda.node.services.schema.NodeSchemaService;
-import net.corda.schemas.CashSchemaV1;
-import net.corda.testing.TestConstants;
-import net.corda.testing.contracts.VaultFiller;
-import net.corda.testing.node.MockServices;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.exposed.sql.Database;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import net.corda.core.node.services.vault.QueryCriteria.*;
+import net.corda.core.schemas.*;
+import net.corda.core.schemas.testing.*;
+import net.corda.core.transactions.*;
+import net.corda.core.utilities.*;
+import net.corda.node.services.database.*;
+import net.corda.node.services.schema.*;
+import net.corda.schemas.*;
+import net.corda.testing.*;
+import net.corda.testing.contracts.*;
+import net.corda.testing.node.*;
+import org.jetbrains.annotations.*;
+import org.jetbrains.exposed.sql.*;
+import org.junit.*;
 import rx.Observable;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.Field;
+import java.io.*;
+import java.lang.reflect.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.stream.*;
 
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER;
-import static net.corda.contracts.asset.CashKt.getDUMMY_CASH_ISSUER_KEY;
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.DEFAULT_PAGE_NUM;
-import static net.corda.testing.CoreTestUtils.getBOC;
-import static net.corda.testing.CoreTestUtils.getBOC_KEY;
-import static net.corda.testing.CoreTestUtils.getBOC_PUBKEY;
-import static net.corda.core.contracts.ContractsDSL.USD;
-import static net.corda.core.node.services.vault.QueryCriteriaUtils.MAX_PAGE_SIZE;
-import static net.corda.node.utilities.DatabaseSupportKt.configureDatabase;
+import static net.corda.contracts.asset.CashKt.*;
+import static net.corda.core.contracts.ContractsDSL.*;
+import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
+import static net.corda.node.utilities.DatabaseSupportKt.*;
 import static net.corda.node.utilities.DatabaseSupportKt.transaction;
-import static net.corda.testing.CoreTestUtils.getMEGA_CORP;
-import static net.corda.testing.CoreTestUtils.getMEGA_CORP_KEY;
-import static net.corda.testing.node.MockServicesKt.makeTestDataSourceProperties;
+import static net.corda.testing.CoreTestUtils.*;
+import static net.corda.testing.node.MockServicesKt.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 public class VaultQueryJavaTests {
 
@@ -220,7 +202,7 @@ public class VaultQueryJavaTests {
             QueryCriteria compositeCriteria1 = dealCriteriaAll.or(linearCriteriaAll);
             QueryCriteria compositeCriteria2 = vaultCriteria.and(compositeCriteria1);
 
-            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
+            PageSpecification pageSpec  = new PageSpecification(STARTING_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             Vault.Page<LinearState> results = vaultQuerySvc.queryBy(LinearState.class, compositeCriteria2, pageSpec, sorting);
@@ -329,7 +311,7 @@ public class VaultQueryJavaTests {
             QueryCriteria dealOrLinearIdCriteria = dealCriteria.or(linearCriteria);
             QueryCriteria compositeCriteria = dealOrLinearIdCriteria.and(vaultCriteria);
 
-            PageSpecification pageSpec  = new PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE);
+            PageSpecification pageSpec  = new PageSpecification(STARTING_PAGE_NUM, MAX_PAGE_SIZE);
             Sort.SortColumn sortByUid = new Sort.SortColumn(new SortAttribute.Standard(Sort.LinearStateAttribute.UUID), Sort.Direction.DESC);
             Sort sorting = new Sort(ImmutableSet.of(sortByUid));
             DataFeed<Vault.Page<ContractState>, Vault.Update> results = vaultQuerySvc.trackBy(ContractState.class, compositeCriteria, pageSpec, sorting);

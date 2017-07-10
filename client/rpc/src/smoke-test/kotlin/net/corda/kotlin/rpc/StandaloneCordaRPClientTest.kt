@@ -187,7 +187,7 @@ class StandaloneCordaRPClientTest {
                 .returnValue.getOrThrow(timeout)
 
         val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-        val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
+        val paging = PageSpecification(STARTING_PAGE_NUM, 10)
         val sorting = Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME), Sort.Direction.DESC)))
 
         val queryResults = rpcProxy.vaultQueryBy<Cash.State>(criteria, paging, sorting)
