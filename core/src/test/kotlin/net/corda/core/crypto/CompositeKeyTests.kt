@@ -1,7 +1,7 @@
 package net.corda.core.crypto
 
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.OpaqueBytes
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -258,5 +258,23 @@ class CompositeKeyTests {
         // One signature is missing.
         val signaturesWithoutRSA = listOf(K1Signature, R1Signature, EdSignature, SPSignature)
         assertFalse { compositeKey.isFulfilledBy(signaturesWithoutRSA.byKeys()) }
+    }
+
+    @Test
+    fun `CompositeKey deterministic children sorting`() {
+        val (_, pub1) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (_, pub2) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+        val (_, pub3) = Crypto.generateKeyPair(Crypto.RSA_SHA256)
+        val (_, pub4) = Crypto.generateKeyPair(Crypto.EDDSA_ED25519_SHA512)
+        val (_, pub5) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
+        val (_, pub6) = Crypto.generateKeyPair(Crypto.SPHINCS256_SHA256)
+        val (_, pub7) = Crypto.generateKeyPair(Crypto.ECDSA_SECP256K1_SHA256)
+
+        // Using default weight = 1, thus all weights are equal.
+        val composite1 = CompositeKey.Builder().addKeys(pub1, pub2, pub3, pub4, pub5, pub6, pub7).build() as CompositeKey
+        // Store in reverse order.
+        val composite2 = CompositeKey.Builder().addKeys(pub7, pub6, pub5, pub4, pub3, pub2, pub1).build() as CompositeKey
+        // There are 7! = 5040 permutations, but as sorting is deterministic the following should never fail.
+        assertEquals(composite1.children, composite2.children)
     }
 }
