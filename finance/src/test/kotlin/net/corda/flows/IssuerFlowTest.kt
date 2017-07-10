@@ -2,17 +2,13 @@ package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
-import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.map
 import net.corda.core.node.services.trackBy
-import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.IssuerFlow.IssuanceRequester
@@ -24,9 +20,7 @@ import net.corda.testing.node.MockNetwork.MockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import rx.Observable
 import java.util.*
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class IssuerFlowTest {
@@ -56,9 +50,9 @@ class IssuerFlowTest {
             val (_, vaultUpdatesBankClient) = bankClientNode.services.vaultQueryService.trackBy<Cash.State>()
 
             // using default IssueTo Party Reference
-            val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
+            val issuerResult = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
                     bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
-            assertEquals(issuerResult.get().stx, issuer.get().resultFuture.get())
+            issuerResult.get()
 
             // Check Bank of Corda Vault Updates
             vaultUpdatesBoc.expectEvents {
@@ -67,6 +61,9 @@ class IssuerFlowTest {
                         expect { update ->
                             require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
                             require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                            val issued = update.produced.single().state.data as Cash.State
+                            require(issued.owner == bankOfCordaNode.info.legalIdentity)
+                            require(issued.owner != bankClientNode.info.legalIdentity)
                         },
                         // MOVE
                         expect { update ->
@@ -78,13 +75,13 @@ class IssuerFlowTest {
 
             // Check Bank Client Vault Updates
             vaultUpdatesBankClient.expectEvents {
-                sequence(
-                        // MOVE
-                        expect { update ->
-                            require(update.consumed.isEmpty()) { update.consumed.size }
-                            require(update.produced.size == 1) { update.produced.size }
-                        }
-                )
+                // MOVE
+                expect { update ->
+                    require(update.consumed.isEmpty()) { update.consumed.size }
+                    require(update.produced.size == 1) { update.produced.size }
+                    val paidState = update.produced.single().state.data as Cash.State
+                    require(paidState.owner == bankClientNode.info.legalIdentity)
+                }
             }
         }
     }
@@ -94,16 +91,31 @@ class IssuerFlowTest {
         // try to issue an amount of a restricted currency
         assertFailsWith<FlowException> {
             runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, Amount(100000L, currency("BRL")),
-                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123)).issueRequestResult.getOrThrow()
+                    bankClientNode.info.legalIdentity, OpaqueBytes.of(123)).getOrThrow()
         }
     }
 
     @Test
     fun `test issue flow to self`() {
-        // using default IssueTo Party Reference
-        val (issuer, issuerResult) = runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
-                bankOfCordaNode.info.legalIdentity, OpaqueBytes.of(123))
-        assertEquals(issuerResult.get().stx, issuer.get().resultFuture.get())
+        bankOfCordaNode.database.transaction {
+            // Register for vault updates
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
+
+            // using default IssueTo Party Reference
+            runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
+                    bankOfCordaNode.info.legalIdentity, OpaqueBytes.of(123)).getOrThrow()
+
+            // Check Bank of Corda Vault Updates
+            vaultUpdatesBoc.expectEvents {
+                sequence(
+                        // ISSUE
+                        expect { update ->
+                            require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
+                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                        }
+                )
+            }
+        }
     }
 
     @Test
@@ -116,7 +128,7 @@ class IssuerFlowTest {
                     bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
         }
         handles.forEach {
-            require(it.issueRequestResult.get().stx is SignedTransaction)
+            require(it.get().stx is SignedTransaction)
         }
     }
 
@@ -124,20 +136,10 @@ class IssuerFlowTest {
                                            issueToNode: MockNode,
                                            amount: Amount<Currency>,
                                            party: Party,
-                                           ref: OpaqueBytes): RunResult {
+                                           ref: OpaqueBytes): ListenableFuture<AbstractCashFlow.Result> {
         val issueToPartyAndRef = party.ref(ref)
-        val issuerFlows: Observable<IssuerFlow.Issuer> = issuerNode.registerInitiatedFlow(IssuerFlow.Issuer::class.java)
-        val firstIssuerFiber = issuerFlows.toFuture().map { it.stateMachine }
-
         val issueRequest = IssuanceRequester(amount, party, issueToPartyAndRef.reference, issuerNode.info.legalIdentity,
                 anonymous = false)
-        val issueRequestResultFuture = issueToNode.services.startFlow(issueRequest).resultFuture
-
-        return IssuerFlowTest.RunResult(firstIssuerFiber, issueRequestResultFuture)
+        return issueToNode.services.startFlow(issueRequest).resultFuture
     }
-
-    private data class RunResult(
-            val issuer: ListenableFuture<FlowStateMachine<*>>,
-            val issueRequestResult: ListenableFuture<AbstractCashFlow.Result>
-    )
 }
