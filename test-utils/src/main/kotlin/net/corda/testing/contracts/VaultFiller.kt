@@ -6,11 +6,13 @@ import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
 import net.corda.contracts.asset.*
 import net.corda.core.contracts.*
+import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.Vault
+import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -19,6 +21,7 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.DUMMY_NOTARY_KEY
 import java.security.KeyPair
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.time.Instant.now
 import java.util.*
@@ -223,7 +226,9 @@ fun ServiceHub.evolveLinearStates(linearStates: List<StateAndRef<LinearState>>) 
 fun ServiceHub.evolveLinearState(linearState: StateAndRef<LinearState>) : StateAndRef<LinearState> = consumeAndProduce(linearState)
 
 @JvmOverloads
-fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): List<StateRef> {
+fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): Vault.Update {
+    val update =  vaultService.rawUpdates.toFuture()
+
     // A tx that spends our money.
     val spendTX = TransactionBuilder(DUMMY_NOTARY).apply {
         vaultService.generateSpend(this, amount, to)
@@ -231,6 +236,6 @@ fun ServiceHub.consumeCash(amount: Amount<Currency>, to: Party = CHARLIE): List<
     }.toSignedTransaction(checkSufficientSignatures = false)
 
     recordTransactions(spendTX)
-    // return spent state refs
-    return spendTX.tx.inputs
+
+    return update.getOrThrow(Duration.ofSeconds(3))
 }
