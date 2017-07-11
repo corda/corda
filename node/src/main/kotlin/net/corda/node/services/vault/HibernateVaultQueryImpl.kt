@@ -72,9 +72,9 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 // pagination checks
                 if (!paging.isDefault) {
                     // pagination
-                    if (paging.pageNumber < STARTING_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $STARTING_PAGE_NUM]")
+                    if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
                     if (paging.pageSize < 0) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 0 and $MAX_PAGE_SIZE]")
-                    if ((paging.pageNumber != STARTING_PAGE_NUM) && (paging.pageSize * (paging.pageNumber - 1) >= totalStates))
+                    if ((paging.pageNumber != DEFAULT_PAGE_NUM) && (paging.pageSize * (paging.pageNumber - 1) >= totalStates))
                         throw VaultQueryException("Requested more results than available [${paging.pageSize} * ${paging.pageNumber} >= $totalStates]")
                 }
 
@@ -88,7 +88,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 if (paging.isDefault && results.size > DEFAULT_PAGE_SIZE)
                     throw VaultQueryException("Please specify a `PageSpecification` as there are more results [${results.size}] than the default page size [$DEFAULT_PAGE_SIZE]")
 
-                val statesAndRefs: MutableList<StateAndRef<*>> = mutableListOf()
+                val statesAndRefs: MutableList<StateAndRef<T>> = mutableListOf()
                 val statesMeta: MutableList<Vault.StateMetadata> = mutableListOf()
                 val otherResults: MutableList<Any> = mutableListOf()
 
@@ -97,10 +97,10 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                             if (result[0] is VaultSchemaV1.VaultStates) {
                                 if (!paging.isDefault && index == paging.pageSize) // skip last result if paged
                                     return@forEachIndexed
-                                val it = result[0] as VaultSchemaV1.VaultStates
-                                val stateRef = StateRef(SecureHash.parse(it.stateRef!!.txId!!), it.stateRef!!.index!!)
-                                val state = it.contractState.deserialize<TransactionState<T>>(storageKryo())
-                                statesMeta.add(Vault.StateMetadata(stateRef, it.contractStateClassName, it.recordedTime, it.consumedTime, it.stateStatus, it.notaryName, it.notaryKey, it.lockId, it.lockUpdateTime))
+                                val vaultState = result[0] as VaultSchemaV1.VaultStates
+                                val stateRef = StateRef(SecureHash.parse(vaultState.stateRef!!.txId!!), vaultState.stateRef!!.index!!)
+                                val state = vaultState.contractState.deserialize<TransactionState<T>>(storageKryo())
+                                statesMeta.add(Vault.StateMetadata(stateRef, vaultState.contractStateClassName, vaultState.recordedTime, vaultState.consumedTime, vaultState.stateStatus, vaultState.notaryName, vaultState.notaryKey, vaultState.lockId, vaultState.lockUpdateTime))
                                 statesAndRefs.add(StateAndRef(state, stateRef))
                             }
                             else {
@@ -109,7 +109,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                             }
                         }
 
-                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults) as Vault.Page<T>
+                return Vault.Page(states = statesAndRefs, statesMetadata = statesMeta, stateTypes = criteriaParser.stateTypes, totalStatesAvailable = totalStates, otherResults = otherResults)
 
             } catch (e: Exception) {
                 log.error(e.message)
@@ -143,6 +143,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
 
         val contractInterfaceToConcreteTypes = mutableMapOf<String, MutableList<String>>()
         distinctTypes.forEach { it ->
+            @Suppress("UNCHECKED_CAST")
             val concreteType = Class.forName(it) as Class<ContractState>
             val contractInterfaces = deriveContractInterfaces(concreteType)
             contractInterfaces.map {
@@ -157,6 +158,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
         val myInterfaces: MutableSet<Class<T>> = mutableSetOf()
         clazz.interfaces.forEach {
             if (!it.equals(ContractState::class.java)) {
+                @Suppress("UNCHECKED_CAST")
                 myInterfaces.add(it as Class<T>)
                 myInterfaces.addAll(deriveContractInterfaces(it))
             }

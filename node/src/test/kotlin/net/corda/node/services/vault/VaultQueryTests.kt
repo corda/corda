@@ -805,7 +805,7 @@ class VaultQueryTests {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
             // DOCSTART VaultQueryExample7
-            val pagingSpec = PageSpecification(STARTING_PAGE_NUM, 10)
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, 10)
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val results = vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
             // DOCEND VaultQueryExample7
@@ -862,7 +862,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-            val pagingSpec = PageSpecification(STARTING_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
+            val pagingSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
