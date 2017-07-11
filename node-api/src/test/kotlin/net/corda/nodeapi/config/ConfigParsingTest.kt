@@ -112,7 +112,7 @@ class ConfigParsingTest {
 
     @Test
     fun x500Name() {
-        testPropertyType<X500NameData, X500NameListData, X500Name>(getTestX509Name("Mock Node"), getTestX509Name("Mock Node 2"), valuesToString = true)
+        testPropertyType<X500NameData, X500NameListData, X500Name>(getTestX509Name("Mock Party"), getTestX509Name("Mock Party 2"), valuesToString = true)
     }
 
     @Test
