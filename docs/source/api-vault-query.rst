@@ -111,6 +111,8 @@ Defining a sensible default page size enables efficient checkpointing within flo
 result sets are expected to be constrained to 200 or fewer entries. Where large result sets are expected (such as using the RPC API for reporting and/or UI display), it is strongly recommended to define a ``PageSpecification`` to correctly process results with efficient memory utilistion. A fail-fast mode is in place to alert API users to the need for pagination where a single query returns more than 200 results and no ``PageSpecification``
 has been supplied.
 
+.. note:: A pages maximum size ``MAX_PAGE_SIZE`` is defined as ``Int.MAX_VALUE`` and should be used with extreme caution as results returned may exceed your JVM's memory footprint.
+
 Example usage
 -------------
 

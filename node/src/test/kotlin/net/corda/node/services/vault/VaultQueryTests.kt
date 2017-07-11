@@ -862,8 +862,7 @@ class VaultQueryTests {
 
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
 
-            val pagingSpec = PageSpecification(STARTING_PAGE_NUM, MAX_PAGE_SIZE + 1)
-
+            val pagingSpec = PageSpecification(STARTING_PAGE_NUM, MAX_PAGE_SIZE + 1)  // overflow = -2147483648
             val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
             vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
         }
