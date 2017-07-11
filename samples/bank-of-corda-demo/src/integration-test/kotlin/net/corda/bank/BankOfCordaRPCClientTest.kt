@@ -1,10 +1,14 @@
 package net.corda.bank
 
 import com.google.common.util.concurrent.Futures
+import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.trackBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.flows.IssuerFlow.IssuanceRequester
 import net.corda.testing.driver.driver
 import net.corda.node.services.startFlowPermission
@@ -33,10 +37,11 @@ class BankOfCordaRPCClientTest {
             val bigCorpProxy = bigCorpClient.start("bigCorpCFO", "password2").proxy
 
             // Register for Bank of Corda Vault updates
-            val vaultUpdatesBoc = bocProxy.vaultAndUpdates().second
+            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val (_, vaultUpdatesBoc) = bocProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
 
             // Register for Big Corporation Vault updates
-            val vaultUpdatesBigCorp = bigCorpProxy.vaultAndUpdates().second
+            val (_, vaultUpdatesBigCorp) = bigCorpProxy.vaultTrackByCriteria<Cash.State>(Cash.State::class.java, criteria)
 
             // Kick-off actual Issuer Flow
             // TODO: Update checks below to reflect states consumed/produced under anonymisation

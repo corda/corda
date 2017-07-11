@@ -5,7 +5,9 @@ import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.transaction
 import net.corda.testing.expect
@@ -13,7 +15,6 @@ import net.corda.testing.expectEvents
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
-import net.corda.testing.sequence
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -59,8 +60,9 @@ class CashPaymentFlowTests {
 
         bankOfCordaNode.database.transaction {
             // Register for vault updates
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
-            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>()
+            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBankClient) = notaryNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.services.startFlow(CashPaymentFlow(expectedPayment,
                     payTo)).resultFuture

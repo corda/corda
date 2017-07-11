@@ -2,7 +2,6 @@ package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
-import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
@@ -104,8 +103,8 @@ class IssuerFlowTest {
     @Test
     fun `test issue flow to self`() {
         val vaultUpdatesBoc = bankOfCordaNode.database.transaction {
-            // Register for vault updates
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
+            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
 
             // using default IssueTo Party Reference
             runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
