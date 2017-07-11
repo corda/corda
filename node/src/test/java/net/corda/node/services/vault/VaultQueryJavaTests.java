@@ -129,7 +129,7 @@ public class VaultQueryJavaTests {
             List<StateRef> stateRefs = stateRefsStream.collect(Collectors.toList());
 
             SortAttribute.Standard sortAttribute = new SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID);
-            Sort sorting = new Sort(Arrays.asList(new Sort.SortColumn(sortAttribute, Sort.Direction.ASC)));
+            Sort sorting = new Sort(Collections.singletonList(new Sort.SortColumn(sortAttribute, Sort.Direction.ASC)));
             VaultQueryCriteria criteria = new VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, null, stateRefs);
             Vault.Page<DummyLinearContract.State> results = vaultQuerySvc.queryBy(DummyLinearContract.State.class, criteria, sorting);
 
@@ -215,6 +215,7 @@ public class VaultQueryJavaTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void customQueryForCashStatesWithAmountOfCurrencyGreaterOrEqualThanQuantity() {
         transaction(database, tx -> {
 
@@ -391,6 +392,7 @@ public class VaultQueryJavaTests {
      */
 
     @Test
+    @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithoutGroupClause() {
         transaction(database, tx -> {
 
@@ -435,6 +437,7 @@ public class VaultQueryJavaTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithSingleGroupClause() {
         transaction(database, tx -> {
 
@@ -455,11 +458,11 @@ public class VaultQueryJavaTests {
                 Field pennies = CashSchemaV1.PersistentCashState.class.getDeclaredField("pennies");
                 Field currency = CashSchemaV1.PersistentCashState.class.getDeclaredField("currency");
 
-                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Arrays.asList(currency)));
+                QueryCriteria sumCriteria = new VaultCustomQueryCriteria(Builder.sum(pennies, Collections.singletonList(currency)));
                 QueryCriteria countCriteria = new VaultCustomQueryCriteria(Builder.count(pennies));
-                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.max(pennies, Arrays.asList(currency)));
-                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.min(pennies, Arrays.asList(currency)));
-                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies, Arrays.asList(currency)));
+                QueryCriteria maxCriteria = new VaultCustomQueryCriteria(Builder.max(pennies, Collections.singletonList(currency)));
+                QueryCriteria minCriteria = new VaultCustomQueryCriteria(Builder.min(pennies, Collections.singletonList(currency)));
+                QueryCriteria avgCriteria = new VaultCustomQueryCriteria(Builder.avg(pennies, Collections.singletonList(currency)));
 
                 QueryCriteria criteria = sumCriteria.and(countCriteria).and(maxCriteria).and(minCriteria).and(avgCriteria);
                 Vault.Page<Cash.State> results = vaultQuerySvc.queryBy(Cash.State.class, criteria);
@@ -505,6 +508,7 @@ public class VaultQueryJavaTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void aggregateFunctionsSumByIssuerAndCurrencyAndSortByAggregateSum() {
         transaction(database, tx -> {
 

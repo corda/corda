@@ -1797,7 +1797,7 @@ class VaultQueryTests {
                 updates
             }
 
-        updates?.expectEvents {
+        updates.expectEvents {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
@@ -1844,7 +1844,7 @@ class VaultQueryTests {
                 updates
             }
 
-        updates?.expectEvents {
+        updates.expectEvents {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
@@ -1891,7 +1891,7 @@ class VaultQueryTests {
                 updates
             }
 
-        updates?.expectEvents {
+        updates.expectEvents {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
@@ -1947,7 +1947,7 @@ class VaultQueryTests {
                 updates
             }
 
-        updates?.expectEvents {
+        updates.expectEvents {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
@@ -1997,7 +1997,7 @@ class VaultQueryTests {
                 updates
             }
 
-        updates?.expectEvents {
+        updates.expectEvents {
             sequence(
                     expect { (consumed, produced, flowId) ->
                         require(flowId == null) {}
