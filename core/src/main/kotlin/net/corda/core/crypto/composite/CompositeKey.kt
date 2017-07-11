@@ -8,7 +8,6 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import java.security.KeyFactory
 import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.util.*
@@ -117,9 +116,10 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
 
         override fun compareTo(other: NodeAndWeight): Int {
-            return if (weight == other.weight) {
+            return if (weight == other.weight)
                 ByteBuffer.wrap(node.toSHA256Bytes()).compareTo(ByteBuffer.wrap(other.node.toSHA256Bytes()))
-            } else weight.compareTo(other.weight)
+            else
+                weight.compareTo(other.weight)
         }
 
         override fun toASN1Primitive(): ASN1Primitive {
