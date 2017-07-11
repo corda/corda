@@ -17,7 +17,7 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.util.Duration
-import net.corda.contracts.asset.Cash
+import net.corda.core.contracts.ContractState
 import net.corda.core.crypto.commonName
 import net.corda.core.match
 import net.corda.core.then
@@ -41,7 +41,7 @@ class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
     private companion object {
-        val pageSpecification = PageSpecification(0, 10)
+        val pageSpecification = PageSpecification(0, 1)
     }
 
     private val nodeController by inject<NodeController>()
@@ -190,7 +190,7 @@ class NodeTerminalView : Fragment() {
     private fun initialise(config: NodeConfig, ops: CordaRPCOps) {
         try {
             val (txInit, txNext) = ops.verifiedTransactionsFeed()
-            val (stateInit, stateNext) = ops.vaultTrackBy<Cash.State>(paging = pageSpecification)
+            val (stateInit, stateNext) = ops.vaultTrackBy<ContractState>(paging = pageSpecification)
 
             txCount = txInit.size
             stateCount = stateInit.totalStatesAvailable
@@ -201,7 +201,7 @@ class NodeTerminalView : Fragment() {
                 states.value = stateCount.toString()
             }
 
-            val fxScheduler = Schedulers.from({ Platform.runLater(it) })
+            val fxScheduler = Schedulers.from(Platform::runLater)
             subscriptions.add(txNext.observeOn(fxScheduler).subscribe {
                 transactions.value = (++txCount).toString()
             })
