@@ -293,7 +293,7 @@ Track unconsumed linear states:
     :end-before: DOCEND VaultQueryExample16
 
 .. note:: This will return both Deal and Linear states.
-    
+
 Track unconsumed deal states:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
@@ -377,6 +377,17 @@ Track unconsumed deal states or linear states (with snapshot including specifica
     :language: java
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4
+
+Behavioural notes
+-----------------
+1. **TrackBy** updates do not take into account the full criteria specification due to different and more restrictive syntax
+   in `observables <https://github.com/ReactiveX/RxJava/wiki>`_ filtering (vs full SQL-92 JDBC filtering as used in snapshot views).
+   Specifically, dynamic updates are filtered by ``contractType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
+2. **QueryBy** and **TrackBy snapshot views** using pagination may return different result sets as each paging request is a
+   separate SQL query on the underlying database, and it is entirely conceivable that state modifications are taking
+   place in between and/or in parallel to paging requests.
+   When using pagination, always check the value of the ``totalStatesAvailable`` (from the ``Vault.Page`` result) and
+   adjust further paging requests appropriately.
 
 Other use case scenarios
 ------------------------
