@@ -2,6 +2,7 @@ package net.corda.core.crypto
 
 import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.composite.CompositeSignature
+import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -155,7 +156,7 @@ object Crypto {
     val COMPOSITE_KEY = SignatureScheme(
             6,
             "COMPOSITE",
-            CompositeSignature.SIGNATURE_ALGORITHM_IDENTIFIER,
+            AlgorithmIdentifier(CordaObjectIdentifier.compositeKey),
             emptyList(),
             CordaSecurityProvider.PROVIDER_NAME,
             CompositeKey.KEY_ALGORITHM,
@@ -684,7 +685,7 @@ object Crypto {
         val pointQ = FixedPointCombMultiplier().multiply(parameterSpec.g, deterministicD)
         // This is unlikely to happen, but we should check for point at infinity.
         if (pointQ.isInfinity)
-            // Instead of throwing an exception, we retry with SHA256(seed).
+        // Instead of throwing an exception, we retry with SHA256(seed).
             return deriveKeyPairECDSA(parameterSpec, privateKey, seed.sha256().bytes)
         val publicKeySpec = ECPublicKeySpec(pointQ, parameterSpec)
         val publicKeyD = BCECPublicKey(privateKey.algorithm, publicKeySpec, BouncyCastleProvider.CONFIGURATION)

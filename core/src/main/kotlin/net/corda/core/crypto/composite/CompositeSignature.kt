@@ -13,10 +13,6 @@ import java.security.spec.AlgorithmParameterSpec
 class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
         val SIGNATURE_ALGORITHM = "COMPOSITESIG"
-        // UUID-based OID
-        // TODO: Register for an OID space and issue our own shorter OID
-        val SIGNATURE_ALGORITHM_IDENTIFIER = AlgorithmIdentifier(ASN1ObjectIdentifier("2.25.30086077608615255153862931087626791003"))
-
         fun getService(provider: Provider) = Provider.Service(provider, "Signature", SIGNATURE_ALGORITHM, CompositeSignature::class.java.name, emptyList(), emptyMap())
     }
 

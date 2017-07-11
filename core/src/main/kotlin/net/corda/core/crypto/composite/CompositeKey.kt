@@ -3,10 +3,12 @@ package net.corda.core.crypto.composite
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.composite.CompositeKey.NodeAndWeight
 import net.corda.core.crypto.keys
+import net.corda.core.crypto.provider.CordaObjectIdentifier
 import net.corda.core.crypto.toSHA256Bytes
 import net.corda.core.crypto.toStringShort
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.*
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.nio.ByteBuffer
 import java.security.PublicKey
@@ -31,6 +33,32 @@ import java.util.*
  */
 @CordaSerializable
 class CompositeKey private constructor(val threshold: Int, children: List<NodeAndWeight>) : PublicKey {
+    companion object {
+        val KEY_ALGORITHM = "COMPOSITE"
+        /**
+         * Build a composite key from a DER encoded form.
+         */
+        fun getInstance(encoded: ByteArray) = getInstance(ASN1Primitive.fromByteArray(encoded))
+
+        fun getInstance(asn1: ASN1Primitive): PublicKey {
+            val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
+            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.compositeKey)
+            val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
+            val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
+            val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
+            val builder = Builder()
+            val listOfChildren = sequenceOfChildren.objects.toList()
+            listOfChildren.forEach { childAsn1 ->
+                require(childAsn1 is ASN1Sequence)
+                val childSeq = childAsn1 as ASN1Sequence
+                val key = Crypto.decodePublicKey((childSeq.getObjectAt(0) as DERBitString).bytes)
+                val weight = ASN1Integer.getInstance(childSeq.getObjectAt(1))
+                builder.addKey(key, weight.positiveValue.toInt())
+            }
+            return builder.build(threshold)
+        }
+    }
+
     val children = children.sorted()
 
     init {
@@ -134,32 +162,6 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
     }
 
-    companion object {
-        val KEY_ALGORITHM = "COMPOSITE"
-        /**
-         * Build a composite key from a DER encoded form.
-         */
-        fun getInstance(encoded: ByteArray) = getInstance(ASN1Primitive.fromByteArray(encoded))
-
-        fun getInstance(asn1: ASN1Primitive): PublicKey {
-            val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
-            require(keyInfo.algorithm.algorithm == CompositeSignature.SIGNATURE_ALGORITHM_IDENTIFIER.algorithm)
-            val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
-            val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
-            val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
-            val builder = Builder()
-            val listOfChildren = sequenceOfChildren.objects.toList()
-            listOfChildren.forEach { childAsn1 ->
-                require(childAsn1 is ASN1Sequence)
-                val childSeq = childAsn1 as ASN1Sequence
-                val key = Crypto.decodePublicKey((childSeq.getObjectAt(0) as DERBitString).bytes)
-                val weight = ASN1Integer.getInstance(childSeq.getObjectAt(1))
-                builder.addKey(key, weight.positiveValue.toInt())
-            }
-            return builder.build(threshold)
-        }
-    }
-
     /**
      * Takes single PublicKey and checks if CompositeKey requirements hold for that key.
      */
@@ -175,7 +177,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
         }
         keyVector.add(ASN1Integer(threshold.toLong()))
         keyVector.add(DERSequence(childrenVector))
-        return SubjectPublicKeyInfo(CompositeSignature.SIGNATURE_ALGORITHM_IDENTIFIER, DERSequence(keyVector)).encoded
+        return SubjectPublicKeyInfo(AlgorithmIdentifier(CordaObjectIdentifier.compositeKey), DERSequence(keyVector)).encoded
     }
 
     override fun getFormat() = ASN1Encoding.DER
