@@ -88,6 +88,8 @@ docs/virtualenv/
 
 # vim
 *.swp
+*.swn
+*.swo
 
 # Files you may find useful to have in your working directory.
 PLAN
