@@ -26,7 +26,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.testing.LogHelper
+import net.corda.core.utilities.toNonEmptySet
 import net.corda.core.utilities.unwrap
 import net.corda.flows.TwoPartyTradeFlow.Buyer
 import net.corda.flows.TwoPartyTradeFlow.Seller
@@ -155,7 +155,10 @@ class TwoPartyTradeFlowTests {
             val cashLockId = UUID.randomUUID()
             bobNode.database.transaction {
                 // lock the cash states with an arbitrary lockId (to prevent the Buyer flow from claiming the states)
-                bobNode.services.vaultService.softLockReserve(cashLockId, cashStates.states.map { it.ref }.toSet())
+                val refs = cashStates.states.map { it.ref }
+                if (refs.isNotEmpty()) {
+                    bobNode.services.vaultService.softLockReserve(cashLockId, refs.toNonEmptySet())
+                }
             }
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notaryNode, aliceNode, bobNode,

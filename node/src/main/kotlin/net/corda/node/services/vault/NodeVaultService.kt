@@ -33,10 +33,7 @@ import net.corda.core.serialization.storageKryo
 import net.corda.core.tee
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.toHexString
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.services.vault.schemas.requery.*
@@ -261,44 +258,42 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     }
 
     @Throws(StatesNotAvailableException::class)
-    override fun softLockReserve(lockId: UUID, stateRefs: Set<StateRef>) {
-        if (stateRefs.isNotEmpty()) {
-            val softLockTimestamp = services.clock.instant()
-            val stateRefArgs = stateRefArgs(stateRefs)
-            try {
-                session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
-                    val updatedRows = update(VaultStatesEntity::class)
-                            .set(VaultStatesEntity.LOCK_ID, lockId.toString())
-                            .set(VaultStatesEntity.LOCK_UPDATE_TIME, softLockTimestamp)
-                            .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
-                            .and((VaultStatesEntity.LOCK_ID eq lockId.toString()) or (VaultStatesEntity.LOCK_ID.isNull()))
+    override fun softLockReserve(lockId: UUID, stateRefs: NonEmptySet<StateRef>) {
+        val softLockTimestamp = services.clock.instant()
+        val stateRefArgs = stateRefArgs(stateRefs)
+        try {
+            session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
+                val updatedRows = update(VaultStatesEntity::class)
+                        .set(VaultStatesEntity.LOCK_ID, lockId.toString())
+                        .set(VaultStatesEntity.LOCK_UPDATE_TIME, softLockTimestamp)
+                        .where(VaultStatesEntity.STATE_STATUS eq Vault.StateStatus.UNCONSUMED)
+                        .and((VaultStatesEntity.LOCK_ID eq lockId.toString()) or (VaultStatesEntity.LOCK_ID.isNull()))
+                        .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
+                if (updatedRows > 0 && updatedRows == stateRefs.size) {
+                    log.trace("Reserving soft lock states for $lockId: $stateRefs")
+                    FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
+                } else {
+                    // revert partial soft locks
+                    val revertUpdatedRows = update(VaultStatesEntity::class)
+                            .set(VaultStatesEntity.LOCK_ID, null)
+                            .where(VaultStatesEntity.LOCK_UPDATE_TIME eq softLockTimestamp)
+                            .and(VaultStatesEntity.LOCK_ID eq lockId.toString())
                             .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
-                    if (updatedRows > 0 && updatedRows == stateRefs.size) {
-                        log.trace("Reserving soft lock states for $lockId: $stateRefs")
-                        FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
-                    } else {
-                        // revert partial soft locks
-                        val revertUpdatedRows = update(VaultStatesEntity::class)
-                                .set(VaultStatesEntity.LOCK_ID, null)
-                                .where(VaultStatesEntity.LOCK_UPDATE_TIME eq softLockTimestamp)
-                                .and(VaultStatesEntity.LOCK_ID eq lockId.toString())
-                                .and(stateRefCompositeColumn.`in`(stateRefArgs)).get().value()
-                        if (revertUpdatedRows > 0) {
-                            log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
-                        }
-                        throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
+                    if (revertUpdatedRows > 0) {
+                        log.trace("Reverting $revertUpdatedRows partially soft locked states for $lockId")
                     }
+                    throw StatesNotAvailableException("Attempted to reserve $stateRefs for $lockId but only $updatedRows rows available")
                 }
-            } catch (e: PersistenceException) {
-                log.error("""soft lock update error attempting to reserve states for $lockId and $stateRefs")
+            }
+        } catch (e: PersistenceException) {
+            log.error("""soft lock update error attempting to reserve states for $lockId and $stateRefs")
                     $e.
                 """)
-                if (e.cause is StatesNotAvailableException) throw (e.cause as StatesNotAvailableException)
-            }
+            if (e.cause is StatesNotAvailableException) throw (e.cause as StatesNotAvailableException)
         }
     }
 
-    override fun softLockRelease(lockId: UUID, stateRefs: Set<StateRef>?) {
+    override fun softLockRelease(lockId: UUID, stateRefs: NonEmptySet<StateRef>?) {
         if (stateRefs == null) {
             session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
                 val update = update(VaultStatesEntity::class)
@@ -310,7 +305,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                     log.trace("Releasing ${update.value()} soft locked states for $lockId")
                 }
             }
-        } else if (stateRefs.isNotEmpty()) {
+        } else {
             try {
                 session.withTransaction(TransactionIsolation.REPEATABLE_READ) {
                     val updatedRows = update(VaultStatesEntity::class)
@@ -398,7 +393,7 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
                         log.trace("Coin selection for $amount retrieved ${stateAndRefs.count()} states totalling $totalPennies pennies: $stateAndRefs")
 
                         // update database
-                        softLockReserve(lockId, stateAndRefs.map { it.ref }.toSet())
+                        softLockReserve(lockId, (stateAndRefs.map { it.ref }).toNonEmptySet())
                         return stateAndRefs
                     }
                     log.trace("Coin selection requested $amount but retrieved $totalPennies pennies with state refs: ${stateAndRefs.map { it.ref }}")

@@ -1,6 +1,9 @@
 package net.corda.core.serialization
 
 import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.CompatibleFieldSerializer
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 import com.esotericsoftware.kryo.util.MapReferenceResolver
@@ -8,13 +11,13 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import de.javakaffee.kryoserializers.BitSetSerializer
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import de.javakaffee.kryoserializers.guava.*
-import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.MetaData
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.node.CordaPluginRegistry
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.NonEmptySet
-import net.corda.core.utilities.NonEmptySetSerializer
+import net.corda.core.utilities.toNonEmptySet
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import org.bouncycastle.asn1.x500.X500Name
@@ -36,6 +39,7 @@ import java.io.InputStream
 import java.lang.reflect.Modifier.isPublic
 import java.security.cert.CertPath
 import java.util.*
+import kotlin.collections.ArrayList
 
 object DefaultKryoCustomizer {
     private val pluginRegistries: List<CordaPluginRegistry> by lazy {
@@ -126,6 +130,24 @@ object DefaultKryoCustomizer {
             // However this doesn't work for non-public classes in the java. namespace
             val strat = if (type.name.startsWith("java.") && !isPublic(type.modifiers)) fallbackStrategy else defaultStrategy
             return strat.newInstantiatorOf(type)
+        }
+    }
+
+    private object NonEmptySetSerializer : Serializer<NonEmptySet<Any>>() {
+        override fun write(kryo: Kryo, output: Output, obj: NonEmptySet<Any>) {
+            // Write out the contents as normal
+            output.writeInt(obj.size, true)
+            obj.forEach { kryo.writeClassAndObject(output, it) }
+        }
+
+        override fun read(kryo: Kryo, input: Input, type: Class<NonEmptySet<Any>>): NonEmptySet<Any> {
+            val size = input.readInt(true)
+            require(size >= 1) { "Invalid size read off the wire: $size" }
+            val list = ArrayList<Any>(size)
+            repeat(size) {
+                list += kryo.readClassAndObject(input)
+            }
+            return list.toNonEmptySet()
         }
     }
 }

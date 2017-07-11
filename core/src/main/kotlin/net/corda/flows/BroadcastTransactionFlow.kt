@@ -6,6 +6,7 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 
 /**
  * Notify the specified parties about a transaction. The remote peers will download this transaction and its
@@ -18,7 +19,7 @@ import net.corda.core.transactions.SignedTransaction
  */
 @InitiatingFlow
 class BroadcastTransactionFlow(val notarisedTransaction: SignedTransaction,
-                               val participants: Set<Party>) : FlowLogic<Unit>() {
+                               val participants: NonEmptySet<Party>) : FlowLogic<Unit>() {
     @CordaSerializable
     data class NotifyTxRequest(val tx: SignedTransaction)
 
