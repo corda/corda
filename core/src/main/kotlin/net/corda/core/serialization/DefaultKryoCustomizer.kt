@@ -47,7 +47,7 @@ object DefaultKryoCustomizer {
         // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
         val unusedKryo = Kryo(makeStandardClassResolver(), MapReferenceResolver())
         val customization = KryoSerializationCustomization(unusedKryo)
-        ServiceLoader.load(CordaPluginRegistry::class.java).toList().filter { it.customizeSerialization(customization) }
+        ServiceLoader.load(CordaPluginRegistry::class.java, this.javaClass.classLoader).toList().filter { it.customizeSerialization(customization) }
     }
 
     fun customize(kryo: Kryo): Kryo {
