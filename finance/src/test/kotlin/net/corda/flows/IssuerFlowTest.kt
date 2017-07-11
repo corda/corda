@@ -2,6 +2,7 @@ package net.corda.flows
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.contracts.asset.Cash
+import net.corda.core.bufferUntilSubscribed
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.currency
@@ -44,7 +45,7 @@ class IssuerFlowTest {
 
     @Test
     fun `test issuer flow`() {
-        bankOfCordaNode.database.transaction {
+        val (vaultUpdatesBoc, vaultUpdatesBankClient) = bankOfCordaNode.database.transaction {
             // Register for vault updates
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
             val (_, vaultUpdatesBankClient) = bankClientNode.services.vaultQueryService.trackBy<Cash.State>()
@@ -54,34 +55,36 @@ class IssuerFlowTest {
                     bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
             issuerResult.get()
 
-            // Check Bank of Corda Vault Updates
-            vaultUpdatesBoc.expectEvents {
-                sequence(
-                        // ISSUE
-                        expect { update ->
-                            require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
-                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                            val issued = update.produced.single().state.data as Cash.State
-                            require(issued.owner == bankOfCordaNode.info.legalIdentity)
-                            require(issued.owner != bankClientNode.info.legalIdentity)
-                        },
-                        // MOVE
-                        expect { update ->
-                            require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
-                            require(update.produced.isEmpty()) { "Expected 0 produced states, actual: $update" }
-                        }
-                )
-            }
+            Pair(vaultUpdatesBoc.bufferUntilSubscribed(), vaultUpdatesBankClient.bufferUntilSubscribed())
+        }
 
-            // Check Bank Client Vault Updates
-            vaultUpdatesBankClient.expectEvents {
-                // MOVE
-                expect { update ->
-                    require(update.consumed.isEmpty()) { update.consumed.size }
-                    require(update.produced.size == 1) { update.produced.size }
-                    val paidState = update.produced.single().state.data as Cash.State
-                    require(paidState.owner == bankClientNode.info.legalIdentity)
-                }
+        // Check Bank of Corda Vault Updates
+        vaultUpdatesBoc.expectEvents {
+            sequence(
+                    // ISSUE
+                    expect { update ->
+                        require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
+                        require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                        val issued = update.produced.single().state.data as Cash.State
+                        require(issued.owner == bankOfCordaNode.info.legalIdentity)
+                        require(issued.owner != bankClientNode.info.legalIdentity)
+                    },
+                    // MOVE
+                    expect { update ->
+                        require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
+                        require(update.produced.isEmpty()) { "Expected 0 produced states, actual: $update" }
+                    }
+            )
+        }
+
+        // Check Bank Client Vault Updates
+        vaultUpdatesBankClient.expectEvents {
+            // MOVE
+            expect { update ->
+                require(update.consumed.isEmpty()) { update.consumed.size }
+                require(update.produced.size == 1) { update.produced.size }
+                val paidState = update.produced.single().state.data as Cash.State
+                require(paidState.owner == bankClientNode.info.legalIdentity)
             }
         }
     }
@@ -97,24 +100,25 @@ class IssuerFlowTest {
 
     @Test
     fun `test issue flow to self`() {
-        bankOfCordaNode.database.transaction {
+        val vaultUpdatesBoc = bankOfCordaNode.database.transaction {
             // Register for vault updates
             val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
 
             // using default IssueTo Party Reference
             runIssuerAndIssueRequester(bankOfCordaNode, bankOfCordaNode, 1000000.DOLLARS,
                     bankOfCordaNode.info.legalIdentity, OpaqueBytes.of(123)).getOrThrow()
+            vaultUpdatesBoc
+        }
 
-            // Check Bank of Corda Vault Updates
-            vaultUpdatesBoc.expectEvents {
-                sequence(
-                        // ISSUE
-                        expect { update ->
-                            require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
-                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                        }
-                )
-            }
+        // Check Bank of Corda Vault Updates
+        vaultUpdatesBoc.expectEvents {
+            sequence(
+                    // ISSUE
+                    expect { update ->
+                        require(update.consumed.isEmpty()) { "Expected 0 consumed states, actual: $update" }
+                        require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                    }
+            )
         }
     }
 
