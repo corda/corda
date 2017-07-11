@@ -90,7 +90,6 @@ class ClassCarpenter {
             get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
 
         fun generateField(cw: ClassWriter) {
-            println ("generateField $name $nullabilityAnnotation")
             val fieldVisitor = cw.visitField(ACC_PROTECTED + ACC_FINAL, name, descriptor, null, null)
             fieldVisitor.visitAnnotation(nullabilityAnnotation, true).visitEnd()
             fieldVisitor.visitEnd()
