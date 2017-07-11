@@ -9,7 +9,9 @@ import net.corda.core.contracts.currency
 import net.corda.core.flows.FlowException
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.trackBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.flows.IssuerFlow.IssuanceRequester
@@ -47,15 +49,16 @@ class IssuerFlowTest {
     fun `test issuer flow`() {
         val (vaultUpdatesBoc, vaultUpdatesBankClient) = bankOfCordaNode.database.transaction {
             // Register for vault updates
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>()
-            val (_, vaultUpdatesBankClient) = bankClientNode.services.vaultQueryService.trackBy<Cash.State>()
+            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
+            val (_, vaultUpdatesBankClient) = bankClientNode.services.vaultQueryService.trackBy<Cash.State>(criteria)
 
             // using default IssueTo Party Reference
             val issuerResult = runIssuerAndIssueRequester(bankOfCordaNode, bankClientNode, 1000000.DOLLARS,
                     bankClientNode.info.legalIdentity, OpaqueBytes.of(123))
             issuerResult.get()
 
-            Pair(vaultUpdatesBoc.bufferUntilSubscribed(), vaultUpdatesBankClient.bufferUntilSubscribed())
+            Pair(vaultUpdatesBoc, vaultUpdatesBankClient)
         }
 
         // Check Bank of Corda Vault Updates
