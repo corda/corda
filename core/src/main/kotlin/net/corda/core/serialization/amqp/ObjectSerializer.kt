@@ -76,9 +76,9 @@ class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerial
             throw NotSerializableException("Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
         }
 
-        /* remember that the properties list contain all of the serialised properties of a class, not just
-           those set by the constructor. These are guaranteed to be listed after those set by the constructor
-           so it' safe to simply slice the list */
+        // Remember that the properties list contain all of the serialised properties of a class, not just
+        // those set by the constructor. These are guaranteed to be listed after those set by the constructor
+        // so it' safe to simply slice the list
         return javaConstructor.newInstance(* properties.subList(0,javaConstructor.parameterCount).toTypedArray())
     }
 }
