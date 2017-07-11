@@ -868,23 +868,6 @@ class VaultQueryTests {
         }
     }
 
-    // pagination: out or range request (page number * page size) > total rows available
-    @Test
-    fun `out of range page request`() {
-        expectedEx.expect(VaultQueryException::class.java)
-        expectedEx.expectMessage("Requested more results than available")
-
-        database.transaction {
-
-            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 100, 100, Random(0L))
-
-            val pagingSpec = PageSpecification(11, 10)  // this requests results 101 .. 110
-
-            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            vaultQuerySvc.queryBy<ContractState>(criteria, paging = pagingSpec)
-        }
-    }
-
     // pagination not specified but more than DEFAULT_PAGE_SIZE results available (fail-fast test)
     @Test
     fun `pagination not specified but more than default results available`() {
