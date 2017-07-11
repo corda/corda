@@ -17,7 +17,9 @@ import java.util.*
 
 import net.corda.core.serialization.carpenter.CarpenterSchemas
 import net.corda.core.serialization.carpenter.Schema as CarpenterSchema
+import net.corda.core.serialization.carpenter.Field as CarpenterField
 import net.corda.core.serialization.carpenter.CarpenterSchemaFactory
+import net.corda.core.serialization.carpenter.FieldFactory
 
 // TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
@@ -350,11 +352,11 @@ data class CompositeType(override val name: String, override val label: String?,
             }
         }
 
-        val m : MutableMap<String, Class<out Any?>> = mutableMapOf()
+        val m : MutableMap<String, CarpenterField> = mutableMapOf()
 
         fields.forEach {
             try {
-                m[it.name] =  it.getTypeAsClass(classLoaders)
+                m[it.name] =  FieldFactory.newInstance(it.mandatory, it.name, it.getTypeAsClass(classLoaders))
             }
             catch (e: ClassNotFoundException) {
                 carpenterSchemas.addDepPair(this, name, it.typeAsString())

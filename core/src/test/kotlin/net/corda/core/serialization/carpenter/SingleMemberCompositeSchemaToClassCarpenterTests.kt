@@ -145,7 +145,7 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
     }
 
     @Test
-fun singleDouble() {
+    fun singleDouble() {
         val test = 10.0
 
         @CordaSerializable

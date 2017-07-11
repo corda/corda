@@ -3,16 +3,13 @@ package net.corda.core.serialization.carpenter
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.Type
 
 import java.lang.Character.isJavaIdentifierPart
 import java.lang.Character.isJavaIdentifierStart
 
-import net.corda.core.serialization.carpenter.Schema
-import net.corda.core.serialization.carpenter.ClassSchema
-import net.corda.core.serialization.carpenter.InterfaceSchema
-
 import java.util.*
+
+/**********************************************************************************************************************/
 
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
@@ -23,6 +20,13 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
+/**********************************************************************************************************************/
+
+class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
+    fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
+}
+
+/**********************************************************************************************************************/
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -68,109 +72,12 @@ interface SimpleFieldAccess {
  *
  * Equals/hashCode methods are not yet supported.
  */
-
-/**********************************************************************************************************************/
-
-class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
-    fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
-}
-
-/**********************************************************************************************************************/
-
 class ClassCarpenter {
     // TODO: Generics.
     // TODO: Sandbox the generated code when a security manager is in use.
     // TODO: Generate equals/hashCode.
     // TODO: Support annotations.
     // TODO: isFoo getter patterns for booleans (this is what Kotlin generates)
-
-    class DuplicateNameException : RuntimeException("An attempt was made to register two classes with the same name within the same ClassCarpenter namespace.")
-    class InterfaceMismatchException(msg: String) : RuntimeException(msg)
-    class NullablePrimitiveException(msg: String) : RuntimeException(msg)
-
-    abstract class Field(val field: Class<out Any?>) {
-        companion object {
-            const val unsetName = "Unset"
-        }
-
-        var name: String = unsetName
-        abstract val nullabilityAnnotation: String
-
-        val descriptor: String
-            get() = Type.getDescriptor(this.field)
-
-        val type: String
-            get() = if (this.field.isPrimitive) this.descriptor else "Ljava/lang/Object;"
-
-        fun generateField(cw: ClassWriter) {
-            val fieldVisitor = cw.visitField(ACC_PROTECTED + ACC_FINAL, name, descriptor, null, null)
-            fieldVisitor.visitAnnotation(nullabilityAnnotation, true).visitEnd()
-            fieldVisitor.visitEnd()
-        }
-
-        fun addNullabilityAnnotation(mv: MethodVisitor) {
-            mv.visitAnnotation(nullabilityAnnotation, true).visitEnd()
-        }
-
-        fun visitParameter(mv: MethodVisitor, idx: Int) {
-            with(mv) {
-                visitParameter(name, 0)
-                if (!field.isPrimitive) {
-                    visitParameterAnnotation(idx, nullabilityAnnotation, true).visitEnd()
-                }
-            }
-        }
-
-        abstract fun copy(name: String, field: Class<out Any?>): Field
-        abstract fun nullTest(mv: MethodVisitor, slot: Int)
-    }
-
-    class NonNullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotation/Nonnull;"
-
-        constructor(name: String, field: Class<out Any?>) : this(field) {
-            this.name = name
-        }
-
-        override fun copy(name: String, field: Class<out Any?>) = NonNullableField(name, field)
-
-        override fun nullTest(mv: MethodVisitor, slot: Int) {
-            assert(name != unsetName)
-
-            if (!field.isPrimitive) {
-                with(mv) {
-                    visitVarInsn(ALOAD, 0) // load this
-                    visitVarInsn(ALOAD, slot) // load parameter
-                    visitLdcInsn("param \"$name\" cannot be null")
-                    visitMethodInsn(INVOKESTATIC,
-                            "java/util/Objects",
-                            "requireNonNull",
-                            "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;", false)
-                    visitInsn(POP)
-                }
-            }
-        }
-    }
-
-
-    class NullableField(field: Class<out Any?>) : Field(field) {
-        override val nullabilityAnnotation = "Ljavax/annotation/Nullable;"
-
-        constructor(name: String, field: Class<out Any?>) : this(field) {
-            if (field.isPrimitive) {
-                throw NullablePrimitiveException (
-                        "Field $name is primitive type ${Type.getDescriptor(field)} and thus cannot be nullable")
-            }
-
-            this.name = name
-        }
-
-        override fun copy(name: String, field: Class<out Any?>) = NullableField(name, field)
-
-        override fun nullTest(mv: MethodVisitor, slot: Int) {
-            assert(name != unsetName)
-        }
-    }
 
     val classloader = CarpenterClassLoader()
 

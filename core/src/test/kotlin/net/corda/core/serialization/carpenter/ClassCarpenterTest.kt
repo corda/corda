@@ -31,7 +31,7 @@ class ClassCarpenterTest {
 
     @Test
     fun prims() {
-        val clazz = cc.build(ClassCarpenter.ClassSchema(
+        val clazz = cc.build(ClassSchema(
                 "gen.Prims",
                 mapOf(
                         "anIntField" to Int::class.javaPrimitiveType!!,
@@ -42,7 +42,7 @@ class ClassCarpenterTest {
                         "floatMyBoat" to Float::class.javaPrimitiveType!!,
                         "byteMe" to Byte::class.javaPrimitiveType!!,
                         "booleanField" to Boolean::class.javaPrimitiveType!!).mapValues {
-                                ClassCarpenter.NonNullableField (it.value)
+                                NonNullableField (it.value)
                 }))
         assertEquals(8, clazz.nonSyntheticFields.size)
         assertEquals(10, clazz.nonSyntheticMethods.size)
@@ -72,7 +72,7 @@ class ClassCarpenterTest {
         val clazz = cc.build(ClassSchema("gen.Person", mapOf(
                 "age" to Int::class.javaPrimitiveType!!,
                 "name" to String::class.java
-        ).mapValues { ClassCarpenter.NonNullableField (it.value) } ))
+        ).mapValues { NonNullableField (it.value) } ))
         val i = clazz.constructors[0].newInstance(32, "Mike")
         return Pair(clazz, i)
     }
@@ -90,7 +90,7 @@ class ClassCarpenterTest {
         assertEquals("Person{age=32, name=Mike}", i.toString())
     }
 
-    @Test(expected = ClassCarpenter.DuplicateNameException::class)
+    @Test(expected = DuplicateNameException::class)
     fun duplicates() {
         cc.build(ClassSchema("gen.EmptyClass", emptyMap(), null))
         cc.build(ClassSchema("gen.EmptyClass", emptyMap(), null))
@@ -99,8 +99,8 @@ class ClassCarpenterTest {
     @Test
     fun `can refer to each other`() {
         val (clazz1, i) = genPerson()
-        val clazz2 = cc.build(ClassCarpenter.ClassSchema("gen.Referee", mapOf(
-                "ref" to ClassCarpenter.NonNullableField (clazz1)
+        val clazz2 = cc.build(ClassSchema("gen.Referee", mapOf(
+                "ref" to NonNullableField (clazz1)
         )))
         val i2 = clazz2.constructors[0].newInstance(i)
         assertEquals(i, (i2 as SimpleFieldAccess)["ref"])
@@ -108,13 +108,13 @@ class ClassCarpenterTest {
 
     @Test
     fun superclasses() {
-        val schema1 = ClassCarpenter.ClassSchema(
+        val schema1 = ClassSchema(
                 "gen.A",
-                mapOf("a" to ClassCarpenter.NonNullableField (String::class.java)))
+                mapOf("a" to NonNullableField (String::class.java)))
 
-        val schema2 = ClassCarpenter.ClassSchema(
+        val schema2 = ClassSchema(
                 "gen.B",
-                mapOf("b" to ClassCarpenter.NonNullableField (String::class.java)),
+                mapOf("b" to NonNullableField (String::class.java)),
                 schema1)
 
         val clazz = cc.build(schema2)
@@ -126,12 +126,12 @@ class ClassCarpenterTest {
 
     @Test
     fun interfaces() {
-        val schema1 = ClassCarpenter.ClassSchema(
+        val schema1 = ClassSchema(
                 "gen.A",
-                mapOf("a" to ClassCarpenter.NonNullableField(String::class.java)))
+                mapOf("a" to NonNullableField(String::class.java)))
 
-        val schema2 = ClassCarpenter.ClassSchema("gen.B",
-                mapOf("b" to ClassCarpenter.NonNullableField(Int::class.java)),
+        val schema2 = ClassSchema("gen.B",
+                mapOf("b" to NonNullableField(Int::class.java)),
                 schema1,
                 interfaces = listOf(DummyInterface::class.java))
 
@@ -141,15 +141,15 @@ class ClassCarpenterTest {
         assertEquals(1, i.b)
     }
 
-    @Test(expected = ClassCarpenter.InterfaceMismatchException::class)
+    @Test(expected = InterfaceMismatchException::class)
     fun `mismatched interface`() {
-        val schema1 = ClassCarpenter.ClassSchema(
+        val schema1 = ClassSchema(
                 "gen.A",
-                mapOf("a" to ClassCarpenter.NonNullableField(String::class.java)))
+                mapOf("a" to NonNullableField(String::class.java)))
 
-        val schema2 = ClassCarpenter.ClassSchema(
+        val schema2 = ClassSchema(
                 "gen.B",
-                mapOf("c" to ClassCarpenter.NonNullableField(Int::class.java)),
+                mapOf("c" to NonNullableField(Int::class.java)),
                 schema1,
                 interfaces = listOf(DummyInterface::class.java))
 
@@ -160,9 +160,9 @@ class ClassCarpenterTest {
 
     @Test
     fun `generate interface`() {
-        val schema1 = ClassCarpenter.InterfaceSchema(
+        val schema1 = InterfaceSchema(
                 "gen.Interface",
-                mapOf("a" to ClassCarpenter.NonNullableField (Int::class.java)))
+                mapOf("a" to NonNullableField (Int::class.java)))
 
         val iface = cc.build(schema1)
 
@@ -173,7 +173,7 @@ class ClassCarpenterTest {
 
         val schema2 = ClassSchema(
                 "gen.Derived",
-                mapOf("a" to ClassCarpenter.NonNullableField (Int::class.java)),
+                mapOf("a" to NonNullableField (Int::class.java)),
                 interfaces = listOf(iface))
 
         val clazz = cc.build(schema2)
@@ -185,25 +185,25 @@ class ClassCarpenterTest {
 
     @Test
     fun `generate multiple interfaces`() {
-        val iFace1 = ClassCarpenter.InterfaceSchema(
+        val iFace1 = InterfaceSchema(
                 "gen.Interface1",
                 mapOf(
-                        "a" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "b" to ClassCarpenter.NonNullableField(String::class.java)))
+                        "a" to NonNullableField(Int::class.java),
+                        "b" to NonNullableField(String::class.java)))
 
-        val iFace2 = ClassCarpenter.InterfaceSchema(
+        val iFace2 = InterfaceSchema(
                 "gen.Interface2",
                 mapOf(
-                        "c" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "d" to ClassCarpenter.NonNullableField(String::class.java)))
+                        "c" to NonNullableField(Int::class.java),
+                        "d" to NonNullableField(String::class.java)))
 
         val class1 = ClassSchema(
                 "gen.Derived",
                 mapOf(
-                        "a" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "b" to ClassCarpenter.NonNullableField(String::class.java),
-                        "c" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "d" to ClassCarpenter.NonNullableField(String::class.java)),
+                        "a" to NonNullableField(Int::class.java),
+                        "b" to NonNullableField(String::class.java),
+                        "c" to NonNullableField(Int::class.java),
+                        "d" to NonNullableField(String::class.java)),
                 interfaces = listOf(cc.build(iFace1), cc.build(iFace2)))
 
         val clazz = cc.build(class1)
@@ -224,23 +224,23 @@ class ClassCarpenterTest {
         val iFace1 = InterfaceSchema(
                 "gen.Interface1",
                 mapOf(
-                        "a" to ClassCarpenter.NonNullableField (Int::class.java),
-                        "b" to ClassCarpenter.NonNullableField(String::class.java)))
+                        "a" to NonNullableField (Int::class.java),
+                        "b" to NonNullableField(String::class.java)))
 
         val iFace2 = InterfaceSchema(
                 "gen.Interface2",
                 mapOf(
-                        "c" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "d" to ClassCarpenter.NonNullableField(String::class.java)),
+                        "c" to NonNullableField(Int::class.java),
+                        "d" to NonNullableField(String::class.java)),
                 interfaces = listOf(cc.build(iFace1)))
 
         val class1 = ClassSchema(
                 "gen.Derived",
                 mapOf(
-                        "a" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "b" to ClassCarpenter.NonNullableField(String::class.java),
-                        "c" to ClassCarpenter.NonNullableField(Int::class.java),
-                        "d" to ClassCarpenter.NonNullableField(String::class.java)),
+                        "a" to NonNullableField(Int::class.java),
+                        "b" to NonNullableField(String::class.java),
+                        "c" to NonNullableField(Int::class.java),
+                        "d" to NonNullableField(String::class.java)),
                 interfaces = listOf(cc.build(iFace2)))
 
         val clazz = cc.build(class1)
@@ -259,9 +259,9 @@ class ClassCarpenterTest {
     @Test(expected = java.lang.IllegalArgumentException::class)
     fun `null parameter small int`() {
         val className = "iEnjoySwede"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField (Int::class.java)))
+                mapOf("a" to NonNullableField (Int::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -269,12 +269,12 @@ class ClassCarpenterTest {
         clazz.constructors[0].newInstance(a)
     }
 
-    @Test(expected = ClassCarpenter.NullablePrimitiveException::class)
+    @Test(expected = NullablePrimitiveException::class)
     fun `nullable parameter small int`() {
         val className = "iEnjoySwede"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NullableField (Int::class.java)))
+                mapOf("a" to NullableField (Int::class.java)))
 
         cc.build(schema)
     }
@@ -282,9 +282,9 @@ class ClassCarpenterTest {
     @Test
     fun `nullable parameter integer`() {
         val className = "iEnjoyWibble"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NullableField (Integer::class.java)))
+                mapOf("a" to NullableField (Integer::class.java)))
 
         val clazz = cc.build(schema)
         val a1 : Int? = null
@@ -297,9 +297,9 @@ class ClassCarpenterTest {
     @Test
     fun `non nullable parameter integer with non null`() {
         val className = "iEnjoyWibble"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField (Integer::class.java)))
+                mapOf("a" to NonNullableField (Integer::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -310,9 +310,9 @@ class ClassCarpenterTest {
     @Test(expected = java.lang.reflect.InvocationTargetException::class)
     fun `non nullable parameter integer with null`() {
         val className = "iEnjoyWibble"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField (Integer::class.java)))
+                mapOf("a" to NonNullableField (Integer::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -324,9 +324,9 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `int array`() {
         val className = "iEnjoyPotato"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField(IntArray::class.java)))
+                mapOf("a" to NonNullableField(IntArray::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -343,9 +343,9 @@ class ClassCarpenterTest {
     @Test(expected = java.lang.reflect.InvocationTargetException::class)
     fun `nullable int array throws`() {
         val className = "iEnjoySwede"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField(IntArray::class.java)))
+                mapOf("a" to NonNullableField(IntArray::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -357,9 +357,9 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `integer array`() {
         val className = "iEnjoyFlan"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NonNullableField(Array<Int>::class.java)))
+                mapOf("a" to NonNullableField(Array<Int>::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -377,11 +377,11 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `int array with ints`() {
         val className = "iEnjoyCrumble"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className", mapOf(
                 "a" to Int::class.java,
                 "b" to IntArray::class.java,
-                "c" to Int::class.java).mapValues { ClassCarpenter.NonNullableField(it.value) })
+                "c" to Int::class.java).mapValues { NonNullableField(it.value) })
 
         val clazz = cc.build(schema)
 
@@ -399,11 +399,11 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `multiple int arrays`() {
         val className = "iEnjoyJam"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className", mapOf(
                 "a" to IntArray::class.java,
                 "b" to Int::class.java,
-                "c" to IntArray::class.java).mapValues { ClassCarpenter.NonNullableField(it.value) })
+                "c" to IntArray::class.java).mapValues { NonNullableField(it.value) })
 
         val clazz = cc.build(schema)
         val i = clazz.constructors[0].newInstance(intArrayOf(1, 2), 3, intArrayOf(4, 5, 6))
@@ -422,9 +422,9 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `string array`() {
         val className = "iEnjoyToast"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NullableField(Array<String>::class.java)))
+                mapOf("a" to NullableField(Array<String>::class.java)))
 
         val clazz = cc.build(schema)
 
@@ -440,12 +440,12 @@ class ClassCarpenterTest {
     @Suppress("UNCHECKED_CAST")
     fun `string arrays`() {
         val className = "iEnjoyToast"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
                 mapOf(
                         "a" to Array<String>::class.java,
                         "b" to String::class.java,
-                        "c" to Array<String>::class.java).mapValues { ClassCarpenter.NullableField (it.value) })
+                        "c" to Array<String>::class.java).mapValues { NullableField (it.value) })
 
         val clazz = cc.build(schema)
 
@@ -469,10 +469,10 @@ class ClassCarpenterTest {
     @Test
     fun `nullable sets annotations`() {
         val className = "iEnjoyJam"
-        val schema = ClassCarpenter.ClassSchema(
+        val schema = ClassSchema(
                 "gen.$className",
-                mapOf("a" to ClassCarpenter.NullableField(String::class.java),
-                      "b" to ClassCarpenter.NonNullableField(String::class.java)))
+                mapOf("a" to NullableField(String::class.java),
+                      "b" to NonNullableField(String::class.java)))
 
         val clazz = cc.build(schema)
 
