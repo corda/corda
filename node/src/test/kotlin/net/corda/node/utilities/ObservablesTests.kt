@@ -5,8 +5,6 @@ import net.corda.core.bufferUntilSubscribed
 import net.corda.core.tee
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.After
 import org.junit.Test
 import rx.Observable
@@ -16,13 +14,13 @@ import java.util.*
 
 class ObservablesTests {
 
-    private fun isInDatabaseTransaction(): Boolean = (TransactionManager.currentOrNull() != null)
+    private fun isInDatabaseTransaction(): Boolean = (DatabaseTransactionManager.currentOrNull() != null)
 
     val toBeClosed = mutableListOf<Closeable>()
 
-    fun createDatabase(): Database {
-        val (closeable, database) = configureDatabase(makeTestDataSourceProperties())
-        toBeClosed += closeable
+    fun createDatabase(): CordaPersistence {
+        val database = configureDatabase(makeTestDataSourceProperties())
+        toBeClosed += database
         return database
     }
 
@@ -167,7 +165,7 @@ class ObservablesTests {
         observableWithDbTx.first().subscribe { undelayedEvent.set(it to isInDatabaseTransaction()) }
 
         fun observeSecondEvent(event: Int, future: SettableFuture<Pair<Int, UUID?>>) {
-            future.set(event to if (isInDatabaseTransaction()) StrandLocalTransactionManager.transactionId else null)
+            future.set(event to if (isInDatabaseTransaction()) DatabaseTransactionManager.transactionId else null)
         }
 
         observableWithDbTx.skip(1).first().subscribe { observeSecondEvent(it, delayedEventFromSecondObserver) }

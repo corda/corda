@@ -546,11 +546,12 @@ abstract class AbstractNode(open val configuration: NodeConfiguration,
     protected open fun initialiseDatabasePersistence(insideTransaction: () -> Unit) {
         val props = configuration.dataSourceProperties
         if (props.isNotEmpty()) {
-            val (toClose, database) = CordaPersistence.configureDatabase(props)
-            this.database = database
+            this.database = configureDatabase(props)
             // Now log the vendor string as this will also cause a connection to be tested eagerly.
-            log.info("Connected to ${database.database.vendor} database.")
-            toClose::close.let {
+            database.transaction {
+                log.info("Connected to ${database.database.vendor} database.")
+            }
+            this.database::close.let {
                 dbCloser = it
                 runOnStop += it
             }

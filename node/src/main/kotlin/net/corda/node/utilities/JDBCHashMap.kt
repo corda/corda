@@ -8,7 +8,6 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.InsertStatement
-//import org.jetbrains.exposed.sql.transactions.TransactionManager
 import java.sql.Blob
 import java.util.*
 import kotlin.system.measureTimeMillis
@@ -60,8 +59,7 @@ class JDBCHashMap<K : Any, V : Any>(tableName: String,
 }
 
 fun bytesToBlob(value: SerializedBytes<*>, finalizables: MutableList<() -> Unit>): Blob {
-    //val blob = TransactionManager.current().connection.createBlob()
-    val blob = CordaTransactionManager.current().connection.createBlob()
+    val blob = DatabaseTransactionManager.current().connection.createBlob()
     finalizables += { blob.free() }
     blob.setBytes(1, value.bytes)
     return blob

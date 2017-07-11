@@ -11,7 +11,6 @@ import net.corda.core.node.services.VaultService
 import net.corda.core.seconds
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.utilities.configureDatabase
-import net.corda.node.utilities.transaction
 import net.corda.testing.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
@@ -212,8 +211,7 @@ class CommercialPaperTestsGeneric {
     fun `issue move and then redeem`() {
 
         val dataSourcePropsAlice = makeTestDataSourceProperties()
-        val dataSourceAndDatabaseAlice = configureDatabase(dataSourcePropsAlice)
-        val databaseAlice = dataSourceAndDatabaseAlice.second
+        val databaseAlice = configureDatabase(dataSourcePropsAlice)
         databaseAlice.transaction {
 
             aliceServices = object : MockServices(ALICE_KEY) {
@@ -232,8 +230,7 @@ class CommercialPaperTestsGeneric {
         }
 
         val dataSourcePropsBigCorp = makeTestDataSourceProperties()
-        val dataSourceAndDatabaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
-        val databaseBigCorp = dataSourceAndDatabaseBigCorp.second
+        val databaseBigCorp = configureDatabase(dataSourcePropsBigCorp)
         databaseBigCorp.transaction {
 
             bigCorpServices = object : MockServices(BIG_CORP_KEY) {

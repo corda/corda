@@ -30,7 +30,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.io.Closeable
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Clock
@@ -51,7 +50,6 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
 
     lateinit var scheduler: NodeSchedulerService
     lateinit var smmExecutor: AffinityExecutor.ServiceAffinityExecutor
-    lateinit var dataSource: Closeable
     lateinit var database: CordaPersistence
     lateinit var countDown: CountDownLatch
     lateinit var smmHasRemovedAllFlows: CountDownLatch
@@ -73,9 +71,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         smmHasRemovedAllFlows = CountDownLatch(1)
         calls = 0
         val dataSourceProps = makeTestDataSourceProperties()
-        val dataSourceAndDatabase = CordaPersistence.configureDatabase(dataSourceProps)
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(dataSourceProps)
         val identityService = InMemoryIdentityService(trustRoot = DUMMY_CA.certificate)
         val kms = MockKeyManagementService(identityService, ALICE_KEY)
 
@@ -117,7 +113,7 @@ class NodeSchedulerServiceTest : SingletonSerializeAsToken() {
         }
         smmExecutor.shutdown()
         smmExecutor.awaitTermination(60, TimeUnit.SECONDS)
-        dataSource.close()
+        database.close()
     }
 
     class TestState(val flowLogicRef: FlowLogicRef, val instant: Instant) : LinearState, SchedulableState {

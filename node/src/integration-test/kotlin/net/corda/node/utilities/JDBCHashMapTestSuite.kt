@@ -12,13 +12,11 @@ import com.google.common.collect.testing.testers.*
 import junit.framework.TestSuite
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
-import java.io.Closeable
 import java.sql.Connection
 import java.util.*
 
@@ -32,9 +30,8 @@ import java.util.*
         JDBCHashMapTestSuite.SetConstrained::class)
 class JDBCHashMapTestSuite {
     companion object {
-        lateinit var dataSource: Closeable
         lateinit var transaction: Transaction
-        lateinit var database: Database
+        lateinit var database: CordaPersistence
         lateinit var loadOnInitFalseMap: JDBCHashMap<String, String>
         lateinit var memoryConstrainedMap: JDBCHashMap<String, String>
         lateinit var loadOnInitTrueMap: JDBCHashMap<String, String>
@@ -45,9 +42,7 @@ class JDBCHashMapTestSuite {
         @JvmStatic
         @BeforeClass
         fun before() {
-            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-            dataSource = dataSourceAndDatabase.first
-            database = dataSourceAndDatabase.second
+            database = configureDatabase(makeTestDataSourceProperties())
             setUpDatabaseTx()
             loadOnInitFalseMap = JDBCHashMap<String, String>("test_map_false", loadOnInit = false)
             memoryConstrainedMap = JDBCHashMap<String, String>("test_map_constrained", loadOnInit = false, maxBuckets = 1)
@@ -61,7 +56,7 @@ class JDBCHashMapTestSuite {
         @AfterClass
         fun after() {
             closeDatabaseTx()
-            dataSource.close()
+            database.close()
         }
 
         @JvmStatic
@@ -228,19 +223,16 @@ class JDBCHashMapTestSuite {
 
         private val transientMapForComparison = applyOpsToMap(LinkedHashMap())
 
-        lateinit var dataSource: Closeable
-        lateinit var database: Database
+        lateinit var database: CordaPersistence
 
         @Before
         fun before() {
-            val dataSourceAndDatabase = configureDatabase(makeTestDataSourceProperties())
-            dataSource = dataSourceAndDatabase.first
-            database = dataSourceAndDatabase.second
+            database = configureDatabase(makeTestDataSourceProperties())
         }
 
         @After
         fun after() {
-            dataSource.close()
+            database.close()
         }
 
 

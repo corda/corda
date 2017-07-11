@@ -11,9 +11,11 @@ import net.corda.core.messaging.*;
 import net.corda.core.node.services.*;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.*;
+import net.corda.testing.contracts.DummyLinearContract;
 import net.corda.core.schemas.*;
 import net.corda.core.transactions.*;
 import net.corda.core.utilities.*;
+import net.corda.node.utilities.CordaPersistence;
 import net.corda.node.services.database.*;
 import net.corda.node.services.schema.*;
 import net.corda.schemas.*;
@@ -22,7 +24,6 @@ import net.corda.testing.contracts.*;
 import net.corda.testing.node.*;
 import net.corda.testing.schemas.DummyLinearStateSchemaV1;
 import org.jetbrains.annotations.*;
-import org.jetbrains.exposed.sql.*;
 import org.junit.*;
 import rx.Observable;
 
@@ -34,8 +35,6 @@ import java.util.stream.*;
 import static net.corda.contracts.asset.CashKt.*;
 import static net.corda.core.contracts.ContractsDSL.*;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
-import static net.corda.node.utilities.DatabaseSupportKt.*;
-import static net.corda.node.utilities.DatabaseSupportKt.transaction;
 import static net.corda.testing.CoreTestUtils.*;
 import static net.corda.testing.node.MockServicesKt.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
@@ -46,19 +45,16 @@ public class VaultQueryJavaTests {
     private MockServices services;
     private VaultService vaultSvc;
     private VaultQueryService vaultQuerySvc;
-    private Closeable dataSource;
-    private Database database;
+    private CordaPersistence database;
 
     @Before
     public void setUp() {
         Properties dataSourceProps = makeTestDataSourceProperties(SecureHash.randomSHA256().toString());
-        Pair<Closeable, Database> dataSourceAndDatabase = configureDatabase(dataSourceProps);
-        dataSource = dataSourceAndDatabase.getFirst();
-        database = dataSourceAndDatabase.getSecond();
+        database = configureDatabase(dataSourceProps);
 
         Set<MappedSchema> customSchemas = new HashSet<>(Collections.singletonList(DummyLinearStateSchemaV1.INSTANCE));
         HibernateConfiguration hibernateConfig = new HibernateConfiguration(new NodeSchemaService(customSchemas));
-        transaction(database,
+        database.transaction(
                     statement -> { services = new MockServices(getMEGA_CORP_KEY()) {
                         @NotNull
                         @Override
@@ -91,7 +87,7 @@ public class VaultQueryJavaTests {
 
     @After
     public void cleanUp() throws IOException {
-        dataSource.close();
+        database.close();
     }
 
     /**
@@ -104,7 +100,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void unconsumedLinearStates() throws VaultQueryException {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             VaultFiller.fillWithSomeTestLinearStates(services, 3);
 
@@ -145,7 +141,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void consumedCashStates() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Amount<Currency> amount = new Amount<>(100, Currency.getInstance("USD"));
 
@@ -175,7 +171,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void consumedDealStatesPagedSorted() throws VaultQueryException {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
             StateAndRef<LinearState> linearState = states.getStates().iterator().next();
@@ -217,7 +213,7 @@ public class VaultQueryJavaTests {
     @Test
     @SuppressWarnings("unchecked")
     public void customQueryForCashStatesWithAmountOfCurrencyGreaterOrEqualThanQuantity() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Amount<Currency> pounds = new Amount<>(100, Currency.getInstance("GBP"));
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
@@ -261,7 +257,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void trackCashStates() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
             VaultFiller.fillWithSomeTestCash(services,
                     new Amount<>(100, Currency.getInstance("USD")),
                     TestConstants.getDUMMY_NOTARY(),
@@ -292,7 +288,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void trackDealStatesPagedSorted() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Vault<LinearState> states = VaultFiller.fillWithSomeTestLinearStates(services, 10, null);
             UniqueIdentifier uid = states.getStates().iterator().next().component1().getData().getLinearId();
@@ -333,7 +329,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void consumedStatesDeprecated() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
             Amount<Currency> amount = new Amount<>(100, USD);
             VaultFiller.fillWithSomeTestCash(services,
                     new Amount<>(100, USD),
@@ -365,7 +361,7 @@ public class VaultQueryJavaTests {
 
     @Test
     public void consumedStatesForLinearIdDeprecated() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Vault<LinearState> linearStates = VaultFiller.fillWithSomeTestLinearStates(services, 4,null);
             linearStates.getStates().iterator().next().component1().getData().getLinearId();
@@ -394,7 +390,7 @@ public class VaultQueryJavaTests {
     @Test
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithoutGroupClause() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
@@ -439,7 +435,7 @@ public class VaultQueryJavaTests {
     @Test
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsWithSingleGroupClause() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));
@@ -510,7 +506,7 @@ public class VaultQueryJavaTests {
     @Test
     @SuppressWarnings("unchecked")
     public void aggregateFunctionsSumByIssuerAndCurrencyAndSortByAggregateSum() {
-        transaction(database, tx -> {
+        database.transaction(tx -> {
 
             Amount<Currency> dollars100 = new Amount<>(100, Currency.getInstance("USD"));
             Amount<Currency> dollars200 = new Amount<>(200, Currency.getInstance("USD"));

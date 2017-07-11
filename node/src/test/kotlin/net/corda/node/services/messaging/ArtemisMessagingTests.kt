@@ -20,6 +20,7 @@ import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.configureDatabase
 import net.corda.testing.freeLocalHostAndPort
 import net.corda.testing.freePort
 import net.corda.testing.node.MOCK_VERSION_INFO
@@ -32,7 +33,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.Closeable
 import java.net.ServerSocket
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -50,7 +50,6 @@ class ArtemisMessagingTests {
     val identity = generateKeyPair()
 
     lateinit var config: NodeConfiguration
-    lateinit var dataSource: Closeable
     lateinit var database: CordaPersistence
     lateinit var userService: RPCUserService
     lateinit var networkMapRegistrationFuture: ListenableFuture<Unit>
@@ -73,9 +72,7 @@ class ArtemisMessagingTests {
                 baseDirectory = baseDirectory,
                 myLegalName = ALICE.name)
         LogHelper.setLevel(PersistentUniquenessProvider::class)
-        val dataSourceAndDatabase = CordaPersistence.configureDatabase(makeTestDataSourceProperties())
-        dataSource = dataSourceAndDatabase.first
-        database = dataSourceAndDatabase.second
+        database = configureDatabase(makeTestDataSourceProperties())
         networkMapRegistrationFuture = Futures.immediateFuture(Unit)
     }
 
@@ -85,7 +82,7 @@ class ArtemisMessagingTests {
         messagingServer?.stop()
         messagingClient = null
         messagingServer = null
-        dataSource.close()
+        database.close()
         LogHelper.reset(PersistentUniquenessProvider::class)
     }
 

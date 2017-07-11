@@ -18,8 +18,8 @@ import net.corda.node.services.messaging.NodeMessagingClient
 import net.corda.node.services.network.InMemoryNetworkMapCache
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
 import net.corda.node.utilities.CordaPersistence
+import net.corda.node.utilities.configureDatabase
 import net.corda.testing.freeLocalHostAndPort
-import java.io.Closeable
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import kotlin.concurrent.thread
@@ -32,8 +32,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
                  rpcAddress: NetworkHostAndPort = freeLocalHostAndPort(),
                  trustRoot: X509Certificate) : AutoCloseable {
 
-    private val databaseWithCloseable: Pair<Closeable, CordaPersistence> = CordaPersistence.configureDatabase(config.dataSourceProperties)
-    val database: CordaPersistence get() = databaseWithCloseable.second
+    val database: CordaPersistence = configureDatabase(config.dataSourceProperties)
     val userService = RPCUserServiceImpl(config.rpcUsers)
     val monitoringService = MonitoringService(MetricRegistry())
     val identity: KeyPair = generateKeyPair()
@@ -70,7 +69,7 @@ class SimpleNode(val config: NodeConfiguration, val address: NetworkHostAndPort 
     override fun close() {
         network.stop()
         broker.stop()
-        databaseWithCloseable.first.close()
+        database.close()
         executor.shutdownNow()
     }
 }

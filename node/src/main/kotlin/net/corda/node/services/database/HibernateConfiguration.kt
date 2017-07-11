@@ -3,7 +3,7 @@ package net.corda.node.services.database
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.api.SchemaService
-import net.corda.node.utilities.CordaTransactionManager
+import net.corda.node.utilities.DatabaseTransactionManager
 import org.hibernate.SessionFactory
 import org.hibernate.boot.MetadataSources
 import org.hibernate.boot.model.naming.Identifier
@@ -93,10 +93,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
     // during schema creation / update.
     class NodeDatabaseConnectionProvider : ConnectionProvider {
         override fun closeConnection(conn: Connection) {
-            //val tx = TransactionManager.current()
-            //tx.commit()
-            //tx.close()
-            val tx = CordaTransactionManager.currentOrNull()
+            val tx = DatabaseTransactionManager.currentOrNull()
             tx?.commit() ?: throw IllegalStateException("Was expecting to find database connection.")
             tx.close()
         }
@@ -104,9 +101,7 @@ class HibernateConfiguration(val schemaService: SchemaService, val useDefaultLog
         override fun supportsAggressiveRelease(): Boolean = true
 
         override fun getConnection(): Connection {
-            //val tx = TransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
-            //return tx.connection
-            val tx = CordaTransactionManager.manager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
+            val tx = DatabaseTransactionManager.newTransaction(Connection.TRANSACTION_REPEATABLE_READ)
             return tx.connection
         }
 
