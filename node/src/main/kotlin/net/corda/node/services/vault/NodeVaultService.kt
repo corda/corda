@@ -2,6 +2,7 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
+import com.google.common.annotations.VisibleForTesting
 import io.requery.PersistenceException
 import io.requery.TransactionIsolation
 import io.requery.kotlin.`in`
@@ -461,7 +462,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
-    private fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
+    @VisibleForTesting
+    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
         val ourNewStates = tx.outputs.
                 filter { isRelevant(it.data, ourKeys) }.
                 map { tx.outRef<ContractState>(it.data) }
@@ -508,7 +510,8 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
         authorisedUpgrade.remove(stateAndRef.ref)
     }
 
-    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
+    @VisibleForTesting
+    internal fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
         is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
         is LinearState -> state.isRelevant(ourKeys)
         else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
