@@ -237,4 +237,36 @@ class ObservablesTests {
         subscription2.unsubscribe()
         assertThat(unsubscribed).isTrue()
     }
+
+    @Test
+    fun `check wrapping in db tx restarts if we pass through zero subscribers`() {
+        val database = createDatabase()
+
+        val source = PublishSubject.create<Int>()
+        var unsubscribed = false
+
+        val bufferedObservable: Observable<Int> = source.doOnUnsubscribe { unsubscribed = true }
+        val databaseWrappedObservable: Observable<Int> = bufferedObservable.wrapWithDatabaseTransaction(database)
+
+        assertThat(unsubscribed).isFalse()
+
+        val subscription1 = databaseWrappedObservable.subscribe { }
+        val subscription2 = databaseWrappedObservable.subscribe { }
+
+        subscription1.unsubscribe()
+        assertThat(unsubscribed).isFalse()
+
+        subscription2.unsubscribe()
+        assertThat(unsubscribed).isTrue()
+
+        val event = SettableFuture.create<Int>()
+        val subscription3 = databaseWrappedObservable.subscribe { event.set(it) }
+
+        source.onNext(1)
+
+        assertThat(event.isDone).isTrue()
+        assertThat(event.get()).isEqualTo(1)
+
+        subscription3.unsubscribe()
+    }
 }
