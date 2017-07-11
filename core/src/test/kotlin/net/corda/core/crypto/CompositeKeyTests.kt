@@ -98,6 +98,24 @@ class CompositeKeyTests {
     }
 
     @Test
+    fun `der encoded tree decodes correctly with weighting`() {
+        val aliceAndBob = CompositeKey.Builder()
+                .addKey(alicePublicKey, 2)
+                .addKey(bobPublicKey, 1)
+                .build(threshold = 2)
+
+        val aliceAndBobOrCharlie = CompositeKey.Builder()
+                .addKey(aliceAndBob, 3)
+                .addKey(charliePublicKey, 2)
+                .build(threshold = 3)
+
+        val encoded = aliceAndBobOrCharlie.encoded
+        val decoded = CompositeKey.getInstance(encoded)
+
+        assertEquals(decoded, aliceAndBobOrCharlie)
+    }
+
+    @Test
     fun `tree canonical form`() {
         assertEquals(CompositeKey.Builder().addKeys(alicePublicKey).build(), alicePublicKey)
         val node1 = CompositeKey.Builder().addKeys(alicePublicKey, bobPublicKey).build(1) // threshold = 1
@@ -330,6 +348,9 @@ class CompositeKeyTests {
         // Run the same composite key test again.
         assertTrue { compositeKey2.isFulfilledBy(signatures.byKeys()) }
         assertFalse { compositeKey2.isFulfilledBy(signaturesWithoutRSA.byKeys()) }
+
+        // Ensure keys are the same before and after keystore.
+        assertEquals(compositeKey, compositeKey2)
     }
 
     @Test
