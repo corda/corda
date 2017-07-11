@@ -70,20 +70,16 @@ class CashPaymentFlowTests {
             // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
             // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
             vaultUpdatesBoc.expectEvents {
-                sequence(
-                        // MOVE
-                        expect { update ->
-                            require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
-                            require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                            val changeState = update.produced.single().state.data as Cash.State
-                            assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
-                        }
-                )
+                expect { update ->
+                    require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
+                    require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
+                    val changeState = update.produced.single().state.data as Cash.State
+                    assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
+                }
             }
 
             // Check notary node vault updates
             vaultUpdatesBankClient.expectEvents {
-                // MOVE
                 expect { update ->
                     require(update.consumed.isEmpty()) { update.consumed.size }
                     require(update.produced.size == 1) { update.produced.size }
