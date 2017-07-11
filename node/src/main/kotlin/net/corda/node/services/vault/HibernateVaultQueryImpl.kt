@@ -73,7 +73,7 @@ class HibernateVaultQueryImpl(hibernateConfig: HibernateConfiguration,
                 if (!paging.isDefault) {
                     // pagination
                     if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
-                    if (paging.pageSize < 0) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 0 and $MAX_PAGE_SIZE]")
+                    if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
                     if ((paging.pageNumber != DEFAULT_PAGE_NUM) && (paging.pageSize * (paging.pageNumber - 1) >= totalStates))
                         throw VaultQueryException("Requested more results than available [${paging.pageSize} * ${paging.pageNumber} >= $totalStates]")
                 }
