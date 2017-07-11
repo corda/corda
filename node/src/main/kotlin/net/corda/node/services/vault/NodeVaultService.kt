@@ -2,7 +2,6 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.google.common.annotations.VisibleForTesting
 import io.requery.PersistenceException
 import io.requery.TransactionIsolation
 import io.requery.kotlin.`in`
@@ -56,25 +55,12 @@ import kotlin.concurrent.withLock
  * TODO: have transaction storage do some caching.
  */
 class NodeVaultService(private val services: ServiceHub, dataSourceProperties: Properties) : SingletonSerializeAsToken(), VaultService {
-    companion object {
-        private val log = loggerFor<NodeVaultService>()
 
-        @VisibleForTesting
-        internal fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
-            is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
-            is LinearState -> state.isRelevant(ourKeys)
-            else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
-        }
-
-        @VisibleForTesting
-        internal fun ourStates(tx: WireTransaction, ourKeys: Set<PublicKey>): List<StateAndRef<ContractState>> {
-            return tx.outputs.
-                    filter { isRelevant(it.data, ourKeys) }.
-                    map { tx.outRef<ContractState>(it.data) }
-        }
+    private companion object {
+        val log = loggerFor<NodeVaultService>()
 
         // Define composite primary key used in Requery Expression
-        private val stateRefCompositeColumn: RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
+        val stateRefCompositeColumn: RowExpression = RowExpression.of(listOf(VaultStatesEntity.TX_ID, VaultStatesEntity.INDEX))
     }
 
     val configuration = RequeryConfiguration(dataSourceProperties)
@@ -475,9 +461,10 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
     private fun deriveState(txState: TransactionState<Cash.State>, amount: Amount<Issued<Currency>>, owner: AbstractParty)
             = txState.copy(data = txState.data.copy(amount = amount, owner = owner))
 
-    @VisibleForTesting
-    internal fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
-        val ourNewStates = ourStates(tx, ourKeys)
+    private fun makeUpdate(tx: WireTransaction, ourKeys: Set<PublicKey>): Vault.Update {
+        val ourNewStates = tx.outputs.
+                filter { isRelevant(it.data, ourKeys) }.
+                map { tx.outRef<ContractState>(it.data) }
 
         // Retrieve all unconsumed states for this transaction's inputs
         val consumedStates = HashSet<StateAndRef<ContractState>>()
@@ -519,6 +506,12 @@ class NodeVaultService(private val services: ServiceHub, dataSourceProperties: P
 
     override fun deauthoriseContractUpgrade(stateAndRef: StateAndRef<*>) {
         authorisedUpgrade.remove(stateAndRef.ref)
+    }
+
+    private fun isRelevant(state: ContractState, ourKeys: Set<PublicKey>) = when (state) {
+        is OwnableState -> state.owner.owningKey.containsAny(ourKeys)
+        is LinearState -> state.isRelevant(ourKeys)
+        else -> ourKeys.intersect(state.participants.map { it.owningKey }).isNotEmpty()
     }
 
     /**
