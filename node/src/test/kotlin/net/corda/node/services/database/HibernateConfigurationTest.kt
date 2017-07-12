@@ -12,8 +12,8 @@ import net.corda.core.crypto.toBase58String
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV2
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
+import net.corda.testing.schemas.DummyLinearStateSchemaV2
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.storageKryo
 import net.corda.core.transactions.SignedTransaction

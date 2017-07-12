@@ -4,7 +4,6 @@ package net.corda.testing.contracts
 
 import net.corda.contracts.Commodity
 import net.corda.contracts.DealState
-import net.corda.contracts.DummyDealContract
 import net.corda.contracts.asset.*
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty

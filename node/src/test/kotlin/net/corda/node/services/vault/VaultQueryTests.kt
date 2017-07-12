@@ -6,7 +6,6 @@ import net.corda.contracts.DealState
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
 import net.corda.core.contracts.*
-import net.corda.testing.contracts.DummyLinearContract
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.toBase58String
 import net.corda.core.days
@@ -14,10 +13,9 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.schemas.testing.DummyLinearStateSchemaV1
 import net.corda.core.seconds
-import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
@@ -32,6 +30,7 @@ import net.corda.testing.*
 import net.corda.testing.contracts.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
+import net.corda.testing.schemas.DummyLinearStateSchemaV1
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -48,7 +47,6 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
-import kotlin.test.assertFails
 
 class VaultQueryTests {
 
@@ -974,7 +972,7 @@ class VaultQueryTests {
             assertThat(states).hasSize(20)
             assertThat(metadata.first().contractStateClassName).isEqualTo("net.corda.testing.contracts.DummyLinearContract\$State")
             assertThat(metadata.first().status).isEqualTo(Vault.StateStatus.UNCONSUMED) // 0 = UNCONSUMED
-            assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.contracts.DummyDealContract\$State")
+            assertThat(metadata.last().contractStateClassName).isEqualTo("net.corda.contracts.asset.Cash\$State")
             assertThat(metadata.last().status).isEqualTo(Vault.StateStatus.CONSUMED)    // 1 = CONSUMED
         }
     }
