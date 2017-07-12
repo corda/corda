@@ -12,7 +12,6 @@ dependencies {
     // Requery: SQL based query & persistence for Kotlin
     kapt "io.requery:requery-processor:$requery_version"
 
-    testCompile project(':test-utils')
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
 
