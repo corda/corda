@@ -7,6 +7,7 @@ import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
+import net.corda.core.node.services.VaultQueryService
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.DEFAULT_PAGE_NUM
 import net.corda.core.node.services.vault.PageSpecification
@@ -137,34 +138,30 @@ class ScheduledFlowTests {
         }
         mockNet.waitQuiescent()
 
-        // Demonstrate Vault Query paging and sorting
-        val PAGE_SIZE = 20
-        val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
-
         val statesFromA = nodeA.database.transaction {
-            var pageNumber = DEFAULT_PAGE_NUM
-            val states = mutableListOf<StateAndRef<ScheduledState>>()
-            do {
-                val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
-                val results = nodeA.services.vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
-                states.addAll(results.states)
-                pageNumber++
-            } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
-            states.toList()
+            queryStatesWithPaging(nodeA.services.vaultQueryService)
         }
         val statesFromB = nodeB.database.transaction {
-            var pageNumber = DEFAULT_PAGE_NUM
-            val states = mutableListOf<StateAndRef<ScheduledState>>()
-            do {
-                val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
-                val results = nodeB.services.vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
-                states.addAll(results.states)
-                pageNumber++
-            } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
-            states.toList()
+            queryStatesWithPaging(nodeB.services.vaultQueryService)
         }
         assertEquals(2 * N, statesFromA.count(), "Expect all states to be present")
         assertEquals(statesFromA, statesFromB, "Expect identical data on both nodes")
         assertTrue("Expect all states have run the scheduled task", statesFromB.all { it.state.data.processed })
+    }
+
+    // Demonstrate Vault Query paging and sorting
+    val PAGE_SIZE = 20
+    val sorting = Sort(listOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF_TXN_ID), Sort.Direction.DESC)))
+
+    private fun queryStatesWithPaging(vaultQueryService: VaultQueryService): List<StateAndRef<ScheduledState>> {
+        var pageNumber = DEFAULT_PAGE_NUM
+        val states = mutableListOf<StateAndRef<ScheduledState>>()
+        do {
+            val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
+            val results = vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
+            states.addAll(results.states)
+            pageNumber++
+        } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
+        return states.toList()
     }
 }
