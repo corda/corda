@@ -48,7 +48,7 @@ The API provides both static (snapshot) and dynamic (snapshot with streaming upd
 .. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
 
 Simple pagination (page number and size) and sorting (directional ordering using standard or custom property attributes) is also specifiable.
-Defaults are defined for Paging (pageNumber = 0, pageSize = 200) and Sorting (direction = ASC).
+Defaults are defined for Paging (pageNumber = 1, pageSize = 200) and Sorting (direction = ASC).
 
 The ``QueryCriteria`` interface provides a flexible mechanism for specifying different filtering criteria, including and/or composition and a rich set of operators to include: binary logical (AND, OR), comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL), equality (EQUAL, NOT_EQUAL), likeness (LIKE, NOT_LIKE), nullability (IS_NULL, NOT_NULL), and collection based (IN, NOT_IN). Standard SQL-92 aggregate functions (SUM, AVG, MIN, MAX, COUNT) are also supported.
 
@@ -103,6 +103,15 @@ An example of a custom query in Java is illustrated here:
     :end-before: DOCEND VaultJavaQueryExample3
 
 .. note:: Current queries by ``Party`` specify the ``AbstractParty`` which may be concrete or anonymous. In the later case, where an anonymous party does not have an associated X500Name, then no query results will ever be produced. For performance reasons, queries do not use PublicKey as search criteria. Ongoing design work on identity manangement is likely to enhance identity based queries (including composite key criteria selection).
+
+Pagination
+----------
+The API provides support for paging where large numbers of results are expected (by default, a page size is set to 200 results).
+Defining a sensible default page size enables efficient checkpointing within flows, and frees the developer from worrying about pagination where
+result sets are expected to be constrained to 200 or fewer entries. Where large result sets are expected (such as using the RPC API for reporting and/or UI display), it is strongly recommended to define a ``PageSpecification`` to correctly process results with efficient memory utilistion. A fail-fast mode is in place to alert API users to the need for pagination where a single query returns more than 200 results and no ``PageSpecification``
+has been supplied.
+
+.. note:: A pages maximum size ``MAX_PAGE_SIZE`` is defined as ``Int.MAX_VALUE`` and should be used with extreme caution as results returned may exceed your JVM's memory footprint.
 
 Example usage
 -------------
@@ -284,7 +293,7 @@ Track unconsumed linear states:
     :end-before: DOCEND VaultQueryExample16
 
 .. note:: This will return both Deal and Linear states.
-    
+
 Track unconsumed deal states:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
@@ -369,6 +378,17 @@ Track unconsumed deal states or linear states (with snapshot including specifica
     :start-after: DOCSTART VaultJavaQueryExample4
     :end-before: DOCEND VaultJavaQueryExample4
 
+Behavioural notes
+-----------------
+1. **TrackBy** updates do not take into account the full criteria specification due to different and more restrictive syntax
+   in `observables <https://github.com/ReactiveX/RxJava/wiki>`_ filtering (vs full SQL-92 JDBC filtering as used in snapshot views).
+   Specifically, dynamic updates are filtered by ``contractType`` and ``stateType`` (UNCONSUMED, CONSUMED, ALL) only.
+2. **QueryBy** and **TrackBy snapshot views** using pagination may return different result sets as each paging request is a
+   separate SQL query on the underlying database, and it is entirely conceivable that state modifications are taking
+   place in between and/or in parallel to paging requests.
+   When using pagination, always check the value of the ``totalStatesAvailable`` (from the ``Vault.Page`` result) and
+   adjust further paging requests appropriately.
+
 Other use case scenarios
 ------------------------
 
@@ -410,10 +430,11 @@ This query returned an ``Iterable<StateAndRef<T>>``
 
 The query returns a ``Vault.Page`` result containing:
 
-	- states as a ``List<StateAndRef<T : ContractState>>`` sized according to the default Page specification of ``DEFAULT_PAGE_NUM`` (0) and ``DEFAULT_PAGE_SIZE`` (200).
+	- states as a ``List<StateAndRef<T : ContractState>>`` up to a maximum of ``DEFAULT_PAGE_SIZE`` (200) where no ``PageSpecification`` provided, otherwise returns results according to the parameters ``pageNumber`` and ``pageSize`` specified in the supplied ``PageSpecification``.
 	- states metadata as a ``List<Vault.StateMetadata>`` containing Vault State metadata held in the Vault states table.
-	- the ``PagingSpecification`` used in the query
-	- a ``total`` number of results available. This value can be used issue subsequent queries with appropriately specified ``PageSpecification`` (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
+	- a ``total`` number of results available if ``PageSpecification`` provided (otherwise returns -1). For pagination, this value can be used to issue subsequent queries with appropriately specified ``PageSpecification`` parameters (according to your paging needs and/or maximum memory capacity for holding large data sets). Note it is your responsibility to manage page numbers and sizes.
+	- status types used in this query: UNCONSUMED, CONSUMED, ALL
+	- other results as a [List] of any type (eg. aggregate function results with/without group by)
 
 2. ServiceHub usage obtaining linear heads for a given contract state type
    

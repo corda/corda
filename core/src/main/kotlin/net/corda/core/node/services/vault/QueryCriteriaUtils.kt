@@ -119,21 +119,25 @@ fun <O, C> getColumnName(column: Column<O, C>): String {
  *  paging and sorting capability:
  *  https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/repository/PagingAndSortingRepository.html
  */
-const val DEFAULT_PAGE_NUM = 0
+const val DEFAULT_PAGE_NUM = 1
 const val DEFAULT_PAGE_SIZE = 200
 
 /**
- * Note: this maximum size will be configurable in future (to allow for large JVM heap sized node configurations)
- *       Use [PageSpecification] to correctly handle a number of bounded pages of [MAX_PAGE_SIZE].
+ * Note: use [PageSpecification] to correctly handle a number of bounded pages of a pre-configured page size.
  */
-const val MAX_PAGE_SIZE = 512
+const val MAX_PAGE_SIZE = Int.MAX_VALUE
 
 /**
- * PageSpecification allows specification of a page number (starting from 0 as default) and page size (defaulting to
- * [DEFAULT_PAGE_SIZE] with a maximum page size of [MAX_PAGE_SIZE]
+ * [PageSpecification] allows specification of a page number (starting from [DEFAULT_PAGE_NUM]) and page size
+ * (defaulting to [DEFAULT_PAGE_SIZE] with a maximum page size of [MAX_PAGE_SIZE])
+ * Note: we default the page number to [DEFAULT_PAGE_SIZE] to enable queries without requiring a page specification
+ * but enabling detection of large results sets that fall out of the [DEFAULT_PAGE_SIZE] requirement.
+ * [MAX_PAGE_SIZE] should be used with extreme caution as results may exceed your JVM memory footprint.
  */
 @CordaSerializable
-data class PageSpecification(val pageNumber: Int = DEFAULT_PAGE_NUM, val pageSize: Int = DEFAULT_PAGE_SIZE)
+data class PageSpecification(val pageNumber: Int = -1, val pageSize: Int = DEFAULT_PAGE_SIZE) {
+    val isDefault = (pageSize == DEFAULT_PAGE_SIZE && pageNumber == -1)
+}
 
 /**
  * Sort allows specification of a set of entity attribute names and their associated directionality

@@ -95,6 +95,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             }
             is ColumnPredicate.BinaryComparison -> {
                 column as Path<Comparable<Any?>?>
+                @Suppress("UNCHECKED_CAST")
                 val literal = columnPredicate.rightLiteral as Comparable<Any?>?
                 when (columnPredicate.operator) {
                     BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
@@ -117,8 +118,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 }
             }
             is ColumnPredicate.Between -> {
+                @Suppress("UNCHECKED_CAST")
                 column as Path<Comparable<Any?>?>
+                @Suppress("UNCHECKED_CAST")
                 val fromLiteral = columnPredicate.rightFromLiteral as Comparable<Any?>?
+                @Suppress("UNCHECKED_CAST")
                 val toLiteral = columnPredicate.rightToLiteral as Comparable<Any?>?
                 criteriaBuilder.between(column, fromLiteral, toLiteral)
             }
@@ -164,6 +168,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val columnPredicate = expression.predicate
         when (columnPredicate) {
             is ColumnPredicate.AggregateFunction -> {
+                @Suppress("UNCHECKED_CAST")
                 column as Path<Long?>?
                 val aggregateExpression =
                     when (columnPredicate.type) {
