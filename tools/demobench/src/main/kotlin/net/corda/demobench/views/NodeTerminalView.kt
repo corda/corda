@@ -194,7 +194,7 @@ class NodeTerminalView : Fragment() {
 
             txCount = txInit.size
             // This is the total number of states in the vault, regardless of pagination.
-            stateCount = stateInit.totalStatesAvailable
+            stateCount = stateInit.totalStatesAvailable.toInt()
 
             Platform.runLater {
                 logo.opacityProperty().animate(1.0, Duration.seconds(2.5))

@@ -343,8 +343,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         log.trace { "Parsing OR QueryCriteria composition: $left OR $right" }
 
         var predicateSet = mutableSetOf<Predicate>()
-        val (_, leftPredicates) = parse(left)
-        val (_, rightPredicates) = parse(right)
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
 
         val orPredicate = criteriaBuilder.or(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
         predicateSet.add(orPredicate)
@@ -356,8 +356,8 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         log.trace { "Parsing AND QueryCriteria composition: $left AND $right" }
 
         var predicateSet = mutableSetOf<Predicate>()
-        val (_, leftPredicates) = parse(left)
-        val (_, rightPredicates) = parse(right)
+        val leftPredicates = parse(left)
+        val rightPredicates = parse(right)
 
         val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
         predicateSet.add(andPredicate)
@@ -365,25 +365,24 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         return predicateSet
     }
 
-    override fun parse(criteria: QueryCriteria, sorting: Sort?): Triple<List<Root<out Any>>, List<Predicate>, List<Order>> {
+    override fun parse(criteria: QueryCriteria, sorting: Sort?): Collection<Predicate> {
         val predicateSet = criteria.visit(this)
 
-        var orderSpec = emptyList<Order>()
         sorting?.let {
             if (sorting.columns.isNotEmpty())
-                orderSpec = parse(sorting)
+                parse(sorting)
         }
 
         val selections =
             if (aggregateExpressions.isEmpty())
                 listOf(vaultStates).plus(rootEntities.map { it.value })
             else
-                aggregateExpressions as List<Root<out Any>>
+                aggregateExpressions
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
-        return Triple(selections, combinedPredicates, orderSpec)
+        return predicateSet
     }
 
     override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
@@ -398,7 +397,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         return predicateSet
     }
 
-    private fun parse(sorting: Sort): List<Order> {
+    private fun parse(sorting: Sort) {
         log.trace { "Parsing sorting specification: $sorting" }
 
         var orderCriteria = mutableListOf<Order>()
@@ -433,28 +432,28 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             }
         }
         if (orderCriteria.isNotEmpty()) {
+            criteriaQuery.orderBy(orderCriteria)
             criteriaQuery.where(*joinPredicates.toTypedArray())
         }
-        return orderCriteria
     }
 
     private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
         val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
-        when(sortAttribute) {
-            is Sort.CommonStateAttribute -> {
-                Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+            when(sortAttribute) {
+                is Sort.CommonStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                }
+                is Sort.VaultStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.LinearStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.FungibleStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+                }
+                else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
             }
-            is Sort.VaultStateAttribute -> {
-                Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
-            }
-            is Sort.LinearStateAttribute -> {
-                Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
-            }
-            is Sort.FungibleStateAttribute -> {
-                Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
-            }
-            else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
-        }
         return entityClassAndColumnName
     }
 }
