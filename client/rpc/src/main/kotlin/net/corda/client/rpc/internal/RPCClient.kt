@@ -137,41 +137,40 @@ class RPCClient<I : RPCOps>(
     ): RPCConnection<I> {
         return log.logElapsedTime("Startup") {
             val clientAddress = SimpleString("${RPCApi.RPC_CLIENT_QUEUE_NAME_PREFIX}.$username.${random63BitValue()}")
-
-            val serverLocator = ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
-                retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
-                retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
-                maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
-                reconnectAttempts = rpcConfiguration.maxReconnectAttempts
-                minLargeMessageSize = rpcConfiguration.maxFileSize
+            val serverLocatorFactory = {
+                ActiveMQClient.createServerLocatorWithoutHA(transport).apply {
+                    retryInterval = rpcConfiguration.connectionRetryInterval.toMillis()
+                    retryIntervalMultiplier = rpcConfiguration.connectionRetryIntervalMultiplier
+                    maxRetryInterval = rpcConfiguration.connectionMaxRetryInterval.toMillis()
+                    minLargeMessageSize = rpcConfiguration.maxFileSize
+                }
             }
-
-            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocator, clientAddress, rpcOpsClass)
+            val serverLocatorWithFailover = serverLocatorFactory().apply { reconnectAttempts = rpcConfiguration.maxReconnectAttempts }
+            val serverLocatorWithoutFailover = serverLocatorFactory()
+            val proxyHandler = RPCClientProxyHandler(rpcConfiguration, username, password, serverLocatorWithFailover, serverLocatorWithoutFailover, clientAddress, rpcOpsClass)
+            fun closeConnection() {
+                proxyHandler.close()
+                serverLocatorWithFailover.close()
+                serverLocatorWithoutFailover.close()
+            }
             try {
                 proxyHandler.start()
-
                 @Suppress("UNCHECKED_CAST")
                 val ops = Proxy.newProxyInstance(rpcOpsClass.classLoader, arrayOf(rpcOpsClass), proxyHandler) as I
-
                 val serverProtocolVersion = ops.protocolVersion
                 if (serverProtocolVersion < rpcConfiguration.minimumServerProtocolVersion) {
                     throw RPCException("Requested minimum protocol version (${rpcConfiguration.minimumServerProtocolVersion}) is higher" +
                             " than the server's supported protocol version ($serverProtocolVersion)")
                 }
                 proxyHandler.setServerProtocolVersion(serverProtocolVersion)
-
                 log.debug("RPC connected, returning proxy")
                 object : RPCConnection<I> {
                     override val proxy = ops
                     override val serverProtocolVersion = serverProtocolVersion
-                    override fun close() {
-                        proxyHandler.close()
-                        serverLocator.close()
-                    }
+                    override fun close() = closeConnection()
                 }
             } catch (exception: Throwable) {
-                proxyHandler.close()
-                serverLocator.close()
+                closeConnection()
                 throw exception
             }
         }

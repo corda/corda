@@ -59,7 +59,8 @@ class RPCClientProxyHandler(
         private val rpcConfiguration: RPCClientConfiguration,
         private val rpcUsername: String,
         private val rpcPassword: String,
-        private val serverLocator: ServerLocator,
+        private val serverLocatorWithFailover: ServerLocator,
+        private val serverLocatorWithoutFailover: ServerLocator,
         private val clientAddress: SimpleString,
         private val rpcOpsClass: Class<out RPCOps>
 ) : InvocationHandler {
@@ -139,7 +140,9 @@ class RPCClientProxyHandler(
     // integrated properly.
     private var sessionAndConsumer: ArtemisConsumer? = null
     // Pool producers to reduce contention on the client side.
-    private val sessionAndProducerPool = LazyPool(bound = rpcConfiguration.producerPoolBound) {
+    private val sessionAndProducerPool = createSessionAndProducerPool(serverLocatorWithFailover, rpcConfiguration.producerPoolBound)
+    private val reapObservablesSessionAndProducerPool = createSessionAndProducerPool(serverLocatorWithoutFailover, 1)
+    private fun createSessionAndProducerPool(serverLocator: ServerLocator, bound: Int) = LazyPool(bound = bound) {
         // Note how we create new sessions *and* session factories per producer.
         // We cannot simply pool producers on one session because sessions are single threaded.
         // We cannot simply pool sessions on one session factory because flow control credits are tied to factories, so
@@ -168,7 +171,7 @@ class RPCClientProxyHandler(
         sessionAndProducerPool.run {
             it.session.createTemporaryQueue(clientAddress, clientAddress)
         }
-        val sessionFactory = serverLocator.createSessionFactory()
+        val sessionFactory = serverLocatorWithFailover.createSessionFactory()
         val session = sessionFactory.createSession(rpcUsername, rpcPassword, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
         val consumer = session.createConsumer(clientAddress)
         consumer.setMessageHandler(this@RPCClientProxyHandler::artemisMessageHandler)
@@ -277,8 +280,8 @@ class RPCClientProxyHandler(
         observableContext.observableMap.invalidateAll()
         reapObservables()
         reaperExecutor?.shutdownNow()
-        sessionAndProducerPool.close().forEach {
-            it.sessionFactory.close()
+        listOf(sessionAndProducerPool, reapObservablesSessionAndProducerPool).forEach {
+            it.close().forEach { it.sessionFactory.close() }
         }
         // Note the ordering is important, we shut down the consumer *before* the observation executor, otherwise we may
         // leak borrowed executors.
@@ -329,7 +332,7 @@ class RPCClientProxyHandler(
         }
         if (observableIds != null) {
             log.debug { "Reaping ${observableIds.size} observables" }
-            sessionAndProducerPool.run {
+            reapObservablesSessionAndProducerPool.run {
                 val message = it.session.createMessage(false)
                 RPCApi.ClientToServer.ObservablesClosed(observableIds).writeToClientMessage(message)
                 it.producer.send(message)
