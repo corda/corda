@@ -83,7 +83,8 @@ class NodeMonitorModel {
         stateMachineUpdates.startWith(currentStateMachines).subscribe(stateMachineUpdatesSubject)
 
         // Vault snapshot (force single page load with MAX_PAGE_SIZE) + updates
-        val (vaultSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(paging = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
+        val (vaultSnapshot, vaultUpdates) = proxy.vaultTrackBy<ContractState>(QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL),
+                                                                              PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE))
         val initialVaultUpdate = Vault.Update(setOf(), vaultSnapshot.states.toSet())
         vaultUpdates.startWith(initialVaultUpdate).subscribe(vaultUpdatesSubject)
 
