@@ -1,4 +1,4 @@
-package net.corda.core.crypto
+package net.corda.core.crypto.composite
 
 import net.corda.core.serialization.deserialize
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
@@ -10,14 +10,10 @@ import java.security.spec.AlgorithmParameterSpec
 /**
  * Dedicated class for storing a set of signatures that comprise [CompositeKey].
  */
-class CompositeSignature : Signature(ALGORITHM) {
+class CompositeSignature : Signature(SIGNATURE_ALGORITHM) {
     companion object {
-        val ALGORITHM = "2.25.30086077608615255153862931087626791003"
-        // UUID-based OID
-        // TODO: Register for an OID space and issue our own shorter OID
-        val ALGORITHM_IDENTIFIER = AlgorithmIdentifier(ASN1ObjectIdentifier(ALGORITHM))
-
-        fun getService(provider: Provider) = Provider.Service(provider, "Signature", ALGORITHM, CompositeSignature::class.java.name, emptyList(), emptyMap())
+        val SIGNATURE_ALGORITHM = "COMPOSITESIG"
+        fun getService(provider: Provider) = Provider.Service(provider, "Signature", SIGNATURE_ALGORITHM, CompositeSignature::class.java.name, emptyList(), emptyMap())
     }
 
     private var signatureState: State? = null

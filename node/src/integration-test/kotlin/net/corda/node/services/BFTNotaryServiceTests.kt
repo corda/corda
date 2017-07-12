@@ -4,7 +4,8 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionType
-import net.corda.core.crypto.CompositeKey
+import net.corda.testing.contracts.DummyContract
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.div
 import net.corda.core.getOrThrow
@@ -22,7 +23,6 @@ import net.corda.node.services.transactions.minClusterSize
 import net.corda.node.services.transactions.minCorrectReplicas
 import net.corda.node.utilities.ServiceIdentityGenerator
 import net.corda.node.utilities.transaction
-import net.corda.testing.contracts.DummyContract
 import net.corda.testing.node.MockNetwork
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.After

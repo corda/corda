@@ -344,7 +344,7 @@ class CryptoUtilsTest {
     @Test
     fun `Check supported algorithms`() {
         val algList: List<String> = Crypto.supportedSignatureSchemes.keys.toList()
-        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512")
+        val expectedAlgSet = setOf("RSA_SHA256", "ECDSA_SECP256K1_SHA256", "ECDSA_SECP256R1_SHA256", "EDDSA_ED25519_SHA512", "SPHINCS-256_SHA512", "COMPOSITE")
         assertTrue { Sets.symmetricDifference(expectedAlgSet, algList.toSet()).isEmpty(); }
     }
 

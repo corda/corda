@@ -1,6 +1,9 @@
 package net.corda.core.crypto
 
-import net.corda.core.crypto.random63BitValue
+import net.corda.core.crypto.composite.CompositeKey
+import net.corda.core.crypto.composite.CompositeSignature
+import net.corda.core.crypto.provider.CordaObjectIdentifier
+import net.corda.core.crypto.provider.CordaSecurityProvider
 import net.i2p.crypto.eddsa.EdDSAEngine
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
@@ -147,6 +150,22 @@ object Crypto {
                     "at the cost of larger key sizes and loss of compatibility."
     )
 
+    /**
+     * Corda composite key type
+     */
+    val COMPOSITE_KEY = SignatureScheme(
+            6,
+            "COMPOSITE",
+            AlgorithmIdentifier(CordaObjectIdentifier.compositeKey),
+            emptyList(),
+            CordaSecurityProvider.PROVIDER_NAME,
+            CompositeKey.KEY_ALGORITHM,
+            CompositeSignature.SIGNATURE_ALGORITHM,
+            null,
+            null,
+            "Composite keys composed from individual public keys"
+    )
+
     /** Our default signature scheme if no algorithm is specified (e.g. for key generation). */
     val DEFAULT_SIGNATURE_SCHEME = EDDSA_ED25519_SHA512
 
@@ -159,7 +178,8 @@ object Crypto {
             ECDSA_SECP256K1_SHA256,
             ECDSA_SECP256R1_SHA256,
             EDDSA_ED25519_SHA512,
-            SPHINCS256_SHA256
+            SPHINCS256_SHA256,
+            COMPOSITE_KEY
     ).associateBy { it.schemeCodeName }
 
     /**
@@ -177,6 +197,7 @@ object Crypto {
     // The val is private to avoid any harmful state changes.
     private val providerMap: Map<String, Provider> = mapOf(
             BouncyCastleProvider.PROVIDER_NAME to getBouncyCastleProvider(),
+            CordaSecurityProvider.PROVIDER_NAME to CordaSecurityProvider(),
             "BCPQC" to BouncyCastlePQCProvider()) // unfortunately, provider's name is not final in BouncyCastlePQCProvider, so we explicitly set it.
 
     private fun getBouncyCastleProvider() = BouncyCastleProvider().apply {
@@ -188,6 +209,7 @@ object Crypto {
         // This registration is needed for reading back EdDSA key from java keystore.
         // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
         Security.addProvider(getBouncyCastleProvider())
+        Security.addProvider(CordaSecurityProvider())
     }
 
     /**
@@ -202,7 +224,7 @@ object Crypto {
     }
 
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
-        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm}")
+        return algorithmMap[normaliseAlgorithmIdentifier(algorithm)] ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
     }
 
     /**
@@ -543,7 +565,7 @@ object Crypto {
         if (signatureScheme.algSpec != null)
             keyPairGenerator.initialize(signatureScheme.algSpec, newSecureRandom())
         else
-            keyPairGenerator.initialize(signatureScheme.keySize, newSecureRandom())
+            keyPairGenerator.initialize(signatureScheme.keySize!!, newSecureRandom())
         return keyPairGenerator.generateKeyPair()
     }
 

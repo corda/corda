@@ -3,7 +3,7 @@ package net.corda.core.node.services
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.*
-import net.corda.core.crypto.CompositeKey
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.keys

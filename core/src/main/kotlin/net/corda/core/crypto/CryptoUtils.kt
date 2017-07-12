@@ -2,6 +2,7 @@
 
 package net.corda.core.crypto
 
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import java.math.BigInteger
