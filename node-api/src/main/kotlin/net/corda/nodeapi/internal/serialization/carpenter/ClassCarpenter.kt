@@ -297,8 +297,10 @@ class ClassCarpenter {
         // fact that we didn't implement the interface we said we would at the moment the missing method is
         // actually called, which is a bit too dynamic for my tastes.
         val allFields = schema.fieldsIncludingSuperclasses()
+        println ("  interfaces = ${schema.interfaces}")
         for (itf in schema.interfaces) {
             itf.methods.forEach {
+                println (" param ${it.name}")
                 val fieldNameFromItf = when {
                     it.name.startsWith("get") -> it.name.substring(3).decapitalize()
                     else -> throw InterfaceMismatchException(

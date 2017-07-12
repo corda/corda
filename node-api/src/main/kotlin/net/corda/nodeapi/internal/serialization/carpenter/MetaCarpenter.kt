@@ -42,6 +42,8 @@ data class CarpenterSchemas (
 
     val size
         get() = carpenterSchemas.size
+
+    fun isEmpty() = carpenterSchemas.isEmpty()
 }
 
 /**
@@ -80,6 +82,9 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     }
 
     abstract fun build()
+
+    val classloader : ClassLoader
+            get() = cc.classloader
 }
 
 class MetaCarpenter(schemas: CarpenterSchemas) : MetaCarpenterBase(schemas) {

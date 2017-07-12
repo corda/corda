@@ -5,6 +5,10 @@ import com.google.common.reflect.TypeResolver
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.carpenter.CarpenterSchemas
+import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.MetaCarpenter
+import net.corda.nodeapi.internal.serialization.carpenter.carpenterSchema
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.GenericArrayType
@@ -167,15 +171,38 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processSchema(schema: Schema) {
+    private fun processSchema(
+            schema: Schema,
+            cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
+        println ("processSchema cl ${cl::class.java}")
+
+        val retry = cl != DeserializedParameterizedType::class.java.classLoader
+        val carpenterSchemas = CarpenterSchemas.newInstance()
         for (typeNotation in schema.types) {
-            processSchemaEntry(typeNotation)
+            try {
+                processSchemaEntry(typeNotation, cl)
+            }
+            catch (e: java.lang.ClassNotFoundException) {
+                println ("  CLASS NOT FOUND - $retry")
+                if (retry) {
+                    throw e
+                }
+                println ("add schema ${typeNotation.name}")
+                (typeNotation as CompositeType).carpenterSchema(carpenterSchemas = carpenterSchemas)
+            }
         }
+
+        if (carpenterSchemas.isEmpty()) return
+        val mc = MetaCarpenter(carpenterSchemas)
+        mc.build()
+
+        processSchema(schema, mc.classloader)
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) {
+    private fun processSchemaEntry(typeNotation: TypeNotation,
+            cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
         when (typeNotation) {
-            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+            is CompositeType -> processCompositeType(typeNotation, cl) // java.lang.Class (whether a class or interface)
             is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
     }
@@ -188,10 +215,13 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
         }
     }
 
-    private fun processCompositeType(typeNotation: CompositeType) {
+    private fun processCompositeType(typeNotation: CompositeType,
+                cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader) {
+        println ("processCompositeType ${typeNotation.name}")
         serializersByDescriptor.computeIfAbsent(typeNotation.descriptor.name!!) {
+            println ("  no such type")
             // TODO: class loader logic, and compare the schema.
-            val type = typeForName(typeNotation.name)
+            val type = typeForName(typeNotation.name, cl)
             get(type.asClass() ?: throw NotSerializableException("Unable to build composite type for $type"), type)
         }
     }
@@ -304,7 +334,9 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                 else -> throw NotSerializableException("Unable to render type $type to a string.")
         }
 
-        private fun typeForName(name: String): Type {
+        private fun typeForName(
+                name: String,
+                cl: ClassLoader = DeserializedParameterizedType::class.java.classLoader): Type {
             return if (name.endsWith("[]")) {
                 val elementType = typeForName(name.substring(0, name.lastIndex - 1))
                 if (elementType is ParameterizedType || elementType is GenericArrayType) {
@@ -329,7 +361,8 @@ class SerializerFactory(val whitelist: ClassWhitelist = AllWhitelist) {
                     else -> throw NotSerializableException("Not able to deserialize array type: $name")
                 }
             } else {
-                DeserializedParameterizedType.make(name)
+                println ("typeForName: name = $name")
+                DeserializedParameterizedType.make(name, cl)
             }
         }
     }
