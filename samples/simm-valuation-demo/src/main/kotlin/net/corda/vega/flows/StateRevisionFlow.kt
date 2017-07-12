@@ -1,14 +1,11 @@
 package net.corda.vega.flows
 
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.seconds
-import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.AbstractStateReplacementFlow
-import net.corda.flows.StateReplacementException
+import net.corda.core.flows.AbstractStateReplacementFlow
+import net.corda.core.flows.StateReplacementException
 import net.corda.vega.contracts.RevisionedState
-import java.security.PublicKey
 
 /**
  * Flow that generates an update on a mutable deal state and commits the resulting transaction reaching consensus

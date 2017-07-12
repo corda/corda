@@ -1,10 +1,6 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import net.corda.core.contracts.*
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.identity.AbstractParty
-import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 

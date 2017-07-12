@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
@@ -15,7 +16,6 @@ import net.corda.core.node.services.linearHeadsOfType
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.FinalityFlow
 import java.security.PublicKey
 import java.time.Duration
 

@@ -50,7 +50,7 @@ the following:
         import net.corda.core.identity.Party
         import net.corda.core.transactions.TransactionBuilder
         import net.corda.core.utilities.ProgressTracker
-        import net.corda.flows.FinalityFlow
+        import net.corda.core.flows.FinalityFlow
 
         @InitiatingFlow
         @StartableByRPC

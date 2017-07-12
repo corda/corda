@@ -31,6 +31,9 @@ UNRELEASED
 * Added additional common Sort attributes (see ``Sort.CommandStateAttribute``) for use in Vault Query criteria
   to include STATE_REF, STATE_REF_TXN_ID, STATE_REF_INDEX
 
+* Moved the core flows previously found in ``net.corda.flows`` into ``net.corda.core.flows``. This is so that all packages
+  in the ``core`` module begin with ``net.corda.core``.
+
 Milestone 13
 ------------
 

@@ -1,9 +1,9 @@
 package net.corda.node.services.transactions
 
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
-import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.core.node.services.TimeWindowChecker
-import net.corda.flows.NotaryFlow
+import net.corda.core.node.services.TrustedAuthorityNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 
 /** A non-validating notary service operated by a group of mutually trusting parties, uses the Raft algorithm to achieve consensus. */

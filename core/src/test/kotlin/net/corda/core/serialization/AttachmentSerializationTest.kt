@@ -11,7 +11,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.unwrap
-import net.corda.flows.FetchAttachmentsFlow
+import net.corda.core.flows.FetchAttachmentsFlow
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.network.NetworkMapService

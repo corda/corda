@@ -1,7 +1,6 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import net.corda.core.contracts.*
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
@@ -20,7 +19,7 @@ import net.corda.core.utilities.ProgressTracker
 class NotaryChangeFlow<out T : ContractState>(
         originalState: StateAndRef<T>,
         newNotary: Party,
-        progressTracker: ProgressTracker = tracker())
+        progressTracker: ProgressTracker = AbstractStateReplacementFlow.Instigator.tracker())
     : AbstractStateReplacementFlow.Instigator<T, T, Party>(originalState, newNotary, progressTracker) {
 
     override fun assembleTx(): AbstractStateReplacementFlow.UpgradeTx {

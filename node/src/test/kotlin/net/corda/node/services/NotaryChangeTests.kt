@@ -8,8 +8,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.seconds
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.NotaryChangeFlow
-import net.corda.flows.StateReplacementException
+import net.corda.core.flows.NotaryChangeFlow
+import net.corda.core.flows.StateReplacementException
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.SimpleNotaryService

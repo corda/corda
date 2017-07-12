@@ -4,7 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.DealState
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.CollectSignaturesFlow
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.SignTransactionFlow
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -20,14 +23,10 @@ import java.security.PublicKey
 
 /**
  * Classes for manipulating a two party deal or agreement.
- *
- * TODO: The subclasses should probably be broken out into individual flows rather than making this an ever expanding collection of subclasses.
- *
- * TODO: Also, the term Deal is used here where we might prefer Agreement.
- *
- * TODO: Make this flow more generic.
- *
  */
+// TODO: The subclasses should probably be broken out into individual flows rather than making this an ever expanding collection of subclasses.
+// TODO: Also, the term Deal is used here where we might prefer Agreement.
+// TODO: Make this flow more generic.
 object TwoPartyDealFlow {
     // This object is serialised to the network and is the first flow message the seller sends to the buyer.
     @CordaSerializable

@@ -18,6 +18,8 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
 import net.corda.core.identity.Party
 import net.corda.core.node.services.TimeWindowChecker
 import net.corda.core.node.services.UniquenessProvider
@@ -30,8 +32,6 @@ import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.BFTSMaRt.Client
 import net.corda.node.services.transactions.BFTSMaRt.Replica

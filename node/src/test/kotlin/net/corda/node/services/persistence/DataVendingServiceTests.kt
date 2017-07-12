@@ -6,13 +6,13 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.USD
+import net.corda.core.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatedBy
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.unconsumedStates
 import net.corda.core.transactions.SignedTransaction
-import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.node.services.NotifyTransactionHandler
 import net.corda.node.utilities.transaction
 import net.corda.testing.DUMMY_NOTARY

@@ -1,4 +1,4 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
@@ -7,9 +7,6 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.keys
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.services.*
 import net.corda.core.serialization.CordaSerializable
@@ -32,7 +29,7 @@ object NotaryFlow {
     @InitiatingFlow
     open class Client(private val stx: SignedTransaction,
                       override val progressTracker: ProgressTracker) : FlowLogic<List<DigitalSignature.WithKey>>() {
-        constructor(stx: SignedTransaction) : this(stx, Client.tracker())
+        constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
             object REQUESTING : ProgressTracker.Step("Requesting signature by Notary service")
