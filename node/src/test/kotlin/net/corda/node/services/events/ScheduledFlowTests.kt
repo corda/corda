@@ -147,10 +147,6 @@ class ScheduledFlowTests {
             do {
                 val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
                 val results = nodeA.services.vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
-                println(" A TOTAL = ${results.totalStatesAvailable}")
-                results.statesMetadata.forEachIndexed { index, (ref, _, _) ->
-                    println(" A${(pageSpec.pageNumber - 1) * pageSpec.pageSize + index}: $ref ")
-                }
                 states.addAll(results.states)
                 pageNumber++
             } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
@@ -162,10 +158,6 @@ class ScheduledFlowTests {
             do {
                 val pageSpec = PageSpecification(pageSize = PAGE_SIZE, pageNumber = pageNumber)
                 val results = nodeB.services.vaultQueryService.queryBy<ScheduledState>(VaultQueryCriteria(), pageSpec, sorting)
-                println(" B TOTAL = ${results.totalStatesAvailable}")
-                results.statesMetadata.forEachIndexed { index, (ref, _, _) ->
-                    println(" B${(pageSpec.pageNumber - 1) * pageSpec.pageSize + index}: $ref ")
-                }
                 states.addAll(results.states)
                 pageNumber++
             } while ((pageSpec.pageSize * (pageNumber)) <= results.totalStatesAvailable)
