@@ -18,7 +18,6 @@ import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria
-import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
@@ -29,7 +28,6 @@ import net.corda.vega.analytics.*
 import net.corda.vega.contracts.*
 import net.corda.vega.portfolio.Portfolio
 import net.corda.vega.portfolio.toPortfolio
-import net.corda.vega.portfolio.toStateAndRef
 import java.time.LocalDate
 
 /**
@@ -70,7 +68,7 @@ object SimmFlow {
             notary = serviceHub.networkMapCache.notaryNodes.first().notaryIdentity
             myIdentity = serviceHub.myInfo.legalIdentity
 
-            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(LinearStateQueryCriteria(participants = listOf(otherParty))).states
+            val trades = serviceHub.vaultService.dealsWith<IRSState>(otherParty)
 
             val portfolio = Portfolio(trades, valuationDate)
             if (existing == null) {
@@ -78,7 +76,7 @@ object SimmFlow {
             } else {
                 updatePortfolio(portfolio, existing)
             }
-            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(LinearStateQueryCriteria(participants = listOf(otherParty))).states.first()
+            val portfolioStateRef = serviceHub.vaultService.dealsWith<PortfolioState>(otherParty).first()
 
             val state = updateValuation(portfolioStateRef)
             logger.info("SimmFlow done")
@@ -196,7 +194,7 @@ object SimmFlow {
         @Suspendable
         override fun call() {
             ownParty = serviceHub.myInfo.legalIdentity
-            val trades = serviceHub.vaultQueryService.queryBy<IRSState>(LinearStateQueryCriteria(participants = listOf(replyToParty))).states
+            val trades = serviceHub.vaultService.dealsWith<IRSState>(replyToParty)
             val portfolio = Portfolio(trades)
             logger.info("SimmFlow receiver started")
             offer = receive<OfferMessage>(replyToParty).unwrap { it }
@@ -205,7 +203,7 @@ object SimmFlow {
             } else {
                 updatePortfolio(portfolio)
             }
-            val portfolioStateRef = serviceHub.vaultQueryService.queryBy<PortfolioState>(LinearStateQueryCriteria(participants = listOf(replyToParty))).states.first()
+            val portfolioStateRef = serviceHub.vaultService.dealsWith<PortfolioState>(replyToParty).first()
             updateValuation(portfolioStateRef)
         }
 
