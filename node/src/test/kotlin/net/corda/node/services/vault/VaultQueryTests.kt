@@ -19,7 +19,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toHexString
 import net.corda.node.services.database.HibernateConfiguration
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.schemas.CashSchemaV1

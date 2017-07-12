@@ -3,7 +3,7 @@ package net.corda.schemas
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
 import javax.persistence.*
 
 /**

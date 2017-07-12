@@ -14,8 +14,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import javax.persistence.Tuple

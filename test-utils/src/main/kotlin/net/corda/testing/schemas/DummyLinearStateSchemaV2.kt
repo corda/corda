@@ -1,8 +1,8 @@
 package net.corda.testing.schemas
 
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Table

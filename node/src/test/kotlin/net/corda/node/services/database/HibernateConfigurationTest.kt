@@ -24,8 +24,8 @@ import net.corda.testing.DUMMY_NOTARY
 import net.corda.node.services.schema.HibernateObserver
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.vault.NodeVaultService
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.schemas.CashSchemaV1
@@ -649,7 +649,7 @@ class HibernateConfigurationTest {
         // search predicate
         val cashStatesSchema = criteriaQuery.from(SampleCashSchemaV3.PersistentCashState::class.java)
 
-        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState,CommonSchemaV1.Party>("owner")
+        val joinCashToParty = cashStatesSchema.join<SampleCashSchemaV3.PersistentCashState, CommonSchemaV1.Party>("owner")
         val queryOwnerKey = BOB_PUBKEY.toBase58String()
         criteriaQuery.where(criteriaBuilder.equal(joinCashToParty.get<CommonSchemaV1.Party>("key"), queryOwnerKey))
 
