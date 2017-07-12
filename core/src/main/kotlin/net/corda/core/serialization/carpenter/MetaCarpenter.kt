@@ -3,8 +3,6 @@ package net.corda.core.serialization.carpenter
 import net.corda.core.serialization.amqp.CompositeType
 import net.corda.core.serialization.amqp.TypeNotation
 
-/**********************************************************************************************************************/
-
 /**
  * Generated from an AMQP schema this class represents the classes unknown to the deserialiser and that thusly
  * require carpenting up in bytecode form. This is a multi step process as carpenting one object may be depedent
@@ -27,8 +25,7 @@ import net.corda.core.serialization.amqp.TypeNotation
 data class CarpenterSchemas (
         val carpenterSchemas : MutableList<Schema>,
         val dependencies     : MutableMap<String, Pair<TypeNotation, MutableList<String>>>,
-        val dependsOn        : MutableMap<String, MutableList<String>>)
-{
+        val dependsOn        : MutableMap<String, MutableList<String>>) {
     companion object CarpenterSchemaConstructor {
         fun newInstance(): CarpenterSchemas {
             return CarpenterSchemas(
@@ -47,8 +44,6 @@ data class CarpenterSchemas (
         get() = carpenterSchemas.size
 }
 
-/**********************************************************************************************************************/
-
 /**
  * Take a dependency tree of [CarpenterSchemas] and reduce it to zero by carpenting those classes that
  * require it. As classes are carpented check for depdency resolution, if now free generate a [Schema] for
@@ -65,15 +60,15 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     fun step (newObject : Schema) {
         objects[newObject.name] = cc.build (newObject)
 
-        /* go over the list of everything that had a dependency on the newly
-           carpented class existing and remove it from their dependency list, If that
-           list is now empty we have no impediment to carpenting that class up */
+        // go over the list of everything that had a dependency on the newly
+        // carpented class existing and remove it from their dependency list, If that
+        // list is now empty we have no impediment to carpenting that class up
         schemas.dependsOn.remove(newObject.name)?.forEach { dependent ->
             assert (newObject.name in schemas.dependencies[dependent]!!.second)
 
             schemas.dependencies[dependent]?.second?.remove(newObject.name)
 
-            /* we're out of blockers so  we can now create the type */
+            // we're out of blockers so  we can now create the type
             if (schemas.dependencies[dependent]?.second?.isEmpty() ?: false) {
                 (schemas.dependencies.remove (dependent)?.first as CompositeType).carpenterSchema (
                         classLoaders = listOf<ClassLoader> (
@@ -87,8 +82,6 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     abstract fun build()
 }
 
-/**********************************************************************************************************************/
-
 class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     override fun build() {
         while (schemas.carpenterSchemas.isNotEmpty()) {
@@ -98,8 +91,6 @@ class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     }
 }
 
-/**********************************************************************************************************************/
-
 class TestMetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
     override fun build() {
         if (schemas.carpenterSchemas.isEmpty()) return
@@ -107,4 +98,3 @@ class TestMetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schema
     }
 }
 
-/**********************************************************************************************************************/

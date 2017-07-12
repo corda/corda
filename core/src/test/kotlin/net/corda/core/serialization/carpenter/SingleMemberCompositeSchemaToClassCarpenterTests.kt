@@ -1,23 +1,19 @@
 package net.corda.core.serialization.carpenter
 
 import net.corda.core.serialization.carpenter.test.AmqpCarpenterBase
-import net.corda.core.serialization.carpenter.CarpenterSchemas
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.amqp.*
 
 import org.junit.Test
 import kotlin.test.assertEquals
 
-
 class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
-
     @Test
     fun singleInteger() {
-        val test = 10
-
         @CordaSerializable
         data class A(val a: Int)
 
+        val test = 10
         val a = A(test)
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
@@ -39,7 +35,6 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
-
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -47,11 +42,10 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun singleString() {
-        val test = "ten"
-
         @CordaSerializable
         data class A(val a: String)
 
+        val test = "ten"
         val a = A(test)
 
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
@@ -64,13 +58,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
         assert(obj.envelope.schema.types[0] is CompositeType)
 
         val amqpSchema = obj.envelope.schema.types[0] as CompositeType
-
         val carpenterSchema = CarpenterSchemas.newInstance()
         amqpSchema.carpenterSchema(carpenterSchemas = carpenterSchema, force = true)
 
         val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }!!
         val aBuilder = ClassCarpenter().build(aSchema)
-
         val p = aBuilder.constructors[0].newInstance(test)
 
         assertEquals(aBuilder.getMethod("getA").invoke(p), amqpObj.a)
@@ -78,13 +70,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun singleLong() {
-        val test = 10L
-
         @CordaSerializable
         data class A(val a: Long)
 
+        val test = 10L
         val a = A(test)
-
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
         assert(obj.obj is A)
@@ -112,13 +102,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun singleShort() {
-        val test = 10.toShort()
-
         @CordaSerializable
         data class A(val a: Short)
 
+        val test = 10.toShort()
         val a = A(test)
-
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
         assert(obj.obj is A)
@@ -146,13 +134,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun singleDouble() {
-        val test = 10.0
-
         @CordaSerializable
         data class A(val a: Double)
 
+        val test = 10.0
         val a = A(test)
-
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
         assert(obj.obj is A)
@@ -180,13 +166,11 @@ class SingleMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase() {
 
     @Test
     fun singleFloat() {
-        val test: Float = 10.0F
-
         @CordaSerializable
         data class A(val a: Float)
 
+        val test: Float = 10.0F
         val a = A(test)
-
         val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
 
         assert(obj.obj is A)

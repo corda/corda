@@ -9,8 +9,6 @@ import java.lang.Character.isJavaIdentifierStart
 
 import java.util.*
 
-/**********************************************************************************************************************/
-
 /**
  * Any object that implements this interface is expected to expose its own fields via the [get] method, exactly
  * as if `this.class.getMethod("get" + name.capitalize()).invoke(this)` had been called. It is intended as a more
@@ -20,13 +18,9 @@ interface SimpleFieldAccess {
     operator fun get(name: String): Any?
 }
 
-/**********************************************************************************************************************/
-
 class CarpenterClassLoader : ClassLoader(Thread.currentThread().contextClassLoader) {
     fun load(name: String, bytes: ByteArray) = defineClass(name, bytes, 0, bytes.size)
 }
-
-/**********************************************************************************************************************/
 
 /**
  * A class carpenter generates JVM bytecodes for a class given a schema and then loads it into a sub-classloader.
@@ -91,7 +85,8 @@ class ClassCarpenter {
      * Generate bytecode for the given schema and load into the JVM. The returned class object can be used to
      * construct instances of the generated class.
      *
-     * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a new ClassCarpenter if you're OK with ambiguous names)
+     * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a
+     * new ClassCarpenter if you're OK with ambiguous names)
      */
     fun build(schema: Schema): Class<*> {
         validateSchema(schema)
@@ -257,9 +252,7 @@ class ClassCarpenter {
                 visitMethodInsn(INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false)
             } else {
                 var slot = 1
-                for (fieldType in superclassFields.values)
-                    slot += load(slot, fieldType)
-                //val superDesc = schema.superclass.descriptorsIncludingSuperclasses().values.joinToString("")
+                superclassFields.values.forEach { slot += load(slot, it) }
                 val superDesc = sc.descriptorsIncludingSuperclasses().values.joinToString("")
                 visitMethodInsn(INVOKESPECIAL, sc.name.jvm, "<init>", "($superDesc)V", false)
             }

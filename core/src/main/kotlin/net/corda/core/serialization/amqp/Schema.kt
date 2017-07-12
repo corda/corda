@@ -15,11 +15,8 @@ import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.util.*
 
-import net.corda.core.serialization.carpenter.CarpenterSchemas
 import net.corda.core.serialization.carpenter.Schema as CarpenterSchema
 import net.corda.core.serialization.carpenter.Field as CarpenterField
-import net.corda.core.serialization.carpenter.CarpenterSchemaFactory
-import net.corda.core.serialization.carpenter.FieldFactory
 
 // TODO: get an assigned number as per AMQP spec
 val DESCRIPTOR_TOP_32BITS: Long = 0xc0da0000
@@ -28,24 +25,6 @@ val DESCRIPTOR_DOMAIN: String = "net.corda"
 
 // "corda" + majorVersionByte + minorVersionMSB + minorVersionLSB
 val AmqpHeaderV1_0: OpaqueBytes = OpaqueBytes("corda\u0001\u0000\u0000".toByteArray())
-
-private fun List<ClassLoader>.exists (clazz: String) =
-        this.find { try { it.loadClass(clazz); true } catch (e: ClassNotFoundException) { false } } != null
-
-private fun List<ClassLoader>.loadIfExists (clazz: String) : Class<*> {
-    this.forEach {
-        try {
-            return it.loadClass(clazz)
-        } catch (e: ClassNotFoundException) {
-            return@forEach
-        }
-    }
-    throw ClassNotFoundException(clazz)
-}
-
-class UncarpentableException (name: String, field: String, type: String) :
-        Throwable ("Class $name is loadable yet contains field $field of unknown type $type")
-
 
 /**
  * This class wraps all serialized data, so that the schema can be carried along with it.  We will provide various internal utilities
@@ -111,18 +90,6 @@ data class Schema(val types: List<TypeNotation>) : DescribedType {
     override fun getDescribed(): Any = listOf(types)
 
     override fun toString(): String = types.joinToString("\n")
-
-    fun carpenterSchema(loaders : List<ClassLoader> = listOf<ClassLoader>(ClassLoader.getSystemClassLoader()))
-            : CarpenterSchemas
-    {
-        val rtn = CarpenterSchemas.newInstance()
-
-        types.filterIsInstance<CompositeType>().forEach {
-            it.carpenterSchema(classLoaders = loaders, carpenterSchemas = rtn)
-        }
-
-        return rtn
-    }
 }
 
 data class Descriptor(val name: String?, val code: UnsignedLong? = null) : DescribedType {
@@ -205,29 +172,6 @@ data class Field(val name: String, val type: String, val requires: List<String>,
         return sb.toString()
     }
 
-    fun getTypeAsClass(
-            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
-    ) = when (type) {
-        "int"     -> Int::class.javaPrimitiveType!!
-        "string"  -> String::class.java
-        "short"   -> Short::class.javaPrimitiveType!!
-        "long"    -> Long::class.javaPrimitiveType!!
-        "char"    -> Char::class.javaPrimitiveType!!
-        "boolean" -> Boolean::class.javaPrimitiveType!!
-        "double"  -> Double::class.javaPrimitiveType!!
-        "float"   -> Float::class.javaPrimitiveType!!
-        "*"       -> classLoaders.loadIfExists(requires[0])
-        else      -> classLoaders.loadIfExists(type)
-    }
-
-    fun validateType(
-            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader())
-    ) = when (type) {
-        "int", "string", "short", "long", "char", "boolean", "double", "float" -> true
-        "*"       -> classLoaders.exists(requires[0])
-        else      -> classLoaders.exists (type)
-    }
-
     fun typeAsString() = if (type =="*") requires[0] else type
 }
 
@@ -293,85 +237,6 @@ data class CompositeType(override val name: String, override val label: String?,
         }
         sb.append("</type>")
         return sb.toString()
-    }
-
-    /**
-     * if we can load the class then we MUST know about all of it's composite elements
-     */
-    private fun validateKnown (
-        classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()))
-    {
-        fields.forEach {
-            if (!it.validateType(classLoaders)) throw UncarpentableException (name, it.name, it.type)
-        }
-    }
-
-    /**
-     * based upon this AMQP schema either
-     *  a) add the corespending carpenter schema to the [carpenterSchemas] param
-     *  b) add the class to the dependency tree in [carpenterSchemas] if it cannot be instantiated
-     *     at this time
-     *
-     *  @param classLoaders list of classLoaders, defaulting toe the system class loader, that might
-     *  be used to load objects
-     *  @param carpenterSchemas structure that holds the dependency tree and list of classes that
-     *  need constructing
-     *  @param force by default a schema is not added to [carpenterSchemas] if it already exists
-     *  on the class path. For testing purposes schema generation can be forced
-     */
-    fun carpenterSchema(
-            classLoaders: List<ClassLoader> = listOf<ClassLoader> (ClassLoader.getSystemClassLoader()),
-            carpenterSchemas : CarpenterSchemas,
-            force : Boolean = false)
-    {
-        /* first question, do we know about this type or not */
-        if (classLoaders.exists(name)) {
-            validateKnown(classLoaders)
-
-            if (!force) return
-        }
-
-        val providesList = mutableListOf<Class<*>>()
-
-        var isInterface = false
-        var isCreatable = true
-
-        provides.forEach {
-            if (name == it) {
-                isInterface = true
-                return@forEach
-            }
-
-            try {
-                providesList.add (classLoaders.loadIfExists(it))
-            }
-            catch (e: ClassNotFoundException) {
-                carpenterSchemas.addDepPair(this, name, it)
-
-                isCreatable = false
-            }
-        }
-
-        val m : MutableMap<String, CarpenterField> = mutableMapOf()
-
-        fields.forEach {
-            try {
-                m[it.name] =  FieldFactory.newInstance(it.mandatory, it.name, it.getTypeAsClass(classLoaders))
-            }
-            catch (e: ClassNotFoundException) {
-                carpenterSchemas.addDepPair(this, name, it.typeAsString())
-
-                isCreatable = false
-            }
-        }
-
-        if (isCreatable) {
-            carpenterSchemas.carpenterSchemas.add (CarpenterSchemaFactory.newInstance(
-                    name = name,
-                    fields = m,
-                    interfaces = providesList,
-                    isInterface = isInterface))
-        }
     }
 }
 
