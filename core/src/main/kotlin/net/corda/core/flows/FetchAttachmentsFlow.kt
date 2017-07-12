@@ -15,8 +15,7 @@ import net.corda.core.serialization.SerializeAsTokenContext
  */
 @InitiatingFlow
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
-                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
-
+                           otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, ByteArray::class.java) {
     override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
     override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire })

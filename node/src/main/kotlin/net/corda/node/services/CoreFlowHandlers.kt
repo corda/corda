@@ -31,7 +31,6 @@ class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTrans
     }
 }
 
-// TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
 class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
     override fun getData(id: SecureHash): ByteArray? {
         return serviceHub.attachments.openAttachment(id)?.open()?.readBytes()
@@ -46,10 +45,13 @@ abstract class FetchDataHandler<out T>(val otherParty: Party) : FlowLogic<Unit>(
             if (it.hashes.isEmpty()) throw FlowException("Empty hash list")
             it
         }
-        val response = request.hashes.map {
-            getData(it) ?: throw FetchDataFlow.HashNotFound(it)
+        // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
+        // See the discussion in FetchDataFlow. We send each item individually here in a separate asynchronous send
+        // call, and the other side picks them up with a straight receive call, because we batching would push us over
+        // the (current) Artemis message size limit.
+        request.hashes.forEach {
+            send(otherParty, getData(it) ?: throw FetchDataFlow.HashNotFound(it))
         }
-        send(otherParty, response)
     }
 
     protected abstract fun getData(id: SecureHash): T?
