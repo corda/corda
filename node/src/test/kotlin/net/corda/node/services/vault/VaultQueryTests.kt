@@ -370,7 +370,7 @@ class VaultQueryTests {
             assertThat(resultsBeforeConsume.states).hasSize(4)
             assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
 
-            services.consumeCash(25.DOLLARS)
+            services.consumeCash(75.DOLLARS)
 
             val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
             val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
