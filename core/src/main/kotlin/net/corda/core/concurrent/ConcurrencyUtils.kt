@@ -8,6 +8,8 @@ import net.corda.core.match
 import net.corda.core.then
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -34,4 +36,12 @@ internal fun <S, T> firstOf(futures: Array<out ListenableFuture<out S>>, log: Lo
         }
     }
     return resultFuture
+}
+
+/** Does not use interrupt, which is unreliable in general as most tasks don't interrupt well. Effectively we assert this executor is idle. */
+fun ExecutorService.shutdownAndAwaitTermination() {
+    shutdown()
+    while (!awaitTermination(1, TimeUnit.SECONDS)) {
+        // Do nothing.
+    }
 }

@@ -1,11 +1,15 @@
 package net.corda.smoketesting
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCConnection
+import net.corda.core.concurrent.shutdownAndAwaitTermination
 import net.corda.core.createDirectories
 import net.corda.core.div
+import net.corda.core.getOrThrow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.ProjectStructure.projectRootDir
+import net.corda.testing.establishRpc
+import net.corda.testing.pollProcessDeath
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -22,14 +26,11 @@ class NodeProcess(
 ) : AutoCloseable {
     private companion object {
         val log = loggerFor<NodeProcess>()
-        val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
+        val javaPath = System.getProperty("java.home") / "bin" / "java"
         val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
     }
 
-    fun connect(): CordaRPCConnection {
-        val user = config.users[0]
-        return client.start(user.username, user.password)
-    }
+    fun connect() = config.users[0].run { client.start(username, password) }
 
     override fun close() {
         log.info("Stopping node '${config.commonName}'")
@@ -38,71 +39,42 @@ class NodeProcess(
             log.warn("Node '${config.commonName}' has not shutdown correctly")
             node.destroyForcibly()
         }
-
         log.info("Deleting Artemis directories, because they're large!")
         (nodeDir / "artemis").toFile().deleteRecursively()
     }
 
     class Factory(val buildDirectory: Path = Paths.get("build"),
-                  val cordaJar: Path = Paths.get(this::class.java.getResource("/corda.jar").toURI())) {
-        val nodesDirectory = buildDirectory / formatter.format(Instant.now())
-        init {
-            nodesDirectory.createDirectories()
-        }
+                  val cordaJar: Path = projectRootDir / "node" / "build" / "resources" / "smokeTest" / "corda.jar") {
+        val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).apply { createDirectories() }
 
-        fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
+        fun baseDirectory(config: NodeConfig) = nodesDirectory / config.commonName
 
         fun create(config: NodeConfig): NodeProcess {
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
-
-            val confFile = nodeDir.resolve("node.conf").toFile()
-            confFile.writeText(config.toText())
-
+            nodeDir.resolve("node.conf").toFile().writeText(config.toText())
             val process = startNode(nodeDir)
-            val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
+            val rpcAddress = NetworkHostAndPort("localhost", config.rpcPort)
             val user = config.users[0]
-
             val setupExecutor = Executors.newSingleThreadScheduledExecutor()
-            try {
-                setupExecutor.scheduleWithFixedDelay({
-                    try {
-                        if (!process.isAlive) {
-                            log.error("Node '${config.commonName}' has died.")
-                            return@scheduleWithFixedDelay
-                        }
-                        val conn = client.start(user.username, user.password)
-                        conn.close()
-
-                        // Cancel the "setup" task now that we've created the RPC client.
-                        setupExecutor.shutdown()
-                    } catch (e: Exception) {
-                        log.warn("Node '{}' not ready yet (Error: {})", config.commonName, e.message)
-                    }
-                }, 5, 1, SECONDS)
-
-                val setupOK = setupExecutor.awaitTermination(120, SECONDS)
-                check(setupOK && process.isAlive) { "Failed to create RPC connection" }
-            } catch (e: Exception) {
-                process.destroyForcibly()
-                throw e
+            return try {
+                val processDeathFuture = setupExecutor.pollProcessDeath(process, rpcAddress)
+                val (client, connection) = setupExecutor.establishRpc(rpcAddress, null, user.username, user.password, processDeathFuture).getOrThrow()
+                processDeathFuture.cancel(false)
+                connection.close()
+                NodeProcess(config, nodeDir, process, client)
             } finally {
-                setupExecutor.shutdownNow()
+                setupExecutor.shutdownAndAwaitTermination()
             }
-
-            return NodeProcess(config, nodeDir, process, client)
         }
 
-        private fun startNode(nodeDir: Path): Process {
-            val builder = ProcessBuilder()
-                .command(javaPath.toString(), "-jar", cordaJar.toString())
-                .directory(nodeDir.toFile())
-
-            builder.environment().putAll(mapOf(
-                "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
+        private fun startNode(nodeDir: Path) = ProcessBuilder().apply {
+            command(javaPath.toString(), "-jar", cordaJar.toString())
+            directory(nodeDir.toFile())
+            inheritIO() // Show any Capsule errors in the console.
+            environment().putAll(mapOf(
+                    "CAPSULE_CACHE_DIR" to (buildDirectory / "capsule").toString()
             ))
-
-            return builder.start()
-        }
+        }.start()
     }
 }

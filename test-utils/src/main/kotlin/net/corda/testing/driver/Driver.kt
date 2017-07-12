@@ -33,10 +33,7 @@ import net.corda.nodeapi.User
 import net.corda.nodeapi.config.SSLConfiguration
 import net.corda.nodeapi.config.parseAs
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.testing.ALICE
-import net.corda.testing.BOB
-import net.corda.testing.DUMMY_BANK_A
-import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.*
 import net.corda.testing.node.MOCK_VERSION_INFO
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -53,11 +50,9 @@ import java.time.ZoneOffset.UTC
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.*
-import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-
 
 /**
  * This file defines a small "Driver" DSL for starting up nodes that is only intended for development, demos and tests.
@@ -296,8 +291,6 @@ fun getTimestampAsDirectoryName(): String {
     return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(UTC).format(Instant.now())
 }
 
-class ListenProcessDeathException(hostAndPort: NetworkHostAndPort, listenProcess: Process) : Exception("The process that was expected to listen on $hostAndPort has died with status: ${listenProcess.exitValue()}")
-
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
  */
@@ -306,7 +299,7 @@ fun addressMustBeBound(executorService: ScheduledExecutorService, hostAndPort: N
 }
 
 fun addressMustBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort, listenProcess: Process? = null): ListenableFuture<Unit> {
-    return poll(executorService, "address $hostAndPort to bind") {
+    return executorService.poll("address $hostAndPort to bind") {
         if (listenProcess != null && !listenProcess.isAlive) {
             throw ListenProcessDeathException(hostAndPort, listenProcess)
         }
@@ -324,7 +317,7 @@ fun addressMustNotBeBound(executorService: ScheduledExecutorService, hostAndPort
 }
 
 fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostAndPort: NetworkHostAndPort): ListenableFuture<Unit> {
-    return poll(executorService, "address $hostAndPort to unbind") {
+    return executorService.poll("address $hostAndPort to unbind") {
         try {
             Socket(hostAndPort.host, hostAndPort.port).close()
             null
@@ -332,37 +325,6 @@ fun addressMustNotBeBoundFuture(executorService: ScheduledExecutorService, hostA
             Unit
         }
     }
-}
-
-fun <A> poll(
-        executorService: ScheduledExecutorService,
-        pollName: String,
-        pollInterval: Duration = 500.millis,
-        warnCount: Int = 120,
-        check: () -> A?
-): ListenableFuture<A> {
-    val resultFuture = SettableFuture.create<A>()
-    val task = object : Runnable {
-        var counter = -1
-        override fun run() {
-            if (resultFuture.isCancelled) return // Give up, caller can no longer get the result.
-            if (++counter == warnCount) {
-                log.warn("Been polling $pollName for ${pollInterval.multipliedBy(warnCount.toLong()).seconds} seconds...")
-            }
-            try {
-                val checkResult = check()
-                if (checkResult != null) {
-                    resultFuture.set(checkResult)
-                } else {
-                    executorService.schedule(this, pollInterval.toMillis(), MILLISECONDS)
-                }
-            } catch (t: Throwable) {
-                resultFuture.setException(t)
-            }
-        }
-    }
-    executorService.submit(task) // The check may be expensive, so always run it in the background even the first time.
-    return resultFuture
 }
 
 class ShutdownManager(private val executorService: ExecutorService) {
@@ -509,21 +471,7 @@ class DriverDSL(
     }
 
     private fun establishRpc(nodeAddress: NetworkHostAndPort, sslConfig: SSLConfiguration, processDeathFuture: ListenableFuture<out Throwable>): ListenableFuture<CordaRPCOps> {
-        val client = CordaRPCClient(nodeAddress, sslConfig)
-        val connectionFuture = poll(executorService, "RPC connection") {
-            try {
-                client.start(ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER)
-            } catch (e: Exception) {
-                if (processDeathFuture.isDone) throw e
-                log.error("Exception $e, Retrying RPC connection at $nodeAddress")
-                null
-            }
-        }
-        return firstOf(connectionFuture, processDeathFuture) {
-            if (it == processDeathFuture) {
-                throw processDeathFuture.getOrThrow()
-            }
-            val connection = connectionFuture.getOrThrow()
+        return executorService.establishRpc(nodeAddress, sslConfig, ArtemisMessagingComponent.NODE_USER, ArtemisMessagingComponent.NODE_USER, processDeathFuture).map { (_, connection) ->
             shutdownManager.registerShutdown(connection::close)
             connection.proxy
         }
@@ -720,9 +668,7 @@ class DriverDSL(
             val processFuture = startOutOfProcessNode(executorService, nodeConfiguration, config, quasarJarPath, debugPort, systemProperties, callerPackage)
             registerProcess(processFuture)
             return processFuture.flatMap { process ->
-                val processDeathFuture = poll(executorService, "process death") {
-                    if (process.isAlive) null else ListenProcessDeathException(nodeConfiguration.p2pAddress, process)
-                }
+                val processDeathFuture = executorService.pollProcessDeath(process, nodeConfiguration.p2pAddress)
                 // We continue to use SSL enabled port for RPC when its for node user.
                 establishRpc(nodeConfiguration.p2pAddress, nodeConfiguration, processDeathFuture).flatMap { rpc ->
                     // Call waitUntilRegisteredWithNetworkMap in background in case RPC is failing over:
@@ -742,7 +688,7 @@ class DriverDSL(
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): ListenableFuture<A> {
-        val pollFuture = poll(executorService, pollName, pollInterval, warnCount, check)
+        val pollFuture = executorService.poll(pollName, pollInterval, warnCount, check)
         shutdownManager.registerShutdown { pollFuture.cancel(true) }
         return pollFuture
     }

@@ -20,7 +20,6 @@ import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.RPCKryo
 import net.corda.testing.*
-import net.corda.testing.driver.poll
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,7 +42,7 @@ class RPCStabilityTests {
 
     private fun waitUntilNumberOfThreadsStable(executorService: ScheduledExecutorService): Int {
         val values = ConcurrentLinkedQueue<Int>()
-        return poll(executorService, "number of threads to become stable", 250.millis) {
+        return executorService.poll("number of threads to become stable", 250.millis) {
             values.add(Thread.activeCount())
             if (values.size > 5) {
                 values.poll()
