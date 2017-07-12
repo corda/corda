@@ -11,14 +11,12 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.flows.AnonymisedIdentity
 import net.corda.node.utilities.*
-import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.operator.ContentSigner
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.cert.CertPath
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
