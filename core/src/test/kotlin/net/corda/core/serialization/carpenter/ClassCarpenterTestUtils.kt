@@ -1,8 +1,9 @@
 package net.corda.core.serialization.carpenter
 
-import net.corda.core.serialization.amqp.*
 import net.corda.core.serialization.amqp.Field
 import net.corda.core.serialization.amqp.Schema
+import net.corda.core.serialization.amqp.SerializerFactory
+import net.corda.core.serialization.amqp.SerializationOutput
 
 fun mangleName(name: String) = "${name}__carpenter"
 

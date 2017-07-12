@@ -42,6 +42,8 @@ data class CarpenterSchemas (
 
     val size
         get() = carpenterSchemas.size
+
+    fun isEmpty() = carpenterSchemas.isEmpty()
 }
 
 /**
@@ -58,6 +60,7 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     val objects = mutableMapOf<String, Class<*>>()
 
     fun step (newObject : Schema) {
+        println ("MetaCarpenter: ${newObject.name}")
         objects[newObject.name] = cc.build (newObject)
 
         // go over the list of everything that had a dependency on the newly
@@ -80,6 +83,9 @@ abstract class MetaCarpenterBase (val schemas : CarpenterSchemas) {
     }
 
     abstract fun build()
+
+    val classloader : ClassLoader
+            get() = cc.classloader
 }
 
 class MetaCarpenter (schemas : CarpenterSchemas) : MetaCarpenterBase (schemas) {
