@@ -5,6 +5,7 @@ import net.corda.contracts.asset.sumCashBy
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
@@ -49,14 +50,14 @@ object TwoPartyTradeFlow {
     data class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount<Currency>,
-            val sellerOwnerKey: PublicKey
+            val sellerOwner: AbstractParty
     )
 
     open class Seller(val otherParty: Party,
                       val notaryNode: NodeInfo,
                       val assetToSell: StateAndRef<OwnableState>,
                       val price: Amount<Currency>,
-                      val myKey: PublicKey,
+                      val me: AbstractParty,
                       override val progressTracker: ProgressTracker = Seller.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
@@ -75,7 +76,7 @@ object TwoPartyTradeFlow {
         override fun call(): SignedTransaction {
             progressTracker.currentStep = AWAITING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
-            val hello = SellerTradeInfo(assetToSell, price, myKey)
+            val hello = SellerTradeInfo(assetToSell, price, me)
             // What we get back from the other side is a transaction that *might* be valid and acceptable to us,
             // but we must check it out thoroughly before we sign!
             send(otherParty, hello)
@@ -85,7 +86,7 @@ object TwoPartyTradeFlow {
             // DOCSTART 5
             val signTransactionFlow = object : SignTransactionFlow(otherParty, VERIFYING_AND_SIGNING.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) {
-                    if (stx.tx.outputs.map { it.data }.sumCashBy(AnonymousParty(myKey)).withoutIssuer() != price)
+                    if (stx.tx.outputs.map { it.data }.sumCashBy(me).withoutIssuer() != price)
                         throw FlowException("Transaction is not sending us the right amount of cash")
                 }
             }
@@ -181,7 +182,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionType.General.Builder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, AnonymousParty(tradeRequest.sellerOwnerKey))
+            val (tx, cashSigningPubKeys) = serviceHub.vaultService.generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwner)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(tradeRequest.assetForSale)

@@ -509,12 +509,13 @@ class TwoPartyTradeFlowTests {
         @Suspendable
         override fun call(): SignedTransaction {
             send(buyer, Pair(notary.notaryIdentity, price))
+            val key = serviceHub.keyManagementService.freshKey()
             return subFlow(Seller(
                 buyer,
                 notary,
                 assetToSell,
                 price,
-                serviceHub.legalIdentityKey))
+                AnonymousParty(key)))
         }
     }
 

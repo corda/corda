@@ -100,6 +100,7 @@ class NewTransaction : Fragment() {
                         command.recipient,
                         command.issueRef,
                         myIdentity.value!!.legalIdentity,
+                        command.notary,
                         command.anonymous)
             } else {
                 command.startFlow(rpcProxy.value!!)
