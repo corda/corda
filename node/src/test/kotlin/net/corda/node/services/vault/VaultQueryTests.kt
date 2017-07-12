@@ -188,6 +188,30 @@ class VaultQueryTests {
     }
 
     @Test
+    fun `unconsumed states with count`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
+            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            assertThat(resultsBeforeConsume.states).hasSize(4)
+            assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
+
+            services.consumeCash(75.DOLLARS)
+
+            val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.UNCONSUMED)
+            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
+            assertThat(resultsAfterConsume.states).hasSize(1)
+            assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(1)
+        }
+    }
+
+    @Test
     fun `unconsumed cash states simple`() {
         database.transaction {
 
@@ -332,6 +356,30 @@ class VaultQueryTests {
     }
 
     @Test
+    fun `consumed states with count`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+            services.fillWithSomeTestCash(25.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
+            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            assertThat(resultsBeforeConsume.states).hasSize(4)
+            assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(4)
+
+            services.consumeCash(25.DOLLARS)
+
+            val consumedCriteria = VaultQueryCriteria(status = Vault.StateStatus.CONSUMED)
+            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(consumedCriteria, paging)
+            assertThat(resultsAfterConsume.states).hasSize(3)
+            assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(3)
+        }
+    }
+
+    @Test
     fun `all states`() {
         database.transaction {
             services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 3, 3, Random(0L))
@@ -349,6 +397,25 @@ class VaultQueryTests {
         }
     }
 
+    @Test
+    fun `all states with count`() {
+        database.transaction {
+
+            services.fillWithSomeTestCash(100.DOLLARS, DUMMY_NOTARY, 1, 1, Random(0L))
+
+            val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+            val paging = PageSpecification(DEFAULT_PAGE_NUM, 10)
+            val resultsBeforeConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            assertThat(resultsBeforeConsume.states).hasSize(1)
+            assertThat(resultsBeforeConsume.totalStatesAvailable).isEqualTo(1)
+
+            services.consumeCash(50.DOLLARS)    // consumed 100 (spent), produced 50 (change)
+
+            val resultsAfterConsume = vaultQuerySvc.queryBy<ContractState>(criteria, paging)
+            assertThat(resultsAfterConsume.states).hasSize(2)
+            assertThat(resultsAfterConsume.totalStatesAvailable).isEqualTo(2)
+        }
+    }
 
     val CASH_NOTARY_KEY: KeyPair by lazy { entropyToKeyPair(BigInteger.valueOf(20)) }
     val CASH_NOTARY: Party get() = Party(X500Name("CN=Cash Notary Service,O=R3,OU=corda,L=Zurich,C=CH"), CASH_NOTARY_KEY.public)

@@ -160,7 +160,7 @@ class StandaloneCordaRPClientTest {
     @Test
     fun `test vault track by`() {
         val (vault, vaultUpdates) = rpcProxy.vaultTrackBy<Cash.State>()
-        assertEquals(0, vault.totalStatesAvailable)
+        assertEquals(-1, vault.totalStatesAvailable)    // totalStates not reported unless Pagination specified
 
         var updateCount = 0
         vaultUpdates.subscribe { update ->
