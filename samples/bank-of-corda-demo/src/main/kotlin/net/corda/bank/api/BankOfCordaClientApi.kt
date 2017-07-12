@@ -40,11 +40,14 @@ class BankOfCordaClientApi(val hostAndPort: NetworkHostAndPort) {
                     ?: throw Exception("Unable to locate ${params.issueToPartyName} in Network Map Service")
             val issuerBankParty = proxy.partyFromX500Name(params.issuerBankName)
                     ?: throw Exception("Unable to locate ${params.issuerBankName} in Network Map Service")
+            val notaryParty = proxy.partyFromX500Name(params.notaryName)
+                    ?: throw Exception("Unable to locate ${params.notaryName} in Network Map Service")
 
             val amount = Amount(params.amount, currency(params.currency))
             val issuerToPartyRef = OpaqueBytes.of(params.issueToPartyRefAsString.toByte())
 
-            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, params.anonymous).returnValue.getOrThrow().stx
+            return proxy.startFlow(::IssuanceRequester, amount, issueToParty, issuerToPartyRef, issuerBankParty, notaryParty, params.anonymous)
+                    .returnValue.getOrThrow().stx
         }
     }
 }

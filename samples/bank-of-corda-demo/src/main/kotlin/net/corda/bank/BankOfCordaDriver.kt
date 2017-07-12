@@ -68,7 +68,7 @@ private class BankOfCordaDriver {
         } else {
             try {
                 val anonymous = true
-                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, anonymous)
+                val requestParams = IssueRequestParams(options.valueOf(quantity), options.valueOf(currency), BIGCORP_LEGAL_NAME, "1", BOC.name, DUMMY_NOTARY.name, anonymous)
                 when (role) {
                     Role.ISSUE_CASH_RPC -> {
                         println("Requesting Cash via RPC ...")
