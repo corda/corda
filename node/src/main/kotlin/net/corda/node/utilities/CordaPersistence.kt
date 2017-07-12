@@ -13,10 +13,20 @@ import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 
+
+//HikariDataSource implements also Closeable which allows CordaPersistence to be Closeable
 class CordaPersistence(var dataSource: HikariDataSource): Closeable {
 
-    /** Holds Exposed database, the field will be removed once Exposed is phased out */
+    /** Holds Exposed database, the field will be removed once Exposed library is removed */
     lateinit var database: Database
+
+    companion object {
+        fun connect(dataSource: HikariDataSource): CordaPersistence {
+            return CordaPersistence(dataSource).apply {
+                DatabaseTransactionManager(this)
+            }
+        }
+    }
 
     fun createTransaction(): DatabaseTransaction {
         // We need to set the database for the current [Thread] or [Fiber] here as some tests share threads across databases.
@@ -89,9 +99,10 @@ class CordaPersistence(var dataSource: HikariDataSource): Closeable {
 fun configureDatabase(props: Properties): CordaPersistence {
     val config = HikariConfig(props)
     val dataSource = HikariDataSource(config)
-    val persistence = CordaPersistence(dataSource)
-    DatabaseTransactionManager(persistence)
-    val database = Database.connect(dataSource) { db -> ExposedTransactionManager() } //org.jetbrains.exposed.sql.Database will be removed once Exposed is phased out
+    val persistence = CordaPersistence.connect(dataSource)
+
+    //org.jetbrains.exposed.sql.Database will be removed once Exposed library is removed
+    val database = Database.connect(dataSource) { _ -> ExposedTransactionManager() }
     persistence.database = database
 
     // Check not in read-only mode.

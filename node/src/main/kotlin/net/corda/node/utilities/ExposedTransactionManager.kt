@@ -10,10 +10,10 @@ import java.sql.Connection
  * Wrapper of [DatabaseTransaction], because the class is effectively used for [ExposedTransaction.connection] method only not all methods are implemented.
  * The class will obsolete when Exposed library is phased out.
  */
-class ExposedTransaction(override val db: Database, val databaseTransaction: DatabaseTransaction) : TransactionInterface {
+class ExposedTransaction(override val db: Database, val databaseTransaction: DatabaseTransaction): TransactionInterface {
 
     override val outerTransaction: Transaction?
-        get() = TODO("not implemented")
+        get() = TODO("not supported")
 
     override val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
         databaseTransaction.connection
@@ -44,12 +44,12 @@ class ExposedTransactionManager: TransactionManager {
     }
 
     override fun newTransaction(isolation: Int): Transaction {
-        var cordaTransaction = DatabaseTransactionManager.newTransaction(isolation)
-        return Transaction(ExposedTransaction(database, cordaTransaction))
+        var databaseTransaction = DatabaseTransactionManager.newTransaction(isolation)
+        return Transaction(ExposedTransaction(database, databaseTransaction))
     }
 
     override fun currentOrNull(): Transaction? {
-        val cordaTransaction = DatabaseTransactionManager.currentOrNull()
-        return if (cordaTransaction != null) Transaction(ExposedTransaction(database, cordaTransaction)) else null
+        val databaseTransaction = DatabaseTransactionManager.currentOrNull()
+        return if (databaseTransaction != null) Transaction(ExposedTransaction(database, databaseTransaction)) else null
     }
 }
