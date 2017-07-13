@@ -41,7 +41,7 @@ class NodeTerminalView : Fragment() {
     override val root by fxml<VBox>()
 
     private companion object {
-        val pageSpecification = PageSpecification(0, 1)
+        val pageSpecification = PageSpecification(1, 1)
     }
 
     private val nodeController by inject<NodeController>()
@@ -60,7 +60,7 @@ class NodeTerminalView : Fragment() {
 
     private val subscriptions: MutableList<Subscription> = mutableListOf()
     private var txCount: Int = 0
-    private var stateCount: Int = 0
+    private var stateCount: Long = 0
     private var isDestroyed: Boolean = false
     private val explorer = explorerController.explorer()
     private val webServer = webServerController.webServer()
