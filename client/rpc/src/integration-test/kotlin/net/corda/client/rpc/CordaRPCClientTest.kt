@@ -5,9 +5,9 @@ import net.corda.core.flows.FlowInitiator
 import net.corda.core.getOrThrow
 import net.corda.core.messaging.*
 import net.corda.core.node.services.ServiceInfo
-import net.corda.core.random63BitValue
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.utilities.ALICE
+import net.corda.core.crypto.random63BitValue
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.testing.ALICE
 import net.corda.flows.CashException
 import net.corda.flows.CashIssueFlow
 import net.corda.flows.CashPaymentFlow

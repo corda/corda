@@ -18,13 +18,13 @@ import net.corda.core.serialization.SerializeAsTokenContext
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
                            otherSide: Party) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide) {
 
-    override fun load(txid: SecureHash): Attachment? = serviceHub.storageService.attachments.openAttachment(txid)
+    override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
     override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire })
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
-            serviceHub.storageService.attachments.importAttachment(attachment.open())
+            serviceHub.attachments.importAttachment(attachment.open())
         }
     }
 

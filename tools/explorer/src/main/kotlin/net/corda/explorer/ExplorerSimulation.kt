@@ -10,29 +10,23 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.GBP
 import net.corda.core.contracts.USD
-import net.corda.core.failure
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.ServiceType
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.success
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.flows.CashExitFlow
-import net.corda.flows.CashFlowCommand
-import net.corda.flows.CashIssueFlow
-import net.corda.flows.CashPaymentFlow
-import net.corda.flows.IssuerFlow
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.driver
+import net.corda.core.thenMatch
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.flows.*
 import net.corda.node.services.startFlowPermission
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.nodeapi.User
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.driver
 import org.bouncycastle.asn1.x500.X500Name
 import java.time.Instant
 import java.util.*
@@ -136,13 +130,13 @@ class ExplorerSimulation(val options: OptionSet) {
 
     private fun startSimulation(eventGenerator: EventGenerator, maxIterations: Int) {
         // Log to logger when flow finish.
-        fun FlowHandle<SignedTransaction>.log(seq: Int, name: String) {
+        fun FlowHandle<AbstractCashFlow.Result>.log(seq: Int, name: String) {
             val out = "[$seq] $name $id :"
-            returnValue.success {
-                Main.log.info("$out ${it.id} ${(it.tx.outputs.first().data as Cash.State).amount}")
-            }.failure {
+            returnValue.thenMatch({ (stx) ->
+                Main.log.info("$out ${stx.id} ${(stx.tx.outputs.first().data as Cash.State).amount}")
+            }, {
                 Main.log.info("$out ${it.message}")
-            }
+            })
         }
 
         for (i in 0..maxIterations) {
@@ -179,11 +173,12 @@ class ExplorerSimulation(val options: OptionSet) {
                 currencies = listOf(GBP, USD)
         )
         val maxIterations = 100_000
+        val anonymous = true
         // Pre allocate some money to each party.
         eventGenerator.parties.forEach {
             for (ref in 0..1) {
                 for ((currency, issuer) in issuers) {
-                    CashFlowCommand.IssueCash(Amount(1_000_000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity).startFlow(issuer)
+                    CashFlowCommand.IssueCash(Amount(1_000_000, currency), OpaqueBytes(ByteArray(1, { ref.toByte() })), it, notaryNode.nodeInfo.notaryIdentity, anonymous).startFlow(issuer)
                 }
             }
         }

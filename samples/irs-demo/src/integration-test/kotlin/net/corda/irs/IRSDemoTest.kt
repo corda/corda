@@ -1,14 +1,14 @@
 package net.corda.irs
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.toFuture
-import net.corda.core.utilities.DUMMY_BANK_A
-import net.corda.core.utilities.DUMMY_BANK_B
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.DUMMY_BANK_A
+import net.corda.testing.DUMMY_BANK_B
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.utilities.uploadFile
@@ -101,7 +101,7 @@ class IRSDemoTest : IntegrationTestCategory {
         assertThat(nodeApi.postJson("deals", tradeFile)).isTrue()
     }
 
-    private fun runUploadRates(host: HostAndPort) {
+    private fun runUploadRates(host: NetworkHostAndPort) {
         println("Running upload rates against $host")
         val fileContents = loadResourceFile("net/corda/irs/simulation/example.rates.txt")
         val url = URL("http://$host/api/irs/fixes")

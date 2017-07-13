@@ -13,7 +13,7 @@ import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.NetworkMapCache
 import net.corda.core.node.services.ServiceType
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -273,11 +273,11 @@ abstract class AbstractNetworkMapService(services: ServiceHubInternal,
         // subscribers
         when (change.type) {
             ADD -> {
-                logger.info("Added node ${node.address} to network map")
+                logger.info("Added node ${node.addresses} to network map")
                 services.networkMapCache.addNode(change.node)
             }
             REMOVE -> {
-                logger.info("Removed node ${node.address} from network map")
+                logger.info("Removed node ${node.addresses} from network map")
                 services.networkMapCache.removeNode(change.node)
             }
         }

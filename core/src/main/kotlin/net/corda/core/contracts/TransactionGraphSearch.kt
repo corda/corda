@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.ReadOnlyTransactionStorage
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import java.util.*
@@ -18,7 +18,7 @@ import java.util.concurrent.Callable
  * @param transactions map of transaction id to [SignedTransaction].
  * @param startPoints transactions to use as starting points for the search.
  */
-class TransactionGraphSearch(val transactions: ReadOnlyTransactionStorage,
+class TransactionGraphSearch(val transactions: TransactionStorage,
                              val startPoints: List<WireTransaction>) : Callable<List<WireTransaction>> {
     class Query(
             val withCommandOfType: Class<out CommandData>? = null,

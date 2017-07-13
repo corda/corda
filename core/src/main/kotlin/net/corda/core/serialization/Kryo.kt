@@ -9,11 +9,13 @@ import com.esotericsoftware.kryo.util.MapReferenceResolver
 import com.google.common.annotations.VisibleForTesting
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
+import net.corda.core.crypto.composite.CompositeKey
 import net.corda.core.identity.Party
 import net.corda.core.node.AttachmentsClassLoader
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.LazyPool
 import net.corda.core.utilities.SgxSupport
+import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
 import net.i2p.crypto.eddsa.EdDSAPublicKey
 import net.i2p.crypto.eddsa.spec.EdDSANamedCurveSpec
@@ -321,6 +323,9 @@ class MissingAttachmentsException(val ids: List<SecureHash>) : Exception()
 /** A serialisation engine that knows how to deserialise code inside a sandbox */
 @ThreadSafe
 object WireTransactionSerializer : Serializer<WireTransaction>() {
+    @VisibleForTesting
+    internal val attachmentsClassLoaderEnabled = "attachments.class.loader.enabled"
+
     override fun write(kryo: Kryo, output: Output, obj: WireTransaction) {
         kryo.writeClassAndObject(output, obj.inputs)
         kryo.writeClassAndObject(output, obj.attachments)
@@ -333,12 +338,12 @@ object WireTransactionSerializer : Serializer<WireTransaction>() {
     }
 
     private fun attachmentsClassLoader(kryo: Kryo, attachmentHashes: List<SecureHash>): ClassLoader? {
+        kryo.context[attachmentsClassLoaderEnabled] as? Boolean ?: false || return null
         val serializationContext = kryo.serializationContext() ?: return null // Some tests don't set one.
-        serializationContext.serviceHub.storageService.attachmentsClassLoaderEnabled || return null
         val missing = ArrayList<SecureHash>()
         val attachments = ArrayList<Attachment>()
         attachmentHashes.forEach { id ->
-            serializationContext.serviceHub.storageService.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
+            serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it } ?: run { missing += id }
         }
         missing.isNotEmpty() && throw MissingAttachmentsException(missing)
         return AttachmentsClassLoader(attachments)
@@ -388,6 +393,20 @@ object Ed25519PublicKeySerializer : Serializer<EdDSAPublicKey>() {
     override fun read(kryo: Kryo, input: Input, type: Class<EdDSAPublicKey>): EdDSAPublicKey {
         val A = input.readBytesWithLength()
         return EdDSAPublicKey(EdDSAPublicKeySpec(A, Crypto.EDDSA_ED25519_SHA512.algSpec as EdDSANamedCurveSpec))
+    }
+}
+
+/** For serialising an ed25519 public key */
+@ThreadSafe
+object ECPublicKeyImplSerializer : Serializer<sun.security.ec.ECPublicKeyImpl>() {
+    override fun write(kryo: Kryo, output: Output, obj: sun.security.ec.ECPublicKeyImpl) {
+        output.writeBytesWithLength(obj.encoded)
+    }
+
+    override fun read(kryo: Kryo, input: Input, type: Class<sun.security.ec.ECPublicKeyImpl>): sun.security.ec.ECPublicKeyImpl {
+        val A = input.readBytesWithLength()
+        val der = sun.security.util.DerValue(A)
+        return sun.security.ec.ECPublicKeyImpl.parse(der) as sun.security.ec.ECPublicKeyImpl
     }
 }
 
@@ -449,19 +468,6 @@ inline fun <reified T> readListOfLength(kryo: Kryo, input: Input, minLen: Int = 
     return list
 }
 
-/** Marker interface for kotlin object definitions so that they are deserialized as the singleton instance. */
-interface DeserializeAsKotlinObjectDef
-
-/** Serializer to deserialize kotlin object definitions marked with [DeserializeAsKotlinObjectDef]. */
-object KotlinObjectSerializer : Serializer<DeserializeAsKotlinObjectDef>() {
-    override fun read(kryo: Kryo, input: Input, type: Class<DeserializeAsKotlinObjectDef>): DeserializeAsKotlinObjectDef {
-        // read the public static INSTANCE field that kotlin compiler generates.
-        return type.getField("INSTANCE").get(null) as DeserializeAsKotlinObjectDef
-    }
-
-    override fun write(kryo: Kryo, output: Output, obj: DeserializeAsKotlinObjectDef) {}
-}
-
 // No ClassResolver only constructor.  MapReferenceResolver is the default as used by Kryo in other constructors.
 private val internalKryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeAllButBlacklistedClassResolver())) }.build()
 private val kryoPool = KryoPool.Builder { DefaultKryoCustomizer.customize(CordaKryo(makeStandardClassResolver())) }.build()
@@ -519,7 +525,7 @@ inline fun <T : Any> Kryo.register(
     return register(
             type.java,
             object : Serializer<T>() {
-                override fun read(kryo: Kryo, input: Input, type: Class<T>): T = read(kryo, input)
+                override fun read(kryo: Kryo, input: Input, clazz: Class<T>): T = read(kryo, input)
                 override fun write(kryo: Kryo, output: Output, obj: T) = write(kryo, output, obj)
             }
     )
@@ -625,7 +631,7 @@ object X500NameSerializer : Serializer<X500Name>() {
  */
 @ThreadSafe
 object CertPathSerializer : Serializer<CertPath>() {
-    val factory = CertificateFactory.getInstance("X.509")
+    val factory: CertificateFactory = CertificateFactory.getInstance("X.509")
     override fun read(kryo: Kryo, input: Input, type: Class<CertPath>): CertPath {
         return factory.generateCertPath(input)
     }
@@ -636,7 +642,7 @@ object CertPathSerializer : Serializer<CertPath>() {
 }
 
 /**
- * For serialising an [CX509CertificateHolder] in an X.500 standard format.
+ * For serialising an [X509CertificateHolder] in an X.500 standard format.
  */
 @ThreadSafe
 object X509CertificateSerializer : Serializer<X509CertificateHolder>() {

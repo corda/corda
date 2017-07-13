@@ -7,14 +7,14 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.QueryCriteria.CommonQueryCriteria
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.OpaqueBytes
-import net.corda.core.serialization.toHexString
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.toHexString
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
 import org.bouncycastle.asn1.x500.X500Name
 import java.util.*
 import javax.persistence.Tuple
@@ -34,19 +34,13 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
     private val joinPredicates = mutableListOf<Predicate>()
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>()
+    private val aggregateExpressions = mutableListOf<Expression<*>>()
 
     var stateTypes: Vault.StateStatus = Vault.StateStatus.UNCONSUMED
 
     override fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria) : Collection<Predicate> {
         log.trace { "Parsing VaultQueryCriteria: $criteria" }
         val predicateSet = mutableSetOf<Predicate>()
-
-        // state status
-        stateTypes = criteria.status
-        if (criteria.status == Vault.StateStatus.ALL)
-            predicateSet.add(vaultStates.get<Vault.StateStatus>("stateStatus").`in`(setOf(Vault.StateStatus.UNCONSUMED, Vault.StateStatus.CONSUMED)))
-        else
-            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
         // contract State Types
         val combinedContractTypeTypes = criteria.contractStateTypes?.plus(contractType) ?: setOf(contractType)
@@ -84,7 +78,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 QueryCriteria.TimeInstantType.CONSUMED -> Column.Kotlin(VaultSchemaV1.VaultStates::consumedTime)
             }
             val expression = CriteriaExpression.ColumnPredicateExpression(timeColumn, timeCondition.predicate)
-            predicateSet.add(expressionToPredicate(vaultStates, expression))
+            predicateSet.add(parseExpression(vaultStates, expression) as Predicate)
         }
         return predicateSet
     }
@@ -100,6 +94,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
             }
             is ColumnPredicate.BinaryComparison -> {
                 column as Path<Comparable<Any?>?>
+                @Suppress("UNCHECKED_CAST")
                 val literal = columnPredicate.rightLiteral as Comparable<Any?>?
                 when (columnPredicate.operator) {
                     BinaryComparisonOperator.GREATER_THAN -> criteriaBuilder.greaterThan(column, literal)
@@ -122,8 +117,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 }
             }
             is ColumnPredicate.Between -> {
+                @Suppress("UNCHECKED_CAST")
                 column as Path<Comparable<Any?>?>
+                @Suppress("UNCHECKED_CAST")
                 val fromLiteral = columnPredicate.rightFromLiteral as Comparable<Any?>?
+                @Suppress("UNCHECKED_CAST")
                 val toLiteral = columnPredicate.rightToLiteral as Comparable<Any?>?
                 criteriaBuilder.between(column, fromLiteral, toLiteral)
             }
@@ -133,32 +131,76 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                     NullOperator.NOT_NULL -> criteriaBuilder.isNotNull(column)
                 }
             }
+            else -> throw VaultQueryException("Not expecting $columnPredicate")
         }
     }
 
-    /**
-     * @return : Expression<Boolean> -> : Predicate
-     */
-    private fun <O, R> expressionToExpression(root: Root<O>, expression: CriteriaExpression<O, R>): Expression<R> {
+    private fun <O> parseExpression(entityRoot: Root<O>, expression: CriteriaExpression<O, Boolean>, predicateSet: MutableSet<Predicate>) {
+        if (expression is CriteriaExpression.AggregateFunctionExpression<O,*>) {
+            parseAggregateFunction(entityRoot, expression)
+        } else {
+            predicateSet.add(parseExpression(entityRoot, expression) as Predicate)
+        }
+    }
+
+    private fun <O, R> parseExpression(root: Root<O>, expression: CriteriaExpression<O, R>): Expression<Boolean> {
         return when (expression) {
             is CriteriaExpression.BinaryLogical -> {
-                val leftPredicate = expressionToExpression(root, expression.left)
-                val rightPredicate = expressionToExpression(root, expression.right)
+                val leftPredicate = parseExpression(root, expression.left)
+                val rightPredicate = parseExpression(root, expression.right)
                 when (expression.operator) {
-                    BinaryLogicalOperator.AND -> criteriaBuilder.and(leftPredicate, rightPredicate) as Expression<R>
-                    BinaryLogicalOperator.OR -> criteriaBuilder.or(leftPredicate, rightPredicate) as Expression<R>
+                    BinaryLogicalOperator.AND -> criteriaBuilder.and(leftPredicate, rightPredicate)
+                    BinaryLogicalOperator.OR -> criteriaBuilder.or(leftPredicate, rightPredicate)
                 }
             }
-            is CriteriaExpression.Not -> criteriaBuilder.not(expressionToExpression(root, expression.expression)) as Expression<R>
+            is CriteriaExpression.Not -> criteriaBuilder.not(parseExpression(root, expression.expression))
             is CriteriaExpression.ColumnPredicateExpression<O, *> -> {
                 val column = root.get<Any?>(getColumnName(expression.column))
-                columnPredicateToPredicate(column, expression.predicate) as Expression<R>
+                columnPredicateToPredicate(column, expression.predicate)
             }
+            else -> throw VaultQueryException("Unexpected expression: $expression")
         }
     }
 
-    private fun <O> expressionToPredicate(root: Root<O>, expression: CriteriaExpression<O, Boolean>): Predicate {
-        return expressionToExpression(root, expression) as Predicate
+    private fun <O, R> parseAggregateFunction(root: Root<O>, expression: CriteriaExpression.AggregateFunctionExpression<O, R>): Expression<out Any?>? {
+        val column = root.get<Any?>(getColumnName(expression.column))
+        val columnPredicate = expression.predicate
+        when (columnPredicate) {
+            is ColumnPredicate.AggregateFunction -> {
+                @Suppress("UNCHECKED_CAST")
+                column as Path<Long?>?
+                val aggregateExpression =
+                    when (columnPredicate.type) {
+                        AggregateFunctionType.SUM -> criteriaBuilder.sum(column)
+                        AggregateFunctionType.AVG -> criteriaBuilder.avg(column)
+                        AggregateFunctionType.COUNT -> criteriaBuilder.count(column)
+                        AggregateFunctionType.MAX -> criteriaBuilder.max(column)
+                        AggregateFunctionType.MIN -> criteriaBuilder.min(column)
+                    }
+                aggregateExpressions.add(aggregateExpression)
+                // optionally order by this aggregate function
+                expression.orderBy?.let {
+                    val orderCriteria =
+                        when (expression.orderBy!!) {
+                            Sort.Direction.ASC -> criteriaBuilder.asc(aggregateExpression)
+                            Sort.Direction.DESC -> criteriaBuilder.desc(aggregateExpression)
+                        }
+                    criteriaQuery.orderBy(orderCriteria)
+                }
+                // add optional group by clauses
+                expression.groupByColumns?.let { columns ->
+                    val groupByExpressions =
+                            columns.map { column ->
+                                val path = root.get<Any?>(getColumnName(column))
+                                aggregateExpressions.add(path)
+                                path
+                            }
+                    criteriaQuery.groupBy(groupByExpressions)
+                }
+                return aggregateExpression
+            }
+            else -> throw VaultQueryException("Not expecting $columnPredicate")
+        }
     }
 
     override fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria) : Collection<Predicate> {
@@ -217,6 +259,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
 
         val vaultLinearStates = criteriaQuery.from(VaultSchemaV1.VaultLinearStates::class.java)
         rootEntities.putIfAbsent(VaultSchemaV1.VaultLinearStates::class.java, vaultLinearStates)
+
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
         joinPredicates.add(joinPredicate)
 
@@ -255,10 +298,12 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         try {
             val entityRoot = criteriaQuery.from(entityClass)
             rootEntities.putIfAbsent(entityClass, entityRoot)
+
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
             joinPredicates.add(joinPredicate)
 
-            predicateSet.add(expressionToPredicate(entityRoot, criteria.expression))
+            // resolve general criteria expressions
+            parseExpression(entityRoot, criteria.expression, predicateSet)
         }
         catch (e: Exception) {
             e.message?.let { message ->
@@ -293,7 +338,7 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         val leftPredicates = parse(left)
         val rightPredicates = parse(right)
 
-        val andPredicate = criteriaBuilder.and(criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray()))
+        val andPredicate = criteriaBuilder.and(*leftPredicates.toTypedArray(), *rightPredicates.toTypedArray())
         predicateSet.add(andPredicate)
 
         return predicateSet
@@ -307,10 +352,26 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                 parse(sorting)
         }
 
-        val selections = listOf(vaultStates).plus(rootEntities.map { it.value })
+        val selections =
+            if (aggregateExpressions.isEmpty())
+                listOf(vaultStates).plus(rootEntities.map { it.value })
+            else
+                aggregateExpressions
         criteriaQuery.multiselect(selections)
         val combinedPredicates = joinPredicates.plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
+
+        return predicateSet
+    }
+
+    override fun parseCriteria(criteria: CommonQueryCriteria): Collection<Predicate> {
+        log.trace { "Parsing CommonQueryCriteria: $criteria" }
+        val predicateSet = mutableSetOf<Predicate>()
+
+        // state status
+        stateTypes = criteria.status
+        if (criteria.status != Vault.StateStatus.ALL)
+            predicateSet.add(criteriaBuilder.equal(vaultStates.get<Vault.StateStatus>("stateStatus"), criteria.status))
 
         return predicateSet
     }
@@ -321,11 +382,11 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         var orderCriteria = mutableListOf<Order>()
 
         sorting.columns.map { (sortAttribute, direction) ->
-            val (entityStateClass, entityStateColumnName) =
-                when(sortAttribute) {
-                    is SortAttribute.Standard -> parse(sortAttribute.attribute)
-                    is SortAttribute.Custom -> Pair(sortAttribute.entityStateClass, sortAttribute.entityStateColumnName)
-            }
+            val (entityStateClass, entityStateAttributeParent, entityStateAttributeChild) =
+                    when(sortAttribute) {
+                        is SortAttribute.Standard -> parse(sortAttribute.attribute)
+                        is SortAttribute.Custom -> Triple(sortAttribute.entityStateClass, sortAttribute.entityStateColumnName, null)
+                    }
             val sortEntityRoot =
                     rootEntities.getOrElse(entityStateClass) {
                         // scenario where sorting on attributes not parsed as criteria
@@ -337,10 +398,16 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
                     }
             when (direction) {
                 Sort.Direction.ASC -> {
-                    orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateColumnName)))
+                    if (entityStateAttributeChild != null)
+                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
+                    else
+                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent)))
                 }
                 Sort.Direction.DESC ->
-                    orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateColumnName)))
+                    if (entityStateAttributeChild != null)
+                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
+                    else
+                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
             }
         }
         if (orderCriteria.isNotEmpty()) {
@@ -349,20 +416,23 @@ class HibernateQueryCriteriaParser(val contractType: Class<out ContractState>,
         }
     }
 
-    private fun parse(sortAttribute: Sort.Attribute): Pair<Class<out PersistentState>, String> {
-        val entityClassAndColumnName : Pair<Class<out PersistentState>, String> =
-        when(sortAttribute) {
-            is Sort.VaultStateAttribute -> {
-                Pair(VaultSchemaV1.VaultStates::class.java, sortAttribute.columnName)
+    private fun parse(sortAttribute: Sort.Attribute): Triple<Class<out PersistentState>, String, String?> {
+        val entityClassAndColumnName : Triple<Class<out PersistentState>, String, String?> =
+            when(sortAttribute) {
+                is Sort.CommonStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeParent, sortAttribute.attributeChild)
+                }
+                is Sort.VaultStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.LinearStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.attributeName, null)
+                }
+                is Sort.FungibleStateAttribute -> {
+                    Triple(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.attributeName, null)
+                }
+                else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
             }
-            is Sort.LinearStateAttribute -> {
-                Pair(VaultSchemaV1.VaultLinearStates::class.java, sortAttribute.columnName)
-            }
-            is Sort.FungibleStateAttribute -> {
-                Pair(VaultSchemaV1.VaultFungibleStates::class.java, sortAttribute.columnName)
-            }
-            else -> throw VaultQueryException("Invalid sort attribute: $sortAttribute")
-        }
         return entityClassAndColumnName
     }
 }

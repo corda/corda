@@ -7,8 +7,33 @@ from the previous milestone release.
 UNRELEASED
 ----------
 
+* Changes in ``NodeInfo``:
+
+   * ``PhysicalLocation`` was renamed to ``WorldMapLocation`` to emphasise that it doesn't need to map to a truly physical
+     location of the node server.
+   * Slots for multiple IP addresses and ``legalIdentitiesAndCert``s were introduced. Addresses are no longer of type
+     ``SingleMessageRecipient``, but of ``NetworkHostAndPort``.
+
+* ``ServiceHub.storageService`` has been removed. ``attachments`` and ``validatedTransactions`` are now direct members of
+  ``ServiceHub``.
+
+* Mock identity constants used in tests, such as ``ALICE``, ``BOB``, ``DUMMY_NOTARY``, have moved to ``net.corda.testing``
+  in the ``test-utils`` module.
+
+* ``DummyContract``, ``DummyContractV2``, ``DummyLinearContract`` and ``DummyState`` have moved to ``net.corda.testing.contracts``
+  in the ``test-utils`` modules.
+
+* In Java, ``QueryCriteriaUtilsKt`` has moved to ``QueryCriteriaUtils``. Also ``and`` and ``or`` are now instance methods
+  of ``QueryCrtieria``.
+
+* ``random63BitValue()`` has moved to ``CryptoUtils``
+
+* Added additional common Sort attributes (see ``Sort.CommandStateAttribute``) for use in Vault Query criteria
+  to include STATE_REF, STATE_REF_TXN_ID, STATE_REF_INDEX
+
 Milestone 13
-----------
+------------
+
 Special thank you to `Frederic Dalibard <https://github.com/FredericDalibard>`_, for his contribution which adds
 support for more currencies to the DemoBench and Explorer tools.
 
@@ -78,7 +103,6 @@ support for more currencies to the DemoBench and Explorer tools.
   to specify for individual nodes.
 
 * Dependencies changes:
-    * Upgraded Kotlin to v1.1.2.
     * Upgraded Dokka to v0.9.14.
     * Upgraded Gradle Plugins to 0.12.4.
     * Upgraded Apache ActiveMQ Artemis to v2.1.0.

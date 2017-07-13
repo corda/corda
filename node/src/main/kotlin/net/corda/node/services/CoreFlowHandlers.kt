@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import net.corda.flows.*
 
@@ -27,14 +28,14 @@ import net.corda.flows.*
  */
 class FetchTransactionsHandler(otherParty: Party) : FetchDataHandler<SignedTransaction>(otherParty) {
     override fun getData(id: SecureHash): SignedTransaction? {
-        return serviceHub.storageService.validatedTransactions.getTransaction(id)
+        return serviceHub.validatedTransactions.getTransaction(id)
     }
 }
 
 // TODO: Use Artemis message streaming support here, called "large messages". This avoids the need to buffer.
 class FetchAttachmentsHandler(otherParty: Party) : FetchDataHandler<ByteArray>(otherParty) {
     override fun getData(id: SecureHash): ByteArray? {
-        return serviceHub.storageService.attachments.openAttachment(id)?.open()?.readBytes()
+        return serviceHub.attachments.openAttachment(id)?.open()?.readBytes()
     }
 }
 
@@ -120,5 +121,26 @@ class ContractUpgradeHandler(otherSide: Party) : AbstractStateReplacementFlow.Ac
             "The proposed tx matches the expected tx for this upgrade" using (proposedTx == expectedTx)
         }
         ContractUpgradeFlow.verify(oldStateAndRef.state.data, expectedTx.outRef<ContractState>(0).state.data, expectedTx.commands.single())
+    }
+}
+
+class TransactionKeyHandler(val otherSide: Party, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
+    constructor(otherSide: Party) : this(otherSide, false)
+    companion object {
+        object SENDING_KEY : ProgressTracker.Step("Sending key")
+    }
+
+    override val progressTracker: ProgressTracker = ProgressTracker(SENDING_KEY)
+
+    @Suspendable
+    override fun call(): Unit {
+        val revocationEnabled = false
+        progressTracker.currentStep = SENDING_KEY
+        val legalIdentityAnonymous = serviceHub.keyManagementService.freshKeyAndCert(serviceHub.myInfo.legalIdentityAndCert, revocationEnabled)
+        val otherSideAnonymous = sendAndReceive<AnonymisedIdentity>(otherSide, legalIdentityAnonymous).unwrap { TransactionKeyFlow.validateIdentity(otherSide, it) }
+        val (certPath, theirCert, txIdentity) = otherSideAnonymous
+        // Validate then store their identity so that we can prove the key in the transaction is owned by the
+        // counterparty.
+        serviceHub.identityService.registerAnonymousIdentity(txIdentity, otherSide, certPath)
     }
 }

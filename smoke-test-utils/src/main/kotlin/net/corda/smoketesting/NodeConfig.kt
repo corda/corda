@@ -6,35 +6,35 @@ import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValue
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.crypto.commonName
-import net.corda.core.identity.Party
 import net.corda.nodeapi.User
+import org.bouncycastle.asn1.x500.X500Name
 
 class NodeConfig(
-    val party: Party,
-    val p2pPort: Int,
-    val rpcPort: Int,
-    val webPort: Int,
-    val extraServices: List<String>,
-    val users: List<User>,
-    var networkMap: NodeConfig? = null
+        val legalName: X500Name,
+        val p2pPort: Int,
+        val rpcPort: Int,
+        val webPort: Int,
+        val extraServices: List<String>,
+        val users: List<User>,
+        var networkMap: NodeConfig? = null
 ) {
     companion object {
         val renderOptions: ConfigRenderOptions = ConfigRenderOptions.defaults().setOriginComments(false)
     }
 
-    val commonName: String get() = party.name.commonName
+    val commonName: String get() = legalName.commonName
 
     /*
      * The configuration object depends upon the networkMap,
      * which is mutable.
      */
     fun toFileConfig(): Config = empty()
-            .withValue("myLegalName", valueFor(party.name.toString()))
+            .withValue("myLegalName", valueFor(legalName.toString()))
             .withValue("p2pAddress", addressValueFor(p2pPort))
             .withValue("extraAdvertisedServiceIds", valueFor(extraServices))
             .withFallback(optional("networkMapService", networkMap, { c, n ->
                 c.withValue("address", addressValueFor(n.p2pPort))
-                    .withValue("legalName", valueFor(n.party.name.toString()))
+                    .withValue("legalName", valueFor(n.legalName.toString()))
             }))
             .withValue("webAddress", addressValueFor(webPort))
             .withValue("rpcAddress", addressValueFor(rpcPort))

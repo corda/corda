@@ -2,23 +2,20 @@ package net.corda.node.services.vault
 
 import net.corda.contracts.asset.Cash
 import net.corda.contracts.asset.DUMMY_CASH_ISSUER
-import net.corda.contracts.testing.fillWithSomeTestCash
 import net.corda.core.contracts.*
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.services.StatesNotAvailableException
-import net.corda.core.node.services.TxWritableStorageService
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.LogHelper
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
-import net.corda.testing.BOC
-import net.corda.testing.BOC_KEY
-import net.corda.testing.MEGA_CORP
-import net.corda.testing.MEGA_CORP_KEY
+import net.corda.testing.*
+import net.corda.testing.contracts.fillWithSomeTestCash
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThat
@@ -32,7 +29,9 @@ import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeVaultServiceTest {
     lateinit var services: MockServices
@@ -53,7 +52,7 @@ class NodeVaultServiceTest {
 
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                     }
                     // Refactored to use notifyAll() as we have no other unit test for that method with multiple transactions.
                     vaultService.notifyAll(txs.map { it.tx })
@@ -77,17 +76,12 @@ class NodeVaultServiceTest {
             val w1 = vaultSvc.unconsumedStates<Cash.State>()
             assertThat(w1).hasSize(3)
 
-            val originalStorage = services.storageService
             val originalVault = vaultSvc
             val services2 = object : MockServices() {
                 override val vaultService: VaultService get() = originalVault
-
-                // We need to be able to find the same transactions as before, too.
-                override val storageService: TxWritableStorageService get() = originalStorage
-
                 override fun recordTransactions(txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
-                        storageService.validatedTransactions.addTransaction(stx)
+                        validatedTransactions.addTransaction(stx)
                         vaultService.notify(stx.tx)
                     }
                 }
@@ -400,17 +394,18 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        database.transaction {
+        val megaCorpServices = MockServices(MEGA_CORP_KEY)
 
+        database.transaction {
             val freshKey = services.legalIdentityKey
 
             // Issue a txn to Send us some Money
-            val usefulTX = TransactionType.General.Builder(null).apply {
+            val usefulBuilder = TransactionType.General.Builder(null).apply {
                 Cash().generateIssue(this, 100.DOLLARS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
+            }
+            val usefulTX = megaCorpServices.signInitialTransaction(usefulBuilder)
 
-            services.recordTransactions(listOf(usefulTX))
+            services.recordTransactions(usefulTX)
 
             vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 1")
             vaultSvc.addNoteToTransaction(usefulTX.id, "USD Sample Note 2")
@@ -418,15 +413,65 @@ class NodeVaultServiceTest {
             assertEquals(3, vaultSvc.getTransactionNotes(usefulTX.id).count())
 
             // Issue more Money (GBP)
-            val anotherTX = TransactionType.General.Builder(null).apply {
+            val anotherBuilder = TransactionType.General.Builder(null).apply {
                 Cash().generateIssue(this, 200.POUNDS `issued by` MEGA_CORP.ref(1), AnonymousParty(freshKey), DUMMY_NOTARY)
-                signWith(MEGA_CORP_KEY)
-            }.toSignedTransaction()
+            }
+            val anotherTX = megaCorpServices.signInitialTransaction(anotherBuilder)
 
-            services.recordTransactions(listOf(anotherTX))
+            services.recordTransactions(anotherTX)
 
-            vaultSvc.addNoteToTransaction(anotherTX.id, "GPB Sample Note 1")
+            vaultSvc.addNoteToTransaction(anotherTX.id, "GBP Sample Note 1")
             assertEquals(1, vaultSvc.getTransactionNotes(anotherTX.id).count())
+        }
+    }
+
+    @Test
+    fun `is ownable state relevant`() {
+        val service = (services.vaultService as NodeVaultService)
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+        val wellKnownCash = Cash.State(amount, services.myInfo.legalIdentity)
+        assertTrue { service.isRelevant(wellKnownCash, services.keyManagementService.keys) }
+
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val anonymousCash = Cash.State(amount, anonymousIdentity.identity)
+        assertTrue { service.isRelevant(anonymousCash, services.keyManagementService.keys) }
+
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+        val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
+        assertFalse { service.isRelevant(thirdPartyCash, services.keyManagementService.keys) }
+    }
+
+    // TODO: Unit test linear state relevancy checks
+
+    @Test
+    fun `make update`() {
+        val service = (services.vaultService as NodeVaultService)
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(services.myInfo.legalIdentityAndCert, false)
+        val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+
+        // Issue then move some cash
+        val issueTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+            Cash().generateIssue(this,
+                    amount, anonymousIdentity.identity, services.myInfo.legalIdentity)
+        }.toWireTransaction()
+        val cashState = StateAndRef(issueTx.outputs.single(), StateRef(issueTx.id, 0))
+
+        database.transaction {
+            val expected = Vault.Update(emptySet(), setOf(cashState), null)
+            val actual = service.makeUpdate(issueTx, setOf(anonymousIdentity.identity.owningKey))
+            assertEquals(expected, actual)
+            services.vaultService.notify(issueTx)
+        }
+
+        database.transaction {
+            val moveTx = TransactionBuilder(TransactionType.General, services.myInfo.legalIdentity).apply {
+                services.vaultService.generateSpend(this, Amount(1000, GBP), thirdPartyIdentity)
+            }.toWireTransaction()
+
+            val expected = Vault.Update(setOf(cashState), emptySet(), null)
+            val actual = service.makeUpdate(moveTx, setOf(anonymousIdentity.identity.owningKey))
+            assertEquals(expected, actual)
         }
     }
 }

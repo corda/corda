@@ -7,18 +7,14 @@ import co.paralleluniverse.strands.Strand
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.DeclaredField.Companion.declaredField
-import net.corda.core.ErrorOr
 import net.corda.core.abbreviate
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
-import net.corda.core.random63BitValue
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.UntrustworthyData
-import net.corda.core.utilities.debug
-import net.corda.core.utilities.trace
+import net.corda.core.utilities.*
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
@@ -71,7 +67,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     @Transient override lateinit var serviceHub: ServiceHubInternal
     @Transient internal lateinit var database: Database
     @Transient internal lateinit var actionOnSuspend: (FlowIORequest) -> Unit
-    @Transient internal lateinit var actionOnEnd: (ErrorOr<R>, Boolean) -> Unit
+    @Transient internal lateinit var actionOnEnd: (Try<R>, Boolean) -> Unit
     @Transient internal var fromCheckpoint: Boolean = false
     @Transient private var txTrampoline: Transaction? = null
 
@@ -125,7 +121,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 .filter { it.state is FlowSessionState.Initiating }
                 .forEach { it.waitForConfirmation() }
         // This is to prevent actionOnEnd being called twice if it throws an exception
-        actionOnEnd(ErrorOr(result), false)
+        actionOnEnd(Try.Success(result), false)
         _resultFuture?.set(result)
         logic.progressTracker?.currentStep = ProgressTracker.DONE
         logger.debug { "Flow finished with result $result" }
@@ -138,7 +134,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     }
 
     private fun processException(exception: Throwable, propagated: Boolean) {
-        actionOnEnd(ErrorOr.of(exception), propagated)
+        actionOnEnd(Try.Failure(exception), propagated)
         _resultFuture?.setException(exception)
         logic.progressTracker?.endWithError(exception)
     }
@@ -205,7 +201,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
     override fun waitForLedgerCommit(hash: SecureHash, sessionFlow: FlowLogic<*>): SignedTransaction {
         logger.debug { "waitForLedgerCommit($hash) ..." }
         suspend(WaitForLedgerCommit(hash, sessionFlow.stateMachine as FlowStateMachineImpl<*>))
-        val stx = serviceHub.storageService.validatedTransactions.getTransaction(hash)
+        val stx = serviceHub.validatedTransactions.getTransaction(hash)
         if (stx != null) {
             logger.debug { "Transaction $hash committed to ledger" }
             return stx

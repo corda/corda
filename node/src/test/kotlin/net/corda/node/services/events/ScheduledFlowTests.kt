@@ -2,6 +2,7 @@ package net.corda.node.services.events
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.containsAny
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
@@ -11,7 +12,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.linearHeadsOfType
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.flows.FinalityFlow
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.statemachine.StateMachineManager
@@ -94,8 +95,8 @@ class ScheduledFlowTests {
         notaryNode = mockNet.createNode(
                 legalName = DUMMY_NOTARY.name,
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), ServiceInfo(ValidatingNotaryService.type)))
-        nodeA = mockNet.createNode(notaryNode.info.address, start = false)
-        nodeB = mockNet.createNode(notaryNode.info.address, start = false)
+        nodeA = mockNet.createNode(notaryNode.network.myAddress, start = false)
+        nodeB = mockNet.createNode(notaryNode.network.myAddress, start = false)
         mockNet.startNodes()
     }
 

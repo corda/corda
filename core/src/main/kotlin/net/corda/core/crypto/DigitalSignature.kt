@@ -1,8 +1,7 @@
 package net.corda.core.crypto
 
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import java.security.InvalidKeyException
 import java.security.PublicKey
 import java.security.SignatureException
@@ -46,7 +45,4 @@ open class DigitalSignature(bits: ByteArray) : OpaqueBytes(bits) {
         @Throws(InvalidKeyException::class, SignatureException::class)
         fun isValid(content: ByteArray) = by.isValid(content, this)
     }
-
-    // TODO: consider removing this as whoever needs to identify the signer should be able to derive it from the public key
-    class LegallyIdentifiable(val signer: Party, bits: ByteArray) : WithKey(signer.owningKey, bits)
 }

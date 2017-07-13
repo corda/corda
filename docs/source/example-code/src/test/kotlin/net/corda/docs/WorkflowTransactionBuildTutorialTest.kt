@@ -9,10 +9,9 @@ import net.corda.core.node.services.ServiceInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.and
 import net.corda.core.toFuture
-import net.corda.core.utilities.DUMMY_NOTARY
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
+import net.corda.testing.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY_KEY
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.ValidatingNotaryService
 import net.corda.node.utilities.transaction
@@ -43,8 +42,8 @@ class WorkflowTransactionBuildTutorialTest {
                 legalName = DUMMY_NOTARY.name,
                 overrideServices = mapOf(Pair(notaryService, DUMMY_NOTARY_KEY)),
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
-        nodeA = mockNet.createPartyNode(notaryNode.info.address)
-        nodeB = mockNet.createPartyNode(notaryNode.info.address)
+        nodeA = mockNet.createPartyNode(notaryNode.network.myAddress)
+        nodeB = mockNet.createPartyNode(notaryNode.network.myAddress)
         nodeA.registerInitiatedFlow(RecordCompletionFlow::class.java)
     }
 

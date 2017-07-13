@@ -10,11 +10,6 @@ import org.gradle.api.tasks.JavaExec
  */
 class QuasarPlugin implements Plugin<Project> {
     void apply(Project project) {
-
-        project.repositories {
-            mavenCentral()
-        }
-
         project.configurations.create("quasar")
 //        To add a local .jar dependency:
 //        project.dependencies.add("quasar", project.files("${project.rootProject.projectDir}/lib/quasar.jar"))

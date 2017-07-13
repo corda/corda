@@ -1,6 +1,5 @@
 package net.corda.verifier
 
-import com.google.common.net.HostAndPort
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningScheduledExecutorService
@@ -11,9 +10,10 @@ import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.commonName
 import net.corda.core.div
 import net.corda.core.map
-import net.corda.core.random63BitValue
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.utilities.ProcessUtilities
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.driver.ProcessUtilities
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.configureDevKeyAndTrustStores
 import net.corda.nodeapi.ArtemisMessagingComponent.Companion.NODE_USER
@@ -50,7 +50,7 @@ interface VerifierExposedDSLInterface : DriverDSLExposedInterface {
     fun startVerificationRequestor(name: X500Name): ListenableFuture<VerificationRequestorHandle>
 
     /** Starts an out of process verifier connected to [address] */
-    fun startVerifier(address: HostAndPort): ListenableFuture<VerifierHandle>
+    fun startVerifier(address: NetworkHostAndPort): ListenableFuture<VerifierHandle>
 
     /**
      * Waits until [number] verifiers are listening for verification requests coming from the Node. Check
@@ -106,7 +106,7 @@ data class VerifierHandle(
 
 /** A handle for the verification requestor */
 data class VerificationRequestorHandle(
-        val p2pAddress: HostAndPort,
+        val p2pAddress: NetworkHostAndPort,
         private val responseAddress: SimpleString,
         private val session: ClientSession,
         private val requestProducer: ClientProducer,
@@ -143,7 +143,7 @@ data class VerifierDriverDSL(
 
     companion object {
         private val log = loggerFor<VerifierDriverDSL>()
-        fun createConfiguration(baseDirectory: Path, nodeHostAndPort: HostAndPort): Config {
+        fun createConfiguration(baseDirectory: Path, nodeHostAndPort: NetworkHostAndPort): Config {
             return ConfigFactory.parseMap(
                     mapOf(
                             "baseDirectory" to baseDirectory.toString(),
@@ -152,7 +152,7 @@ data class VerifierDriverDSL(
             )
         }
 
-        fun createVerificationRequestorArtemisConfig(baseDirectory: Path, responseAddress: String, hostAndPort: HostAndPort, sslConfiguration: SSLConfiguration): Configuration {
+        fun createVerificationRequestorArtemisConfig(baseDirectory: Path, responseAddress: String, hostAndPort: NetworkHostAndPort, sslConfiguration: SSLConfiguration): Configuration {
             val connectionDirection = ConnectionDirection.Inbound(acceptorFactoryClassName = NettyAcceptorFactory::class.java.name)
             return ConfigurationImpl().apply {
                 val artemisDir = "$baseDirectory/artemis"
@@ -183,7 +183,7 @@ data class VerifierDriverDSL(
         }
     }
 
-    private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: HostAndPort): VerificationRequestorHandle {
+    private fun startVerificationRequestorInternal(name: X500Name, hostAndPort: NetworkHostAndPort): VerificationRequestorHandle {
         val baseDir = driverDSL.driverDirectory / name.commonName
         val sslConfig = object : NodeSSLConfiguration {
             override val baseDirectory = baseDir
@@ -247,7 +247,7 @@ data class VerifierDriverDSL(
         )
     }
 
-    override fun startVerifier(address: HostAndPort): ListenableFuture<VerifierHandle> {
+    override fun startVerifier(address: NetworkHostAndPort): ListenableFuture<VerifierHandle> {
         log.info("Starting verifier connecting to address $address")
         val id = verifierCount.andIncrement
         val jdwpPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null

@@ -7,10 +7,12 @@ various services the node provides. The services offered by the ``ServiceHub`` a
     * Provides information on other nodes on the network (e.g. notaries…)
 * ``ServiceHub.identityService``
     * Allows you to resolve anonymous identities to well-known identities if you have the required certificates
+* ``ServiceHub.attachments``
+    * Gives you access to the node's attachments
+* ``ServiceHub.validatedTransactions``
+    * Gives you access to the transactions stored in the node
 * ``ServiceHub.vaultService``
     * Stores the node’s current and historic states
-* ``ServiceHub.storageService``
-    * Stores additional information such as transactions and attachments
 * ``ServiceHub.keyManagementService``
     * Manages signing transactions and generating fresh public keys
 * ``ServiceHub.myInfo``

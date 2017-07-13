@@ -32,6 +32,10 @@ import com.opengamma.strata.product.common.BuySell
 import com.opengamma.strata.product.swap.type.FixedIborSwapConventions
 import com.opengamma.strata.report.ReportCalculationResults
 import com.opengamma.strata.report.trade.TradeReport
+import net.corda.core.div
+import net.corda.core.exists
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.LocalDate
 
 /**
@@ -59,31 +63,44 @@ class SwapPricingCcpExample {
     /**
      * The location of the data files.
      */
-    private val PATH_CONFIG = "src/main/resources/"
+    private val resourcesUri = run {
+        // Find src/main/resources by walking up the directory tree starting at a classpath root:
+        var module = Paths.get(javaClass.getResource("/").toURI())
+        val relative = "src" / "main" / "resources"
+        var path: Path
+        while (true) {
+            path = module.resolve(relative)
+            path.exists() && break
+            module = module.parent
+        }
+        path.toUri()
+    }
+
+    private fun resourceLocator(uri: String) = ResourceLocator.ofUrl(resourcesUri.resolve(uri).toURL())
     /**
      * The location of the curve calibration groups file for CCP1 and CCP2.
      */
-    private val GROUPS_RESOURCE_CCP1 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/groups.csv")
-    private val GROUPS_RESOURCE_CCP2 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/groups-ccp2.csv")
+    private val GROUPS_RESOURCE_CCP1 = resourceLocator("example-calibration/curves/groups.csv")
+    private val GROUPS_RESOURCE_CCP2 = resourceLocator("example-calibration/curves/groups-ccp2.csv")
     /**
      * The location of the curve calibration settings file for CCP1 and CCP2.
      */
-    private val SETTINGS_RESOURCE_CCP1 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/settings.csv")
-    private val SETTINGS_RESOURCE_CCP2 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/settings-ccp2.csv")
+    private val SETTINGS_RESOURCE_CCP1 = resourceLocator("example-calibration/curves/settings.csv")
+    private val SETTINGS_RESOURCE_CCP2 = resourceLocator("example-calibration/curves/settings-ccp2.csv")
     /**
      * The location of the curve calibration nodes file for CCP1 and CCP2.
      */
-    private val CALIBRATION_RESOURCE_CCP1 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/calibrations.csv")
-    private val CALIBRATION_RESOURCE_CCP2 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/curves/calibrations-ccp2.csv")
+    private val CALIBRATION_RESOURCE_CCP1 = resourceLocator("example-calibration/curves/calibrations.csv")
+    private val CALIBRATION_RESOURCE_CCP2 = resourceLocator("example-calibration/curves/calibrations-ccp2.csv")
     /**
      * The location of the market quotes file for CCP1 and CCP2.
      */
-    private val QUOTES_RESOURCE_CCP1 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/quotes/quotes.csv")
-    private val QUOTES_RESOURCE_CCP2 = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-calibration/quotes/quotes-ccp2.csv")
+    private val QUOTES_RESOURCE_CCP1 = resourceLocator("example-calibration/quotes/quotes.csv")
+    private val QUOTES_RESOURCE_CCP2 = resourceLocator("example-calibration/quotes/quotes-ccp2.csv")
     /**
      * The location of the historical fixing file.
      */
-    private val FIXINGS_RESOURCE = ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "example-marketdata/historical-fixings/usd-libor-3m.csv")
+    private val FIXINGS_RESOURCE = resourceLocator("example-marketdata/historical-fixings/usd-libor-3m.csv")
 
     /**
      * The first counterparty.

@@ -33,7 +33,7 @@ data class LoadTestConfiguration(
         val remoteSystemdServiceName: String,
         val seed: Long?,
         val mode: TestMode = TestMode.LOAD_TEST,
-        val executionFrequency: Int = 20,
+        val executionFrequency: Int = 2,
         val generateCount: Int = 10000,
         val parallelism: Int = ForkJoinPool.getCommonPoolParallelism())
 

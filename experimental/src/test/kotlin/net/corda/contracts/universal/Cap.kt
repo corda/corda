@@ -4,7 +4,7 @@ import net.corda.contracts.BusinessCalendar
 import net.corda.contracts.FixOf
 import net.corda.contracts.Frequency
 import net.corda.contracts.Tenor
-import net.corda.core.utilities.DUMMY_NOTARY
+import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.transaction
 import org.junit.Ignore
 import org.junit.Test

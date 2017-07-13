@@ -7,10 +7,10 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.deserialize
-import net.corda.core.utilities.ALICE
-import net.corda.core.utilities.BOB
-import net.corda.core.utilities.CHARLIE
-import net.corda.core.utilities.DUMMY_MAP
+import net.corda.testing.ALICE
+import net.corda.testing.BOB
+import net.corda.testing.CHARLIE
+import net.corda.testing.DUMMY_MAP
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.messaging.send
 import net.corda.node.services.messaging.sendRequest
@@ -186,8 +186,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun MockNode.fetchMap(subscribe: Boolean = false, ifChangedSinceVersion: Int? = null): List<Changed> {
-        val request = FetchMapRequest(subscribe, ifChangedSinceVersion, info.address)
-        val response = services.networkService.sendRequest<FetchMapResponse>(FETCH_TOPIC, request, mapServiceNode.info.address)
+        val request = FetchMapRequest(subscribe, ifChangedSinceVersion, network.myAddress)
+        val response = services.networkService.sendRequest<FetchMapResponse>(FETCH_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response.getOrThrow().nodes?.map { it.toChanged() } ?: emptyList()
     }
@@ -198,8 +198,8 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
     }
 
     private fun MockNode.identityQuery(): NodeInfo? {
-        val request = QueryIdentityRequest(info.legalIdentityAndCert, info.address)
-        val response = services.networkService.sendRequest<QueryIdentityResponse>(QUERY_TOPIC, request, mapServiceNode.info.address)
+        val request = QueryIdentityRequest(info.legalIdentityAndCert, network.myAddress)
+        val response = services.networkService.sendRequest<QueryIdentityResponse>(QUERY_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response.getOrThrow().node
     }
@@ -216,39 +216,39 @@ abstract class AbstractNetworkMapServiceTest<out S : AbstractNetworkMapService> 
         }
         val expires = Instant.now() + NetworkMapService.DEFAULT_EXPIRATION_PERIOD
         val nodeRegistration = NodeRegistration(info, distinctSerial, addOrRemove, expires)
-        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, services.legalIdentityKey), info.address)
-        val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.info.address)
+        val request = RegistrationRequest(nodeRegistration.toWire(services.keyManagementService, services.legalIdentityKey), network.myAddress)
+        val response = services.networkService.sendRequest<RegistrationResponse>(REGISTER_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         return response
     }
 
     private fun MockNode.subscribe(): List<Update> {
-        val request = SubscribeRequest(true, info.address)
+        val request = SubscribeRequest(true, network.myAddress)
         val updates = BlockingArrayQueue<Update>()
         services.networkService.addMessageHandler(PUSH_TOPIC, DEFAULT_SESSION_ID) { message, _ ->
             updates += message.data.deserialize<Update>()
         }
-        val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.info.address)
+        val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         assertThat(response.getOrThrow().confirmed).isTrue()
         return updates
     }
 
     private fun MockNode.unsubscribe() {
-        val request = SubscribeRequest(false, info.address)
-        val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.info.address)
+        val request = SubscribeRequest(false, network.myAddress)
+        val response = services.networkService.sendRequest<SubscribeResponse>(SUBSCRIPTION_TOPIC, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
         assertThat(response.getOrThrow().confirmed).isTrue()
     }
 
     private fun MockNode.ackUpdate(mapVersion: Int) {
         val request = UpdateAcknowledge(mapVersion, services.networkService.myAddress)
-        services.networkService.send(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID, request, mapServiceNode.info.address)
+        services.networkService.send(PUSH_ACK_TOPIC, DEFAULT_SESSION_ID, request, mapServiceNode.network.myAddress)
         mockNet.runNetwork()
     }
 
     private fun addNewNodeToNetworkMap(legalName: X500Name): MockNode {
-        val node = mockNet.createNode(networkMapAddress = mapServiceNode.info.address, legalName = legalName)
+        val node = mockNet.createNode(networkMapAddress = mapServiceNode.network.myAddress, legalName = legalName)
         mockNet.runNetwork()
         lastSerial = System.currentTimeMillis()
         return node

@@ -31,23 +31,11 @@ dependencies {
     compile project(':finance')
 
     // Corda Plugins: dependent flows and services
-    compile project(':samples:bank-of-corda-demo')
-
-    // Javax is required for webapis
-    compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
-
-    // GraphStream: For visualisation (required by ExampleClientRPC app)
-    compile "org.graphstream:gs-core:1.3"
-    compile("org.graphstream:gs-ui:1.3") {
-        exclude group: "bouncycastle"
-    }
+    cordapp project(':samples:bank-of-corda-demo')
 
     testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
-
-    // Cordapp dependencies
-    // Specify your cordapp's dependencies below, including dependent cordapps
 }
 
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {

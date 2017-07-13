@@ -1,20 +1,22 @@
 package net.corda.node.shell
 
 import com.google.common.util.concurrent.SettableFuture
-import net.corda.core.ErrorOr
 import net.corda.core.crypto.commonName
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.messaging.StateMachineUpdate.Added
+import net.corda.core.messaging.StateMachineUpdate.Removed
 import net.corda.core.then
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.Try
 import org.crsh.text.Color
 import org.crsh.text.Decoration
 import org.crsh.text.RenderPrintWriter
 import org.crsh.text.ui.LabelElement
-import org.crsh.text.ui.TableElement
 import org.crsh.text.ui.Overflow
 import org.crsh.text.ui.RowElement
+import org.crsh.text.ui.TableElement
 import rx.Subscriber
 
 class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Subscriber<Any>() {
@@ -25,7 +27,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     init {
         // The future is public and can be completed by something else to indicate we don't wish to follow
         // anymore (e.g. the user pressing Ctrl-C).
-        future then { unsubscribe() }
+        future.then { unsubscribe() }
     }
 
     @Synchronized
@@ -51,10 +53,10 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
         future.setException(e)
     }
 
-    private fun stateColor(smmUpdate: StateMachineUpdate): Color {
-        return when(smmUpdate){
-            is StateMachineUpdate.Added -> Color.blue
-            is StateMachineUpdate.Removed -> smmUpdate.result.match({ Color.green } , { Color.red })
+    private fun stateColor(update: StateMachineUpdate): Color {
+        return when (update) {
+            is Added -> Color.blue
+            is Removed -> if (update.result.isSuccess) Color.green else Color.red
         }
     }
 
@@ -68,7 +70,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
     // TODO Add progress tracker?
     private fun createStateMachinesRow(smmUpdate: StateMachineUpdate) {
         when (smmUpdate) {
-            is StateMachineUpdate.Added -> {
+            is Added -> {
                 table.add(RowElement().add(
                         LabelElement(formatFlowId(smmUpdate.id)),
                         LabelElement(formatFlowName(smmUpdate.stateMachineInfo.flowLogicClassName)),
@@ -77,7 +79,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
                 ).style(stateColor(smmUpdate).fg()))
                 indexMap[smmUpdate.id] = table.rows.size - 1
             }
-            is StateMachineUpdate.Removed -> {
+            is Removed -> {
                 val idx = indexMap[smmUpdate.id]
                 if (idx != null) {
                     val oldRow = table.rows[idx]
@@ -114,7 +116,7 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
         }
     }
 
-    private fun formatFlowResult(flowResult: ErrorOr<*>): String {
+    private fun formatFlowResult(flowResult: Try<*>): String {
         fun successFormat(value: Any?): String {
             return when(value) {
                 is SignedTransaction -> "Tx ID: " + value.id.toString()
@@ -123,6 +125,9 @@ class FlowWatchPrintingSubscriber(private val toStream: RenderPrintWriter) : Sub
                 else -> value.toString()
             }
         }
-        return flowResult.match({ successFormat(it) }, { it.message ?: it.toString() })
+        return when (flowResult) {
+            is Try.Success -> successFormat(flowResult.value)
+            is Try.Failure -> flowResult.exception.message ?: flowResult.exception.toString()
+        }
     }
 }

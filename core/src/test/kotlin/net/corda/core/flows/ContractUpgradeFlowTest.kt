@@ -3,6 +3,8 @@ package net.corda.core.flows
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
+import net.corda.testing.contracts.DummyContract
+import net.corda.testing.contracts.DummyContractV2
 import net.corda.core.crypto.SecureHash
 import net.corda.core.getOrThrow
 import net.corda.core.identity.AbstractParty
@@ -10,7 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.unconsumedStates
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.Emoji
 import net.corda.flows.CashIssueFlow
@@ -64,8 +66,8 @@ class ContractUpgradeFlowTest {
         a.services.startFlow(FinalityFlow(stx, setOf(a.info.legalIdentity, b.info.legalIdentity)))
         mockNet.runNetwork()
 
-        val atx = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(stx.id) }
-        val btx = b.database.transaction { b.services.storageService.validatedTransactions.getTransaction(stx.id) }
+        val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
+        val btx = b.database.transaction { b.services.validatedTransactions.getTransaction(stx.id) }
         requireNotNull(atx)
         requireNotNull(btx)
 
@@ -85,13 +87,13 @@ class ContractUpgradeFlowTest {
 
         fun check(node: MockNetwork.MockNode) {
             val nodeStx = node.database.transaction {
-                node.services.storageService.validatedTransactions.getTransaction(result.ref.txhash)
+                node.services.validatedTransactions.getTransaction(result.ref.txhash)
             }
             requireNotNull(nodeStx)
 
             // Verify inputs.
             val input = node.database.transaction {
-                node.services.storageService.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
+                node.services.validatedTransactions.getTransaction(nodeStx!!.tx.inputs.single().txhash)
             }
             requireNotNull(input)
             assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
@@ -132,8 +134,8 @@ class ContractUpgradeFlowTest {
             mockNet.runNetwork()
             handle.returnValue.getOrThrow()
 
-            val atx = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(stx.id) }
-            val btx = b.database.transaction { b.services.storageService.validatedTransactions.getTransaction(stx.id) }
+            val atx = a.database.transaction { a.services.validatedTransactions.getTransaction(stx.id) }
+            val btx = b.database.transaction { b.services.validatedTransactions.getTransaction(stx.id) }
             requireNotNull(atx)
             requireNotNull(btx)
 
@@ -156,11 +158,11 @@ class ContractUpgradeFlowTest {
             val result = resultFuture.getOrThrow()
             // Check results.
             listOf(a, b).forEach {
-                val signedTX = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(result.ref.txhash) }
+                val signedTX = a.database.transaction { a.services.validatedTransactions.getTransaction(result.ref.txhash) }
                 requireNotNull(signedTX)
 
                 // Verify inputs.
-                val input = a.database.transaction { a.services.storageService.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
+                val input = a.database.transaction { a.services.validatedTransactions.getTransaction(signedTX!!.tx.inputs.single().txhash) }
                 requireNotNull(input)
                 assertTrue(input!!.tx.outputs.single().data is DummyContract.State)
 
@@ -173,17 +175,19 @@ class ContractUpgradeFlowTest {
     @Test
     fun `upgrade Cash to v2`() {
         // Create some cash.
-        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary)).resultFuture
+        val anonymous = false
+        val result = a.services.startFlow(CashIssueFlow(Amount(1000, USD), OpaqueBytes.of(1), a.info.legalIdentity, notary, anonymous)).resultFuture
         mockNet.runNetwork()
-        val stateAndRef = result.getOrThrow().tx.outRef<Cash.State>(0)
-        val baseState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
+        val stx = result.getOrThrow().stx
+        val stateAndRef = stx.tx.outRef<Cash.State>(0)
+        val baseState = a.database.transaction { a.services.vaultService.unconsumedStates<ContractState>().single() }
         assertTrue(baseState.state.data is Cash.State, "Contract state is old version.")
         // Starts contract upgrade flow.
         val upgradeResult = a.services.startFlow(ContractUpgradeFlow(stateAndRef, CashV2::class.java)).resultFuture
         mockNet.runNetwork()
         upgradeResult.getOrThrow()
         // Get contract state from the vault.
-        val firstState = a.database.transaction { a.vault.unconsumedStates<ContractState>().single() }
+        val firstState = a.database.transaction { a.services.vaultService.unconsumedStates<ContractState>().single() }
         assertTrue(firstState.state.data is CashV2.State, "Contract state is upgraded to the new version.")
         assertEquals(Amount(1000000, USD).`issued by`(a.info.legalIdentity.ref(1)), (firstState.state.data as CashV2.State).amount, "Upgraded cash contain the correct amount.")
         assertEquals<Collection<AbstractParty>>(listOf(a.info.legalIdentity), (firstState.state.data as CashV2.State).owners, "Upgraded cash belongs to the right owner.")

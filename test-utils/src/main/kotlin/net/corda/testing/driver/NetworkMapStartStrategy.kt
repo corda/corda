@@ -1,13 +1,13 @@
 package net.corda.testing.driver
 
-import com.google.common.net.HostAndPort
-import net.corda.core.utilities.DUMMY_MAP
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.DUMMY_MAP
 import org.bouncycastle.asn1.x500.X500Name
 
 sealed class NetworkMapStartStrategy {
     internal abstract val startDedicated: Boolean
     internal abstract val legalName: X500Name
-    internal fun serviceConfig(address: HostAndPort) = mapOf(
+    internal fun serviceConfig(address: NetworkHostAndPort) = mapOf(
             "address" to address.toString(),
             "legalName" to legalName.toString()
     )

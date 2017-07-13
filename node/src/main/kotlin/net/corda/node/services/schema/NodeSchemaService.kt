@@ -9,8 +9,8 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.api.SchemaService
-import net.corda.node.services.vault.schemas.jpa.CommonSchemaV1
-import net.corda.node.services.vault.schemas.jpa.VaultSchemaV1
+import net.corda.core.schemas.CommonSchemaV1
+import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.schemas.CashSchemaV1
 
 /**

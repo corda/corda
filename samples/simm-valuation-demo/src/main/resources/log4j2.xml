@@ -11,11 +11,7 @@
 
     <Appenders>
         <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout>
-                <pattern>
-                    [%-5level] %date{HH:mm:ss.SSS} [%t] %c{2}.%method - %msg%n
-                </pattern>>
-            </PatternLayout>
+            <PatternLayout pattern="[%-5level] %date{HH:mm:ss,SSSZ} [%t] %c{2}.%method - %msg%n"/>
         </Console>
 
         <!-- Required for printBasicInfo -->
@@ -29,7 +25,7 @@
                      fileName="${log-path}/${log-name}.log"
                      filePattern="${archive}/${log-name}.%date{yyyy-MM-dd}-%i.log.gz">
 
-            <PatternLayout pattern="[%-5level] %date{ISO8601}{GMT+0} [%t] %c{2} - %msg%n"/>
+            <PatternLayout pattern="[%-5level] %date{ISO8601}{UTC}Z [%t] %c{2} - %msg%n"/>
 
             <Policies>
                 <TimeBasedTriggeringPolicy/>

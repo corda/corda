@@ -3,9 +3,9 @@ package net.corda.flows
 import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.DOLLARS
 import net.corda.core.contracts.`issued by`
-import net.corda.core.identity.Party
 import net.corda.core.getOrThrow
-import net.corda.core.serialization.OpaqueBytes
+import net.corda.core.identity.Party
+import net.corda.core.utilities.OpaqueBytes
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetwork.MockNode
@@ -51,7 +51,7 @@ class CashExitFlowTests {
         val future = bankOfCordaNode.services.startFlow(CashExitFlow(exitAmount,
                 ref)).resultFuture
         mockNet.runNetwork()
-        val exitTx = future.getOrThrow().tx
+        val exitTx = future.getOrThrow().stx.tx
         val expected = (initialBalance - exitAmount).`issued by`(bankOfCorda.ref(ref))
         assertEquals(1, exitTx.inputs.size)
         assertEquals(1, exitTx.outputs.size)

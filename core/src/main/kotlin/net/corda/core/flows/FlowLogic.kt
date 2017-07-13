@@ -4,13 +4,13 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.debug
 import org.slf4j.Logger
-import rx.Observable
 
 /**
  * A sub-class of [FlowLogic<T>] implements a flow using direct, straight line blocking code. Thus you
@@ -180,7 +180,7 @@ abstract class FlowLogic<out T> {
      * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
      */
     @Throws(FlowException::class)
-    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String,String>) = stateMachine.checkFlowPermission(permissionName, extraAuditData)
+    fun checkFlowPermission(permissionName: String, extraAuditData: Map<String, String>) = stateMachine.checkFlowPermission(permissionName, extraAuditData)
 
 
     /**
@@ -189,7 +189,7 @@ abstract class FlowLogic<out T> {
      * @param comment a general human readable summary of the event.
      * @param extraAuditData in the audit log for this permission check these extra key value pairs will be recorded.
      */
-    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String,String>) = stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
+    fun recordAuditEvent(eventType: String, comment: String, extraAuditData: Map<String, String>) = stateMachine.recordAuditEvent(eventType, comment, extraAuditData)
 
     /**
      * Override this to provide a [ProgressTracker]. If one is provided and stepped, the framework will do something
@@ -215,10 +215,10 @@ abstract class FlowLogic<out T> {
      *
      * @return Returns null if this flow has no progress tracker.
      */
-    fun track(): Pair<String, Observable<String>>? {
+    fun track(): DataFeed<String, String>? {
         // TODO this is not threadsafe, needs an atomic get-step-and-subscribe
         return progressTracker?.let {
-            it.currentStep.label to it.changes.map { it.toString() }
+            DataFeed(it.currentStep.label, it.changes.map { it.toString() })
         }
     }
 
@@ -230,7 +230,7 @@ abstract class FlowLogic<out T> {
     @Suspendable
     fun waitForLedgerCommit(hash: SecureHash): SignedTransaction = stateMachine.waitForLedgerCommit(hash, this)
 
-   ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private var _stateMachine: FlowStateMachine<*>? = null
     /**

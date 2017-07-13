@@ -9,18 +9,19 @@ import net.corda.core.*
 import net.corda.core.crypto.CertificateAndKeyPair
 import net.corda.core.crypto.cert
 import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.random63BitValue
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.RPCOps
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.CordaPluginRegistry
-import net.corda.core.node.PhysicalLocation
 import net.corda.core.node.ServiceEntry
-import net.corda.core.node.services.*
-import net.corda.core.utilities.DUMMY_NOTARY_KEY
-import net.corda.core.utilities.getTestPartyAndCertificate
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.node.WorldMapLocation
+import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.ServiceInfo
 import net.corda.core.utilities.loggerFor
-import net.corda.flows.TxKeyFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.InMemoryIdentityService
@@ -29,20 +30,17 @@ import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.InMemoryNetworkMapService
 import net.corda.node.services.network.NetworkMapService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
-import net.corda.node.services.transactions.InMemoryUniquenessProvider
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.node.services.transactions.ValidatingNotaryService
-import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.AffinityExecutor.ServiceAffinityExecutor
-import net.corda.testing.MOCK_VERSION_INFO
-import net.corda.testing.getTestX509Name
-import net.corda.testing.testNodeConfiguration
+import net.corda.testing.*
 import org.apache.activemq.artemis.utils.ReusableLatch
 import org.bouncycastle.asn1.x500.X500Name
 import org.slf4j.Logger
 import java.math.BigInteger
 import java.nio.file.FileSystem
+import java.nio.file.Path
 import java.security.KeyPair
 import java.security.cert.X509Certificate
 import java.util.*
@@ -147,7 +145,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             AbstractNode(config, advertisedServices, TestClock(), mockNet.busyLatch) {
         var counter = entropyRoot
         override val log: Logger = loggerFor<MockNode>()
-        override val platformVersion: Int get() = MOCK_VERSION_INFO.platformVersion
+        override val platformVersion: Int get() = 1
         override val serverThread: AffinityExecutor =
                 if (mockNet.threadPerNode)
                     ServiceAffinityExecutor("Mock node $id thread", 1)
@@ -180,8 +178,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             return InMemoryIdentityService((mockNet.identities + info.legalIdentityAndCert).toSet(),
                     trustRoot = trustRoot, caCertificates = *caCertificates)
         }
-
-        override fun makeVaultService(dataSourceProperties: Properties): VaultService = NodeVaultService(services, dataSourceProperties)
 
         override fun makeKeyManagementService(identityService: IdentityService): KeyManagementService {
             return E2ETestKeyManagementService(identityService, partyKeys + (overrideServices?.values ?: emptySet()))
@@ -222,11 +218,11 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         override fun noNetworkMapConfigured(): ListenableFuture<Unit> = Futures.immediateFuture(Unit)
 
         // There is no need to slow down the unit tests by initialising CityDatabase
-        override fun findMyLocation(): PhysicalLocation? = null
-
-        override fun makeUniquenessProvider(type: ServiceType): UniquenessProvider = InMemoryUniquenessProvider()
+        override fun findMyLocation(): WorldMapLocation? = null
 
         override fun makeTransactionVerifierService() = InMemoryTransactionVerifierService(1)
+
+        override fun myAddresses() = emptyList<NetworkHostAndPort>()
 
         override fun start(): MockNode {
             super.start()
@@ -242,7 +238,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
 
         // This does not indirect through the NodeInfo object so it can be called before the node is started.
         // It is used from the network visualiser tool.
-        @Suppress("unused") val place: PhysicalLocation get() = findMyLocation()!!
+        @Suppress("unused") val place: WorldMapLocation get() = findMyLocation()!!
 
         fun pumpReceive(block: Boolean = false): InMemoryMessagingNetwork.MessageTransfer? {
             return (network as InMemoryMessagingNetwork.InMemoryMessaging).pumpReceive(block)
@@ -302,8 +298,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         val node = nodeFactory.create(config, this, networkMapAddress, advertisedServices.toSet(), id, overrideServices, entropyRoot)
         if (start) {
             node.setup().start()
-            // Register flows that are normally found via plugins
-            node.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
             if (threadPerNode && networkMapAddress != null)
                 node.networkMapRegistrationFuture.getOrThrow()   // Block and wait for the node to register in the net map.
         }
@@ -311,7 +305,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         return node
     }
 
-    fun baseDirectory(nodeId: Int) = filesystem.getPath("/nodes/$nodeId")
+    fun baseDirectory(nodeId: Int): Path = filesystem.getPath("/nodes/$nodeId")
 
     /**
      * Asks every node in order to process any queued up inbound messages. This may in turn result in nodes
@@ -351,7 +345,7 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
             null
         return Pair(
                 createNode(null, -1, nodeFactory, true, firstNodeName, notaryOverride, BigInteger.valueOf(random63BitValue()), ServiceInfo(NetworkMapService.type), notaryServiceInfo),
-                createNode(nodes[0].info.address, -1, nodeFactory, true, secondNodeName)
+                createNode(nodes[0].network.myAddress, -1, nodeFactory, true, secondNodeName)
         )
     }
 
@@ -374,11 +368,12 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
         else
             null
         val mapNode = createNode(null, nodeFactory = nodeFactory, advertisedServices = ServiceInfo(NetworkMapService.type))
-        val notaryNode = createNode(mapNode.info.address, nodeFactory = nodeFactory, overrideServices = notaryOverride,
+        val mapAddress = mapNode.network.myAddress
+        val notaryNode = createNode(mapAddress, nodeFactory = nodeFactory, overrideServices = notaryOverride,
                 advertisedServices = notaryServiceInfo)
         val nodes = ArrayList<MockNode>()
         repeat(numPartyNodes) {
-            nodes += createPartyNode(mapNode.info.address)
+            nodes += createPartyNode(mapAddress)
         }
         nodes.forEach { itNode ->
             nodes.map { it.info.legalIdentityAndCert }.forEach(itNode.services.identityService::registerIdentity)
@@ -418,7 +413,6 @@ class MockNetwork(private val networkSendManuallyPumped: Boolean = false,
     }
 
     fun stopNodes() {
-        require(nodes.isNotEmpty())
         nodes.forEach { if (it.started) it.stop() }
     }
 

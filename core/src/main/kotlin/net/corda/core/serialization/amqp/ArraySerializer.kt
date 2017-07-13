@@ -2,8 +2,6 @@ package net.corda.core.serialization.amqp
 
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
-import java.lang.reflect.GenericArrayType
-import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 /**
@@ -12,13 +10,9 @@ import java.lang.reflect.Type
 class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
     override val typeDescriptor = "$DESCRIPTOR_DOMAIN:${fingerprintForType(type, factory)}"
 
-    internal val elementType: Type = makeElementType()
+    internal val elementType: Type = type.componentType()
 
     private val typeNotation: TypeNotation = RestrictedType(type.typeName, null, emptyList(), "list", Descriptor(typeDescriptor, null), emptyList())
-
-    private fun makeElementType(): Type {
-        return (type as? Class<*>)?.componentType ?: (type as GenericArrayType).genericComponentType
-    }
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -44,13 +38,7 @@ class ArraySerializer(override val type: Type, factory: SerializerFactory) : AMQ
     }
 
     private fun <T> List<T>.toArrayOfType(type: Type): Any {
-        val elementType: Class<*> = if (type is Class<*>) {
-            type
-        } else if (type is ParameterizedType) {
-            type.rawType as Class<*>
-        } else {
-            throw NotSerializableException("Unexpected array element type $type")
-        }
+        val elementType = type.asClass() ?: throw NotSerializableException("Unexpected array element type $type")
         val list = this
         return java.lang.reflect.Array.newInstance(elementType, this.size).apply {
             val array = this

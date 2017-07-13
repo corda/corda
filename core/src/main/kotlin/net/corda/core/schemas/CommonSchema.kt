@@ -1,11 +1,11 @@
-package net.corda.node.services.vault.schemas.jpa
+package net.corda.core.schemas
 
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.FungibleAsset
+import net.corda.core.contracts.OwnableState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.toBase58String
 import net.corda.core.identity.AbstractParty
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.PersistentState
-import net.corda.core.schemas.StatePersistable
 import java.util.*
 import javax.persistence.*
 
@@ -90,7 +90,7 @@ object CommonSchemaV1 : MappedSchema(schemaFamily = CommonSchema.javaClass, vers
             @Column(name = "party_key", length = 65535) // TODO What is the upper limit on size of CompositeKey?)
             var key: String
     ) {
-        constructor(party: net.corda.core.identity.AbstractParty)
+        constructor(party: AbstractParty)
                 : this(0, party.nameOrNull()?.toString() ?: party.toString(), party.owningKey.toBase58String())
     }
 }

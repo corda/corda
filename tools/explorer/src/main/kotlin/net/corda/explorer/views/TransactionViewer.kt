@@ -24,7 +24,6 @@ import net.corda.contracts.asset.Cash
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.node.NodeInfo
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter

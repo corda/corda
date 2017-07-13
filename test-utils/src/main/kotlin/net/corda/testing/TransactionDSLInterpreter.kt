@@ -1,11 +1,11 @@
 package net.corda.testing
 
 import net.corda.core.contracts.*
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.seconds
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.DUMMY_NOTARY
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -51,7 +51,7 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
     fun _command(signers: List<PublicKey>, commandData: CommandData)
 
     /**
-     * Adds a time-window to the transaction.
+     * Sets the time-window of the transaction.
      * @param data the [TimeWindow] (validation window).
      */
     fun timeWindow(data: TimeWindow)
@@ -115,7 +115,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(val interpreter: T) : Tr
     fun command(signer: PublicKey, commandData: CommandData) = _command(listOf(signer), commandData)
 
     /**
-     * Adds a [TimeWindow] command to the transaction.
+     * Sets the [TimeWindow] of the transaction.
      * @param time The [Instant] of the [TimeWindow].
      * @param tolerance The tolerance of the [TimeWindow].
      */

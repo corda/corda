@@ -2,8 +2,7 @@ package net.corda.node.services.transactions
 
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.UniquenessException
-import net.corda.core.utilities.LogHelper
-import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.testing.LogHelper
 import net.corda.node.utilities.configureDatabase
 import net.corda.node.utilities.transaction
 import net.corda.testing.MEGA_CORP

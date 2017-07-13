@@ -1,14 +1,15 @@
 package net.corda.nodeapi
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.toBase58String
 import net.corda.core.messaging.MessageRecipientGroup
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.messaging.SingleMessageRecipient
+import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.ServiceType
 import net.corda.core.read
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.config.SSLConfiguration
 import java.security.KeyStore
 import java.security.PublicKey
@@ -34,18 +35,6 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         const val P2P_QUEUE = "p2p.inbound"
         const val NOTIFICATIONS_ADDRESS = "${INTERNAL_PREFIX}activemq.notifications"
         const val NETWORK_MAP_QUEUE = "${INTERNAL_PREFIX}networkmap"
-
-        /**
-         * Assuming the passed in target address is actually an ArtemisAddress will extract the host and port of the node. This should
-         * only be used in unit tests and the internals of the messaging services to keep addressing opaque for the future.
-         * N.B. Marked as JvmStatic to allow use in the inherited classes.
-         */
-        @JvmStatic
-        @VisibleForTesting
-        fun toHostAndPort(target: MessageRecipients): HostAndPort {
-            val addr = target as? ArtemisMessagingComponent.ArtemisPeerAddress ?: throw IllegalArgumentException("Not an Artemis address")
-            return addr.hostAndPort
-        }
     }
 
     interface ArtemisAddress : MessageRecipients {
@@ -53,11 +42,11 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
     }
 
     interface ArtemisPeerAddress : ArtemisAddress, SingleMessageRecipient {
-        val hostAndPort: HostAndPort
+        val hostAndPort: NetworkHostAndPort
     }
 
     @CordaSerializable
-    data class NetworkMapAddress(override val hostAndPort: HostAndPort) : SingleMessageRecipient, ArtemisPeerAddress {
+    data class NetworkMapAddress(override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         override val queueName: String get() = NETWORK_MAP_QUEUE
     }
 
@@ -73,13 +62,13 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
      * @param hostAndPort The address of the node.
      */
     @CordaSerializable
-    data class NodeAddress(override val queueName: String, override val hostAndPort: HostAndPort) : ArtemisPeerAddress {
+    data class NodeAddress(override val queueName: String, override val hostAndPort: NetworkHostAndPort) : ArtemisPeerAddress {
         companion object {
-            fun asPeer(peerIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asPeer(peerIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
                 return NodeAddress("$PEERS_PREFIX${peerIdentity.toBase58String()}", hostAndPort)
             }
 
-            fun asService(serviceIdentity: PublicKey, hostAndPort: HostAndPort): NodeAddress {
+            fun asService(serviceIdentity: PublicKey, hostAndPort: NetworkHostAndPort): NodeAddress {
                 return NodeAddress("$SERVICES_PREFIX${serviceIdentity.toBase58String()}", hostAndPort)
             }
         }
@@ -114,6 +103,14 @@ abstract class ArtemisMessagingComponent : SingletonSerializeAsToken() {
         }
         config.trustStoreFile.read {
             KeyStore.getInstance("JKS").load(it, config.trustStorePassword.toCharArray())
+        }
+    }
+
+    fun getArtemisPeerAddress(nodeInfo: NodeInfo): ArtemisPeerAddress {
+        return if (nodeInfo.advertisedServices.any { it.info.type == ServiceType.networkMap }) {
+            NetworkMapAddress(nodeInfo.addresses.first())
+        } else {
+            NodeAddress.asPeer(nodeInfo.legalIdentity.owningKey, nodeInfo.addresses.first())
         }
     }
 }

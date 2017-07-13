@@ -35,7 +35,9 @@ notary directly, so there's no need to pass in the test ``User``.
 The ``startNode`` function returns a future that completes once the
 node is fully started. This allows starting of the nodes to be
 parallel. We wait on these futures as we need the information
-returned; their respective ``NodeHandles`` s.
+returned; their respective ``NodeHandles`` s. After getting the handles we
+wait for both parties to register with the network map to ensure we don't
+have race conditions with network map registration.
 
 .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/IntegrationTestingTutorial.kt
     :language: kotlin

@@ -7,17 +7,17 @@ import javafx.collections.FXCollections
 import net.corda.client.jfx.utils.fold
 import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.recordAsAssociation
-import net.corda.core.ErrorOr
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.StateMachineUpdate
+import net.corda.core.utilities.Try
 import org.fxmisc.easybind.EasyBind
 
 data class ProgressStatus(val status: String?)
 
 sealed class StateMachineStatus {
     data class Added(val id: StateMachineRunId, val stateMachineName: String, val flowInitiator: FlowInitiator) : StateMachineStatus()
-    data class Removed(val id: StateMachineRunId, val result: ErrorOr<*>) : StateMachineStatus()
+    data class Removed(val id: StateMachineRunId, val result: Try<*>) : StateMachineStatus()
 }
 
 data class StateMachineData(
@@ -33,11 +33,11 @@ data class Counter(
         var progress: SimpleIntegerProperty = SimpleIntegerProperty(0)
 ) {
     fun addSmm() { progress.value += 1 }
-    fun removeSmm(result: ErrorOr<*>) {
+    fun removeSmm(result: Try<*>) {
         progress.value -= 1
-        when (result.error) {
-            null -> success.value += 1
-            else -> errored.value += 1
+        when (result) {
+            is Try.Success -> success.value += 1
+            is Try.Failure -> errored.value += 1
         }
     }
 }

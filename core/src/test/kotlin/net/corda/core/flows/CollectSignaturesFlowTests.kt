@@ -2,9 +2,9 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.DummyContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.requireThat
+import net.corda.testing.contracts.DummyContract
 import net.corda.core.getOrThrow
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
@@ -14,6 +14,7 @@ import net.corda.flows.FinalityFlow
 import net.corda.flows.SignTransactionFlow
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockServices
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,6 +27,7 @@ class CollectSignaturesFlowTests {
     lateinit var b: MockNetwork.MockNode
     lateinit var c: MockNetwork.MockNode
     lateinit var notary: Party
+    val services = MockServices()
 
     @Before
     fun setup() {
@@ -162,7 +164,8 @@ class CollectSignaturesFlowTests {
     @Test
     fun `fails when not signed by initiator`() {
         val onePartyDummyContract = DummyContract.generateInitial(1337, notary, a.info.legalIdentity.ref(1))
-        val ptx = onePartyDummyContract.signWith(MINI_CORP_KEY).toSignedTransaction(false)
+        val miniCorpServices = MockServices(MINI_CORP_KEY)
+        val ptx = miniCorpServices.signInitialTransaction(onePartyDummyContract)
         val flow = a.services.startFlow(CollectSignaturesFlow(ptx))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException>("The Initiator of CollectSignaturesFlow must have signed the transaction.") {

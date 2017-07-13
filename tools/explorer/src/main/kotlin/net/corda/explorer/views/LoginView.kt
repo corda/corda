@@ -1,10 +1,10 @@
 package net.corda.explorer.views
 
-import com.google.common.net.HostAndPort
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.scene.control.*
 import net.corda.client.jfx.model.NodeMonitorModel
 import net.corda.client.jfx.model.objectProperty
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.explorer.model.SettingsModel
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.*
@@ -27,8 +27,8 @@ class LoginView : View() {
     private val port by objectProperty(SettingsModel::portProperty)
     private val fullscreen by objectProperty(SettingsModel::fullscreenProperty)
 
-    fun login(host: String?, port: Int, username: String, password: String) {
-        getModel<NodeMonitorModel>().register(HostAndPort.fromParts(host, port), username, password)
+    fun login(host: String, port: Int, username: String, password: String) {
+        getModel<NodeMonitorModel>().register(NetworkHostAndPort(host, port), username, password)
     }
 
     fun login() {

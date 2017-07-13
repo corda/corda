@@ -2,7 +2,11 @@ package net.corda.verifier
 
 import net.corda.client.mock.*
 import net.corda.core.contracts.*
-import net.corda.core.crypto.*
+import net.corda.testing.contracts.DummyContract
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.X509Utilities
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.crypto.sha256
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -54,7 +58,7 @@ data class GeneratedLedger(
      * Invariants: The input list must be empty.
      */
     val issuanceGenerator: Generator<Pair<WireTransaction, GeneratedLedger>> by lazy {
-        val outputsGen = outputsGenerator.bind { outputs ->
+        val outputsGen = outputsGenerator.flatMap { outputs ->
             Generator.sequence(
                     outputs.map { output ->
                         pickOneOrMaybeNew(identities, partyGenerator).map { notary ->
@@ -136,7 +140,7 @@ data class GeneratedLedger(
     fun notaryChangeTransactionGenerator(inputNotary: Party, inputsToChooseFrom: List<StateAndRef<ContractState>>): Generator<Pair<WireTransaction, GeneratedLedger>> {
         val newNotaryGen = pickOneOrMaybeNew(identities - inputNotary, partyGenerator)
         val inputsGen = Generator.sampleBernoulli(inputsToChooseFrom)
-        return inputsGen.bind { inputs ->
+        return inputsGen.flatMap { inputs ->
             val signers: List<PublicKey> = (inputs.flatMap { it.state.data.participants } + inputNotary).map { it.owningKey }
             val outputsGen = Generator.sequence(inputs.map { input -> newNotaryGen.map { TransactionState(input.state.data, it, null) } })
             outputsGen.combine(attachmentsGenerator) { outputs, txAttachments ->
@@ -173,7 +177,7 @@ data class GeneratedLedger(
         if (availableOutputs.isEmpty()) {
             issuanceGenerator
         } else {
-            Generator.pickOne(availableOutputs.keys.toList()).bind { inputNotary ->
+            Generator.pickOne(availableOutputs.keys.toList()).flatMap { inputNotary ->
                 val inputsToChooseFrom = availableOutputs[inputNotary]!!
                 Generator.frequency(
                         0.3 to issuanceGenerator,
@@ -227,7 +231,7 @@ fun <A> pickOneOrMaybeNew(from: Collection<A>, generator: Generator<A>): Generat
     if (from.isEmpty()) {
         return generator
     } else {
-        return generator.bind {
+        return generator.flatMap {
             Generator.pickOne(from + it)
         }
     }

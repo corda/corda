@@ -1,7 +1,7 @@
 package net.corda.core.flows
 
-import net.corda.core.utilities.CordaException
-import net.corda.core.utilities.CordaRuntimeException
+import net.corda.core.CordaException
+import net.corda.core.CordaRuntimeException
 
 // DOCSTART 1
 /**

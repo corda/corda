@@ -1,8 +1,8 @@
 package net.corda.node.services.config
 
-import com.google.common.net.HostAndPort
 import net.corda.core.crypto.commonName
-import net.corda.core.utilities.ALICE
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.testing.ALICE
 import net.corda.nodeapi.User
 import net.corda.testing.node.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -25,8 +25,8 @@ class FullNodeConfigurationTest {
                 rpcUsers = emptyList(),
                 verifierType = VerifierType.InMemory,
                 useHTTPS = false,
-                p2pAddress = HostAndPort.fromParts("localhost", 0),
-                rpcAddress = HostAndPort.fromParts("localhost", 1),
+                p2pAddress = NetworkHostAndPort("localhost", 0),
+                rpcAddress = NetworkHostAndPort("localhost", 1),
                 messagingServerAddress = null,
                 extraAdvertisedServiceIds = emptyList(),
                 bftReplicaId = null,
