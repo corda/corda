@@ -1,11 +1,9 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.toBase58String
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.SignedTransaction
@@ -62,7 +60,7 @@ import java.security.PublicKey
 // TODO: AbstractStateReplacementFlow needs updating to use this flow.
 // TODO: Update this flow to handle randomly generated keys when that works is complete.
 class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
-                            override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
+                            override val progressTracker: ProgressTracker = CollectSignaturesFlow.tracker()): FlowLogic<SignedTransaction>() {
 
     companion object {
         object COLLECTING : ProgressTracker.Step("Collecting signatures from counter-parties.")
@@ -175,7 +173,7 @@ class CollectSignaturesFlow(val partiallySignedTx: SignedTransaction,
  * @param otherParty The counter-party which is providing you a transaction to sign.
  */
 abstract class SignTransactionFlow(val otherParty: Party,
-                                   override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
+                                   override val progressTracker: ProgressTracker = SignTransactionFlow.tracker()) : FlowLogic<SignedTransaction>() {
 
     companion object {
         object RECEIVING : ProgressTracker.Step("Receiving transaction proposal for signing.")

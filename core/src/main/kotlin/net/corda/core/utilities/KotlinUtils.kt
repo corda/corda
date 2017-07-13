@@ -19,3 +19,6 @@ inline fun Logger.trace(msg: () -> String) {
 inline fun Logger.debug(msg: () -> String) {
     if (isDebugEnabled) debug(msg())
 }
+
+/** @see NonEmptySet.copyOf */
+fun <T> Collection<T>.toNonEmptySet(): NonEmptySet<T> = NonEmptySet.copyOf(this)

@@ -8,6 +8,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionForContract
 import net.corda.core.contracts.TransactionType
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
@@ -16,8 +17,9 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.sizedInputStreamAndHash
 import net.corda.core.transactions.SignedTransaction
-import net.corda.core.utilities.*
-import net.corda.flows.FinalityFlow
+import net.corda.core.utilities.Emoji
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.ProgressTracker
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
 import net.corda.testing.driver.poll

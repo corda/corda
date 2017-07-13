@@ -4,7 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.WireTransaction
-import net.corda.flows.ContractUpgradeFlow
+import net.corda.core.flows.ContractUpgradeFlow
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.
 val DUMMY_V2_PROGRAM_ID = DummyContractV2()

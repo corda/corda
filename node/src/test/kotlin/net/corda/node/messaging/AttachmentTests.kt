@@ -5,8 +5,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.services.ServiceInfo
-import net.corda.flows.FetchAttachmentsFlow
-import net.corda.flows.FetchDataFlow
+import net.corda.core.flows.FetchAttachmentsFlow
+import net.corda.core.flows.FetchDataFlow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.database.RequeryConfiguration
 import net.corda.node.services.network.NetworkMapService

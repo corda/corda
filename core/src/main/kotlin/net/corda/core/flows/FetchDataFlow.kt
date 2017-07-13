@@ -1,16 +1,14 @@
-package net.corda.flows
+package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.NamedByHash
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
+import net.corda.core.flows.FetchDataFlow.HashNotFound
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
-import net.corda.flows.FetchDataFlow.DownloadedVsRequestedDataMismatch
-import net.corda.flows.FetchDataFlow.HashNotFound
 import java.util.*
 
 /**

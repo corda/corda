@@ -2,11 +2,11 @@ package net.corda.services.messaging
 
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.crypto.X509Utilities
 import net.corda.core.crypto.cert
-import net.corda.core.node.NodeInfo
 import net.corda.core.crypto.random63BitValue
+import net.corda.core.node.NodeInfo
 import net.corda.core.seconds
+import net.corda.core.utilities.NonEmptySet
 import net.corda.node.internal.NetworkMapInfo
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.sendRequest
@@ -29,7 +29,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     @Test
     fun `incorrect legal name for the network map service config`() {
-        val incorrectNetworkMapName = X509Utilities.getDevX509Name("NetworkMap-${random63BitValue()}")
+        val incorrectNetworkMapName = getTestX509Name("NetworkMap-${random63BitValue()}")
         val node = startNode(BOB.name, configOverrides = mapOf(
                 "networkMapService" to mapOf(
                         "address" to networkMapNode.configuration.p2pAddress.toString(),
@@ -66,7 +66,7 @@ class P2PSecurityTest : NodeBasedTest() {
 
     private fun SimpleNode.registerWithNetworkMap(registrationName: X500Name): CordaFuture<NetworkMapService.RegistrationResponse> {
         val legalIdentity = getTestPartyAndCertificate(registrationName, identity.public)
-        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, setOf(legalIdentity), 1)
+        val nodeInfo = NodeInfo(listOf(MOCK_HOST_AND_PORT), legalIdentity, NonEmptySet.of(legalIdentity), 1)
         val registration = NodeRegistration(nodeInfo, System.currentTimeMillis(), AddOrRemove.ADD, Instant.MAX)
         val request = RegistrationRequest(registration.toWire(keyService, identity.public), network.myAddress)
         return network.sendRequest<NetworkMapService.RegistrationResponse>(NetworkMapService.REGISTER_TOPIC, request, networkMapNode.network.myAddress)

@@ -7,9 +7,9 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.core.identity.Party
 import net.corda.core.concurrent.transpose
 import net.corda.testing.DUMMY_BANK_A
-import net.corda.flows.NotaryError
-import net.corda.flows.NotaryException
-import net.corda.flows.NotaryFlow
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
 import net.corda.node.internal.AbstractNode
 import net.corda.node.utilities.transaction
 import net.corda.testing.node.NodeBasedTest

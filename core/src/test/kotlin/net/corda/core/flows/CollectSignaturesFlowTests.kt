@@ -8,9 +8,6 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.CollectSignaturesFlow
-import net.corda.flows.FinalityFlow
-import net.corda.flows.SignTransactionFlow
 import net.corda.testing.MINI_CORP_KEY
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices

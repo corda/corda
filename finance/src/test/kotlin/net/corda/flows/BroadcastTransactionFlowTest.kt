@@ -7,9 +7,9 @@ import com.pholser.junit.quickcheck.generator.Generator
 import com.pholser.junit.quickcheck.random.SourceOfRandomness
 import com.pholser.junit.quickcheck.runner.JUnitQuickcheck
 import net.corda.contracts.testing.SignedTransactionGenerator
+import net.corda.core.flows.BroadcastTransactionFlow.NotifyTxRequest
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
-import net.corda.flows.BroadcastTransactionFlow.NotifyTxRequest
 import org.junit.runner.RunWith
 import kotlin.test.assertEquals
 

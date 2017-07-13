@@ -4,6 +4,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.NonEmptySet
 import java.security.PublicKey
 import java.util.*
 
@@ -107,7 +108,7 @@ sealed class TransactionVerificationException(val txId: SecureHash, cause: Throw
         override fun toString(): String = "Signers missing: ${missing.joinToString()}"
     }
 
-    class DuplicateInputStates(txId: SecureHash, val duplicates: Set<StateRef>) : TransactionVerificationException(txId, null) {
+    class DuplicateInputStates(txId: SecureHash, val duplicates: NonEmptySet<StateRef>) : TransactionVerificationException(txId, null) {
         override fun toString(): String = "Duplicate inputs: ${duplicates.joinToString()}"
     }
 

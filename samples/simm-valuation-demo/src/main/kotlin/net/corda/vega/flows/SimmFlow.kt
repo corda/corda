@@ -19,8 +19,8 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
-import net.corda.flows.AbstractStateReplacementFlow.Proposal
-import net.corda.flows.StateReplacementException
+import net.corda.core.flows.AbstractStateReplacementFlow.Proposal
+import net.corda.core.flows.StateReplacementException
 import net.corda.flows.TwoPartyDealFlow
 import net.corda.vega.analytics.*
 import net.corda.vega.contracts.*

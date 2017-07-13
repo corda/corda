@@ -4,6 +4,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.toNonEmptySet
 import java.security.PublicKey
 
 /** Defines transaction build & validation logic for a specific transaction type */
@@ -20,7 +21,7 @@ sealed class TransactionType {
     fun verify(tx: LedgerTransaction) {
         require(tx.notary != null || tx.timeWindow == null) { "Transactions with time-windows must be notarised" }
         val duplicates = detectDuplicateInputs(tx)
-        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates)
+        if (duplicates.isNotEmpty()) throw TransactionVerificationException.DuplicateInputStates(tx.id, duplicates.toNonEmptySet())
         val missing = verifySigners(tx)
         if (missing.isNotEmpty()) throw TransactionVerificationException.SignersMissing(tx.id, missing.toList())
         verifyTransaction(tx)
@@ -51,7 +52,7 @@ sealed class TransactionType {
     }
 
     /**
-     * Return the list of public keys that that require signatures for the transaction type.
+     * Return the set of public keys that require signatures for the transaction type.
      * Note: the notary key is checked separately for all transactions and need not be included.
      */
     abstract fun getRequiredSigners(tx: LedgerTransaction): Set<PublicKey>
