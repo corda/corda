@@ -6,6 +6,8 @@ import net.corda.core.crypto.X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
 import net.corda.core.crypto.X509Utilities.createSelfSignedCACertificate
 import net.corda.core.div
 import net.corda.core.toTypedArray
+import net.corda.node.services.config.createKeystoreForCordaNode
+import net.corda.node.utilities.*
 import net.corda.testing.MEGA_CORP
 import net.corda.testing.getTestX509Name
 import org.bouncycastle.asn1.x500.X500Name
@@ -89,13 +91,13 @@ class X509UtilitiesTest {
         assertTrue(Arrays.equals(selfSignCert.subjectPublicKeyInfo.encoded, keyPair.public.encoded))
 
         // Save the EdDSA private key with self sign cert in the keystore.
-        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
+        val keyStore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", keyPair.private, "password".toCharArray(),
                 Stream.of(selfSignCert).map { it.cert }.toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
-        val keyStore2 = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
+        val keyStore2 = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         val privateKey = keyStore2.getKey("Key", "password".toCharArray())
         val pubKey = keyStore2.getCertificate("Key").publicKey
 
@@ -114,13 +116,13 @@ class X509UtilitiesTest {
         val edDSACert = X509Utilities.createCertificate(CertificateType.TLS, ecDSACert, ecDSAKey, X500Name("CN=TestEdDSA"), edDSAKeypair.public)
 
         // Save the EdDSA private key with cert chains.
-        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
+        val keyStore = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         keyStore.setKeyEntry("Key", edDSAKeypair.private, "password".toCharArray(),
                 Stream.of(ecDSACert, edDSACert).map { it.cert }.toTypedArray())
         keyStore.save(tmpKeyStore, "keystorepass")
 
         // Load the keystore from file and make sure keys are intact.
-        val keyStore2 = KeyStoreUtilities.loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
+        val keyStore2 = loadOrCreateKeyStore(tmpKeyStore, "keystorepass")
         val privateKey = keyStore2.getKey("Key", "password".toCharArray())
         val certs = keyStore2.getCertificateChain("Key")
 
@@ -142,8 +144,8 @@ class X509UtilitiesTest {
         createCAKeyStoreAndTrustStore(tmpKeyStore, "keystorepass", "keypass", tmpTrustStore, "trustpass")
 
         // Load back generated root CA Cert and private key from keystore and check against copy in truststore
-        val keyStore = KeyStoreUtilities.loadKeyStore(tmpKeyStore, "keystorepass")
-        val trustStore = KeyStoreUtilities.loadKeyStore(tmpTrustStore, "trustpass")
+        val keyStore = loadKeyStore(tmpKeyStore, "keystorepass")
+        val trustStore = loadKeyStore(tmpTrustStore, "trustpass")
         val rootCaCert = keyStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as X509Certificate
         val rootCaPrivateKey = keyStore.getKey(X509Utilities.CORDA_ROOT_CA, "keypass".toCharArray()) as PrivateKey
         val rootCaFromTrustStore = trustStore.getCertificate(X509Utilities.CORDA_ROOT_CA) as X509Certificate
@@ -182,14 +184,14 @@ class X509UtilitiesTest {
                 "trustpass")
 
         // Load signing intermediate CA cert
-        val caKeyStore = KeyStoreUtilities.loadKeyStore(tmpCAKeyStore, "cakeystorepass")
+        val caKeyStore = loadKeyStore(tmpCAKeyStore, "cakeystorepass")
         val caCertAndKey = caKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_INTERMEDIATE_CA, "cakeypass")
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        X509Utilities.createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass", MEGA_CORP.name)
+        createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverkeypass", caKeyStore, "cakeypass", MEGA_CORP.name)
 
         // Load back server certificate
-        val serverKeyStore = KeyStoreUtilities.loadKeyStore(tmpServerKeyStore, "serverstorepass")
+        val serverKeyStore = loadKeyStore(tmpServerKeyStore, "serverstorepass")
         val serverCertAndKey = serverKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_CA, "serverkeypass")
 
         serverCertAndKey.certificate.isValidOn(Date())
@@ -198,7 +200,7 @@ class X509UtilitiesTest {
         assertTrue { serverCertAndKey.certificate.subject.toString().contains(MEGA_CORP.name.commonName) }
 
         // Load back server certificate
-        val sslKeyStore = KeyStoreUtilities.loadKeyStore(tmpSSLKeyStore, "serverstorepass")
+        val sslKeyStore = loadKeyStore(tmpSSLKeyStore, "serverstorepass")
         val sslCertAndKey = sslKeyStore.getCertificateAndKeyPair(X509Utilities.CORDA_CLIENT_TLS, "serverkeypass")
 
         sslCertAndKey.certificate.isValidOn(Date())
@@ -227,9 +229,9 @@ class X509UtilitiesTest {
                 "trustpass")
 
         // Generate server cert and private key and populate another keystore suitable for SSL
-        X509Utilities.createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverstorepass", caKeyStore, "cakeypass", MEGA_CORP.name)
-        val keyStore = KeyStoreUtilities.loadKeyStore(tmpSSLKeyStore, "serverstorepass")
-        val trustStore = KeyStoreUtilities.loadKeyStore(tmpTrustStore, "trustpass")
+        createKeystoreForCordaNode(tmpSSLKeyStore, tmpServerKeyStore, "serverstorepass", "serverstorepass", caKeyStore, "cakeypass", MEGA_CORP.name)
+        val keyStore = loadKeyStore(tmpSSLKeyStore, "serverstorepass")
+        val trustStore = loadKeyStore(tmpTrustStore, "trustpass")
 
         val context = SSLContext.getInstance("TLS")
         val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
@@ -348,7 +350,7 @@ class X509UtilitiesTest {
         val intermediateCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, rootCACert, rootCAKey, X509Utilities.getX509Name("Corda Node Intermediate CA","London","demo@r3.com",null), intermediateCAKeyPair.public)
 
         val keyPass = keyPassword.toCharArray()
-        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(keyStoreFilePath, storePassword)
+        val keyStore = loadOrCreateKeyStore(keyStoreFilePath, storePassword)
 
         keyStore.addOrReplaceKey(X509Utilities.CORDA_ROOT_CA, rootCAKey.private, keyPass, arrayOf<Certificate>(rootCACert.cert))
 
@@ -359,7 +361,7 @@ class X509UtilitiesTest {
 
         keyStore.save(keyStoreFilePath, storePassword)
 
-        val trustStore = KeyStoreUtilities.loadOrCreateKeyStore(trustStoreFilePath, trustStorePassword)
+        val trustStore = loadOrCreateKeyStore(trustStoreFilePath, trustStorePassword)
 
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_INTERMEDIATE_CA, intermediateCACert.cert)
@@ -373,7 +375,7 @@ class X509UtilitiesTest {
     fun `Get correct private key type from Keystore`() {
         val keyPair = generateKeyPair(Crypto.ECDSA_SECP256R1_SHA256)
         val selfSignCert = createSelfSignedCACertificate(X500Name("CN=Test"), keyPair)
-        val keyStore = KeyStoreUtilities.loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
+        val keyStore = loadOrCreateKeyStore(tempFile("testKeystore.jks"), "keystorepassword")
         keyStore.setKeyEntry("Key", keyPair.private, "keypassword".toCharArray(), arrayOf(selfSignCert.cert))
 
         val keyFromKeystore = keyStore.getKey("Key", "keypassword".toCharArray())
@@ -382,5 +384,4 @@ class X509UtilitiesTest {
         assertTrue(keyFromKeystore is java.security.interfaces.ECPrivateKey) // by default JKS returns SUN EC key
         assertTrue(keyFromKeystoreCasted is org.bouncycastle.jce.interfaces.ECPrivateKey)
     }
-
 }

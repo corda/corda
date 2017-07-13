@@ -1,6 +1,9 @@
 package net.corda.core.crypto
 
 import net.corda.core.toTypedArray
+import net.corda.node.utilities.KEYSTORE_TYPE
+import net.corda.node.utilities.addOrReplaceCertificate
+import net.corda.node.utilities.addOrReplaceKey
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
@@ -26,14 +29,14 @@ class X509NameConstraintsTest {
         val clientCACert = X509Utilities.createCertificate(CertificateType.INTERMEDIATE_CA, intermediateCACert, intermediateCAKeyPair, X509Utilities.getX509Name("Corda Client CA","London","demo@r3.com",null), clientCAKeyPair.public, nameConstraints = nameConstraints)
 
         val keyPass = "password"
-        val trustStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
+        val trustStore = KeyStore.getInstance(KEYSTORE_TYPE)
         trustStore.load(null, keyPass.toCharArray())
         trustStore.addOrReplaceCertificate(X509Utilities.CORDA_ROOT_CA, rootCACert.cert)
 
         val tlsKey = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
         val tlsCert = X509Utilities.createCertificate(CertificateType.TLS, clientCACert, clientCAKeyPair, subjectName, tlsKey.public)
 
-        val keyStore = KeyStore.getInstance(KeyStoreUtilities.KEYSTORE_TYPE)
+        val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
         keyStore.load(null, keyPass.toCharArray())
         keyStore.addOrReplaceKey(X509Utilities.CORDA_CLIENT_TLS, tlsKey.private, keyPass.toCharArray(),
                 Stream.of(tlsCert, clientCACert, intermediateCACert, rootCACert).map { it.cert }.toTypedArray<Certificate>())

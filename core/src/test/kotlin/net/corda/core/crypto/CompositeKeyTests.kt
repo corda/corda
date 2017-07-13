@@ -6,10 +6,14 @@ import net.corda.core.crypto.composite.CompositeSignaturesWithKeys
 import net.corda.core.div
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.node.utilities.loadKeyStore
+import net.corda.node.utilities.loadOrCreateKeyStore
+import net.corda.node.utilities.save
 import org.bouncycastle.asn1.x500.X500Name
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -24,9 +28,9 @@ class CompositeKeyTests {
     val bobKey = generateKeyPair()
     val charlieKey = generateKeyPair()
 
-    val alicePublicKey = aliceKey.public
-    val bobPublicKey = bobKey.public
-    val charliePublicKey = charlieKey.public
+    val alicePublicKey: PublicKey = aliceKey.public
+    val bobPublicKey: PublicKey = bobKey.public
+    val charliePublicKey: PublicKey = charlieKey.public
 
     val message = OpaqueBytes("Transaction".toByteArray())
 
@@ -332,12 +336,12 @@ class CompositeKeyTests {
 
         // Store certificate to keystore.
         val keystorePath = tempFolder.root.toPath() / "keystore.jks"
-        val keystore = KeyStoreUtilities.loadOrCreateKeyStore(keystorePath, "password")
+        val keystore = loadOrCreateKeyStore(keystorePath, "password")
         keystore.setCertificateEntry("CompositeKey", compositeKeyCert.cert)
         keystore.save(keystorePath, "password")
 
         // Load keystore from disk.
-        val keystore2 = KeyStoreUtilities.loadKeyStore(keystorePath, "password")
+        val keystore2 = loadKeyStore(keystorePath, "password")
         assertTrue { keystore2.containsAlias("CompositeKey") }
 
         val key = keystore2.getCertificate("CompositeKey").publicKey
