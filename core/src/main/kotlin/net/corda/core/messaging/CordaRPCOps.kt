@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowInitiator
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.NetworkMapCache
@@ -303,6 +304,13 @@ interface CordaRPCOps : RPCOps {
 
     /** Enumerates the class names of the flows that this node knows about. */
     fun registeredFlows(): List<String>
+
+    /**
+     * Returns a node's identity from the network map cache, where known.
+     *
+     * @return the node info if available.
+     */
+    fun nodeIdentityFromParty(party: AbstractParty): NodeInfo?
 }
 
 inline fun <reified T : ContractState> CordaRPCOps.vaultQueryBy(criteria: QueryCriteria = QueryCriteria.VaultQueryCriteria(),
@@ -370,6 +378,17 @@ inline fun <T : Any, A, B, C, D, E, reified R : FlowLogic<T>> CordaRPCOps.startF
         arg3: D,
         arg4: E
 ): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4)
+
+inline fun <T : Any, A, B, C, D, E, F, reified R : FlowLogic<T>> CordaRPCOps.startFlow(
+        @Suppress("UNUSED_PARAMETER")
+        flowConstructor: (A, B, C, D, E, F) -> R,
+        arg0: A,
+        arg1: B,
+        arg2: C,
+        arg3: D,
+        arg4: E,
+        arg5: F
+): FlowHandle<T> = startFlowDynamic(R::class.java, arg0, arg1, arg2, arg3, arg4, arg5)
 
 /**
  * Same again, except this time with progress-tracking enabled.
