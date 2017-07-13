@@ -255,7 +255,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             state = FlowSessionState.Initiated(peerParty, sessionInitResponse.initiatedSessionId)
         } else {
             sessionInitResponse as SessionReject
-            throw FlowSessionException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
+            throw UnexpectedFlowEndException("Party ${state.sendToParty} rejected session request: ${sessionInitResponse.errorMessage}")
         }
     }
 
@@ -357,7 +357,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 session.erroredEnd(message)
             } else {
                 val expectedType = receiveRequest.userReceiveType?.name ?: receiveType.simpleName
-                throw FlowSessionException("Counterparty flow on ${session.state.sendToParty} has completed without " +
+                throw UnexpectedFlowEndException("Counterparty flow on ${session.state.sendToParty} has completed without " +
                         "sending a $expectedType")
             }
         } else {
@@ -371,7 +371,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             (end.errorResponse as java.lang.Throwable).fillInStackTrace()
             throw end.errorResponse
         } else {
-            throw FlowSessionException("Counterparty flow on ${state.sendToParty} had an internal error and has terminated")
+            throw UnexpectedFlowEndException("Counterparty flow on ${state.sendToParty} had an internal error and has terminated")
         }
     }
 
