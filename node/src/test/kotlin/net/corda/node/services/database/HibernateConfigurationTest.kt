@@ -86,6 +86,7 @@ class HibernateConfigurationTest : TestDependencyInjectionBase() {
                 }
                 override fun jdbcSession(): Connection = database.createSession()
             }
+            hibernatePersister = services.hibernatePersister
         }
         setUpDb()
 

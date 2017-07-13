@@ -82,9 +82,11 @@ open class MockServices(vararg val keys: KeyPair) : ServiceHub {
     }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
 
+    lateinit var hibernatePersister: HibernateObserver
+
     fun makeVaultService(dataSourceProps: Properties, hibernateConfig: HibernateConfiguration = HibernateConfiguration(NodeSchemaService(), makeTestDatabaseProperties())): VaultService {
         val vaultService = NodeVaultService(this, dataSourceProps, makeTestDatabaseProperties())
-        HibernateObserver(vaultService.rawUpdates, hibernateConfig)
+        hibernatePersister = HibernateObserver(vaultService.rawUpdates, hibernateConfig)
         return vaultService
     }
 
