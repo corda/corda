@@ -23,7 +23,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.testing.DUMMY_BANK_B
 import net.corda.testing.DUMMY_NOTARY
-import net.corda.testing.driver.poll
+import net.corda.testing.poll
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -79,7 +79,7 @@ fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
 fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256) {
     // Get the identity key of the other side (the recipient).
     val executor = Executors.newScheduledThreadPool(1)
-    val otherSide: Party = poll(executor, DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
+    val otherSide: Party = executor.poll(DUMMY_BANK_B.name.toString()) { rpc.partyFromX500Name(DUMMY_BANK_B.name) }.get()
 
     // Make sure we have the file in storage
     if (!rpc.attachmentExists(hash)) {
